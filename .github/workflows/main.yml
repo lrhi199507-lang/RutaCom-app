@@ -24,10 +24,14 @@ jobs:
       - name: Prepare Project
         run: |
           rm -rf android
-          # Reparación avanzada: Sustituye protocolos por versiones fijas en lugar de borrar
-          node -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); const fix = (deps) => { if (!deps) return; for (const k in deps) { if (deps[k].includes("catalog:") || deps[k].includes("workspace:")) deps[k] = "latest"; } }; fix(pkg.dependencies); fix(pkg.devDependencies); fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));'
           
-          # Instalación ignorando scripts de ciclo de vida que puedan fallar
+          # LIMPIEZA RADICAL (Solución a 160227.jpg)
+          # Eliminamos cualquier línea que mencione workspace o catalog
+          # Esto evita que npm intente buscarlos en internet
+          sed -i '/workspace:/d' package.json
+          sed -i '/catalog:/d' package.json
+          
+          # Instalación forzada ignorando errores de dependencias faltantes
           npm install --no-package-lock --force --ignore-scripts
           
           mkdir -p dist
@@ -36,31 +40,27 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Ultimate Android Fix
+      - name: Final Android Fix
         run: |
           mkdir -p android/app
           echo '{"project_info":{"project_number":"0","project_id":"temp"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.rutacom.app"}},"api_key":[{"current_key":"0"}]}]}' > android/app/google-services.json
           
-          # Configuración agresiva de compatibilidad
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
-          echo "android.nonTransitiveRClass=false" >> android/gradle.properties
           
-          # Forzar namespace y SDK 34 en el build.gradle de la app
-          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle
-          sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle
-          sed -i 's/targetSdkVersion.*/targetSdkVersion 34/' android/app/build.gradle
+          # Forzar namespace para evitar errores de compilación previos (160216.jpg)
+          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle || true
 
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          # Ejecutar build saltando lint y tests para asegurar la generación del APK
-          ./gradlew assembleDebug -x lint -x test
+          ./gradlew assembleDebug -x lint
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
           
