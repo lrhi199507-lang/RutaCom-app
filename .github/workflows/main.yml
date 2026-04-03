@@ -16,21 +16,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build APK (Auto-detect folder)
+      - name: List files and Build
         run: |
-          # Este comando busca el archivo gradlew en cualquier carpeta
-          GRADLEW_FILE=$(find . -name "gradlew" | head -n 1)
-          if [ -z "$GRADLEW_FILE" ]; then
-            echo "Error: No se encontró el archivo gradlew en ninguna carpeta."
+          echo "--- Listado de archivos para diagnóstico ---"
+          find . -maxdepth 3 -not -path '*/.*'
+          
+          echo "--- Buscando gradlew ---"
+          GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+          
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "ERROR: No se encontró el archivo gradlew. ¿Subiste la carpeta completa?"
             exit 1
           fi
           
-          # Entrar a la carpeta donde está el archivo y darle permisos
-          DIR=$(dirname "$GRADLEW_FILE")
-          cd "$DIR"
-          chmod +x gradlew
-          
-          # Empezar la construcción
+          echo "Encontrado en: $GRADLEW_PATH"
+          chmod +x "$GRADLEW_PATH"
+          cd $(dirname "$GRADLEW_PATH")
           ./gradlew assembleDebug
 
       - name: Upload APK
