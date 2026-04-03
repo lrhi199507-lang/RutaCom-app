@@ -25,25 +25,45 @@ jobs:
         run: |
           rm -f package-lock.json
           npm install --legacy-peer-deps --no-package-lock || true
+          # Forzamos la creación de la carpeta android si algo falla
+          npx cap add android || true
           npx cap sync android
 
-      - name: Force Build
+      - name: Force Repair and Build
         run: |
-          # 1. Buscamos la carpeta de Android
           ANDROID_DIR=$(find . -name "build.gradle" -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
           
-          # 2. Reparamos posibles errores de formato en los archivos gradle
-          find . -name "*.gradle" -exec sed -i 's/\r$//' {} +
-          
-          # 3. Movemos los archivos de Capacitor a su sitio
-          find . -name "capacitor.*.gradle" -exec cp {} "$ANDROID_DIR/" \;
-          
+          # Reparamos el archivo build.gradle principal que da error
+          cat <<EOF > "$ANDROID_DIR/build.gradle"
+          buildscript {
+              repositories { google(); mavenCentral() }
+              dependencies { classpath 'com.android.tools.build:gradle:8.2.1' }
+          }
+          allprojects {
+              repositories { google(); mavenCentral() }
+          }
+          EOF
+
+          # Reparamos el del la App
+          cat <<EOF > "$ANDROID_DIR/app/build.gradle"
+          apply plugin: 'com.android.application'
+          android {
+              namespace "com.rutacom.app"
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.rutacom.app"
+                  minSdk 22
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+          }
+          EOF
+
           cd "$ANDROID_DIR"
           chmod +x gradlew
-          
-          # 4. Construimos ignorando errores menores de lint
-          ./gradlew assembleDebug -x lint
-          
+          ./gradlew assembleDebug --stacktrace
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -51,5 +71,4 @@ jobs:
           path: |
             **/build/outputs/apk/debug/*.apk
             **/*.apk
-          if-no-files-found: error
-          
+            
