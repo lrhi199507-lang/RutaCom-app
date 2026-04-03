@@ -48,17 +48,19 @@ jobs:
           mkdir -p dist
           echo "<html><body>RutaCom</body></html>" > dist/index.html
           
-          # Generar carpeta Android limpia
+          # Generar carpeta Android
           npx cap add android
           
-          # Configurar el Namespace de forma que no rompa el archivo
-          # Simplemente añadimos la línea al principio sin borrar nada más
-          echo "namespace = 'com.rutacom.app'" > android/app/build.gradle.tmp
-          cat android/app/build.gradle >> android/app/build.gradle.tmp
-          mv android/app/build.gradle.tmp android/app/build.gradle
+          # PARCHE QUIRÚRGICO: Poner el namespace DENTRO del bloque android
+          # Esto evita el error en la línea 1 que viste en la captura
+          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle
           
-          # Crear google-services mínimo para que no de error
+          # Configuración de Google Services mínima
           echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
+          
+          # Forzar AndroidX
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
           
           npx cap sync android
 
@@ -66,7 +68,6 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # Quitamos --info para que el log sea más limpio y fácil de leer
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
