@@ -22,19 +22,19 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Prepare Project and Fix JSON
+      - name: Prepare Project
         run: |
           rm -rf android
           rm -rf node_modules
           
-          # Reparación segura de JSON
+          # Reparación de JSON
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
           const clean = (obj) => {
             if (!obj) return;
             for (const key in obj) {
-              if (obj[key].includes("workspace:") || obj[key].includes("catalog:")) {
+              if (typeof obj[key] === "string" && (obj[key].includes("workspace:") || obj[key].includes("catalog:"))) {
                 delete obj[key];
               }
             }
@@ -48,19 +48,16 @@ jobs:
           mkdir -p dist
           echo "<html><body>RutaCom</body></html>" > dist/index.html
           
-          # Generar carpeta Android
           npx cap add android
           
-          # PARCHE QUIRÚRGICO: Poner el namespace DENTRO del bloque android
-          # Esto evita el error en la línea 1 que viste en la captura
-          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle
-          
-          # Configuración de Google Services mínima
+          # CONFIGURACIÓN MANUAL DE ANDROID (Sin usar SED para evitar errores)
+          # Esto asegura que el namespace sea el correcto y no haya duplicados
+          echo "namespace = 'com.rutacom.app'" > android/app/build.gradle.new
+          cat android/app/build.gradle >> android/app/build.gradle.new
+          mv android/app/build.gradle.new android/app/build.gradle
+
+          # Google Services básico
           echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
-          
-          # Forzar AndroidX
-          echo "android.useAndroidX=true" >> android/gradle.properties
-          echo "android.enableJetifier=true" >> android/gradle.properties
           
           npx cap sync android
 
@@ -68,11 +65,13 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
+          # Limpiamos caché antes de compilar
+          ./gradlew clean
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-Debug
+          name: RutaCom-App-Final
           path: android/app/build/outputs/apk/debug/*.apk
           
