@@ -27,7 +27,7 @@ jobs:
           rm -rf android
           rm -rf node_modules
           
-          # Reparación de JSON
+          # Reparación de JSON (Mantenemos lo que ya funciona)
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -50,23 +50,22 @@ jobs:
           
           npx cap add android
           
-          # CONFIGURACIÓN MANUAL DE ANDROID (Sin usar SED para evitar errores)
-          # Esto asegura que el namespace sea el correcto y no haya duplicados
-          echo "namespace = 'com.rutacom.app'" > android/app/build.gradle.new
-          cat android/app/build.gradle >> android/app/build.gradle.new
-          mv android/app/build.gradle.new android/app/build.gradle
-
-          # Google Services básico
+          # PARCHE DE NAMESPACE (Lugar correcto: dentro de android {})
+          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle
+          
+          # Google Services
           echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
           
           npx cap sync android
+
+      - name: Accept Android Licenses
+        run: yes | sdkmanager --licenses || true
 
       - name: Build APK with Gradle
         run: |
           cd android
           chmod +x gradlew
-          # Limpiamos caché antes de compilar
-          ./gradlew clean
+          # Usamos --no-daemon para estabilidad en servidores
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
