@@ -23,15 +23,19 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # Eliminamos el archivo que bloquea los permisos e instalamos en limpio
           rm -f package-lock.json
           npm install --legacy-peer-deps --no-package-lock || true
           npx cap sync android
 
       - name: Force Build
         run: |
-          DIR=$(find . -name "build.gradle" -exec dirname {} \; | head -n 1)
-          cd "$DIR"
+          # Buscamos la carpeta de Android
+          ANDROID_DIR=$(find . -name "build.gradle" -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
+          
+          # TRUCO: Movemos los archivos de Capacitor a la carpeta de Android por si acaso
+          find . -name "capacitor.*.gradle" -exec cp {} "$ANDROID_DIR/" \;
+          
+          cd "$ANDROID_DIR"
           gradle wrapper
           chmod +x gradlew
           ./gradlew assembleDebug
