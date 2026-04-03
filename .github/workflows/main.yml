@@ -21,14 +21,16 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Prepare Project
         run: |
           rm -rf android
-          # Usamos pnpm para evitar el error EUNSUPPORTEDPROTOCOL
-          pnpm install --no-frozen-lockfile
+          
+          # LIMPIEZA CRÍTICA: Eliminamos las referencias a 'catalog:' que causan errores
+          sed -i 's/catalog://g' package.json
+          
+          # Instalamos dependencias ignorando el archivo de bloqueo antiguo
+          npm install --no-package-lock
+          
           mkdir -p dist
           cp -r * dist/ 2>/dev/null || true
           npx cap add android
@@ -43,7 +45,6 @@ jobs:
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.namespace = 'com.rutacom.app'" >> android/gradle.properties
           
-          # Forzamos la resolución de librerías de Google
           echo "configurations.all { resolutionStrategy.force 'com.google.android.gms:play-services-basement:18.5.0' }" >> android/app/build.gradle
           
           sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle || true
@@ -62,3 +63,4 @@ jobs:
         with:
           name: RutaCom-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
+          
