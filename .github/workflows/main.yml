@@ -15,17 +15,15 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          # Eliminamos el cache de gradle temporalmente para evitar errores de ruta
-          
-      - name: Find and Grant execute permission for gradlew
-        run: |
-          GRADLEW_PATH=$(find . -name gradlew)
-          chmod +x $GRADLEW_PATH
-          echo "GRADLEW_DIR=$(dirname $GRADLEW_PATH)" >> $GITHUB_ENV
 
-      - name: Build with Gradle
+      - name: Run Build
         run: |
-          cd ${{ env.GRADLEW_DIR }}
+          # Buscar la carpeta que contiene el proyecto
+          PROJECT_DIR=$(find . -name "gradlew" -exec dirname {} \;)
+          cd $PROJECT_DIR
+          # Forzar permisos de ejecución
+          chmod +x gradlew
+          # Ejecutar la construcción
           ./gradlew assembleDebug
 
       - name: Upload APK
