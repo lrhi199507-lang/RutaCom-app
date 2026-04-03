@@ -10,26 +10,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build APK
+      - name: Locate and Build
         run: |
-          # Entramos a la carpeta exacta que vimos en tu Replit
-          cd artifacts/rutacom/android/
+          # 1. Buscamos dónde está el archivo build.gradle real
+          REAL_PATH=$(find . -name "build.gradle" -not -path "*/app/*" | xargs dirname | head -n 1)
+          echo "Proyecto encontrado en: $REAL_PATH"
           
-          # Damos permiso al motor real
+          # 2. Entramos a esa carpeta
+          cd "$REAL_PATH"
+          
+          # 3. Si no hay gradlew, lo generamos nosotros mismos
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper
+          fi
+          
+          # 4. Construimos el APK
           chmod +x gradlew
-          
-          # Ejecutamos la construcción
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: "**/build/outputs/apk/debug/*.apk"
+          path: "**/*.apk"
           
