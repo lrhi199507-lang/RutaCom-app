@@ -41,12 +41,10 @@ jobs:
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.namespace = 'com.rutacom.app'" >> android/gradle.properties
           
-          # 3. SOLUCIÓN AL CONFLICTO DE THEME (Error 160165.jpg)
-          # Añadimos la regla de "tools:replace" para que deje de pelear por el tema de Google
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          sed -i 's/<manifest /<manifest xmlns:tools="http:\/\/schemas.android.com\/tools" /' $MANIFEST
-          sed -i '/<\/application>/i \    <activity android:name="com.google.android.gms.common.api.GoogleApiActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" tools:replace="android:theme" \/>' $MANIFEST
-
+          # 3. FORZAR RESOLUCIÓN DE DEPENDENCIAS (Solución al error 160174.jpg)
+          # Esto obliga a Gradle a usar solo la versión más nueva de las librerías de Google
+          echo "configurations.all { resolutionStrategy.force 'com.google.android.gms:play-services-basement:18.5.0' }" >> android/app/build.gradle
+          
           # 4. Ajustes de SDK y Versiones
           sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle || true
           sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle || true
