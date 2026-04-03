@@ -16,17 +16,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
+          # Aquí le decimos que busque el archivo gradle dentro de tu carpeta
+          cache-dependency-path: RutaCom-app/*.gradle*
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-        continue-on-error: true
+        working-directory: RutaCom-app
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug || (cd * && chmod +x gradlew && ./gradlew assembleDebug)
+        run: ./gradlew assembleDebug
+        working-directory: RutaCom-app
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: "**/build/outputs/apk/debug/*.apk"
+          path: RutaCom-app/app/build/outputs/apk/debug/*.apk
           
