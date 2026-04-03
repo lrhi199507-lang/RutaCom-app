@@ -32,14 +32,17 @@ jobs:
 
       - name: Final Android Fix
         run: |
-          # 1. Creamos el archivo de servicios vacío para que no dé error
+          # 1. Archivo de servicios temporal
           mkdir -p android/app
           echo '{"project_info":{"project_number":"0","project_id":"temp"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.rutacom.app"}},"api_key":[{"current_key":"0"}]}]}' > android/app/google-services.json
           
-          # 2. Configuramos el Namespace y versiones
-          echo "android.namespace = 'com.rutacom.app'" >> android/gradle.properties
-          sed -i 's/compileSdkVersion.*/compileSdk = 34/' android/app/build.gradle || true
-          sed -i 's/targetSdkVersion.*/targetSdk = 34/' android/app/build.gradle || true
+          # 2. Corrección de sintaxis (Quitamos el '=' que causó el error)
+          sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle || true
+          sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle || true
+          sed -i 's/targetSdkVersion.*/targetSdkVersion 34/' android/app/build.gradle || true
+          
+          # 3. Inyectamos el Namespace directamente en el archivo
+          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle || true
           
       - name: Build APK
         run: |
