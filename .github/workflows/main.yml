@@ -23,11 +23,23 @@ jobs:
 
       - name: Prepare Project
         run: |
+          # 1. Limpieza inicial
           rm -rf android
+          
+          # 2. Limpieza de catálogos y dependencias
           sed -i 's/catalog://g' package.json
           npm install --no-package-lock
+          
+          # 3. CREACIÓN FORZADA DE DIST (Solución al error 160192.jpg)
+          # Creamos la carpeta y metemos un index.html básico si no existe
           mkdir -p dist
+          if [ ! -f dist/index.html ]; then
+            echo "<html><body>RutaCom App</body></html>" > dist/index.html
+          fi
+          # Copiamos todo lo que tengas en la raíz a dist por si acaso
           cp -r * dist/ 2>/dev/null || true
+          
+          # 4. Construcción de Android
           npx cap add android
           npx cap sync android
 
@@ -54,7 +66,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          # CAMBIO AQUÍ: Buscamos en cualquier subcarpeta para no fallar
           path: "**/*.apk"
           if-no-files-found: error
           
