@@ -16,19 +16,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Run Build
-        run: |
-          # Buscar la carpeta que contiene el proyecto
-          PROJECT_DIR=$(find . -name "gradlew" -exec dirname {} \;)
-          cd $PROJECT_DIR
-          # Forzar permisos de ejecución
-          chmod +x gradlew
-          # Ejecutar la construcción
-          ./gradlew assembleDebug
+      - name: Grant execute permission
+        run: chmod +x RutaCom-app/gradlew
+
+      - name: Build with Gradle
+        run: cd RutaCom-app && ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: "**/*.apk"
+          path: RutaCom-app/app/build/outputs/apk/debug/*.apk
           
