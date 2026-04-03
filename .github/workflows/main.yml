@@ -16,16 +16,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Install Dependencies
+        run: |
+          npm install
+          npx cap sync android
+
       - name: Force Build
         run: |
-          # 1. Buscamos la carpeta donde subiste el build.gradle
+          # Buscamos la carpeta del proyecto Android
           DIR=$(find . -name "build.gradle" -exec dirname {} \; | head -n 1)
           cd "$DIR"
           
-          # 2. TRUCO: Generamos el wrapper que falta automáticamente
+          # Generamos el motor que falta
           gradle wrapper
           
-          # 3. Construimos el APK
+          # Damos permisos y construimos
           chmod +x gradlew
           ./gradlew assembleDebug
 
