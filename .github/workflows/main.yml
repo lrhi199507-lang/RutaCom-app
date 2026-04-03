@@ -27,7 +27,7 @@ jobs:
           rm -rf android
           rm -rf node_modules
           
-          # Reparación de JSON (Mantenemos lo que funciona)
+          # REPARACIÓN JSON (No tocamos lo que ya funciona)
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -48,16 +48,21 @@ jobs:
           mkdir -p dist
           echo "<html><body>RutaCom</body></html>" > dist/index.html
           
+          # Añadir android de forma fresca
           npx cap add android
           
-          # Forzar configuración de Android
+          # ARCHIVOS CRÍTICOS
           echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
+          
+          # CONFIGURACIÓN GRADLE (Aseguramos compatibilidad)
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> android/gradle.properties
           
-          # PARCHE CRÍTICO: Inyectar namespace en build.gradle DE FORMA GLOBAL
-          # Algunos errores de Gradle 8+ se deben a que el namespace es obligatorio
-          sed -i "s/defaultConfig {/namespace 'com.rutacom.app'\n    defaultConfig {/" android/app/build.gradle
+          # PARCHE MAESTRO DE GRADLE (Evita el error de Namespace)
+          # Borramos líneas que puedan chocar y ponemos el namespace arriba del todo
+          sed -i 's/namespace .*//g' android/app/build.gradle
+          sed -i "1i namespace 'com.rutacom.app'" android/app/build.gradle
           
           npx cap sync android
 
@@ -65,8 +70,8 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # Usamos --no-daemon para que no consuma memoria extra en GitHub
-          ./gradlew clean assembleDebug --no-daemon --stacktrace
+          # Ejecutamos con --no-daemon y forzamos la compilación limpia
+          ./gradlew assembleDebug --no-daemon --stacktrace --info
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
