@@ -16,15 +16,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Grant execute permission
-        run: chmod +x RutaCom-app/gradlew
-
-      - name: Build with Gradle
-        run: cd RutaCom-app && ./gradlew assembleDebug
+      - name: Build APK (Auto-detect folder)
+        run: |
+          # Este comando busca el archivo gradlew en cualquier carpeta
+          GRADLEW_FILE=$(find . -name "gradlew" | head -n 1)
+          if [ -z "$GRADLEW_FILE" ]; then
+            echo "Error: No se encontró el archivo gradlew en ninguna carpeta."
+            exit 1
+          fi
+          
+          # Entrar a la carpeta donde está el archivo y darle permisos
+          DIR=$(dirname "$GRADLEW_FILE")
+          cd "$DIR"
+          chmod +x gradlew
+          
+          # Empezar la construcción
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: RutaCom-app/app/build/outputs/apk/debug/*.apk
+          path: "**/*.apk"
           
