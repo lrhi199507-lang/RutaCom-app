@@ -23,27 +23,28 @@ jobs:
 
       - name: Prepare Project
         run: |
-          # 1. Limpieza profunda
           rm -rf android
           rm -f package-lock.json
           
-          # 2. Instalación de dependencias
+          # 1. Instalación
           npm install --legacy-peer-deps --no-package-lock || true
           
-          # 3. Reconstrucción de la carpeta Android desde cero
+          # 2. CREAR CARPETA WEB (Solución al error 160132.jpg)
+          # Si usas React/Vite suele ser 'dist', si es plano es 'www' o 'public'
+          # Creamos una carpeta 'www' vacía por si acaso para que Capacitor no falle
+          mkdir -p www
+          
+          # 3. Reconstrucción
           npx cap add android
           npx cap sync android
 
       - name: Fix and Build
         run: |
-          # 1. Localizamos la nueva carpeta
           cd android
+          # Reparamos SDK
+          sed -i 's/compileSdkVersion.*/compileSdk = 34/' app/build.gradle || true
+          sed -i 's/targetSdkVersion.*/targetSdk = 34/' app/build.gradle || true
           
-          # 2. Inyectamos la configuración de SDK corregida
-          sed -i 's/compileSdkVersion.*/compileSdk = 34/' app/build.gradle
-          sed -i 's/targetSdkVersion.*/targetSdk = 34/' app/build.gradle
-          
-          # 3. Permisos y construcción
           chmod +x gradlew
           ./gradlew assembleDebug
 
