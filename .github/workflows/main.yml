@@ -23,23 +23,25 @@ jobs:
 
       - name: Prepare Project
         run: |
-          # 1. Limpieza inicial
+          # 1. Limpieza total de rastros anteriores
           rm -rf android
           
-          # 2. Limpieza de catálogos y dependencias
+          # 2. LIMPIEZA DE PROTOCOLOS (Solución a errores 160192.jpg y 160208.jpg)
+          # Eliminamos 'catalog:' y cambiamos 'workspace:*' por versiones normales
           sed -i 's/catalog://g' package.json
+          sed -i 's/workspace:\*/latest/g' package.json
+          
+          # 3. Instalación de dependencias
           npm install --no-package-lock
           
-          # 3. CREACIÓN FORZADA DE DIST (Solución al error 160192.jpg)
-          # Creamos la carpeta y metemos un index.html básico si no existe
+          # 4. Asegurar carpeta de salida para Capacitor
           mkdir -p dist
           if [ ! -f dist/index.html ]; then
             echo "<html><body>RutaCom App</body></html>" > dist/index.html
           fi
-          # Copiamos todo lo que tengas en la raíz a dist por si acaso
           cp -r * dist/ 2>/dev/null || true
           
-          # 4. Construcción de Android
+          # 5. Sincronización
           npx cap add android
           npx cap sync android
 
