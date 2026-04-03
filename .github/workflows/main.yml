@@ -27,7 +27,7 @@ jobs:
           rm -rf android
           rm -rf node_modules
           
-          # REPARACIÓN JSON (No tocamos lo que ya funciona)
+          # Reparación segura de JSON
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -48,21 +48,17 @@ jobs:
           mkdir -p dist
           echo "<html><body>RutaCom</body></html>" > dist/index.html
           
-          # Añadir android de forma fresca
+          # Generar carpeta Android limpia
           npx cap add android
           
-          # ARCHIVOS CRÍTICOS
+          # Configurar el Namespace de forma que no rompa el archivo
+          # Simplemente añadimos la línea al principio sin borrar nada más
+          echo "namespace = 'com.rutacom.app'" > android/app/build.gradle.tmp
+          cat android/app/build.gradle >> android/app/build.gradle.tmp
+          mv android/app/build.gradle.tmp android/app/build.gradle
+          
+          # Crear google-services mínimo para que no de error
           echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
-          
-          # CONFIGURACIÓN GRADLE (Aseguramos compatibilidad)
-          echo "android.useAndroidX=true" >> android/gradle.properties
-          echo "android.enableJetifier=true" >> android/gradle.properties
-          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> android/gradle.properties
-          
-          # PARCHE MAESTRO DE GRADLE (Evita el error de Namespace)
-          # Borramos líneas que puedan chocar y ponemos el namespace arriba del todo
-          sed -i 's/namespace .*//g' android/app/build.gradle
-          sed -i "1i namespace 'com.rutacom.app'" android/app/build.gradle
           
           npx cap sync android
 
@@ -70,9 +66,9 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # Ejecutamos con --no-daemon y forzamos la compilación limpia
-          ./gradlew assembleDebug --no-daemon --stacktrace --info
-          
+          # Quitamos --info para que el log sea más limpio y fácil de leer
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
