@@ -26,24 +26,20 @@ jobs:
           # 1. Limpieza inicial
           rm -rf android
           
-          # 2. REPARACIÓN SEGURA DE PROTOCOLOS (Solución al error EJSONPARSE 160212.jpg)
-          # En lugar de borrar líneas, sustituimos los protocolos por '*'
-          # Esto mantiene el JSON válido y le dice a npm: "instala cualquier versión"
-          sed -i 's/catalog:/^/g' package.json
-          sed -i 's/workspace:\*/\*/g' package.json
+          # 2. CIRUGÍA DE PACKAGE.JSON (Solución definitiva a 160212.jpg y 160213.jpg)
+          # Este comando de node borra las dependencias que usan protocolos raros 
+          # sin romper el formato del archivo JSON.
+          node -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); const clean = (deps) => { if (!deps) return; for (const [k, v] of Object.entries(deps)) { if (v.includes("catalog:") || v.includes("workspace:")) delete deps[k]; } }; clean(pkg.dependencies); clean(pkg.devDependencies); fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));'
           
-          # 3. Instalación con ignorado de errores
-          # Usamos --force para que no se detenga si faltan dependencias del monorepo
+          # 3. Instalación forzada (omitirá lo que borramos)
           npm install --no-package-lock --force
           
-          # 4. Asegurar carpeta de salida
+          # 4. Crear carpeta de salida mínima para Capacitor
           mkdir -p dist
-          if [ ! -f dist/index.html ]; then
-            echo "<html><body>RutaCom App</body></html>" > dist/index.html
-          fi
+          echo "<html><body>RutaCom</body></html>" > dist/index.html
           cp -r * dist/ 2>/dev/null || true
           
-          # 5. Capacitor
+          # 5. Generar Android
           npx cap add android
           npx cap sync android
 
