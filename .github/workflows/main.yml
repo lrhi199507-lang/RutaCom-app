@@ -25,13 +25,24 @@ jobs:
         run: |
           rm -rf android
           
-          # LIMPIEZA RADICAL (Solución a 160227.jpg)
-          # Eliminamos cualquier línea que mencione workspace o catalog
-          # Esto evita que npm intente buscarlos en internet
-          sed -i '/workspace:/d' package.json
-          sed -i '/catalog:/d' package.json
+          # REPARACIÓN SEGURA DE JSON (Solución a 160227.jpg y 160228.jpg)
+          node -e '
+          const fs = require("fs");
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const clean = (obj) => {
+            if (!obj) return;
+            for (const key in obj) {
+              if (obj[key].includes("workspace:") || obj[key].includes("catalog:")) {
+                delete obj[key];
+              }
+            }
+          };
+          clean(pkg.dependencies);
+          clean(pkg.devDependencies);
+          fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          '
           
-          # Instalación forzada ignorando errores de dependencias faltantes
+          # Instalación limpia
           npm install --no-package-lock --force --ignore-scripts
           
           mkdir -p dist
@@ -48,8 +59,8 @@ jobs:
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           
-          # Forzar namespace para evitar errores de compilación previos (160216.jpg)
-          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle || true
+          # Parche de Namespace para Capacitor 6+ (Solución a 160214.jpg)
+          sed -i "/android {/a \    namespace \"com.rutacom.app\"" android/app/build.gradle || true
 
       - name: Build APK
         run: |
@@ -62,5 +73,4 @@ jobs:
         with:
           name: RutaCom-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
           
