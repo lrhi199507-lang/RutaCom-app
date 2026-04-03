@@ -15,7 +15,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle' # Esto acelera el proceso
+          cache: 'gradle'
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
@@ -24,11 +24,10 @@ jobs:
 
       - name: Prepare Project and Fix JSON
         run: |
-          # 1. Limpieza total de intentos fallidos previos
           rm -rf android
           rm -rf node_modules
           
-          # 2. Reparación segura del JSON (Para evitar el EJSONPARSE)
+          # Reparación de JSON (Mantenemos lo que funciona)
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -45,23 +44,20 @@ jobs:
           fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
           
-          # 3. Instalación de dependencias
           npm install --no-package-lock --force --ignore-scripts
-          
-          # 4. Crear carpeta de salida para que Capacitor no llore
           mkdir -p dist
           echo "<html><body>RutaCom</body></html>" > dist/index.html
           
-          # 5. Agregar y sincronizar Android
           npx cap add android
           
-          # 6. Configuración de archivos críticos de Android
+          # Forzar configuración de Android
           echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           
-          # Inyectar Namespace (Esto suele causar el Build Failed si falta)
-          sed -i "/android {/a \    namespace \"com.rutacom.app\"" android/app/build.gradle
+          # PARCHE CRÍTICO: Inyectar namespace en build.gradle DE FORMA GLOBAL
+          # Algunos errores de Gradle 8+ se deben a que el namespace es obligatorio
+          sed -i "s/defaultConfig {/namespace 'com.rutacom.app'\n    defaultConfig {/" android/app/build.gradle
           
           npx cap sync android
 
@@ -69,10 +65,9 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # Ejecutamos un clean antes para asegurar que no hay basura
-          ./gradlew clean
-          ./gradlew assembleDebug --stacktrace --no-daemon
-
+          # Usamos --no-daemon para que no consuma memoria extra en GitHub
+          ./gradlew clean assembleDebug --no-daemon --stacktrace
+          
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
