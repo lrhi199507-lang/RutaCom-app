@@ -10,32 +10,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: set up JDK 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Force Build APK
+      - name: Build APK
         run: |
-          # 1. Buscar el archivo gradlew en cualquier carpeta
-          GRADLEW_FILE=$(find . -name "gradlew" | head -n 1)
+          # Entramos a la carpeta exacta que vimos en tu Replit
+          cd artifacts/rutacom/android/
           
-          if [ -z "$GRADLEW_FILE" ]; then
-            echo "ERROR: No se encontró el archivo gradlew. Asegúrate de haber subido la carpeta del proyecto."
-            exit 1
-          fi
+          # Damos permiso al motor real
+          chmod +x gradlew
           
-          # 2. Dar permisos y entrar a la carpeta correcta
-          chmod +x "$GRADLEW_FILE"
-          cd "$(dirname "$GRADLEW_FILE")"
-          
-          # 3. Ejecutar la construcción
+          # Ejecutamos la construcción
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: "**/*.apk"
+          path: "**/build/outputs/apk/debug/*.apk"
           
