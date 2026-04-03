@@ -36,17 +36,18 @@ jobs:
           mkdir -p android/app
           echo '{"project_info":{"project_number":"0","project_id":"temp"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.rutacom.app"}},"api_key":[{"current_key":"0"}]}]}' > android/app/google-services.json
           
-          # 2. Forzar AndroidX y Jetifier
+          # 2. Forzar AndroidX y Namespace
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.namespace = 'com.rutacom.app'" >> android/gradle.properties
           
-          # 3. LIMPIEZA DE MANIFEST (Solución al error 160164.jpg)
-          # Eliminamos cualquier declaración duplicada de GoogleApiActivity que Capacitor haya inyectado mal
+          # 3. SOLUCIÓN AL CONFLICTO DE THEME (Error 160165.jpg)
+          # Añadimos la regla de "tools:replace" para que deje de pelear por el tema de Google
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          sed -i '/com.google.android.gms.common.api.GoogleApiActivity/d' $MANIFEST || true
-          
-          # 4. Ajustes de Versiones y Namespace
+          sed -i 's/<manifest /<manifest xmlns:tools="http:\/\/schemas.android.com\/tools" /' $MANIFEST
+          sed -i '/<\/application>/i \    <activity android:name="com.google.android.gms.common.api.GoogleApiActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" tools:replace="android:theme" \/>' $MANIFEST
+
+          # 4. Ajustes de SDK y Versiones
           sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle || true
           sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle || true
           sed -i 's/targetSdkVersion.*/targetSdkVersion 34/' android/app/build.gradle || true
