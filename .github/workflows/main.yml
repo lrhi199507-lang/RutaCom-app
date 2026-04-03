@@ -29,24 +29,19 @@ jobs:
 
       - name: Force Build
         run: |
-          # 1. Buscamos la carpeta de Android
           ANDROID_DIR=$(find . -name "build.gradle" -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
-          
-          # 2. Aseguramos que los archivos de Capacitor estén en su sitio
           find . -name "capacitor.*.gradle" -exec cp {} "$ANDROID_DIR/" \;
-          
           cd "$ANDROID_DIR"
-          
-          # 3. LA CLAVE: Forzamos el permiso de ejecución al máximo
           chmod +x gradlew
-          
-          # 4. Generamos el wrapper y construimos
-          ./gradlew wrapper
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: "**/*.apk"
+          # CAMBIO AQUÍ: Buscamos en la raíz de forma más agresiva
+          path: |
+            **/build/outputs/apk/debug/*.apk
+            **/*.apk
+          if-no-files-found: error
           
