@@ -15,7 +15,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
@@ -25,12 +24,11 @@ jobs:
       - name: Prepare Project
         run: |
           rm -rf android
-          # Limpieza de JSON segura con Node
+          # Limpiamos el package.json de protocolos incompatibles (Solución a 160211.jpg y 160212.jpg)
           node -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); const clean = (deps) => { if (!deps) return; for (const [k, v] of Object.entries(deps)) { if (v.includes("catalog:") || v.includes("workspace:")) delete deps[k]; } }; clean(pkg.dependencies); clean(pkg.devDependencies); fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));'
           
           npm install --no-package-lock --force
           
-          # Crear carpeta web necesaria para Capacitor
           mkdir -p dist
           echo "<html><body>RutaCom</body></html>" > dist/index.html
           
@@ -40,30 +38,27 @@ jobs:
       - name: Final Android Fix
         run: |
           mkdir -p android/app
-          # Google Services mínimo
           echo '{"project_info":{"project_number":"0","project_id":"temp"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.rutacom.app"}},"api_key":[{"current_key":"0"}]}]}' > android/app/google-services.json
           
-          # Forzar variables de compilación en gradle.properties
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           
-          # Ajustar build.gradle para evitar errores de SDK y Namespace
-          sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle
-          sed -i 's/targetSdkVersion.*/targetSdkVersion 34/' android/app/build.gradle
-          # Asegurar que el namespace esté presente
-          sed -i '/defaultConfig {/i \    namespace "com.rutacom.app"' android/app/build.gradle
+          # Ajustes de SDK y Namespace para evitar errores de Gradle (Solución a 160214.jpg)
+          sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle || true
+          sed -i 's/targetSdkVersion.*/targetSdkVersion 34/' android/app/build.gradle || true
+          sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle || true
 
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          # Aceptamos licencias y compilamos ignorando advertencias de lint
-          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug
 
       - name: Upload APK
-        uses: upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
+          # Buscamos cualquier APK generado para asegurar que no falle el paso
           path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
           
