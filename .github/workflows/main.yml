@@ -23,27 +23,27 @@ jobs:
 
       - name: Prepare Project
         run: |
-          # 1. Limpieza radical
+          # 1. Limpieza inicial
           rm -rf android
           
-          # 2. LIMPIEZA DE PAQUETES CONFLICTIVOS (Solución a error 160211.jpg)
-          # Eliminamos las líneas que contienen 'catalog:' o 'workspace:' del package.json
-          # Esto evita que npm intente buscarlos en internet.
-          sed -i '/catalog:/d' package.json
-          sed -i '/workspace:/d' package.json
+          # 2. REPARACIÓN SEGURA DE PROTOCOLOS (Solución al error EJSONPARSE 160212.jpg)
+          # En lugar de borrar líneas, sustituimos los protocolos por '*'
+          # Esto mantiene el JSON válido y le dice a npm: "instala cualquier versión"
+          sed -i 's/catalog:/^/g' package.json
+          sed -i 's/workspace:\*/\*/g' package.json
           
-          # 3. Instalación "suave"
-          # Usamos --force para que ignore dependencias faltantes que borramos arriba
+          # 3. Instalación con ignorado de errores
+          # Usamos --force para que no se detenga si faltan dependencias del monorepo
           npm install --no-package-lock --force
           
-          # 4. Preparar carpeta web
+          # 4. Asegurar carpeta de salida
           mkdir -p dist
           if [ ! -f dist/index.html ]; then
             echo "<html><body>RutaCom App</body></html>" > dist/index.html
           fi
           cp -r * dist/ 2>/dev/null || true
           
-          # 5. Generar proyecto Android
+          # 5. Capacitor
           npx cap add android
           npx cap sync android
 
