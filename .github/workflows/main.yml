@@ -15,21 +15,22 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
-          # Aquí le decimos que busque el archivo gradle dentro de tu carpeta
-          cache-dependency-path: RutaCom-app/*.gradle*
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-        working-directory: RutaCom-app
+          # Eliminamos el cache de gradle temporalmente para evitar errores de ruta
+          
+      - name: Find and Grant execute permission for gradlew
+        run: |
+          GRADLEW_PATH=$(find . -name gradlew)
+          chmod +x $GRADLEW_PATH
+          echo "GRADLEW_DIR=$(dirname $GRADLEW_PATH)" >> $GITHUB_ENV
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug
-        working-directory: RutaCom-app
+        run: |
+          cd ${{ env.GRADLEW_DIR }}
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: RutaCom-app/app/build/outputs/apk/debug/*.apk
+          path: "**/*.apk"
           
