@@ -36,17 +36,20 @@ jobs:
           mkdir -p android/app
           echo '{"project_info":{"project_number":"0","project_id":"temp"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.rutacom.app"}},"api_key":[{"current_key":"0"}]}]}' > android/app/google-services.json
           
-          # 2. ACTIVAR ANDROIDX Y JETIFIER (Solución al error 160163.jpg)
+          # 2. Forzar AndroidX y Jetifier
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.namespace = 'com.rutacom.app'" >> android/gradle.properties
           
-          # 3. Corrección de sintaxis de SDK
+          # 3. LIMPIEZA DE MANIFEST (Solución al error 160164.jpg)
+          # Eliminamos cualquier declaración duplicada de GoogleApiActivity que Capacitor haya inyectado mal
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/com.google.android.gms.common.api.GoogleApiActivity/d' $MANIFEST || true
+          
+          # 4. Ajustes de Versiones y Namespace
           sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle || true
           sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle || true
           sed -i 's/targetSdkVersion.*/targetSdkVersion 34/' android/app/build.gradle || true
-          
-          # 4. Inyectamos el Namespace
           sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle || true
           
       - name: Build APK
