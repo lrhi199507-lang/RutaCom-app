@@ -19,13 +19,14 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+        continue-on-error: true
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug || (cd * && chmod +x gradlew && ./gradlew assembleDebug)
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: "**/build/outputs/apk/debug/*.apk"
           
