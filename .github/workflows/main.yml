@@ -36,12 +36,17 @@ jobs:
           mkdir -p android/app
           echo '{"project_info":{"project_number":"0","project_id":"temp"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.rutacom.app"}},"api_key":[{"current_key":"0"}]}]}' > android/app/google-services.json
           
-          # 2. Corrección de sintaxis (Quitamos el '=' que causó el error)
+          # 2. ACTIVAR ANDROIDX Y JETIFIER (Solución al error 160163.jpg)
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+          echo "android.namespace = 'com.rutacom.app'" >> android/gradle.properties
+          
+          # 3. Corrección de sintaxis de SDK
           sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle || true
           sed -i 's/compileSdk .*/compileSdk 34/' android/app/build.gradle || true
           sed -i 's/targetSdkVersion.*/targetSdkVersion 34/' android/app/build.gradle || true
           
-          # 3. Inyectamos el Namespace directamente en el archivo
+          # 4. Inyectamos el Namespace
           sed -i '/android {/a \    namespace "com.rutacom.app"' android/app/build.gradle || true
           
       - name: Build APK
