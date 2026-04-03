@@ -72,3 +72,4 @@ jobs:
           nam-debug-apk
           path: artifacts/rutacom/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
