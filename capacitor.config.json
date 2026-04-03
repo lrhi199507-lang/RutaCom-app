@@ -1,0 +1,6 @@
+{
+  "appId": "com.rutacom.app",
+  "appName": "RutaCom",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
