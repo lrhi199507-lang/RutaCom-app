@@ -16,22 +16,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: List files and Build
+      - name: Force Build APK
         run: |
-          echo "--- Listado de archivos para diagnóstico ---"
-          find . -maxdepth 3 -not -path '*/.*'
+          # 1. Buscar el archivo gradlew en cualquier carpeta
+          GRADLEW_FILE=$(find . -name "gradlew" | head -n 1)
           
-          echo "--- Buscando gradlew ---"
-          GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
-          
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "ERROR: No se encontró el archivo gradlew. ¿Subiste la carpeta completa?"
+          if [ -z "$GRADLEW_FILE" ]; then
+            echo "ERROR: No se encontró el archivo gradlew. Asegúrate de haber subido la carpeta del proyecto."
             exit 1
           fi
           
-          echo "Encontrado en: $GRADLEW_PATH"
-          chmod +x "$GRADLEW_PATH"
-          cd $(dirname "$GRADLEW_PATH")
+          # 2. Dar permisos y entrar a la carpeta correcta
+          chmod +x "$GRADLEW_FILE"
+          cd "$(dirname "$GRADLEW_FILE")"
+          
+          # 3. Ejecutar la construcción
           ./gradlew assembleDebug
 
       - name: Upload APK
