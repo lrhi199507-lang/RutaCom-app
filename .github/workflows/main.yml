@@ -15,17 +15,20 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle' # Esto acelera el proceso
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Prepare Project
+      - name: Prepare Project and Fix JSON
         run: |
+          # 1. Limpieza total de intentos fallidos previos
           rm -rf android
+          rm -rf node_modules
           
-          # REPARACIÓN SEGURA DE JSON (Solución a 160227.jpg y 160228.jpg)
+          # 2. Reparación segura del JSON (Para evitar el EJSONPARSE)
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -42,35 +45,37 @@ jobs:
           fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
           
-          # Instalación limpia
+          # 3. Instalación de dependencias
           npm install --no-package-lock --force --ignore-scripts
           
+          # 4. Crear carpeta de salida para que Capacitor no llore
           mkdir -p dist
           echo "<html><body>RutaCom</body></html>" > dist/index.html
           
+          # 5. Agregar y sincronizar Android
           npx cap add android
-          npx cap sync android
-
-      - name: Final Android Fix
-        run: |
-          mkdir -p android/app
-          echo '{"project_info":{"project_number":"0","project_id":"temp"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.rutacom.app"}},"api_key":[{"current_key":"0"}]}]}' > android/app/google-services.json
           
+          # 6. Configuración de archivos críticos de Android
+          echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           
-          # Parche de Namespace para Capacitor 6+ (Solución a 160214.jpg)
-          sed -i "/android {/a \    namespace \"com.rutacom.app\"" android/app/build.gradle || true
+          # Inyectar Namespace (Esto suele causar el Build Failed si falta)
+          sed -i "/android {/a \    namespace \"com.rutacom.app\"" android/app/build.gradle
+          
+          npx cap sync android
 
-      - name: Build APK
+      - name: Build APK with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug -x lint
+          # Ejecutamos un clean antes para asegurar que no hay basura
+          ./gradlew clean
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-debug-apk
+          name: RutaCom-App-Debug
           path: android/app/build/outputs/apk/debug/*.apk
           
