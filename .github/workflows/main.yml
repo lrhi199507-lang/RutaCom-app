@@ -23,25 +23,27 @@ jobs:
 
       - name: Prepare Project
         run: |
+          # Limpiamos rastros anteriores
           rm -rf android
           rm -f package-lock.json
           
-          # 1. Instalación
+          # 1. Instalación de dependencias
           npm install --legacy-peer-deps --no-package-lock || true
           
-          # 2. CREAR CARPETA WEB (Solución al error 160132.jpg)
-          # Si usas React/Vite suele ser 'dist', si es plano es 'www' o 'public'
-          # Creamos una carpeta 'www' vacía por si acaso para que Capacitor no falle
-          mkdir -p www
+          # 2. CREAR CARPETA 'dist' (Solución al error 160133.jpg)
+          # Como tu capacitor.config.json busca "dist", creamos esa carpeta
+          mkdir -p dist
+          # Copiamos tus archivos index.html y demás a dist para que la app no esté vacía
+          cp -r * dist/ 2>/dev/null || true
           
-          # 3. Reconstrucción
+          # 3. Reconstrucción de Android
           npx cap add android
           npx cap sync android
 
       - name: Fix and Build
         run: |
           cd android
-          # Reparamos SDK
+          # Reparamos versiones de SDK para evitar errores de compilación
           sed -i 's/compileSdkVersion.*/compileSdk = 34/' app/build.gradle || true
           sed -i 's/targetSdkVersion.*/targetSdk = 34/' app/build.gradle || true
           
