@@ -21,54 +21,35 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install Dependencies
+      - name: Prepare Project
         run: |
+          # 1. Limpieza profunda
+          rm -rf android
           rm -f package-lock.json
+          
+          # 2. Instalación de dependencias
           npm install --legacy-peer-deps --no-package-lock || true
-          # Forzamos la creación de la carpeta android si algo falla
-          npx cap add android || true
+          
+          # 3. Reconstrucción de la carpeta Android desde cero
+          npx cap add android
           npx cap sync android
 
-      - name: Force Repair and Build
+      - name: Fix and Build
         run: |
-          ANDROID_DIR=$(find . -name "build.gradle" -not -path "*/node_modules/*" -exec dirname {} \; | head -n 1)
+          # 1. Localizamos la nueva carpeta
+          cd android
           
-          # Reparamos el archivo build.gradle principal que da error
-          cat <<EOF > "$ANDROID_DIR/build.gradle"
-          buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.2.1' }
-          }
-          allprojects {
-              repositories { google(); mavenCentral() }
-          }
-          EOF
-
-          # Reparamos el del la App
-          cat <<EOF > "$ANDROID_DIR/app/build.gradle"
-          apply plugin: 'com.android.application'
-          android {
-              namespace "com.rutacom.app"
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.rutacom.app"
-                  minSdk 22
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-          }
-          EOF
-
-          cd "$ANDROID_DIR"
+          # 2. Inyectamos la configuración de SDK corregida
+          sed -i 's/compileSdkVersion.*/compileSdk = 34/' app/build.gradle
+          sed -i 's/targetSdkVersion.*/targetSdk = 34/' app/build.gradle
+          
+          # 3. Permisos y construcción
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-debug-apk
-          path: |
-            **/build/outputs/apk/debug/*.apk
-            **/*.apk
-            
+          path: android/app/build/outputs/apk/debug/*.apk
+          
