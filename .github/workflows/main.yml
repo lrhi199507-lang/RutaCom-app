@@ -1,7 +1,7 @@
-name: Build APK - RutaCom Final
+name: Build APK - RutaCom Estilo Final
 
 on:
-  workflow_dispatch: # ESTO ES LO QUE CREA EL BOTÓN DE "RUN WORKFLOW"
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,26 +15,29 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Instalación y Compilación de RutaCom
+      - name: Instalación de Motor de Diseño y App
         run: |
-          # 1. Limpiar rastro de Replit
+          # 1. Limpieza total
           sed -i 's/catalog:/latest/g' package.json
           sed -i '/@workspace/d' package.json
           rm -f .npmrc package-lock.json
+          rm -rf android
           
-          # 2. Borrar archivos de Android viejos y el index falso
-          rm -rf android gradlew build.gradle settings.gradle index.html
-          
-          # 3. Instalación de librerías reales (Firebase + Lucide + Vite)
+          # 2. INSTALACIÓN DE ESTILOS (Tailwind + PostCSS)
+          # Esto es lo que falta para que no se vea solo texto blanco
           npm install --force
-          npm install firebase lucide-react typescript ts-node vite @vitejs/plugin-react --save-dev
+          npm install -D tailwindcss postcss autoprefixer lucide-react firebase
+          npm install -D typescript ts-node vite @vitejs/plugin-react
           
-          # 4. Crear el index.html correcto para que cargue tu código real
+          # 3. Asegurar que Tailwind esté inicializado
+          npx tailwindcss init -p || true
+
+          # 4. Crear el index.html limpio
           echo '<!DOCTYPE html>
           <html lang="es">
             <head>
               <meta charset="UTF-8" />
-              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
               <title>RutaCom</title>
             </head>
             <body>
@@ -43,7 +46,7 @@ jobs:
             </body>
           </html>' > index.html
 
-          # 5. Compilar la aplicación
+          # 5. COMPILAR (Aquí se genera el diseño real)
           npx vite build --outDir dist
 
       - name: Set up JDK 21
@@ -52,15 +55,14 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Configuración de Capacitor
+      - name: Capacitor Sync
         run: |
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
-          # Forzamos configuración apuntando a 'dist'
           echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'RutaCom', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
           npx cap add android || true
           npx cap sync android
 
-      - name: Generar APK Final
+      - name: Generar APK con Diseño
         run: |
           cd android
           chmod +x gradlew
@@ -69,6 +71,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-Real
+          name: RutaCom-App-Diseno-Real
           path: android/app/build/outputs/apk/debug/*.apk
           
