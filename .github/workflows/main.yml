@@ -24,7 +24,7 @@ jobs:
 
       - name: Prepare Project
         run: |
-          # 1. Limpieza de dependencias conflictivas de Replit/Workspace
+          # 1. Limpiar rastro de Workspaces de Replit
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -32,7 +32,7 @@ jobs:
             if (!obj) return;
             for (const key in obj) {
               if (typeof obj[key] === "string" && (obj[key].includes("workspace:") || obj[key].includes("catalog:"))) {
-                delete obj[key];
+                obj[key] = "latest"; // Cambiamos workspace por la versión más reciente
               }
             }
           };
@@ -40,21 +40,21 @@ jobs:
           clean(pkg.devDependencies);
           fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
+
+          # 2. Instalación limpia y build real de React
+          npm install --force
+          npm run build
           
-          # 2. Instalar dependencias y CONSTRUIR la app de React
-          npm install --no-package-lock --force
-          npm run build || mkdir -p dist && echo "<html><body>Revisa el comando build</body></html>" > dist/index.html
-          
-          # 3. Configurar Android con Capacitor
+          # 3. Si por alguna razón no se crea la carpeta dist, la creamos vacía para que no falle el APK
+          mkdir -p dist
+
+          # 4. Configurar Android
           npx cap add android || true
-          
-          # Parche de seguridad para el Namespace y Java 21
           sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    lintOptions { abortOnError false }\n    packagingOptions { pickFirst "**/*.so" }' android/app/build.gradle
-          
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           
-          # Archivo de servicios necesario
+          # Google Services básico
           echo "{\"project_info\":{\"project_number\":\"123\",\"project_id\":\"rutacom-app\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:0:android:0\",\"android_client_info\":{\"package_name\":\"com.rutacom.app\"}},\"api_key\":[{\"current_key\":\"0\"}]}]}" > android/app/google-services.json
           
           npx cap sync android
@@ -68,6 +68,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-Final-React
+          name: RutaCom-App-Real
           path: android/app/build/outputs/apk/**/*.apk
           
