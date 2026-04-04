@@ -1,4 +1,4 @@
-name: Build APK - RutaCom v4 Design
+name: Build APK - RutaCom Pro Final
 
 on:
   workflow_dispatch:
@@ -15,20 +15,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Compilación de Motor de Diseño Avanzado
+      - name: Instalación de Componentes y Diseño
         run: |
-          # Limpiar rastros
+          # 1. Limpieza de entorno
           sed -i 's/catalog:/latest/g' package.json
           sed -i '/@workspace/d' package.json
           rm -f .npmrc package-lock.json
           rm -rf android
           
-          # Instalación de librerías para Tailwind Moderno y UI
+          # 2. Instalación de todas las librerías detectadas en tus archivos
           npm install --force
-          npm install -D tailwindcss @tailwindcss/vite @tailwindcss/typography postcss autoprefixer
-          npm install lucide-react firebase clsx tailwind-merge class-variance-authority
+          npm install -D tailwindcss @tailwindcss/vite postcss autoprefixer typescript ts-node vite @vitejs/plugin-react
+          npm install firebase lucide-react clsx tailwind-merge class-variance-authority @radix-ui/react-slot
           
-          # Crear el index.html que conecte con tu main.tsx
+          # 3. Crear el index.html (Asegurando que esté en la raíz)
           echo '<!DOCTYPE html>
           <html lang="es">
             <head>
@@ -42,7 +42,7 @@ jobs:
             </body>
           </html>' > index.html
 
-          # COMPILAR (Aquí es donde se aplica toda la magia de tu index.css)
+          # 4. COMPILAR (Vite procesará el index.css y las clases de App.tsx)
           npx vite build --outDir dist
 
       - name: Set up JDK 21
@@ -51,7 +51,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Capacitor Sync
+      - name: Sincronización Capacitor
         run: |
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
           echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'RutaCom', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
@@ -67,6 +67,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-Pro-APK
+          name: RutaCom-App-Pro-Final
           path: android/app/build/outputs/apk/debug/*.apk
           
