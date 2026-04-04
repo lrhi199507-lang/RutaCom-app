@@ -7,11 +7,9 @@ import {
   Search, MessageCircle, Wallet, User, LogOut, Car, X, Briefcase, Users, CheckCircle, Star, Send, ArrowLeft, Phone, Edit2, Save, Headset, PlusCircle
 } from 'lucide-react';
 
-const ESTADOS = ["Caracas", "Valencia", "Barquisimeto", "Maracay", "Puerto La Cruz", "Mérida"];
-
 export default function NavegacionPrincipal({ user }: { user: any }) {
   const [vista, setVista] = useState('inicio'); 
-  const [modo, setModo] = useState('pasajero'); // 'pasajero' o 'chofer'
+  const [modo, setModo] = useState('pasajero'); 
   const [busqueda, setBusqueda] = useState("");
   const [mostrarDestinos, setMostrarDestinos] = useState(false);
   
@@ -29,7 +27,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   const [userData, setUserData] = useState<any>({ nombre: "", saldo: 0, saldoRetenido: 0, telefono: "" });
   const [formPerfil, setFormPerfil] = useState({ nombre: "", telefono: "" });
 
-  // Estado para el formulario de publicación del Chófer
   const [formViaje, setFormViaje] = useState({
     conductorNombre: "",
     destino: "",
@@ -48,7 +45,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         const data = snap.data();
         setUserData(data);
         setFormPerfil({ nombre: data.nombre || "", telefono: data.telefono || "" });
-        // Pre-rellenar el nombre del conductor con el nombre de usuario si existe
         setFormViaje(prev => ({ ...prev, conductorNombre: data.nombre || "" }));
       }
     });
@@ -80,7 +76,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         fecha: new Date().toISOString()
       });
       alert("¡Viaje publicado con éxito!");
-      setModo('pasajero'); // Volver a vista de inicio tras publicar
+      setModo('pasajero');
       setFormViaje({ conductorNombre: userData.nombre, destino: "", precio: "", modeloAuto: "", placa: "", puestos: "4", detalles: "" });
     } catch (e) { alert("Error al publicar."); }
   };
@@ -120,7 +116,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 relative overflow-hidden flex flex-col font-sans">
       
-      {/* HEADER CON SWITCH DE MODO */}
       {!['chat_conductor', 'chat_soporte'].includes(vista) && (
         <header className="p-6 pt-12 bg-white border-b shrink-0 z-20">
           <div className="flex justify-between items-center mb-4">
@@ -136,7 +131,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
             </div>
           </div>
           
-          {/* Botón Switcher */}
           <button 
             onClick={() => setModo(modo === 'pasajero' ? 'chofer' : 'pasajero')}
             className={`w-full py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${modo === 'chofer' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}
@@ -164,7 +158,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
 
              <div className="bg-white p-5 rounded-[25px] border shadow-sm flex items-center gap-4 cursor-pointer" onClick={() => setMostrarDestinos(!mostrarDestinos)}>
                 <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><Search size={20}/></div>
-                <div className="flex-1 text-left"><p className="text-[9px] font-black uppercase text-slate-400">¿A dónde vas?</p><p className="text-sm font-black uppercase">{busqueda || "Seleccionar ciudad"}</p></div>
+                <div className="flex-1 text-left">
+                  <p className="text-[9px] font-black uppercase text-slate-400">¿A dónde vas?</p>
+                  <p className="text-sm font-black uppercase">{busqueda || "Seleccionar ciudad"}</p>
+                </div>
              </div>
 
              <div className="space-y-4">
@@ -186,45 +183,23 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* MODO CHÓFER: FORMULARIO DE PUBLICACIÓN */}
         {vista === 'inicio' && modo === 'chofer' && (
           <div className="p-6 space-y-4 pb-32 text-left">
              <div className="flex items-center gap-2 mb-2">
                 <PlusCircle className="text-green-600" size={20}/>
                 <h2 className="text-lg font-black uppercase italic">Publicar mi Ruta</h2>
              </div>
-             
              <div className="bg-white p-6 rounded-[35px] border shadow-sm space-y-4">
-                <div>
-                  <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Tu Nombre de Chófer</label>
-                  <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold mt-1 outline-none focus:ring-2 ring-green-500 transition-all" value={formViaje.conductorNombre} onChange={(e) => setFormViaje({...formViaje, conductorNombre: e.target.value})} placeholder="Ej: Luis Hernández"/>
-                </div>
-                
+                <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold outline-none" value={formViaje.conductorNombre} onChange={(e) => setFormViaje({...formViaje, conductorNombre: e.target.value})} placeholder="Nombre Chófer"/>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Modelo Auto</label>
-                    <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold mt-1 outline-none" value={formViaje.modeloAuto} onChange={(e) => setFormViaje({...formViaje, modeloAuto: e.target.value})} placeholder="Toyota Hilux"/>
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Placa</label>
-                    <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold mt-1 outline-none" value={formViaje.placa} onChange={(e) => setFormViaje({...formViaje, placa: e.target.value})} placeholder="AB123CD"/>
-                  </div>
+                  <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold outline-none" value={formViaje.modeloAuto} onChange={(e) => setFormViaje({...formViaje, modeloAuto: e.target.value})} placeholder="Modelo Auto"/>
+                  <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold outline-none" value={formViaje.placa} onChange={(e) => setFormViaje({...formViaje, placa: e.target.value})} placeholder="Placa"/>
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Destino</label>
-                    <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold mt-1 outline-none" value={formViaje.destino} onChange={(e) => setFormViaje({...formViaje, destino: e.target.value})} placeholder="Ej: Caracas"/>
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Precio ($)</label>
-                    <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold mt-1 outline-none" value={formViaje.precio} onChange={(e) => setFormViaje({...formViaje, precio: e.target.value})} placeholder="10"/>
-                  </div>
+                  <input className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold outline-none" value={formViaje.destino} onChange={(e) => setFormViaje({...formViaje, destino: e.target.value})} placeholder="Destino"/>
+                  <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-bold outline-none" value={formViaje.precio} onChange={(e) => setFormViaje({...formViaje, precio: e.target.value})} placeholder="Precio ($)"/>
                 </div>
-
-                <button onClick={publicarViaje} className="w-full py-5 bg-green-600 text-white rounded-[25px] font-black uppercase italic shadow-lg active:scale-95 transition-all">
-                  Publicar Viaje Ahora
-                </button>
+                <button onClick={publicarViaje} className="w-full py-5 bg-green-600 text-white rounded-[25px] font-black uppercase italic shadow-lg">Publicar Viaje</button>
              </div>
           </div>
         )}
@@ -238,43 +213,41 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               </div>
               <div className="text-left flex-1">
                 <p className="text-sm font-black uppercase italic leading-none">{vista === 'chat_soporte' ? "Soporte Técnico" : (viajeActivo?.conductor || "Conductor")}</p>
-                <p className="text-[9px] text-green-500 font-black uppercase mt-1 animate-pulse">● En línea ahora</p>
+                <p className="text-[9px] text-green-500 font-black uppercase mt-1">● En línea ahora</p>
               </div>
             </div>
-            
             <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50 text-left">
               {vista === 'chat_conductor' && viajeActivo && (
                 <div className="mb-4">
                    {!viajeConfirmado ? (
-                     <button onClick={() => { setViajeConfirmado(true); alert("¡Viaje confirmado!"); }} className="w-full py-4 bg-green-500 text-white rounded-2xl text-[11px] font-black uppercase shadow-lg italic border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all">Confirmar Inicio de Viaje</button>
+                     <button onClick={() => { setViajeConfirmado(true); alert("¡Viaje confirmado!"); }} className="w-full py-4 bg-green-500 text-white rounded-2xl text-[11px] font-black uppercase shadow-lg italic">Confirmar Inicio de Viaje</button>
                    ) : (
-                     <div className="grid grid-cols-2 gap-3 animate-in zoom-in">
-                        <button onClick={async () => { if(window.confirm("¿Cancelar viaje?")) { await updateDoc(doc(db, 'usuarios', user.uid), { saldo: (userData.saldo || 0) + Number(viajeActivo.precio), saldoRetenido: (userData.saldoRetenido || 0) - Number(viajeActivo.precio) }); setViajeActivo(null); setVista('inicio'); }} className="py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase border italic">Cancelar</button>
-                        <button onClick={async () => { await updateDoc(doc(db, 'usuarios', user.uid), { saldoRetenido: (userData.saldoRetenido || 0) - Number(viajeActivo.precio) }); setViajeActivo(null); setVista('inicio'); alert("¡Llegaste!"); }} className="py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg italic">¡Llegué al destino!</button>
+                     <div className="grid grid-cols-2 gap-3">
+                        <button onClick={async () => { if(window.confirm("¿Cancelar?")) { await updateDoc(doc(db, 'usuarios', user.uid), { saldo: (userData.saldo || 0) + Number(viajeActivo.precio), saldoRetenido: (userData.saldoRetenido || 0) - Number(viajeActivo.precio) }); setViajeActivo(null); setVista('inicio'); } }} className="py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase border">Cancelar</button>
+                        <button onClick={async () => { await updateDoc(doc(db, 'usuarios', user.uid), { saldoRetenido: (userData.saldoRetenido || 0) - Number(viajeActivo.precio) }); setViajeActivo(null); setVista('inicio'); alert("¡Llegaste!"); }} className="py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg">¡Llegué!</button>
                      </div>
                    )}
                 </div>
               )}
-              <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm max-w-[85%] border border-slate-100">
-                <p className="text-xs font-bold italic text-slate-700 leading-relaxed">{vista === 'chat_soporte' ? "Hola, cuéntanos tu problema." : `Hola, soy ${viajeActivo?.conductor || 'tu conductor'}. Tengo tu reserva para ${viajeActivo?.destino}.`}</p>
+              <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm max-w-[85%]">
+                <p className="text-xs font-bold italic text-slate-700">{vista === 'chat_soporte' ? "Hola, cuéntanos tu problema." : `Hola, soy ${viajeActivo?.conductor || 'tu conductor'}.`}</p>
               </div>
               {(vista === 'chat_soporte' ? mensajesSoporte : mensajesConductor).map((c, i) => (
-                <div key={i} className={`p-4 rounded-2xl max-w-[85%] shadow-md ${c.yo ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border'}`}>
+                <div key={i} className={`p-4 rounded-2xl max-w-[85%] ${c.yo ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border'}`}>
                   <p className="text-xs font-black italic">{c.texto}</p>
                 </div>
               ))}
             </div>
-
             <div className="p-4 border-t flex gap-3 items-center bg-white">
-              <input type="text" value={vista === 'chat_soporte' ? inputSoporte : inputConductor} onChange={(e) => vista === 'chat_soporte' ? setInputSoporte(e.target.value) : setInputConductor(e.target.value)} placeholder="Escribe aquí..." className="flex-1 bg-slate-100 p-4 rounded-2xl text-xs outline-none font-bold italic"/>
-              <button onClick={vista === 'chat_soporte' ? enviarASoporte : enviarAConductor} className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white"><Send size={24}/></button>
+              <input type="text" value={vista === 'chat_soporte' ? inputSoporte : inputConductor} onChange={(e) => vista === 'chat_soporte' ? setInputSoporte(e.target.value) : setInputConductor(e.target.value)} placeholder="Escribe..." className="flex-1 bg-slate-100 p-4 rounded-2xl text-xs font-bold"/>
+              <button onClick={vista === 'chat_soporte' ? enviarASoporte : enviarAConductor} className="w-14 h-14 bg-blue-600 rounded-2xl text-white flex items-center justify-center"><Send size={24}/></button>
             </div>
           </div>
         )}
         
         {vista === 'perfil' && (
            <div className="p-6 text-center space-y-6 pb-32">
-              <div className="w-32 h-32 bg-blue-600 rounded-[40px] mx-auto flex items-center justify-center text-white border-8 border-white shadow-2xl rotate-3 relative">
+              <div className="w-32 h-32 bg-blue-600 rounded-[40px] mx-auto flex items-center justify-center text-white border-8 border-white shadow-2xl relative">
                 <User size={60}/>
                 <button onClick={() => setEditando(!editando)} className="absolute -bottom-2 -right-2 bg-slate-900 text-white p-2.5 rounded-xl border-4 border-white shadow-lg"><Edit2 size={16}/></button>
               </div>
@@ -297,19 +270,38 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                        {editando ? <input className="w-full bg-slate-50 p-3 rounded-xl border font-bold" value={formPerfil.telefono} onChange={(e) => setFormPerfil({...formPerfil, telefono: e.target.value})}/> : <p className="font-black italic text-sm text-slate-800">{userData.telefono || "Sin registrar"}</p>}
                     </div>
                  </div>
-                 {editando && <button onClick={async () => { await updateDoc(doc(db, 'usuarios', user.uid), formPerfil); setEditando(false); }} className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Guardar Cambios</button>}
+                 {editando && <button onClick={async () => { await updateDoc(doc(db, 'usuarios', user.uid), formPerfil); setEditando(false); }} className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Guardar</button>}
               </div>
               <button onClick={() => auth.signOut()} className="w-full py-5 bg-red-50 text-red-500 font-black italic uppercase text-[11px] rounded-3xl border border-red-100 flex items-center justify-center gap-3"><LogOut size={16}/> Cerrar Sesión</button>
            </div>
         )}
       </main>
 
-      {/* MODAL DE RESERVA (SÓLO MODO PASAJERO) */}
       {viajeSeleccionado && modo === 'pasajero' && !['chat_conductor', 'chat_soporte'].includes(vista) && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
-          <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 animate-in slide-in-from-bottom">
+          <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6">
             <div className="flex justify-between items-start">
-               <div className="flex gap-4">
+               <div className="flex gap-4 text-left">
                   <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{(viajeSeleccionado.conductor || "C")[0]}</div>
-                  <div className="text-left">
-                    <p className="text-[10px] 
+                  <div>
+                    <p className="text-[10px] font-black text-blue-600 uppercase">Conductor Verificado</p>
+                    <h2 className="text-2xl font-black italic uppercase text-slate-800">{viajeSeleccionado.conductor || "Chofer"}</h2>
+                  </div>
+               </div>
+               <button onClick={() => setViajeSeleccionado(null)} className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><X/></button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-2xl border text-left">
+                    <Briefcase size={16} className="text-blue-600 mb-1"/>
+                    <p className="text-[8px] font-black text-slate-400 uppercase">Equipaje</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.kilosMaleta || "20"}kg máx.</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border text-left">
+                    <Users size={16} className="text-blue-600 mb-1"/>
+                    <p className="text-[8px] font-black text-slate-400 uppercase">Puestos</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.puestos || "4"}</p>
+                </div>
+            </div>
+            <div className="flex gap-3">
+               <button onClick={() => {setViajeActivo(viajeSeleccionado); setViajeSeleccionado(null); setVista('chat_conductor');}} className="flex-1 py-5 bg-slate-100 rounded-[22px] font-black text-[10px] uppercase text-slate-600">Chat</button>
+               <button onClick={() => manejarReserva(viajeSeleccionado)} className="flex-[2] py-5 bg-blue-600 rounded-[22px] font-black text-[10px] uppercase text-white shadow-2xl">Confirmar Reserva (${viajeSelecciona
