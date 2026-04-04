@@ -22,50 +22,46 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Limpiar y Compilar App Real
+      - name: Limpiar y Preparar Entorno Real
         run: |
-          # 1. Borrar paquetes de Replit que causan el Error 404 (Captura 160862)
+          # 1. Eliminar rastros de Replit que causan el error 404 (Captura 160862)
           node -e '
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            const eliminarIncompatibles = (deps) => {
+            const limpiar = (deps) => {
               if (!deps) return;
               Object.keys(deps).forEach(key => {
                 if (key.includes("workspace") || String(deps[key]).includes("workspace") || String(deps[key]).includes("catalog")) {
-                  console.log("Eliminando paquete fantasma: " + key);
                   delete deps[key];
                 }
               });
             };
-            eliminarIncompatibles(pkg.dependencies);
-            eliminarIncompatibles(pkg.devDependencies);
+            limpiar(pkg.dependencies);
+            limpiar(pkg.devDependencies);
             fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
 
-          # 2. Instalación forzada
+          # 2. Instalación forzada de dependencias
           npm install --force
 
-          # 3. Solución para el error de Tailwind @theme (Captura 160738)
-          # Instalamos los plugins necesarios para que Vite entienda tu CSS real
-          npm install @tailwindcss/vite tailwindcss vite --no-save
+          # 3. FIX CRÍTICO: Instalar el plugin que falta (Captura 160872) y Tailwind (Captura 160738)
+          npm install @vitejs/plugin-react @tailwindcss/vite tailwindcss vite --save-dev
 
-          # 4. COMPILAR TU APP (Sin rutas de escape)
-          # Si esto falla, el proceso se detendrá y nos dirá el error exacto en TU código
+          # 4. Compilar tu código real (Si esto falla, veremos errores de tu código JS)
           npm run build
 
-          # 5. Sincronizar con Android
+          # 5. Configurar Android
           npx cap add android || true
-          # Asegurar compatibilidad de Java en el proyecto Android
           sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    lintOptions { abortOnError false }' android/app/build.gradle
           npx cap sync android
 
-      - name: Generar APK
+      - name: Build APK (Gradle)
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK
+      - name: Upload APK Real
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-App-Real
