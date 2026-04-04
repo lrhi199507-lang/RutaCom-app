@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore"; // <-- Importamos Firestore
 
-// Tus datos reales
 const firebaseConfig = {
   apiKey: "AIzaSyCXBs3-Z4-SC2UUAtZhjMgMZ74sD9rqq9Y",
   authDomain: "rutacom-4ea87.firebaseapp.com",
@@ -15,8 +15,11 @@ const firebaseConfig = {
 // 1. Inicializamos la App
 const app = initializeApp(firebaseConfig);
 
-// 2. Inicializamos el Auth de forma sencilla
-// Esto corregirá el error de "Missing export"
+// 2. Inicializamos Auth (para usuarios)
 const auth = getAuth(app);
 
-export { auth };
+// 3. Inicializamos Firestore (para saldo y datos)
+const db = getFirestore(app);
+
+// EXPORTAMOS AMBOS
+export { auth, db }; 
