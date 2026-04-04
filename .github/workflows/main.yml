@@ -21,18 +21,16 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Limpieza Agresiva de Replit
+      - name: Limpieza y Construcción
         run: |
-          # 1. Borrar rastros de Replit en package.json (Solución al Error 404 de 160862.jpg)
+          # 1. Eliminar protocolos de Replit (Solución a error 160862.jpg)
           node -e '
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
             const limpiar = (obj) => {
               if (!obj) return;
               for (const key in obj) {
-                if (obj[key].includes("workspace") || obj[key].includes("catalog")) {
-                  delete obj[key];
-                }
+                if (obj[key].includes("workspace") || obj[key].includes("catalog")) delete obj[key];
               }
             };
             limpiar(pkg.dependencies);
@@ -40,19 +38,16 @@ jobs:
             fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
 
-          # 2. Instalar dependencias estándar
+          # 2. Instalar dependencias necesarias
           npm install --force
-
-          # 3. FIX: Instalar plugin faltante (Solución al Error 160872.jpg)
           npm install @vitejs/plugin-react @tailwindcss/vite vite tailwindcss --save-dev
 
-          # 4. COMPILAR APP REAL (Si esto falla, el log nos dirá exactamente qué línea de tu código src/ tiene el error)
+          # 3. COMPILAR TU CÓDIGO REAL
           npm run build
 
-          # 5. Sincronizar con Android
+          # 4. Configurar Android (Sin el error de kotlinOptions de 160913.jpg)
           npx cap add android || true
-          # Forzar compatibilidad con Java 21 en Android
-          sed -i "/android {/a \    namespace \"com.rutacom.app\"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    kotlinOptions { jvmTarget = \"21\" }" android/app/build.gradle
+          sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }' android/app/build.gradle
           npx cap sync android
 
       - name: Generar APK
@@ -61,7 +56,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Subir APK Final
+      - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-App-Real
