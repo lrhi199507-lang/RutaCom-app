@@ -72,15 +72,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       const userDoc = doc(db, 'usuarios', user.uid);
       await updateDoc(userDoc, {
         saldo: userData.saldo - precioViaje,
-        saldoRetenido: (userData.saldoRetenido || 0) + precioViaje,
-        historial: arrayUnion({
-          idViaje: viaje.id,
-          destino: viaje.destino || "No especificado",
-          conductor: viaje.conductor || "Conductor",
-          precio: precioViaje,
-          estado: "retenido", 
-          fecha: new Date().toISOString()
-        })
+        saldoRetenido: (userData.saldoRetenido || 0) + precioViaje
       });
 
       setViajeActivo(viaje);
@@ -117,7 +109,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                     <div className="bg-white/20 p-2 rounded-xl"><Car size={20}/></div>
                     <div className="text-left">
                       <p className="text-[9px] font-black uppercase opacity-70 italic">Viaje en curso</p>
-                      <p className="text-xs font-black italic">Chat con {viajeActivo.conductor}</p>
+                      <p className="text-xs font-black italic">Chat con {viajeActivo.conductor || "Conductor"}</p>
                     </div>
                   </div>
                   <ArrowLeft className="rotate-180" size={18}/>
@@ -142,9 +134,9 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                         <div className="flex gap-4 text-left">
                           <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-600 border"><Car size={24}/></div>
                           <div>
-                            <p className="text-[9px] font-black text-blue-600 uppercase italic leading-none mb-1">• {v.destino}</p>
-                            <p className="font-black text-sm uppercase italic text-slate-800">{v.conductor}</p>
-                            <p className="text-[9px] font-bold text-slate-400 italic mt-1 uppercase">{v.vehiculo}</p>
+                            <p className="text-[9px] font-black text-blue-600 uppercase italic leading-none mb-1">• {v.destino || "Ruta"}</p>
+                            <p className="font-black text-sm uppercase italic text-slate-800">{v.conductor || "Chofer Profesional"}</p>
+                            <p className="text-[9px] font-bold text-slate-400 italic mt-1 uppercase">{v.vehiculo || "Vehículo verificado"}</p>
                           </div>
                         </div>
                         <div className="text-right"><p className="text-xl font-black italic text-blue-600">${v.precio}</p></div>
@@ -167,8 +159,8 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               </div>
             </div>
             
-            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50">
-              <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm max-w-[85%] text-left border border-slate-100">
+            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50 text-left">
+              <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm max-w-[85%] border border-slate-100">
                 <p className="text-xs font-bold italic text-slate-700 leading-relaxed">
                   {vista === 'chat_soporte' ? "Hola, cuéntanos tu problema." : `Hola, soy ${viajeActivo?.conductor || 'tu conductor'}. Tengo tu reserva para ${viajeActivo?.destino}.`}
                 </p>
@@ -182,17 +174,18 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                         try {
                           const userDoc = doc(db, 'usuarios', user.uid);
                           const monto = Number(viajeActivo.precio);
+                          // CORRECCIÓN: Restamos del retenido en lugar de sumar
                           await updateDoc(userDoc, {
                             saldo: (userData.saldo || 0) + monto,
                             saldoRetenido: (userData.saldoRetenido || 0) - monto
                           });
                           setViajeActivo(null); setVista('inicio');
-                          alert("Viaje cancelado.");
-                        } catch(e) { alert("Error."); }
+                          alert("Viaje cancelado correctamente.");
+                        } catch(e) { alert("Error al cancelar."); }
                       }
                     }}
                     className="py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase border italic"
-                  >Cancelar</button>
+                  >Cancelar Viaje</button>
                   <button 
                     onClick={async () => {
                       if(window.confirm("¿Confirmas encuentro? Se liberará el pago.")) {
@@ -200,7 +193,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                           const userDoc = doc(db, 'usuarios', user.uid);
                           await updateDoc(userDoc, { saldoRetenido: (userData.saldoRetenido || 0) - Number(viajeActivo.precio) });
                           setViajeActivo(null); setVista('inicio');
-                          alert("Pago liberado.");
+                          alert("¡Buen viaje! Pago liberado.");
                         } catch(e) { alert("Error."); }
                       }
                     }}
@@ -210,14 +203,14 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               )}
               
               {(vista === 'chat_soporte' ? mensajesSoporte : mensajesConductor).map((c, i) => (
-                <div key={i} className={`p-4 rounded-2xl max-w-[85%] shadow-md ${c.yo ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border'} text-left`}>
+                <div key={i} className={`p-4 rounded-2xl max-w-[85%] shadow-md ${c.yo ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border'}`}>
                   <p className="text-xs font-black italic">{c.texto}</p>
                 </div>
               ))}
             </div>
 
             <div className="p-4 border-t flex gap-3 items-center bg-white">
-              <input type="text" value={vista === 'chat_soporte' ? inputSoporte : inputConductor} onChange={(e) => vista === 'chat_soporte' ? setInputSoporte(e.target.value) : setInputConductor(e.target.value)} placeholder="Mensaje..." className="flex-1 bg-slate-100 p-4 rounded-2xl text-xs outline-none font-bold italic"/>
+              <input type="text" value={vista === 'chat_soporte' ? inputSoporte : inputConductor} onChange={(e) => vista === 'chat_soporte' ? setInputSoporte(e.target.value) : setInputConductor(e.target.value)} placeholder="Escribe aquí..." className="flex-1 bg-slate-100 p-4 rounded-2xl text-xs outline-none font-bold italic"/>
               <button onClick={vista === 'chat_soporte' ? enviarASoporte : enviarAConductor} className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white"><Send size={24}/></button>
             </div>
           </div>
@@ -243,11 +236,11 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                  <div className="space-y-6">
                     <div>
                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-2 ml-1">Nombre</p>
-                       {editando ? <input className="w-full bg-slate-50 p-3 rounded-xl border" value={formPerfil.nombre} onChange={(e) => setFormPerfil({...formPerfil, nombre: e.target.value})}/> : <p className="font-black italic text-sm text-slate-800">{userData.nombre || "Propietario"}</p>}
+                       {editando ? <input className="w-full bg-slate-50 p-3 rounded-xl border font-bold" value={formPerfil.nombre} onChange={(e) => setFormPerfil({...formPerfil, nombre: e.target.value})}/> : <p className="font-black italic text-sm text-slate-800">{userData.nombre || "Usuario"}</p>}
                     </div>
                     <div>
                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-2 ml-1">Teléfono</p>
-                       {editando ? <input className="w-full bg-slate-50 p-3 rounded-xl border" value={formPerfil.telefono} onChange={(e) => setFormPerfil({...formPerfil, telefono: e.target.value})}/> : <p className="font-black italic text-sm text-slate-800">{userData.telefono || "Sin registrar"}</p>}
+                       {editando ? <input className="w-full bg-slate-50 p-3 rounded-xl border font-bold" value={formPerfil.telefono} onChange={(e) => setFormPerfil({...formPerfil, telefono: e.target.value})}/> : <p className="font-black italic text-sm text-slate-800">{userData.telefono || "Sin registrar"}</p>}
                     </div>
                  </div>
                  {editando && <button onClick={async () => { await updateDoc(doc(db, 'usuarios', user.uid), formPerfil); setEditando(false); }} className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Guardar Cambios</button>}
@@ -257,25 +250,43 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         )}
       </main>
 
+      {/* MODAL DE RESERVA CORREGIDO: Recupera equipaje y puestos */}
       {viajeSeleccionado && !['chat_conductor', 'chat_soporte'].includes(vista) && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
           <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 animate-in slide-in-from-bottom">
             <div className="flex justify-between items-start">
                <div className="flex gap-4">
-                  <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{viajeSeleccionado.conductor?.[0]}</div>
+                  <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{viajeSeleccionado.conductor?.[0] || "C"}</div>
                   <div className="text-left">
-                    <p className="text-[10px] font-black text-blue-600 uppercase italic">Conductor Pro</p>
+                    <p className="text-[10px] font-black text-blue-600 uppercase italic">Conductor Verificado</p>
                     <h2 className="text-2xl font-black italic uppercase text-slate-800 leading-none">{viajeSeleccionado.conductor}</h2>
                   </div>
                </div>
                <button onClick={() => setViajeSeleccionado(null)} className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><X/></button>
             </div>
-            <div className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100 text-left">
-               <p className="text-xs font-bold italic text-slate-600">"{viajeSeleccionado.detallesExtras || "Viaje cómodo y seguro."}"</p>
+
+            {/* DETALLES DEL VIAJE REINSTAURADOS */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-2xl border text-left">
+                    <Briefcase size={16} className="text-blue-600 mb-1"/>
+                    <p className="text-[8px] font-black text-slate-400 uppercase">Equipaje</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.equipaje || "20kg máx."}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border text-left">
+                    <Users size={16} className="text-blue-600 mb-1"/>
+                    <p className="text-[8px] font-black text-slate-400 uppercase">Puestos</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.puestos || "Disponibles"}</p>
+                </div>
             </div>
+
+            <div className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100 text-left">
+               <p className="text-[9px] font-black text-blue-500 uppercase mb-1">Notas del conductor:</p>
+               <p className="text-xs font-bold italic text-slate-600">"{viajeSeleccionado.detallesExtras || "No se aceptan mascotas"}"</p>
+            </div>
+
             <div className="flex gap-3">
                <button onClick={() => {setViajeActivo(viajeSeleccionado); setViajeSeleccionado(null); setVista('chat_conductor');}} className="flex-1 py-5 bg-slate-100 rounded-[22px] font-black text-[10px] uppercase italic text-slate-600">Chat</button>
-               <button onClick={() => manejarReserva(viajeSeleccionado)} className="flex-[2] py-5 bg-blue-600 rounded-[22px] font-black text-[10px] uppercase italic text-white shadow-2xl">Reservar (${viajeSeleccionado.precio})</button>
+               <button onClick={() => manejarReserva(viajeSeleccionado)} className="flex-[2] py-5 bg-blue-600 rounded-[22px] font-black text-[10px] uppercase italic text-white shadow-2xl">Confirmar Reserva (${viajeSeleccionado.precio})</button>
             </div>
           </div>
         </div>
@@ -290,4 +301,4 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       )}
     </div>
   );
-            }
+                                                                                 }
