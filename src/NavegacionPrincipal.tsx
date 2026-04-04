@@ -41,6 +41,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   }, [user]);
 
   useEffect(() => {
+    // RESTAURADO: Se mantiene "Viajes" con V mayúscula
     const q = query(collection(db, "Viajes")); 
     const unsubViajes = onSnapshot(q, (snapshot) => {
       setViajesReales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -109,7 +110,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                     <div className="bg-white/20 p-2 rounded-xl"><Car size={20}/></div>
                     <div className="text-left">
                       <p className="text-[9px] font-black uppercase opacity-70 italic">Viaje en curso</p>
-                      <p className="text-xs font-black italic">Chat con {viajeActivo.conductor || "Conductor"}</p>
+                      <p className="text-xs font-black italic">Chat con {viajeActivo.conductor || viajeActivo.Conductor || viajeActivo.nombre || "Conductor"}</p>
                     </div>
                   </div>
                   <ArrowLeft className="rotate-180" size={18}/>
@@ -135,7 +136,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                           <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-600 border"><Car size={24}/></div>
                           <div>
                             <p className="text-[9px] font-black text-blue-600 uppercase italic leading-none mb-1">• {v.destino || "Ruta"}</p>
-                            <p className="font-black text-sm uppercase italic text-slate-800">{v.conductor || "Chofer Profesional"}</p>
+                            <p className="font-black text-sm uppercase italic text-slate-800">{v.conductor || v.Conductor || v.nombre || "Chofer Profesional"}</p>
                             <p className="text-[9px] font-bold text-slate-400 italic mt-1 uppercase">{v.vehiculo || "Vehículo verificado"}</p>
                           </div>
                         </div>
@@ -151,10 +152,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
             <div className="p-6 pt-12 border-b flex items-center gap-4">
               <button onClick={() => setVista('inicio')} className="p-2 bg-slate-50 rounded-full"><ArrowLeft size={20}/></button>
               <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold italic shadow-lg">
-                {vista === 'chat_soporte' ? <Headset size={22}/> : (viajeActivo?.conductor?.[0] || "C")}
+                {vista === 'chat_soporte' ? <Headset size={22}/> : (viajeActivo?.conductor || viajeActivo?.Conductor || viajeActivo?.nombre || "C")[0]}
               </div>
               <div className="text-left flex-1">
-                <p className="text-sm font-black uppercase italic leading-none">{vista === 'chat_soporte' ? "Soporte Técnico" : (viajeActivo?.conductor || "Conductor")}</p>
+                <p className="text-sm font-black uppercase italic leading-none">{vista === 'chat_soporte' ? "Soporte Técnico" : (viajeActivo?.conductor || viajeActivo?.Conductor || viajeActivo?.nombre || "Conductor")}</p>
                 <p className="text-[9px] text-green-500 font-black uppercase mt-1 animate-pulse">● En línea ahora</p>
               </div>
             </div>
@@ -162,7 +163,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
             <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50 text-left">
               <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm max-w-[85%] border border-slate-100">
                 <p className="text-xs font-bold italic text-slate-700 leading-relaxed">
-                  {vista === 'chat_soporte' ? "Hola, cuéntanos tu problema." : `Hola, soy ${viajeActivo?.conductor || 'tu conductor'}. Tengo tu reserva para ${viajeActivo?.destino}.`}
+                  {vista === 'chat_soporte' ? "Hola, cuéntanos tu problema." : `Hola, soy ${viajeActivo?.conductor || viajeActivo?.Conductor || viajeActivo?.nombre || 'tu conductor'}. Tengo tu reserva para ${viajeActivo?.destino}.`}
                 </p>
               </div>
 
@@ -174,7 +175,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                         try {
                           const userDoc = doc(db, 'usuarios', user.uid);
                           const monto = Number(viajeActivo.precio);
-                          // CORRECCIÓN: Restamos del retenido en lugar de sumar
                           await updateDoc(userDoc, {
                             saldo: (userData.saldo || 0) + monto,
                             saldoRetenido: (userData.saldoRetenido || 0) - monto
@@ -256,16 +256,16 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 animate-in slide-in-from-bottom">
             <div className="flex justify-between items-start">
                <div className="flex gap-4">
-                  <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{viajeSeleccionado.conductor?.[0] || "C"}</div>
+                  <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{(viajeSeleccionado.conductor || viajeSeleccionado.Conductor || viajeSeleccionado.nombre || "C")[0]}</div>
                   <div className="text-left">
                     <p className="text-[10px] font-black text-blue-600 uppercase italic">Conductor Verificado</p>
-                    <h2 className="text-2xl font-black italic uppercase text-slate-800 leading-none">{viajeSeleccionado.conductor}</h2>
+                    <h2 className="text-2xl font-black italic uppercase text-slate-800 leading-none">{viajeSeleccionado.conductor || viajeSeleccionado.Conductor || viajeSeleccionado.nombre || "Chofer"}</h2>
                   </div>
                </div>
                <button onClick={() => setViajeSeleccionado(null)} className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><X/></button>
             </div>
 
-            {/* DETALLES DEL VIAJE REINSTAURADOS */}
+            {/* DETALLES DEL VIAJE REINSTAURADOS (Sin tocar) */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl border text-left">
                     <Briefcase size={16} className="text-blue-600 mb-1"/>
@@ -301,4 +301,5 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       )}
     </div>
   );
-                                                                                 }
+      }
+              
