@@ -1,8 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuth } from "firebase/auth";
 
-// Tus datos reales de la consola
+// Tus datos reales
 const firebaseConfig = {
   apiKey: "AIzaSyCXBs3-Z4-SC2UUAtZhjMgMZ74sD9rqq9Y",
   authDomain: "rutacom-4ea87.firebaseapp.com",
@@ -13,14 +12,11 @@ const firebaseConfig = {
   measurementId: "G-2TYQF2QBYD"
 };
 
-// 1. Inicializamos la App de Firebase
+// 1. Inicializamos la App
 const app = initializeApp(firebaseConfig);
 
-// 2. Configuramos la Autenticación para que RECUERDE al usuario
-// Esto usa el almacenamiento del teléfono para que no pida login cada vez
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-});
+// 2. Inicializamos el Auth de forma sencilla
+// Esto corregirá el error de "Missing export"
+const auth = getAuth(app);
 
 export { auth };
-
