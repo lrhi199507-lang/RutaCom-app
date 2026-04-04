@@ -1,14 +1,74 @@
-      - name: Instalación y Compilación Real
+name: Build APK - RutaCom Final
+
+on:
+  workflow_dispatch: # ESTO ES LO QUE CREA EL BOTÓN DE "RUN WORKFLOW"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalación y Compilación de RutaCom
         run: |
-          # Limpiar protocolos de Replit
+          # 1. Limpiar rastro de Replit
           sed -i 's/catalog:/latest/g' package.json
           sed -i '/@workspace/d' package.json
           rm -f .npmrc package-lock.json
           
-          # Instalación de TODAS las librerías necesarias para tu código real
+          # 2. Borrar archivos de Android viejos y el index falso
+          rm -rf android gradlew build.gradle settings.gradle index.html
+          
+          # 3. Instalación de librerías reales (Firebase + Lucide + Vite)
           npm install --force
           npm install firebase lucide-react typescript ts-node vite @vitejs/plugin-react --save-dev
           
-          # Compilar
+          # 4. Crear el index.html correcto para que cargue tu código real
+          echo '<!DOCTYPE html>
+          <html lang="es">
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>RutaCom</title>
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="/src/main.tsx"></script>
+            </body>
+          </html>' > index.html
+
+          # 5. Compilar la aplicación
           npx vite build --outDir dist
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Configuración de Capacitor
+        run: |
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
+          # Forzamos configuración apuntando a 'dist'
+          echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'RutaCom', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Generar APK Final
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RutaCom-App-Real
+          path: android/app/build/outputs/apk/debug/*.apk
           
