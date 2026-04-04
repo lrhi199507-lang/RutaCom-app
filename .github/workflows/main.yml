@@ -10,51 +10,52 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Set up Node.js 22
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
-      - name: Limpieza y Construcción
+      - name: Instalar y Compilar
         run: |
-          # 1. Eliminar protocolos de Replit (Solución a error 160862.jpg)
-          node -e '
-            const fs = require("fs");
-            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            const limpiar = (obj) => {
-              if (!obj) return;
-              for (const key in obj) {
-                if (obj[key].includes("workspace") || obj[key].includes("catalog")) delete obj[key];
-              }
-            };
-            limpiar(pkg.dependencies);
-            limpiar(pkg.devDependencies);
-            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
-          '
-
-          # 2. Instalar dependencias necesarias
+          # 1. Limpiar package.json de rastros de Replit
+          sed -i 's/"catalog:[^"]*"/"latest"/g' package.json
+          sed -i 's/"workspace:[^"]*"/"latest"/g' package.json
+          
+          # 2. Instalación limpia
           npm install --force
-          npm install @vitejs/plugin-react @tailwindcss/vite vite tailwindcss --save-dev
-
-          # 3. COMPILAR TU CÓDIGO REAL
+          
+          # 3. COMPILAR LA APP (Aquí es donde se crea tu código real)
           npm run build
+          
+          # VERIFICACIÓN CRÍTICA: Si la carpeta dist no existe o está vacía, falla aquí.
+          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+            echo "ERROR: La carpeta dist está vacía. Tu código no se compiló."
+            exit 1
+          fi
 
-          # 4. Configurar Android (Sin el error de kotlinOptions de 160913.jpg)
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Integrar con Android
+        run: |
+          # Instalar capacitor CLI
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+          
+          # Sincronizar la carpeta 'dist' con el proyecto Android
           npx cap add android || true
-          sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }' android/app/build.gradle
+          # Forzamos que Capacitor use la carpeta 'dist' que acabamos de crear
+          sed -i 's/"webDir": "[^"]*"/"webDir": "dist"/' capacitor.config.json || echo '{"webDir": "dist"}' > capacitor.config.json
+          
           npx cap sync android
 
-      - name: Generar APK
+      - name: Construir APK Nativo
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug
 
       - name: Subir APK
         uses: actions/upload-artifact@v4
