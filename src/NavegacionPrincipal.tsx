@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebaseConfig'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'; // Añadimos updateDoc
 import { 
-  Search, MessageCircle, Star, Wallet, User, LogOut, Send
+  Search, MessageCircle, Star, Wallet, User, LogOut, Send, Save
 } from 'lucide-react';
 
 const ESTADOS = ["Caracas", "Valencia", "Barquisimeto", "Maracay", "Puerto La Cruz", "Mérida"];
@@ -13,33 +13,65 @@ const EJEMPLOS_VIAJES = [
   { id: 'e2', destino: 'Valencia', precio: 12, conductor: 'Elena Rodríguez', vehiculo: 'Ford Fiesta', rating: 4.9 }
 ];
 
-// Cambiamos el nombre de la función y recibimos al 'user'
 export default function NavegacionPrincipal({ user }: { user: any }) {
   const [vista, setVista] = useState('inicio'); 
   const [busqueda, setBusqueda] = useState("");
   const [mostrarDestinos, setMostrarDestinos] = useState(false);
   const [viajeSeleccionado, setViajeSeleccionado] = useState<any>(null);
+  
+  // Estado para los datos del usuario
   const [userData, setUserData] = useState({ 
-    nombre: "Usuario", saldo: 50.0, rating: 5.0, viajesRealizados: 0, historial: [] 
+    nombre: "", 
+    telefono: "",
+    saldo: 50.0, 
+    rating: 5.0, 
+    viajesRealizados: 0 
   });
-  const [mensajesSoporte, setMensajesSoporte] = useState([{ id: 1, text: "Hola, bienvenido al soporte real.", sender: "bot" }]);
-  const [inputMsg, setInputMsg] = useState("");
 
-  // Conexión real a la base de datos de este usuario específico
+  const [editando, setEditando] = useState(false);
+
+  // Escuchar cambios en Firestore en tiempo real
   useEffect(() => {
     if (!user) return;
     const userDoc = doc(db, 'usuarios', user.uid);
     const unsub = onSnapshot(userDoc, (snap) => {
-      if (snap.exists()) { setUserData(snap.data() as any); }
-      else { setDoc(userDoc, userData); }
+      if (snap.exists()) {
+        setUserData(snap.data() as any);
+      } else {
+        // Si es un usuario nuevo, creamos su perfil inicial
+        setDoc(userDoc, {
+          nombre: "Nuevo Usuario",
+          telefono: "",
+          saldo: 50.0,
+          rating: 5.0,
+          correo: user.email
+        });
+      }
     });
     return () => unsub();
   }, [user]);
 
+  // FUNCIÓN PARA GUARDAR DATOS EN FIREBASE
+  const guardarPerfil = async () => {
+    try {
+      const userDoc = doc(db, 'usuarios', user.uid);
+      await updateDoc(userDoc, {
+        nombre: userData.nombre,
+        telefono: userData.telefono
+      });
+      setEditando(false);
+      alert("¡Perfil actualizado!");
+    } catch (error) {
+      alert("Error al guardar: " + error);
+    }
+  };
+
+  const [mensajesSoporte, setMensajesSoporte] = useState([{ id: 1, text: "Hola, ¿en qué podemos ayudarte?", sender: "bot" }]);
+  const [inputMsg, setInputMsg] = useState("");
+
   const handleEnviarMsg = () => {
     if (!inputMsg.trim()) return;
-    const nuevoMsg = { id: Date.now(), text: inputMsg, sender: 'yo' };
-    setMensajesSoporte(prev => [...prev, nuevoMsg]);
+    setMensajesSoporte(prev => [...prev, { id: Date.now(), text: inputMsg, sender: 'yo' }]);
     setInputMsg("");
   };
 
@@ -49,11 +81,9 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       <header className="p-6 pt-12 bg-white flex justify-between items-center border-b shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic text-xl">R</div>
-          <div>
+          <div className="text-left">
             <p className="text-[10px] font-black uppercase text-slate-400 italic">RutaCom Pro</p>
-            <div className="flex items-center gap-1 text-yellow-500 font-black text-[10px] italic">
-               <Star size={10} fill="currentColor"/> {userData.rating.toFixed(1)}
-            </div>
+            <p className="text-xs font-bold uppercase">{userData.nombre || "Cargando..."}</p>
           </div>
         </div>
         <div className="bg-slate-900 text-white px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg">
@@ -117,23 +147,40 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         {vista === 'perfil' && (
           <div className="text-center space-y-6">
             <div className="w-24 h-24 bg-blue-50 rounded-full mx-auto flex items-center justify-center text-blue-600"><User size={40}/></div>
-            <h2 className="text-xl font-black italic uppercase">Mi Perfil</h2>
-            <div className="bg-white p-6 rounded-[30px] border shadow-sm text-left text-xs">
-               <p className="text-[10px] font-black text-slate-400 uppercase italic mb-4">Información</p>
-               <div className="flex justify-between py-2 border-b">
-                 <span className="font-bold uppercase italic text-slate-500">Correo</span>
-                 <span className="font-black italic">{user.email}</span>
+            
+            <div className="bg-white p-6 rounded-[30px] border shadow-sm text-left">
+               <div className="flex justify-between items-center mb-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase italic">Mis Datos</p>
+                  <button onClick={() => editando ? guardarPerfil() : setEditando(true)} className="text-blue-600 text-[10px] font-black uppercase italic flex items-center gap-1">
+                    {editando ? <><Save size={12}/> Guardar</> : "Editar"}
+                  </button>
                </div>
-               <div className="flex justify-between py-2">
-                 <span className="font-bold uppercase italic text-slate-500">Saldo</span>
-                 <span className="font-black italic text-green-600">${userData.saldo.toFixed(2)}</span>
+               
+               <div className="space-y-4">
+                 <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Nombre Completo</label>
+                    {editando ? (
+                      <input className="w-full p-2 bg-slate-50 rounded-lg text-xs font-bold outline-none border border-blue-100" value={userData.nombre} onChange={e => setUserData({...userData, nombre: e.target.value})}/>
+                    ) : (
+                      <p className="font-black italic text-sm">{userData.nombre}</p>
+                    )}
+                 </div>
+                 <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Teléfono</label>
+                    {editando ? (
+                      <input className="w-full p-2 bg-slate-50 rounded-lg text-xs font-bold outline-none border border-blue-100" value={userData.telefono} onChange={e => setUserData({...userData, telefono: e.target.value})}/>
+                    ) : (
+                      <p className="font-black italic text-sm">{userData.telefono || "No registrado"}</p>
+                    )}
+                 </div>
+                 <div className="pt-2 border-t">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Correo</label>
+                    <p className="font-black italic text-slate-400 text-xs">{user.email}</p>
+                 </div>
                </div>
             </div>
-            {/* BOTÓN DE CERRAR SESIÓN REAL */}
-            <button 
-              onClick={() => signOut(auth)} 
-              className="w-full py-4 text-red-500 font-black italic uppercase text-[10px] flex items-center justify-center gap-2 border border-red-50 rounded-2xl"
-            >
+
+            <button onClick={() => signOut(auth)} className="w-full py-4 text-red-500 font-black italic uppercase text-[10px] flex items-center justify-center gap-2 border border-red-50 rounded-2xl mt-4">
               <LogOut size={14}/> Cerrar Sesión
             </button>
           </div>
@@ -146,17 +193,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         <button onClick={() => setVista('chat')} className={`${vista === 'chat' ? 'text-blue-600' : 'text-slate-300'}`}><MessageCircle size={22}/></button>
         <button onClick={() => setVista('perfil')} className={`${vista === 'perfil' ? 'text-blue-600' : 'text-slate-300'}`}><User size={22}/></button>
       </nav>
-
-      {viajeSeleccionado && (
-        <div className="fixed inset-0 z-[100] flex items-end">
-           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setViajeSeleccionado(null)}></div>
-           <div className="relative w-full bg-white rounded-t-[40px] p-8 text-center shadow-2xl">
-              <h4 className="text-xl font-black italic uppercase mb-2">{viajeSeleccionado.conductor}</h4>
-              <p className="text-[10px] font-black text-blue-500 uppercase italic mb-6">{viajeSeleccionado.vehiculo}</p>
-              <button onClick={() => { setViajeSeleccionado(null); alert('Viaje Aceptado'); }} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black italic uppercase text-xs">Confirmar Viaje</button>
-           </div>
-        </div>
-      )}
     </div>
   );
-          }
+}
