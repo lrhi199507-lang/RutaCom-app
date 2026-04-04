@@ -105,7 +105,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 relative overflow-hidden flex flex-col font-sans">
       
-      {/* HEADER DINÁMICO */}
+      {/* HEADER */}
       {!['chat_conductor', 'chat_soporte'].includes(vista) && (
         <header className="p-6 pt-12 bg-white border-b shrink-0 z-20">
           <div className="flex justify-between items-center mb-4">
@@ -127,7 +127,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       )}
 
       <main className="flex-1 overflow-y-auto">
-        {/* VISTA: INICIO PASAJERO */}
+        {/* INICIO PASAJERO */}
         {vista === 'inicio' && modo === 'pasajero' && (
           <div className="p-6 space-y-6 pb-32">
              <div className="relative">
@@ -169,9 +169,9 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* VISTA: INICIO CHÓFER */}
+        {/* INICIO CHÓFER */}
         {vista === 'inicio' && modo === 'chofer' && (
-          <div className="p-6 space-y-4 pb-32 text-left animate-in slide-in-from-right duration-300">
+          <div className="p-6 space-y-4 pb-32 text-left">
              <div className="flex items-center gap-2 mb-2">
                 <PlusCircle className="text-green-600" size={20}/>
                 <h2 className="text-lg font-black uppercase italic">Publicar mi Ruta</h2>
@@ -191,7 +191,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* VISTA: CHAT CONDUCTOR */}
+        {/* CHAT CONDUCTOR */}
         {vista === 'chat_conductor' && (
           <div className="h-full flex flex-col bg-white">
             <div className="p-6 pt-12 border-b flex items-center gap-4">
@@ -222,7 +222,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* VISTA: SOPORTE */}
+        {/* SOPORTE */}
         {vista === 'chat_soporte' && (
           <div className="h-full flex flex-col bg-white">
             <div className="p-6 pt-12 border-b flex items-center gap-4 bg-slate-900 text-white">
@@ -249,7 +249,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* VISTA: PERFIL */}
+        {/* PERFIL */}
         {vista === 'perfil' && (
            <div className="p-6 space-y-6 pb-32">
               <div className="w-32 h-32 bg-blue-600 rounded-[40px] mx-auto flex items-center justify-center text-white border-8 border-white shadow-2xl relative">
@@ -277,10 +277,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         )}
       </main>
 
-      {/* MODAL DETALLES VIAJE (CORREGIDO) */}
+      {/* MODAL DETALLES */}
       {viajeSeleccionado && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
-          <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 animate-in slide-in-from-bottom duration-300">
+          <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6">
             <div className="flex justify-between items-start">
                <div className="flex gap-4 text-left">
                   <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{(viajeSeleccionado.conductor || "C")[0]}</div>
@@ -295,17 +295,17 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                 <div className="bg-slate-50 p-4 rounded-2xl border text-left">
                     <Briefcase size={16} className="text-blue-600 mb-1"/>
                     <p className="text-[8px] font-black text-slate-400 uppercase">EQUIPAJE</p>
-                    <p className="text-xs font-black italic">{viajeSeleccionado.kilosMaleta || "HASTA 20KG"}</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.kilosMaleta || "20kg máx."}</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl border text-left">
                     <Users size={16} className="text-blue-600 mb-1"/>
                     <p className="text-[8px] font-black text-slate-400 uppercase">PUESTOS</p>
-                    <p className="text-xs font-black italic">{viajeSeleccionado.puestos || 4} LIBRES</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.puestos || 3} Libres</p>
                 </div>
             </div>
             <div className="bg-blue-50/50 p-5 rounded-3xl text-left border border-blue-100">
                <p className="text-[10px] font-black text-blue-600 uppercase mb-1 italic">NOTAS DEL CONDUCTOR:</p>
-               <p className="text-xs font-bold italic text-slate-600">"{viajeSeleccionado.detallesExtras || "Sin notas adicionales"}"</p>
+               <p className="text-xs font-bold italic text-slate-600">"{viajeSeleccionado.detallesExtras || "No se aceptan mascotas"}"</p>
             </div>
             <div className="flex gap-3">
                <button onClick={() => { setViajeActivo(viajeSeleccionado); setViajeSeleccionado(null); setVista('chat_conductor'); }} className="flex-1 py-5 bg-slate-100 rounded-[22px] font-black text-[10px] uppercase text-slate-600">CHAT</button>
@@ -317,4 +317,5 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
 
       {/* NAVBAR INFERIOR */}
       {!['chat_conductor', 'chat_soporte'].includes(vista) && (
-        <nav className="absolute bottom-6 left-6 right-6 bg-slate-900 rounded-[35px] p-4 flex justify-ar
+        <nav className="absolute bottom-6 left-6 right-6 bg-slate-900 rounded-[35px] p-4 flex justify-around items-center z-40 shadow-2xl">
+          <button onClick={() => setVista('inicio')} className={`p-2 transition-all ${vista === 'inicio' ? 'text-bl
