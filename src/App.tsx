@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-// Importamos Firebase
+// Importamos Firebase desde tu archivo de configuración
 import { auth } from './firebaseConfig'; 
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  signOut 
 } from 'firebase/auth';
 
 export default function App() {
@@ -15,17 +15,18 @@ export default function App() {
   const [cargando, setCargando] = useState(false);
   const [usuario, setUsuario] = useState<any>(null);
 
-  // ESTA FUNCIÓN REVISA SI YA ESTÁS LOGUEADO
+  // REVISAR SI HAY SESIÓN ACTIVA
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
-  const manejarAutenticacion = async () => {
+  const manejarAutenticacion = async (e: React.FormEvent) => {
+    e.preventDefault(); // Evita que la página se recargue
     if (!email || !password) {
-      Alert.alert("Error", "Por favor rellena todos los campos");
+      alert("Por favor rellena todos los campos");
       return;
     }
     
@@ -33,91 +34,81 @@ export default function App() {
     try {
       if (esRegistro) {
         await createUserWithEmailAndPassword(auth, email, password);
-        Alert.alert("¡Éxito!", "Cuenta creada correctamente");
+        alert("¡Cuenta creada correctamente!");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (error: any) {
       let mensaje = "Ocurrió un error";
-      if (error.code === 'auth/weak-password') mensaje = "La clave es muy corta";
+      if (error.code === 'auth/weak-password') mensaje = "La clave es muy corta (mínimo 6 caracteres)";
       if (error.code === 'auth/email-already-in-use') mensaje = "El correo ya está registrado";
       if (error.code === 'auth/invalid-credential') mensaje = "Correo o clave incorrectos";
-      Alert.alert("Aviso", mensaje);
+      alert(mensaje);
     }
     setCargando(false);
   };
 
-  // SI EL USUARIO YA ESTÁ LOGUEADO, MOSTRAR EL HOME
+  // VISTA SI YA ESTÁ LOGUEADO
   if (usuario) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Bienvenido, {usuario.email}</Text>
-        <TouchableOpacity 
-          onPress={() => auth.signOut()}
-          className="mt-4 bg-red-500 p-4 rounded-xl"
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f172a] text-white">
+        <h2 className="text-2xl font-bold mb-4">Bienvenido, {usuario.email}</h2>
+        <button 
+          onClick={() => signOut(auth)}
+          className="bg-red-500 hover:bg-red-600 px-6 py-2 rounded-xl font-bold transition-colors"
         >
-          <Text className="text-white">CERRAR SESIÓN</Text>
-        </TouchableOpacity>
-      </View>
+          CERRAR SESIÓN
+        </button>
+      </div>
     );
   }
 
-  // PANTALLA DE INICIO (LOGIN / REGISTRO)
+  // PANTALLA DE INICIO (VISTA WEB COMPATIBLE CON VITE)
   return (
-    <View className="flex-1 bg-[#0f172a] items-center justify-center px-8">
-      {/* LOGO */}
-      <View className="bg-blue-600 w-24 h-24 rounded-3xl items-center justify-center mb-6">
-        <Text className="text-white text-5xl font-bold italic">R</Text>
-      </View>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f172a] px-8 text-center">
       
-      <Text className="text-white text-4xl font-bold italic mb-2">RutaCom</Text>
-      <Text className="text-gray-400 tracking-[4px] text-xs mb-10">CONECTANDO DESTINOS</Text>
+      {/* LOGO SIMULADO */}
+      <div className="bg-blue-600 w-24 h-24 rounded-[2rem] flex items-center justify-center mb-6 shadow-lg">
+        <span className="text-white text-6xl font-bold italic">R</span>
+      </div>
+      
+      <h1 className="text-white text-5xl font-bold italic mb-2">RutaCom</h1>
+      <p className="text-gray-400 tracking-[6px] text-xs mb-10 uppercase">Conectando Destinos</p>
 
-      {/* FORMULARIO NUEVO */}
-      <View className="w-full gap-y-4 mb-6">
-        <TextInput 
+      {/* FORMULARIO */}
+      <form onSubmit={manejarAutenticacion} className="w-full max-w-sm flex flex-col gap-4 mb-6">
+        <input 
+          type="email"
           placeholder="Correo electrónico"
-          placeholderTextColor="#9ca3af"
-          className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white"
+          className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all"
           value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
+          onChange={(e) => setEmail(e.target.value)}
         />
-        <TextInput 
+        <input 
+          type="password"
           placeholder="Contraseña"
-          placeholderTextColor="#9ca3af"
-          className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white"
+          className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all"
           value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+          onChange={(e) => setPassword(e.target.value)}
         />
-      </View>
 
-      {/* BOTÓN PRINCIPAL */}
-      <TouchableOpacity 
-        onPress={manejarAutenticacion}
-        disabled={cargando}
-        className="w-full bg-blue-600 p-5 rounded-2xl items-center"
-      >
-        {cargando ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text className="text-white font-bold tracking-widest">
-            {esRegistro ? "CREAR CUENTA" : "ENTRAR A LA APP"}
-          </Text>
-        )}
-      </TouchableOpacity>
+        {/* BOTÓN PRINCIPAL */}
+        <button 
+          type="submit"
+          disabled={cargando}
+          className="w-full bg-blue-600 hover:bg-blue-700 p-5 rounded-2xl text-white font-bold tracking-widest shadow-lg transition-all disabled:opacity-50"
+        >
+          {cargando ? "CARGANDO..." : (esRegistro ? "CREAR CUENTA" : "ENTRAR A LA APP")}
+        </button>
+      </form>
 
       {/* CAMBIAR ENTRE LOGIN Y REGISTRO */}
-      <TouchableOpacity 
-        onPress={() => setEsRegistro(!esRegistro)}
-        className="mt-6"
+      <button 
+        onClick={() => setEsRegistro(!esRegistro)}
+        className="text-gray-400 text-sm hover:text-white transition-colors underline decoration-dotted underline-offset-4"
       >
-        <Text className="text-gray-400 text-sm">
-          {esRegistro ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
-        </Text>
-      </TouchableOpacity>
-    </View>
+        {esRegistro ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
+      </button>
+    </div>
   );
 }
