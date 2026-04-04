@@ -321,4 +321,9 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         <nav className="absolute bottom-6 left-6 right-6 bg-slate-900/95 backdrop-blur-xl rounded-[35px] p-4 flex justify-around items-center z-40 border border-white/10 shadow-2xl">
           <button onClick={() => setVista('inicio')} className={`p-2 transition-all ${vista === 'inicio' ? 'text-blue-400 scale-125' : 'text-slate-500'}`}><Search size={26}/></button>
           <button onClick={() => setVista('chat_soporte')} className={`p-2 transition-all ${vista === 'chat_soporte' ? 'text-blue-400 scale-125' : 'text-slate-500'}`}><Headset size={26}/></button>
-          <button onClick={() => setVista('perfil')} className={`p-2 transition-all ${vista === 'perfil' ? 'text-blue-40
+          <button onClick={() => setVista('perfil')} className={`p-2 transition-all ${vista === 'perfil' ? 'text-blue-400 scale-125' : 'text-slate-500'}`}><User size={26}/></button>
+        </nav>
+      )}
+    </div>
+  );
+}
