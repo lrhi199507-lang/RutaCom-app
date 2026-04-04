@@ -1,4 +1,4 @@
-name: Build APK Final
+name: Build APK Final - App Real
 
 on:
   workflow_dispatch:
@@ -22,49 +22,52 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Limpieza y Construccion Real
+      - name: Limpiar y Compilar App Real
         run: |
-          # 1. Script para ELIMINAR dependencias rotas de Replit (@workspace y catalog)
+          # 1. Borrar paquetes de Replit que causan el Error 404 (Captura 160862)
           node -e '
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            const limpiar = (deps) => {
+            const eliminarIncompatibles = (deps) => {
               if (!deps) return;
               Object.keys(deps).forEach(key => {
                 if (key.includes("workspace") || String(deps[key]).includes("workspace") || String(deps[key]).includes("catalog")) {
-                  console.log("Eliminando paquete incompatible: " + key);
+                  console.log("Eliminando paquete fantasma: " + key);
                   delete deps[key];
                 }
               });
             };
-            limpiar(pkg.dependencies);
-            limpiar(pkg.devDependencies);
+            eliminarIncompatibles(pkg.dependencies);
+            eliminarIncompatibles(pkg.devDependencies);
             fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
 
-          # 2. Instalacion limpia ignorando conflictos de versiones (Peer Deps)
-          npm install --force --legacy-peer-deps
+          # 2. Instalación forzada
+          npm install --force
 
-          # 3. Instalacion de emergencia de Tailwind y Vite para evitar el error @theme
-          npm install tailwindcss @tailwindcss/vite vite @vitejs/plugin-react --no-save
+          # 3. Solución para el error de Tailwind @theme (Captura 160738)
+          # Instalamos los plugins necesarios para que Vite entienda tu CSS real
+          npm install @tailwindcss/vite tailwindcss vite --no-save
 
-          # 4. Intentar construir TU aplicacion real
+          # 4. COMPILAR TU APP (Sin rutas de escape)
+          # Si esto falla, el proceso se detendrá y nos dirá el error exacto en TU código
           npm run build
 
-          # 5. Configurar Android con tu codigo real
+          # 5. Sincronizar con Android
           npx cap add android || true
+          # Asegurar compatibilidad de Java en el proyecto Android
           sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    lintOptions { abortOnError false }' android/app/build.gradle
           npx cap sync android
 
-      - name: Build APK (Gradle)
+      - name: Generar APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug -x test -x lint --no-daemon
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-App-Real
-          path: android/app/build/outputs/apk/**/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
           
