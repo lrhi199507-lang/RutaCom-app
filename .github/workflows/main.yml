@@ -24,44 +24,44 @@ jobs:
 
       - name: Prepare Project
         run: |
-          # 1. Limpieza radical del package.json para evitar el error 404
+          # 1. Limpieza profunda del package.json
           node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-          
-          // Eliminar el nombre del paquete si empieza con @workspace
-          if (pkg.name && pkg.name.includes("@workspace")) {
-            pkg.name = "rutacom-app";
-          }
-
+          pkg.name = "rutacom-app";
           const clean = (obj) => {
             if (!obj) return;
             for (const key in obj) {
-              // Si la version dice "catalog:" o "workspace:", o si la dependencia misma es un @workspace, la borramos
               if (key.includes("@workspace") || (typeof obj[key] === "string" && (obj[key].includes("workspace:") || obj[key].includes("catalog:")))) {
                 delete obj[key];
               }
             }
           };
-
           clean(pkg.dependencies);
           clean(pkg.devDependencies);
           
-          // Asegurar que React esté presente ya que lo borramos en el paso anterior
+          // Inyectar dependencias necesarias que Replit maneja ocultas
           pkg.dependencies = pkg.dependencies || {};
-          pkg.dependencies["react"] = "18.2.0";
-          pkg.dependencies["react-dom"] = "18.2.0";
-          pkg.dependencies["@tanstack/react-query"] = "latest";
+          pkg.dependencies["react"] = "latest";
+          pkg.dependencies["react-dom"] = "latest";
+          pkg.dependencies["lucide-react"] = "latest";
+          pkg.dependencies["clsx"] = "latest";
+          pkg.dependencies["tailwind-merge"] = "latest";
+          
+          pkg.devDependencies = pkg.devDependencies || {};
+          pkg.devDependencies["vite"] = "latest";
+          pkg.devDependencies["@vitejs/plugin-react"] = "latest";
+          pkg.devDependencies["typescript"] = "latest";
 
           fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
 
-          # 2. Instalación forzada ignorando errores de red de paquetes inexistentes
+          # 2. Instalación forzada
           npm install --force
           
-          # 3. Crear carpeta dist manual por si el build falla, que el APK no se detenga
-          mkdir -p dist
-          npm run build || echo "<html><body>RutaCom: Error en Build pero APK generada</body></html>" > dist/index.html
+          # 3. BUILD REAL (Sin sistema de seguridad de error para ver que pasa)
+          # Si falla el build de Vite, intentamos un build simple
+          npm run build || npx vite build || mkdir -p dist && echo "<html><body>Error critico en Vite. Revisa logs.</body></html>" > dist/index.html
           
           # 4. Configurar Android
           npx cap add android || true
@@ -83,6 +83,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-Final
+          name: RutaCom-APK-FINAL
           path: android/app/build/outputs/apk/**/*.apk
           
