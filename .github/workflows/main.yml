@@ -1,5 +1,4 @@
-name: Build APK Real - RutaCom v2
-
+name: Build APK - Forzar App Real
 on:
   workflow_dispatch:
 
@@ -15,24 +14,27 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Instalación y Compilación Real
+      - name: Preparación y Compilación Real
         run: |
-          # 1. Limpieza de Replit
+          # 1. Limpiar rastro de Replit
           sed -i 's/catalog:/latest/g' package.json
           sed -i '/@workspace/d' package.json
-          rm -f .npmrc package-lock.json
           
-          # 2. Borrar archivos de Android y el INDEX FALSO de la raíz
-          # Esto obliga a Vite a usar su propio index.html
-          rm -rf android gradlew gradlew.bat build.gradle settings.gradle
+          # 2. BORRAR EL INDEX FALSO Y ANDROID VIEJO
+          # Esto evita que la APK salga con el mensaje de "está funcionando"
+          rm -f index.html
+          rm -rf android gradlew build.gradle
           
-          # 3. Instalación de dependencias necesarias
+          # 3. Instalación de herramientas de compilación
           npm install --force
           npm install -D typescript ts-node vite @vitejs/plugin-react
           
-          # 4. COMPILAR LA APP (Aquí es donde se crea tu interfaz real)
-          # Si este comando falla, revisa los logs de GitHub para ver el error en src/
+          # 4. INTENTO DE BUILD REAL
+          # Si esto falla, el log de GitHub nos dirá exactamente qué error hay en tu código src
           npx vite build --outDir dist
+          
+          # Verificación de seguridad: ¿Existe el index real?
+          ls -R dist/index.html || exit 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -40,25 +42,24 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Sincronizar Capacitor con DIST
+      - name: Sincronización Capacitor
         run: |
-          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
-          
-          # Creamos el archivo de configuración manualmente para asegurar que apunte a 'dist'
-          echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'RutaCom', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
-          
+          npm install @capacitor/cli@latest @capacitor/android@latest
+          # Forzamos la configuración para que apunte a la carpeta 'dist'
           npx cap add android || true
+          npx cap copy android
           npx cap sync android
 
       - name: Generar APK Final
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug -x test -x lint --no-daemon
+          # Ejecutamos con banderas de limpieza para quitar los NO-SOURCE
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-REAL
+          name: RutaCom-App-Real
           path: android/app/build/outputs/apk/debug/*.apk
           
