@@ -24,25 +24,36 @@ jobs:
 
       - name: Limpieza y Construccion Real
         run: |
-          # 1. Eliminar CUALQUIER protocolo de Replit (catalog, workspace, etc)
-          # Esto convierte "workspace:*" o "catalog:*" en "latest" para que GitHub pueda descargarlos
-          sed -i 's/"workspace:[^"]*"/"latest"/g' package.json
-          sed -i 's/"catalog:[^"]*"/"latest"/g' package.json
-          rm -f package-lock.json
-          
-          # 2. Instalacion limpia
-          npm install --force
-          
-          # 3. Intentar el Build de TU App Real
-          # Si falla, el script se detendra para decirnos POR QUE fallo tu app real
+          # 1. Script para ELIMINAR dependencias rotas de Replit (@workspace y catalog)
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const limpiar = (deps) => {
+              if (!deps) return;
+              Object.keys(deps).forEach(key => {
+                if (key.includes("workspace") || String(deps[key]).includes("workspace") || String(deps[key]).includes("catalog")) {
+                  console.log("Eliminando paquete incompatible: " + key);
+                  delete deps[key];
+                }
+              });
+            };
+            limpiar(pkg.dependencies);
+            limpiar(pkg.devDependencies);
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          '
+
+          # 2. Instalacion limpia ignorando conflictos de versiones (Peer Deps)
+          npm install --force --legacy-peer-deps
+
+          # 3. Instalacion de emergencia de Tailwind y Vite para evitar el error @theme
+          npm install tailwindcss @tailwindcss/vite vite @vitejs/plugin-react --no-save
+
+          # 4. Intentar construir TU aplicacion real
           npm run build
-          
-          # 4. Configurar Android con el codigo de tu app
+
+          # 5. Configurar Android con tu codigo real
           npx cap add android || true
-          
-          # Corregir configuraciones de Gradle para compatibilidad con Java 21
-          sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    kotlinOptions { jvmTarget = "21" }\n    lintOptions { abortOnError false }' android/app/build.gradle
-          
+          sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    lintOptions { abortOnError false }' android/app/build.gradle
           npx cap sync android
 
       - name: Build APK (Gradle)
