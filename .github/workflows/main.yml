@@ -1,4 +1,4 @@
-name: Build APK Final - App Real
+name: Build APK Final - RutaCom Real
 
 on:
   workflow_dispatch:
@@ -15,56 +15,53 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: 'gradle'
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Reparar Archivos de Replit
+      - name: Limpieza Agresiva de Replit
         run: |
-          # 1. Eliminar CUALQUIER rastro de protocolos de Replit (catalog, workspace)
-          # Esto evita el Error 404 (Captura 160862.jpg)
+          # 1. Borrar rastros de Replit en package.json (Solución al Error 404 de 160862.jpg)
           node -e '
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            const limpiar = (deps) => {
-              if (!deps) return;
-              Object.keys(deps).forEach(key => {
-                if (key.includes("workspace") || String(deps[key]).includes("workspace") || String(deps[key]).includes("catalog")) {
-                  console.log("Eliminando dependencia incompatible: " + key);
-                  delete deps[key];
+            const limpiar = (obj) => {
+              if (!obj) return;
+              for (const key in obj) {
+                if (obj[key].includes("workspace") || obj[key].includes("catalog")) {
+                  delete obj[key];
                 }
-              });
+              }
             };
             limpiar(pkg.dependencies);
             limpiar(pkg.devDependencies);
             fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
 
-          # 2. Instalación limpia y forzada
+          # 2. Instalar dependencias estándar
           npm install --force
 
-          # 3. Inyectar plugins de React y Tailwind (Captura 160872.jpg)
-          npm install @vitejs/plugin-react @tailwindcss/vite tailwindcss vite --save-dev
+          # 3. FIX: Instalar plugin faltante (Solución al Error 160872.jpg)
+          npm install @vitejs/plugin-react @tailwindcss/vite vite tailwindcss --save-dev
 
-          # 4. COMPILAR APP REAL
-          # Eliminamos el "fallback" para que si hay error, el log nos diga qué línea de tu código falla
+          # 4. COMPILAR APP REAL (Si esto falla, el log nos dirá exactamente qué línea de tu código src/ tiene el error)
           npm run build
 
-          # 5. Configurar Android
+          # 5. Sincronizar con Android
           npx cap add android || true
-          sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    lintOptions { abortOnError false }' android/app/build.gradle
+          # Forzar compatibilidad con Java 21 en Android
+          sed -i "/android {/a \    namespace \"com.rutacom.app\"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    kotlinOptions { jvmTarget = \"21\" }" android/app/build.gradle
           npx cap sync android
 
-      - name: Generar APK (Gradle)
+      - name: Generar APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Subir APK Real
+      - name: Subir APK Final
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-App-Real
