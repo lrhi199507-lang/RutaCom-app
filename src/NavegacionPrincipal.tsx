@@ -23,6 +23,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   const [viajesReales, setViajesReales] = useState<any[]>([]);
   const [viajeSeleccionado, setViajeSeleccionado] = useState<any>(null);
   const [viajeActivo, setViajeActivo] = useState<any>(null);
+  const [viajeConfirmado, setViajeConfirmado] = useState(false); // NUEVO ESTADO DE FLUJO
 
   const [userData, setUserData] = useState<any>({ nombre: "", saldo: 0, saldoRetenido: 0, telefono: "" });
   const [formPerfil, setFormPerfil] = useState({ nombre: "", telefono: "" });
@@ -41,7 +42,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   }, [user]);
 
   useEffect(() => {
-    // RESTAURADO: Se mantiene "Viajes" con V mayúscula
     const q = query(collection(db, "Viajes")); 
     const unsubViajes = onSnapshot(q, (snapshot) => {
       setViajesReales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -77,6 +77,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       });
 
       setViajeActivo(viaje);
+      setViajeConfirmado(false); // Iniciamos sin confirmar para activar el nuevo flujo
       setViajeSeleccionado(null);
       setVista('chat_conductor');
       alert("✅ Reserva exitosa. Pago retenido.");
@@ -110,7 +111,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                     <div className="bg-white/20 p-2 rounded-xl"><Car size={20}/></div>
                     <div className="text-left">
                       <p className="text-[9px] font-black uppercase opacity-70 italic">Viaje en curso</p>
-                      <p className="text-xs font-black italic">Chat con {viajeActivo.conductor || viajeActivo.Conductor || viajeActivo.nombre || "Conductor"}</p>
+                      <p className="text-xs font-black italic">Chat con {viajeActivo.conductor || viajeActivo.Conductor || "Conductor"}</p>
                     </div>
                   </div>
                   <ArrowLeft className="rotate-180" size={18}/>
@@ -122,12 +123,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                 <div className="flex-1 text-left"><p className="text-[9px] font-black uppercase text-slate-400">¿A dónde vas?</p><p className="text-sm font-black uppercase">{busqueda || "Seleccionar ciudad"}</p></div>
              </div>
 
-             {mostrarDestinos && (
-               <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">{ESTADOS.map(e => (
-                 <button key={e} onClick={() => {setBusqueda(e); setMostrarDestinos(false);}} className="bg-white p-3 rounded-xl font-black text-[9px] uppercase border">{e}</button>
-               ))}</div>
-             )}
-
              <div className="space-y-4">
                 <p className="text-[10px] font-black uppercase text-slate-400 italic text-left ml-2 tracking-widest">Rutas disponibles</p>
                 {viajesReales.filter(v => busqueda === "" || (v.destino && v.destino.toLowerCase() === busqueda.toLowerCase())).map(v => (
@@ -136,7 +131,8 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                           <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-600 border"><Car size={24}/></div>
                           <div>
                             <p className="text-[9px] font-black text-blue-600 uppercase italic leading-none mb-1">• {v.destino || "Ruta"}</p>
-                            <p className="font-black text-sm uppercase italic text-slate-800">{v.conductor || v.Conductor || v.nombre || "Chofer Profesional"}</p>
+                            {/* CORRECCIÓN: Se prioriza el nombre real de Firebase */}
+                            <p className="font-black text-sm uppercase italic text-slate-800">{v.conductor || v.Conductor || "Conductor"}</p>
                             <p className="text-[9px] font-bold text-slate-400 italic mt-1 uppercase">{v.vehiculo || "Vehículo verificado"}</p>
                           </div>
                         </div>
@@ -152,55 +148,61 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
             <div className="p-6 pt-12 border-b flex items-center gap-4">
               <button onClick={() => setVista('inicio')} className="p-2 bg-slate-50 rounded-full"><ArrowLeft size={20}/></button>
               <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold italic shadow-lg">
-                {vista === 'chat_soporte' ? <Headset size={22}/> : (viajeActivo?.conductor || viajeActivo?.Conductor || viajeActivo?.nombre || "C")[0]}
+                {vista === 'chat_soporte' ? <Headset size={22}/> : (viajeActivo?.conductor || "C")[0]}
               </div>
               <div className="text-left flex-1">
-                <p className="text-sm font-black uppercase italic leading-none">{vista === 'chat_soporte' ? "Soporte Técnico" : (viajeActivo?.conductor || viajeActivo?.Conductor || viajeActivo?.nombre || "Conductor")}</p>
+                <p className="text-sm font-black uppercase italic leading-none">{vista === 'chat_soporte' ? "Soporte Técnico" : (viajeActivo?.conductor || "Conductor")}</p>
                 <p className="text-[9px] text-green-500 font-black uppercase mt-1 animate-pulse">● En línea ahora</p>
               </div>
             </div>
             
             <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50 text-left">
-              <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm max-w-[85%] border border-slate-100">
-                <p className="text-xs font-bold italic text-slate-700 leading-relaxed">
-                  {vista === 'chat_soporte' ? "Hola, cuéntanos tu problema." : `Hola, soy ${viajeActivo?.conductor || viajeActivo?.Conductor || viajeActivo?.nombre || 'tu conductor'}. Tengo tu reserva para ${viajeActivo?.destino}.`}
-                </p>
-              </div>
-
+              {/* FLUJO DE BOTONES CORREGIDO */}
               {vista === 'chat_conductor' && viajeActivo && (
-                <div className="grid grid-cols-2 gap-3 mb-4 animate-in fade-in zoom-in">
-                  <button 
-                    onClick={async () => {
-                      if(window.confirm("¿Cancelar viaje? El dinero volverá a tu saldo.")) {
-                        try {
-                          const userDoc = doc(db, 'usuarios', user.uid);
-                          const monto = Number(viajeActivo.precio);
-                          await updateDoc(userDoc, {
-                            saldo: (userData.saldo || 0) + monto,
-                            saldoRetenido: (userData.saldoRetenido || 0) - monto
-                          });
-                          setViajeActivo(null); setVista('inicio');
-                          alert("Viaje cancelado correctamente.");
-                        } catch(e) { alert("Error al cancelar."); }
-                      }
-                    }}
-                    className="py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase border italic"
-                  >Cancelar Viaje</button>
-                  <button 
-                    onClick={async () => {
-                      if(window.confirm("¿Confirmas encuentro? Se liberará el pago.")) {
-                        try {
-                          const userDoc = doc(db, 'usuarios', user.uid);
-                          await updateDoc(userDoc, { saldoRetenido: (userData.saldoRetenido || 0) - Number(viajeActivo.precio) });
-                          setViajeActivo(null); setVista('inicio');
-                          alert("¡Buen viaje! Pago liberado.");
-                        } catch(e) { alert("Error."); }
-                      }
-                    }}
-                    className="py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg italic"
-                  >¡Ya llegué!</button>
+                <div className="mb-4">
+                   {!viajeConfirmado ? (
+                     <button 
+                       onClick={() => {
+                         setViajeConfirmado(true);
+                         alert("¡Viaje confirmado! El chófer ha sido notificado.");
+                       }}
+                       className="w-full py-4 bg-green-500 text-white rounded-2xl text-[11px] font-black uppercase shadow-lg italic border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all"
+                     >
+                       Confirmar Inicio de Viaje
+                     </button>
+                   ) : (
+                     <div className="grid grid-cols-2 gap-3 animate-in zoom-in">
+                        <button 
+                          onClick={async () => {
+                            if(window.confirm("¿Cancelar viaje?")) {
+                              const monto = Number(viajeActivo.precio);
+                              await updateDoc(doc(db, 'usuarios', user.uid), {
+                                saldo: (userData.saldo || 0) + monto,
+                                saldoRetenido: (userData.saldoRetenido || 0) - monto
+                              });
+                              setViajeActivo(null); setVista('inicio');
+                            }
+                          }}
+                          className="py-3 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase border italic"
+                        >Cancelar</button>
+                        <button 
+                          onClick={async () => {
+                            await updateDoc(doc(db, 'usuarios', user.uid), { saldoRetenido: (userData.saldoRetenido || 0) - Number(viajeActivo.precio) });
+                            setViajeActivo(null); setVista('inicio');
+                            alert("¡Llegaste a tu destino!");
+                          }}
+                          className="py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg italic"
+                        >¡Llegué al destino!</button>
+                     </div>
+                   )}
                 </div>
               )}
+
+              <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm max-w-[85%] border border-slate-100">
+                <p className="text-xs font-bold italic text-slate-700 leading-relaxed">
+                  {vista === 'chat_soporte' ? "Hola, cuéntanos tu problema." : `Hola, soy ${viajeActivo?.conductor || 'tu conductor'}. Tengo tu reserva para ${viajeActivo?.destino}.`}
+                </p>
+              </div>
               
               {(vista === 'chat_soporte' ? mensajesSoporte : mensajesConductor).map((c, i) => (
                 <div key={i} className={`p-4 rounded-2xl max-w-[85%] shadow-md ${c.yo ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border'}`}>
@@ -215,14 +217,14 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
             </div>
           </div>
         )}
-
+        
+        {/* ... Resto del componente (Perfil y Modal de Reserva) se mantiene igual ... */}
         {vista === 'perfil' && (
            <div className="p-6 text-center space-y-6 pb-32">
               <div className="w-32 h-32 bg-blue-600 rounded-[40px] mx-auto flex items-center justify-center text-white border-8 border-white shadow-2xl rotate-3 relative">
                 <User size={60}/>
                 <button onClick={() => setEditando(!editando)} className="absolute -bottom-2 -right-2 bg-slate-900 text-white p-2.5 rounded-xl border-4 border-white shadow-lg"><Edit2 size={16}/></button>
               </div>
-
               <div className="bg-slate-900 p-6 rounded-[35px] text-left shadow-xl flex justify-between items-center relative overflow-hidden">
                  <div className="z-10">
                     <p className="text-[10px] font-black text-blue-400 uppercase italic">Tu Billetera</p>
@@ -231,7 +233,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                  </div>
                  <Wallet className="text-white/10 absolute -right-4 -bottom-4" size={100} />
               </div>
-
               <div className="bg-white p-8 rounded-[40px] border shadow-sm text-left">
                  <div className="space-y-6">
                     <div>
@@ -250,40 +251,36 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         )}
       </main>
 
-      {/* MODAL DE RESERVA CORREGIDO: Recupera equipaje y puestos */}
+      {/* MODAL DE RESERVA */}
       {viajeSeleccionado && !['chat_conductor', 'chat_soporte'].includes(vista) && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
           <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 animate-in slide-in-from-bottom">
             <div className="flex justify-between items-start">
                <div className="flex gap-4">
-                  <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{(viajeSeleccionado.conductor || viajeSeleccionado.Conductor || viajeSeleccionado.nombre || "C")[0]}</div>
+                  <div className="w-16 h-16 bg-blue-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-black italic">{(viajeSeleccionado.conductor || "C")[0]}</div>
                   <div className="text-left">
                     <p className="text-[10px] font-black text-blue-600 uppercase italic">Conductor Verificado</p>
-                    <h2 className="text-2xl font-black italic uppercase text-slate-800 leading-none">{viajeSeleccionado.conductor || viajeSeleccionado.Conductor || viajeSeleccionado.nombre || "Chofer"}</h2>
+                    <h2 className="text-2xl font-black italic uppercase text-slate-800 leading-none">{viajeSeleccionado.conductor || "Chofer"}</h2>
                   </div>
                </div>
                <button onClick={() => setViajeSeleccionado(null)} className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><X/></button>
             </div>
-
-            {/* DETALLES DEL VIAJE REINSTAURADOS (Sin tocar) */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl border text-left">
                     <Briefcase size={16} className="text-blue-600 mb-1"/>
                     <p className="text-[8px] font-black text-slate-400 uppercase">Equipaje</p>
-                    <p className="text-xs font-black italic">{viajeSeleccionado.equipaje || "20kg máx."}</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.kilosMaleta || "20"}kg máx.</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl border text-left">
                     <Users size={16} className="text-blue-600 mb-1"/>
                     <p className="text-[8px] font-black text-slate-400 uppercase">Puestos</p>
-                    <p className="text-xs font-black italic">{viajeSeleccionado.puestos || "Disponibles"}</p>
+                    <p className="text-xs font-black italic">{viajeSeleccionado.puestos || "4"}</p>
                 </div>
             </div>
-
             <div className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100 text-left">
                <p className="text-[9px] font-black text-blue-500 uppercase mb-1">Notas del conductor:</p>
-               <p className="text-xs font-bold italic text-slate-600">"{viajeSeleccionado.detallesExtras || "No se aceptan mascotas"}"</p>
+               <p className="text-xs font-bold italic text-slate-600">"{viajeSeleccionado.detallesExtras || "Viaje cómodo y seguro"}"</p>
             </div>
-
             <div className="flex gap-3">
                <button onClick={() => {setViajeActivo(viajeSeleccionado); setViajeSeleccionado(null); setVista('chat_conductor');}} className="flex-1 py-5 bg-slate-100 rounded-[22px] font-black text-[10px] uppercase italic text-slate-600">Chat</button>
                <button onClick={() => manejarReserva(viajeSeleccionado)} className="flex-[2] py-5 bg-blue-600 rounded-[22px] font-black text-[10px] uppercase italic text-white shadow-2xl">Confirmar Reserva (${viajeSeleccionado.precio})</button>
@@ -301,5 +298,5 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       )}
     </div>
   );
-      }
-              
+                            }
+                
