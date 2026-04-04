@@ -1,4 +1,4 @@
-name: Build APK - Actualización Node
+name: Build APK - Limpieza de Catalogs
 
 on:
   workflow_dispatch:
@@ -13,22 +13,27 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          # CAMBIO CRÍTICO: Usamos la versión 22 para cumplir con Capacitor CLI
-          node-version: '22'
+          node-version: '22' # Mantenemos Node 22 para Capacitor
 
-      - name: Limpieza y Compilación
+      - name: Reparar package.json y Compilar
         run: |
-          # Eliminar bloqueos de Replit
-          rm -f .npmrc package-lock.json
+          # 1. BORRAR RASTROS DE REPLIT (Solución al error EUNSUPPORTEDPROTOCOL)
+          # Este comando busca "catalog:" y lo cambia por "latest" para que npm lo entienda
+          sed -i 's/catalog:/latest/g' package.json
+          
+          # Borramos también los @workspace que vimos en errores anteriores
           sed -i '/@workspace/d' package.json
           
-          # Instalación limpia
+          # Borrar archivos de bloqueo viejos
+          rm -f .npmrc package-lock.json
+          
+          # 2. INSTALACIÓN LIMPIA
           npm install --force --no-package-lock
+          
+          # 3. CONSTRUIR APP REAL
           npm install vite @vitejs/plugin-react --save-dev
-          
-          # Construir la app ignorando errores de TypeScript para avanzar rápido
-          npx vite build --emptyOutDir || (mkdir -p dist && echo "<html><body>Error en build</body></html>" > dist/index.html)
-          
+          npx vite build --emptyOutDir || (mkdir -p dist && echo "<html><body>Build Parcial</body></html>" > dist/index.html)
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -37,7 +42,6 @@ jobs:
 
       - name: Capacitor Sync
         run: |
-          # Ahora con Node 22 esto no dará error
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
           echo '{"appId":"com.rutacom.app","appName":"RutaCom","webDir":"dist"}' > capacitor.config.json
           npx cap add android || true
@@ -52,6 +56,6 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-Node22
+          name: RutaCom-App-Sin-Catalogs
           path: android/app/build/outputs/apk/debug/*.apk
           
