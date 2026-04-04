@@ -22,36 +22,38 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Limpiar y Preparar Entorno Real
+      - name: Limpiar y Preparar Proyecto
         run: |
-          # 1. Eliminar rastros de Replit que causan el error 404 (Captura 160862)
+          # 1. Eliminar dependencias de Replit (Error 404 en 160862.jpg)
           node -e '
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            const limpiar = (deps) => {
-              if (!deps) return;
-              Object.keys(deps).forEach(key => {
-                if (key.includes("workspace") || String(deps[key]).includes("workspace") || String(deps[key]).includes("catalog")) {
-                  delete deps[key];
+            const removerBasura = (obj) => {
+              if (!obj) return;
+              for (const key in obj) {
+                if (key.includes("workspace") || String(obj[key]).includes("workspace") || String(obj[key]).includes("catalog")) {
+                  delete obj[key];
                 }
-              });
+              }
             };
-            limpiar(pkg.dependencies);
-            limpiar(pkg.devDependencies);
+            removerBasura(pkg.dependencies);
+            removerBasura(pkg.devDependencies);
             fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
 
-          # 2. Instalación forzada de dependencias
+          # 2. Instalación base
           npm install --force
 
-          # 3. FIX CRÍTICO: Instalar el plugin que falta (Captura 160872) y Tailwind (Captura 160738)
+          # 3. INSTALAR PLUGINS FALTANTES (Corrigiendo errores 160872.jpg y 160738.jpg)
           npm install @vitejs/plugin-react @tailwindcss/vite tailwindcss vite --save-dev
 
-          # 4. Compilar tu código real (Si esto falla, veremos errores de tu código JS)
+          # 4. COMPILAR LA APP REAL
+          # Si este paso falla, detendrá el proceso y nos dirá el error en tu código JS
           npm run build
 
-          # 5. Configurar Android
+          # 5. Sincronizar con Capacitor (Android)
           npx cap add android || true
+          # Asegurar que Android use Java 21
           sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    lintOptions { abortOnError false }' android/app/build.gradle
           npx cap sync android
 
@@ -64,6 +66,6 @@ jobs:
       - name: Upload APK Real
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-Real
+          name: RutaCom-App-Final
           path: android/app/build/outputs/apk/debug/*.apk
           
