@@ -25,7 +25,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   const [viajeSeleccionado, setViajeSeleccionado] = useState<any>(null);
   const [viajeActivo, setViajeActivo] = useState<any>(null);
 
-  const [userData, setUserData] = useState<any>({ nombre: "", saldo: 0, telefono: "" });
+  const [userData, setUserData] = useState<any>({ nombre: "", saldo: 0, saldoRetenido: 0, telefono: "" });
   const [formPerfil, setFormPerfil] = useState({ nombre: "", telefono: "" });
 
   useEffect(() => {
@@ -62,17 +62,47 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
     setInputConductor("");
   };
 
+  // NUEVA LÓGICA DE RESERVA CON RETENCIÓN DE DINERO
   const manejarReserva = async (viaje: any) => {
-    if (userData.saldo < viaje.precio) { alert("Saldo insuficiente"); return; }
+    // Validar que tengamos todos los datos necesarios para evitar errores
+    if (!viaje || !viaje.id) {
+      alert("Error: Datos del viaje incompletos.");
+      return;
+    }
+
+    const precioViaje = Number(viaje.precio) || 0;
+
+    // Verificar saldo
+    if (userData.saldo < precioViaje) {
+      alert("⚠️ Saldo insuficiente para realizar la reserva.");
+      return;
+    }
+
     try {
-      await updateDoc(doc(db, 'usuarios', user.uid), {
-        saldo: userData.saldo - viaje.precio,
-        historial: arrayUnion({ idViaje: viaje.id, destino: viaje.destino, conductor: viaje.conductor, fecha: new Date().toISOString() })
+      const userDoc = doc(db, 'usuarios', user.uid);
+      
+      // Actualizar base de datos: Restar de saldo, sumar a retenido
+      await updateDoc(userDoc, {
+        saldo: userData.saldo - precioViaje,
+        saldoRetenido: (userData.saldoRetenido || 0) + precioViaje,
+        historial: arrayUnion({
+          idViaje: viaje.id,
+          destino: viaje.destino || "No especificado",
+          conductor: viaje.conductor || "Conductor",
+          precio: precioViaje,
+          estado: "retenido", 
+          fecha: new Date().toISOString()
+        })
       });
+
       setViajeActivo(viaje);
       setViajeSeleccionado(null);
       setVista('chat_conductor');
-    } catch (e) { alert("Error al reservar"); }
+      alert("✅ Reserva exitosa. El pago ha sido retenido hasta confirmar el encuentro.");
+    } catch (e: any) {
+      console.error("Error en reserva:", e);
+      alert("Error al reservar. Inténtalo de nuevo.");
+    }
   };
 
   return (
@@ -193,12 +223,25 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* PERFIL EDITABLE */}
+        {/* PERFIL EDITABLE CON BILLETERA DE DINERO RETENIDO */}
         {vista === 'perfil' && (
            <div className="p-6 text-center space-y-6 pb-32">
               <div className="w-32 h-32 bg-blue-600 rounded-[40px] mx-auto flex items-center justify-center text-white border-8 border-white shadow-2xl rotate-3 relative">
                 <User size={60}/>
                 <button onClick={() => setEditando(!editando)} className="absolute -bottom-2 -right-2 bg-slate-900 text-white p-2.5 rounded-xl border-4 border-white shadow-lg"><Edit2 size={16}/></button>
+              </div>
+
+              {/* TARJETA DE BILLETERA DETALLADA */}
+              <div className="bg-slate-900 p-6 rounded-[35px] text-left shadow-xl flex justify-between items-center overflow-hidden relative">
+                 <div className="z-10">
+                    <p className="text-[10px] font-black text-blue-400 uppercase italic">Tu Billetera</p>
+                    <h3 className="text-2xl font-black text-white italic">${Number(userData.saldo).toFixed(2)}</h3>
+                    <div className="flex items-center gap-2 mt-2">
+                       <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                       <p className="text-[9px] font-bold text-slate-400 uppercase">Retenido: ${Number(userData.saldoRetenido || 0).toFixed(2)}</p>
+                    </div>
+                 </div>
+                 <Wallet className="text-white/10 absolute -right-4 -bottom-4" size={100} />
               </div>
 
               <div className="bg-white p-8 rounded-[40px] border shadow-sm text-left">
@@ -278,9 +321,4 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         <nav className="absolute bottom-6 left-6 right-6 bg-slate-900/95 backdrop-blur-xl rounded-[35px] p-4 flex justify-around items-center z-40 border border-white/10 shadow-2xl">
           <button onClick={() => setVista('inicio')} className={`p-2 transition-all ${vista === 'inicio' ? 'text-blue-400 scale-125' : 'text-slate-500'}`}><Search size={26}/></button>
           <button onClick={() => setVista('chat_soporte')} className={`p-2 transition-all ${vista === 'chat_soporte' ? 'text-blue-400 scale-125' : 'text-slate-500'}`}><Headset size={26}/></button>
-          <button onClick={() => setVista('perfil')} className={`p-2 transition-all ${vista === 'perfil' ? 'text-blue-400 scale-125' : 'text-slate-500'}`}><User size={26}/></button>
-        </nav>
-      )}
-    </div>
-  );
-}
+          <button onClick={() => setVista('perfil')} className={`p-2 transition-all ${vista === 'perfil' ? 'text-blue-40
