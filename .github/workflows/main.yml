@@ -22,10 +22,10 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Limpieza y Construcción Real
+      - name: Reparar Archivos de Replit
         run: |
           # 1. Eliminar CUALQUIER rastro de protocolos de Replit (catalog, workspace)
-          # Esto evita el Error 404 de la captura 160862.jpg
+          # Esto evita el Error 404 (Captura 160862.jpg)
           node -e '
             const fs = require("fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -33,6 +33,7 @@ jobs:
               if (!deps) return;
               Object.keys(deps).forEach(key => {
                 if (key.includes("workspace") || String(deps[key]).includes("workspace") || String(deps[key]).includes("catalog")) {
+                  console.log("Eliminando dependencia incompatible: " + key);
                   delete deps[key];
                 }
               });
@@ -42,15 +43,14 @@ jobs:
             fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
           '
 
-          # 2. Instalación limpia de dependencias
+          # 2. Instalación limpia y forzada
           npm install --force
 
-          # 3. Inyectar plugins que faltan (Error 160872.jpg)
-          # Esto asegura que Vite entienda tu código de React y Tailwind
+          # 3. Inyectar plugins de React y Tailwind (Captura 160872.jpg)
           npm install @vitejs/plugin-react @tailwindcss/vite tailwindcss vite --save-dev
 
-          # 4. COMPILAR TU APP (Sin rutas de escape)
-          # Si este paso falla, GitHub nos dirá el error exacto en tu código JS/TS
+          # 4. COMPILAR APP REAL
+          # Eliminamos el "fallback" para que si hay error, el log nos diga qué línea de tu código falla
           npm run build
 
           # 5. Configurar Android
@@ -58,13 +58,13 @@ jobs:
           sed -i '/android {/a \    namespace "com.rutacom.app"\n    compileOptions { sourceCompatibility JavaVersion.VERSION_21; targetCompatibility JavaVersion.VERSION_21 }\n    lintOptions { abortOnError false }' android/app/build.gradle
           npx cap sync android
 
-      - name: Generar APK con Gradle
+      - name: Generar APK (Gradle)
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Subir APK de Tu App
+      - name: Subir APK Real
         uses: actions/upload-artifact@v4
         with:
           name: RutaCom-App-Real
