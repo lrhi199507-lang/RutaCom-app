@@ -10,7 +10,7 @@ import {
   ChevronRight, Luggage, Info, MessageSquare, Star, ArrowUpRight, ArrowDownLeft
 } from "lucide-react";
 
-// 1. DICCIONARIO DE ESTADOS Y CIUDADES COMPLETO (24 Estados)
+// DICCIONARIO DE ESTADOS Y CIUDADES COMPLETO (24 Estados)
 const UBICACIONES = {
   "Amazonas": ["Puerto Ayacucho", "San Fernando de Atabapo"],
   "Anzoátegui": ["Puerto La Cruz", "Barcelona", "Lechería", "El Tigre", "Anaco", "Cantaura"],
@@ -46,7 +46,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   const [editando, setEditando] = useState(false);
   const [verificandoKYC, setVerificandoKYC] = useState(false);
   
-  // FILTRO PASAJERO ACTUALIZADO (Ahora incluye ciudades)
   const [busqueda, setBusqueda] = useState({ estadoOrigen: "", ciudadOrigen: "", estadoDestino: "", ciudadDestino: "" });
 
   const [inputSoporte, setInputSoporte] = useState("");
@@ -97,7 +96,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       return alert("⚠️ Completa los campos de origen, destino y precio.");
     }
     if (!userData.vehiculo || !userData.vehiculo.placa) {
-      return alert("⚠️ Registra la placa de tu carro en el Perfil antes de publicar.");
+      return alert("⚠️ Registra la placa de tu carro en el Perfil antes de ofrecer cola.");
     }
     
     try {
@@ -116,7 +115,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         idCreador: user.uid,
         fecha: serverTimestamp(),
       });
-      alert("✅ Ruta publicada con éxito.");
+      alert("✅ Cola publicada con éxito.");
       setFormViaje({ ...formViaje, precio: "", detallesExtras: "" });
       setModo("pasajero");
     } catch (e: any) { 
@@ -134,14 +133,15 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         </button>
       )}
 
-      {/* HEADER DINÁMICO (Se oculta si estás en algún chat) */}
+      {/* HEADER DINÁMICO REBRANDING: DameLaCola */}
       {!["chat_conductor", "chat_soporte"].includes(vista) && (
         <header className="p-6 pt-12 bg-white border-b shrink-0 z-20 shadow-sm text-left">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg">R</div>
+              {/* LOGO "D" ESTILIZADO */}
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg text-xl transform -skew-x-6">D</div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase">RutaCom {modo}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">DameLaCola {modo}</p>
                 <p className="text-xs font-bold uppercase text-slate-800 flex items-center gap-1">
                   {userData.nombre || "Usuario"} 
                   {userData.kycVerificado && <CheckCircle size={10} className="text-blue-500 fill-blue-500"/>}
@@ -169,10 +169,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         {vista === "inicio" && (
           <div className="p-6 space-y-4">
             
-            {/* BUSCADOR DESDE / HASTA (Filtro Inteligente Pasajero) */}
+            {/* BUSCADOR (Filtro Pasajero) */}
             {modo === "pasajero" && (
                <div className="bg-white p-5 rounded-[25px] border shadow-sm space-y-3 text-left">
-                 <p className="text-[9px] font-black text-slate-400 uppercase ml-1">Filtros de Búsqueda</p>
+                 <p className="text-[9px] font-black text-slate-400 uppercase ml-1">¿A dónde vamos hoy?</p>
                  
                  <div className="grid grid-cols-2 gap-2">
                    <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={busqueda.estadoOrigen} onChange={(e) => setBusqueda({...busqueda, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
@@ -198,10 +198,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                </div>
             )}
 
-            {/* MODO CHOFER: PUBLICAR (Intacto con Extras, Maleta, Asientos y Precios) */}
+            {/* MODO CHOFER: PUBLICAR */}
             {modo === "chofer" && (
               <div className="bg-white p-6 rounded-[35px] border border-green-100 shadow-sm space-y-4 text-left">
-                <h3 className="text-sm font-black uppercase italic text-green-600 flex items-center gap-2"><PlusCircle size={18}/> Publicar Mi Ruta</h3>
+                <h3 className="text-sm font-black uppercase italic text-green-600 flex items-center gap-2"><PlusCircle size={18}/> Ofrecer una Cola</h3>
                 
                 <div className="grid grid-cols-2 gap-2">
                    <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.estadoOrigen} onChange={(e) => setFormViaje({...formViaje, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
@@ -237,14 +237,14 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                    <input type="number" placeholder="Kilos permitidos (Ej: 20)" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.kilosMaleta} onChange={(e) => setFormViaje({...formViaje, kilosMaleta: e.target.value})} />
                 )}
                 
-                <textarea placeholder="Extras (No mascotas, aire full, punto de encuentro...)" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none h-16 resize-none" value={formViaje.detallesExtras} onChange={(e) => setFormViaje({...formViaje, detallesExtras: e.target.value})} />
+                <textarea placeholder="Detalles (Punto de encuentro, aire, etc...)" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none h-16 resize-none" value={formViaje.detallesExtras} onChange={(e) => setFormViaje({...formViaje, detallesExtras: e.target.value})} />
 
-                <button onClick={publicarViaje} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase italic shadow-lg text-xs">Publicar Ahora</button>
+                <button onClick={publicarViaje} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase italic shadow-lg text-xs">Ofrecer Cola Ahora</button>
               </div>
             )}
 
-            {/* LISTADO DE VIAJES (Con filtro avanzado por ciudad y estado) */}
-            <p className="text-[10px] font-black text-slate-400 uppercase text-left ml-2 mt-4">Rutas Disponibles</p>
+            {/* LISTADO DE COLAS DISPONIBLES */}
+            <p className="text-[10px] font-black text-slate-400 uppercase text-left ml-2 mt-4">Colas en tu Zona</p>
             {viajesReales.filter(v => 
               (!busqueda.estadoOrigen || (v.origen && v.origen.includes(busqueda.estadoOrigen))) &&
               (!busqueda.ciudadOrigen || (v.origen && v.origen.includes(busqueda.ciudadOrigen))) &&
@@ -342,7 +342,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
             <div className="p-6 pt-12 border-b border-slate-800 flex items-center gap-4 shrink-0">
               <button onClick={() => setVista("inicio")} className="p-2 bg-slate-800 rounded-full text-white"><ArrowLeft size={20} /></button>
               <div className="text-left flex-1">
-                <p className="font-black uppercase text-sm italic">Soporte RutaCom</p>
+                <p className="font-black uppercase text-sm italic">Soporte DameLaCola</p>
                 <p className="text-[9px] text-green-500 font-black tracking-widest">• En línea</p>
               </div>
             </div>
@@ -364,7 +364,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* CHAT DE CONDUCTOR BLINDADO */}
+        {/* CHAT DE CONDUCTOR */}
         {vista === "chat_conductor" && (
           <div className="absolute inset-0 z-50 flex flex-col bg-white">
             <div className="p-6 pt-12 border-b flex items-center gap-4 shrink-0 bg-white text-slate-900">
@@ -383,12 +383,12 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
             </div>
             <div className="px-4 py-2 bg-white flex flex-col gap-2 shadow-2xl border-t">
                 <div className="flex gap-2">
-                  <button onClick={() => alert("✅ Viaje Confirmado.")} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">Confirmar Viaje</button>
+                  <button onClick={() => alert("✅ Cola Confirmada.")} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">Confirmar Cola</button>
                   <button onClick={() => { setVista('inicio'); setViajeActivo(null); }} className="px-4 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase italic text-[10px]">Cancelar</button>
                 </div>
             </div>
             <div className="p-4 border-t flex gap-2 bg-white pb-8">
-              <input className="flex-1 bg-slate-100 p-4 rounded-2xl text-sm outline-none font-bold" placeholder="Escribe al conductor..." value={inputConductor} onChange={(e) => setInputConductor(e.target.value)} />
+              <input className="flex-1 bg-slate-100 p-4 rounded-2xl text-sm outline-none font-bold" placeholder="Dile algo al chofer..." value={inputConductor} onChange={(e) => setInputConductor(e.target.value)} />
               <button onClick={() => {
                 if (!inputConductor) return;
                 setMensajesConductor([...mensajesConductor, { texto: inputConductor, yo: true }]); 
@@ -406,7 +406,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                 <h3 className="font-black uppercase text-xl italic text-slate-800 mb-6">Verificación KYC</h3>
                 
                 <div className="space-y-3">
-                   {/* 1. Rostro */}
                    <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
                      <div className="flex items-center gap-3">
                        <Camera size={20} className="text-blue-600"/>
@@ -415,7 +414,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
                    </div>
                    
-                   {/* 2. Cédula Frontal */}
                    <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
                      <div className="flex items-center gap-3">
                        <Camera size={20} className="text-blue-600"/>
@@ -424,7 +422,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
                    </div>
 
-                   {/* 3. Cédula Posterior */}
                    <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
                      <div className="flex items-center gap-3">
                        <Camera size={20} className="text-blue-600"/>
@@ -437,19 +434,19 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      await updateDoc(doc(db, "usuarios", user.uid), { kycVerificado: true });
                      setVerificandoKYC(false);
                      alert("✅ Documentos en revisión.");
-                   }} className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[11px] italic mt-4 shadow-xl active:scale-95">Enviar Documentos</button>
+                   }} className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[11px] italic mt-4 shadow-xl">Enviar Documentos</button>
                 </div>
              </div>
           </div>
         )}
 
-        {/* DETALLES DE VIAJE AL SELECCIONAR (INTACTO) */}
+        {/* DETALLES DE VIAJE AL SELECCIONAR */}
         {viajeSeleccionado && (
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
             <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 shadow-2xl text-left animate-in slide-in-from-bottom">
               <div className="flex justify-between items-start">
                 <div className="flex gap-4">
-                  <div className="w-14 h-14 bg-blue-600 rounded-[20px] flex items-center justify-center text-white text-2xl font-black italic shadow-lg">R</div>
+                  <div className="w-14 h-14 bg-blue-600 rounded-[20px] flex items-center justify-center text-white text-2xl font-black italic shadow-lg transform -skew-x-6">D</div>
                   <div>
                     <p className="text-blue-600 font-black uppercase italic text-xs">• {viajeSeleccionado.origen} → {viajeSeleccionado.destino}</p>
                     <p className="text-xl font-black uppercase text-slate-800">{viajeSeleccionado.conductor}</p>
@@ -481,7 +478,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
 
               <div className="flex gap-3">
                  <button onClick={() => { setViajeActivo(viajeSeleccionado); setVista("chat_conductor"); setViajeSeleccionado(null); }} className="p-5 bg-slate-100 text-blue-600 rounded-3xl shadow-sm active:scale-90"><MessageSquare size={24}/></button>
-                 <button onClick={() => { setViajeActivo(viajeSeleccionado); setVista("chat_conductor"); setViajeSeleccionado(null); alert("✅ Reservado. Confirma en el chat."); }} className="flex-1 py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic shadow-xl text-xs tracking-widest active:scale-95">Reservar Cupo</button>
+                 <button onClick={() => { setViajeActivo(viajeSeleccionado); setVista("chat_conductor"); setViajeSeleccionado(null); alert("✅ Pediste la cola. Confirma en el chat."); }} className="flex-1 py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic shadow-xl text-xs tracking-widest active:scale-95">Pedir la Cola</button>
               </div>
             </div>
           </div>
@@ -492,10 +489,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       {/* NAVBAR INFERIOR */}
       <nav className="p-6 bg-white border-t flex justify-around items-center shrink-0 z-20 pb-10">
         <button onClick={() => setVista("inicio")} className={`flex flex-col items-center gap-1 ${vista === "inicio" ? "text-blue-600" : "text-slate-400"}`}>
-          <Car size={24} /><span className="text-[9px] font-black uppercase">Rutas</span>
+          <Car size={24} /><span className="text-[9px] font-black uppercase">Colas</span>
         </button>
         <button onClick={() => setVista("chat_soporte")} className={`flex flex-col items-center gap-1 ${vista === "chat_soporte" ? "text-blue-600" : "text-slate-400"}`}>
-          <Headset size={24} /><span className="text-[9px] font-black uppercase">Soporte</span>
+          <Headset size={24} /><span className="text-[9px] font-black uppercase">Ayuda</span>
         </button>
         <button onClick={() => setVista("perfil")} className={`flex flex-col items-center gap-1 ${vista === "perfil" ? "text-blue-600" : "text-slate-400"}`}>
           <User size={24} /><span className="text-[9px] font-black uppercase">Perfil</span>
