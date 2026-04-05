@@ -10,14 +10,32 @@ import {
   ChevronRight, Luggage, Info, MessageSquare, Star, ArrowUpRight, ArrowDownLeft
 } from "lucide-react";
 
-// DICCIONARIO DE ESTADOS Y CIUDADES
+// 1. DICCIONARIO DE ESTADOS Y CIUDADES COMPLETO (24 Estados)
 const UBICACIONES = {
-  "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego", "Puerto Cabello", "Los Guayos"],
-  "Aragua": ["Maracay", "Turmero", "La Victoria", "Cagua", "El Limón"],
-  "Distrito Capital": ["Caracas", "Chacao", "Baruta", "El Hatillo"],
-  "Lara": ["Barquisimeto", "Cabudare", "Carora"],
-  "Anzoátegui": ["Puerto La Cruz", "Barcelona", "Lechería", "El Tigre"],
-  "Mérida": ["Mérida", "Ejido", "El Vigía"]
+  "Amazonas": ["Puerto Ayacucho", "San Fernando de Atabapo"],
+  "Anzoátegui": ["Puerto La Cruz", "Barcelona", "Lechería", "El Tigre", "Anaco", "Cantaura"],
+  "Apure": ["San Fernando de Apure", "Guasdualito", "Elorza"],
+  "Aragua": ["Maracay", "Turmero", "La Victoria", "Cagua", "El Limón", "Palo Negro", "Villa de Cura"],
+  "Barinas": ["Barinas", "Socopó", "Santa Bárbara"],
+  "Bolívar": ["Ciudad Guayana", "Ciudad Bolívar", "Upata", "Caicara del Orinoco"],
+  "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego", "Puerto Cabello", "Los Guayos", "Mariara", "Morón"],
+  "Cojedes": ["San Carlos", "Tinaquillo", "El Pao"],
+  "Delta Amacuro": ["Tucupita", "Pedernales"],
+  "Distrito Capital": ["Caracas"],
+  "Falcón": ["Coro", "Punto Fijo", "Tucacas", "Dabajuro"],
+  "Guárico": ["San Juan de los Morros", "Valle de la Pascua", "Calabozo", "Zaraza"],
+  "Lara": ["Barquisimeto", "Cabudare", "Carora", "El Tocuyo", "Quíbor"],
+  "La Guaira": ["La Guaira", "Maiquetía", "Catia La Mar", "Macuto", "Caraballeda"],
+  "Mérida": ["Mérida", "Ejido", "El Vigía", "Tovar", "Mucuchíes"],
+  "Miranda": ["Los Teques", "Guarenas", "Guatire", "Cúa", "Charallave", "Ocumare del Tuy", "Petare", "Baruta", "Chacao", "El Hatillo"],
+  "Monagas": ["Maturín", "Punta de Mata", "Caripe"],
+  "Nueva Esparta": ["Porlamar", "Pampatar", "La Asunción", "Juan Griego"],
+  "Portuguesa": ["Acarigua", "Guanare", "Araure", "Turén"],
+  "Sucre": ["Cumaná", "Carúpano", "Güiria"],
+  "Táchira": ["San Cristóbal", "Táriba", "Rubio", "San Antonio", "La Grita"],
+  "Trujillo": ["Valera", "Trujillo", "Boconó"],
+  "Yaracuy": ["San Felipe", "Yaritagua", "Chivacoa", "Nirgua"],
+  "Zulia": ["Maracaibo", "San Francisco", "Cabimas", "Ciudad Ojeda", "Machiques"]
 };
 
 const ESTADOS = Object.keys(UBICACIONES);
@@ -28,7 +46,8 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   const [editando, setEditando] = useState(false);
   const [verificandoKYC, setVerificandoKYC] = useState(false);
   
-  const [busqueda, setBusqueda] = useState({ estadoOrigen: "", estadoDestino: "" });
+  // FILTRO PASAJERO ACTUALIZADO (Ahora incluye ciudades)
+  const [busqueda, setBusqueda] = useState({ estadoOrigen: "", ciudadOrigen: "", estadoDestino: "", ciudadDestino: "" });
 
   const [inputSoporte, setInputSoporte] = useState("");
   const [inputConductor, setInputConductor] = useState("");
@@ -77,8 +96,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
     if (!formViaje.ciudadOrigen || !formViaje.ciudadDestino || !formViaje.precio) {
       return alert("⚠️ Completa los campos de origen, destino y precio.");
     }
-    
-    // Validar que exista el vehículo solo si intenta publicar
     if (!userData.vehiculo || !userData.vehiculo.placa) {
       return alert("⚠️ Registra la placa de tu carro en el Perfil antes de publicar.");
     }
@@ -100,12 +117,9 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         fecha: serverTimestamp(),
       });
       alert("✅ Ruta publicada con éxito.");
-      
-      // Limpiar formulario tras publicar
       setFormViaje({ ...formViaje, precio: "", detallesExtras: "" });
       setModo("pasajero");
     } catch (e: any) { 
-      // Si falla, mostramos el error exacto para saber qué pasó
       alert(`❌ Error al publicar: ${e.message}`); 
     }
   };
@@ -120,7 +134,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         </button>
       )}
 
-      {/* HEADER DINÁMICO */}
+      {/* HEADER DINÁMICO (Se oculta si estás en algún chat) */}
       {!["chat_conductor", "chat_soporte"].includes(vista) && (
         <header className="p-6 pt-12 bg-white border-b shrink-0 z-20 shadow-sm text-left">
           <div className="flex justify-between items-center mb-4">
@@ -155,29 +169,40 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         {vista === "inicio" && (
           <div className="p-6 space-y-4">
             
-            {/* BUSCADOR DESDE / HASTA (Solo Pasajero) */}
+            {/* BUSCADOR DESDE / HASTA (Filtro Inteligente Pasajero) */}
             {modo === "pasajero" && (
                <div className="bg-white p-5 rounded-[25px] border shadow-sm space-y-3 text-left">
                  <p className="text-[9px] font-black text-slate-400 uppercase ml-1">Filtros de Búsqueda</p>
+                 
                  <div className="grid grid-cols-2 gap-2">
-                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" onChange={(e) => setBusqueda({...busqueda, estadoOrigen: e.target.value})}>
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={busqueda.estadoOrigen} onChange={(e) => setBusqueda({...busqueda, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
                      <option value="">Estado Origen</option>
                      {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
                    </select>
-                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" onChange={(e) => setBusqueda({...busqueda, estadoDestino: e.target.value})}>
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" disabled={!busqueda.estadoOrigen} value={busqueda.ciudadOrigen} onChange={(e) => setBusqueda({...busqueda, ciudadOrigen: e.target.value})}>
+                     <option value="">Ciudad Origen</option>
+                     {busqueda.estadoOrigen && (UBICACIONES as any)[busqueda.estadoOrigen]?.map((c: string) => <option key={c} value={c}>{c}</option>)}
+                   </select>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-2">
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={busqueda.estadoDestino} onChange={(e) => setBusqueda({...busqueda, estadoDestino: e.target.value, ciudadDestino: ""})}>
                      <option value="">Estado Destino</option>
                      {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                   </select>
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" disabled={!busqueda.estadoDestino} value={busqueda.ciudadDestino} onChange={(e) => setBusqueda({...busqueda, ciudadDestino: e.target.value})}>
+                     <option value="">Ciudad Destino</option>
+                     {busqueda.estadoDestino && (UBICACIONES as any)[busqueda.estadoDestino]?.map((c: string) => <option key={c} value={c}>{c}</option>)}
                    </select>
                  </div>
                </div>
             )}
 
-            {/* MODO CHOFER: PUBLICAR (Agregados Maleta y Extras) */}
+            {/* MODO CHOFER: PUBLICAR (Intacto con Extras, Maleta, Asientos y Precios) */}
             {modo === "chofer" && (
               <div className="bg-white p-6 rounded-[35px] border border-green-100 shadow-sm space-y-4 text-left">
                 <h3 className="text-sm font-black uppercase italic text-green-600 flex items-center gap-2"><PlusCircle size={18}/> Publicar Mi Ruta</h3>
                 
-                {/* Origen y Destino Seguros (No colapsan) */}
                 <div className="grid grid-cols-2 gap-2">
                    <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.estadoOrigen} onChange={(e) => setFormViaje({...formViaje, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
                      <option value="">Origen</option>
@@ -204,7 +229,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                    <input type="number" placeholder="Asientos" className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.puestos} onChange={(e) => setFormViaje({...formViaje, puestos: e.target.value})} />
                 </div>
 
-                {/* Extras y Maletas de vuelta */}
                 <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border">
                   <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1"><Luggage size={14}/> ¿Acepta Maleta?</span>
                   <input type="checkbox" checked={formViaje.aceptaMaleta} onChange={(e) => setFormViaje({...formViaje, aceptaMaleta: e.target.checked})} className="accent-green-600" />
@@ -219,11 +243,13 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               </div>
             )}
 
-            {/* LISTADO DE VIAJES (Con protección anticaídas) */}
+            {/* LISTADO DE VIAJES (Con filtro avanzado por ciudad y estado) */}
             <p className="text-[10px] font-black text-slate-400 uppercase text-left ml-2 mt-4">Rutas Disponibles</p>
             {viajesReales.filter(v => 
-              (!busqueda.estadoOrigen || (v.origen && v.origen.includes(busqueda.estadoOrigen))) && 
-              (!busqueda.estadoDestino || (v.destino && v.destino.includes(busqueda.estadoDestino)))
+              (!busqueda.estadoOrigen || (v.origen && v.origen.includes(busqueda.estadoOrigen))) &&
+              (!busqueda.ciudadOrigen || (v.origen && v.origen.includes(busqueda.ciudadOrigen))) &&
+              (!busqueda.estadoDestino || (v.destino && v.destino.includes(busqueda.estadoDestino))) &&
+              (!busqueda.ciudadDestino || (v.destino && v.destino.includes(busqueda.ciudadDestino)))
             ).map((v) => (
               <div key={v.id} onClick={() => setViajeSeleccionado(v)} className="bg-white p-5 rounded-[30px] border flex justify-between items-center shadow-sm cursor-pointer hover:border-blue-400 transition-all text-left">
                 <div className="flex gap-3">
@@ -244,11 +270,9 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* PERFIL INTELIGENTE (Cambia según el modo) */}
+        {/* PERFIL */}
         {vista === "perfil" && (
           <div className="p-6 space-y-6 pb-32 text-left">
-            
-            {/* CABECERA PERFIL */}
             <div className="bg-white rounded-[35px] border p-6 flex flex-col items-center shadow-sm relative">
               <div className="w-24 h-24 bg-blue-600 rounded-[35px] flex items-center justify-center text-white shadow-xl relative border-4 border-white mb-3">
                 <User size={40} />
@@ -264,7 +288,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               </div>
             </div>
 
-            {/* WALLET */}
             <div className="bg-slate-900 p-6 rounded-[35px] shadow-xl border border-slate-800 text-left">
               <p className="text-blue-400 text-[10px] font-black uppercase italic">Billetera Digital</p>
               <p className="text-4xl font-black text-white italic mb-4">${Number(userData.saldo).toFixed(2)}</p>
@@ -274,7 +297,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               </div>
             </div>
 
-            {/* DATOS PERSONALES BÁSICOS (Se ven en ambos modos) */}
             <div className="bg-white p-6 rounded-[35px] border shadow-sm space-y-4">
                <div className="flex justify-between items-center">
                  <h3 className="text-[11px] font-black text-slate-400 uppercase italic">Mis Datos Personales</h3>
@@ -288,9 +310,8 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                )}
             </div>
 
-            {/* SECCIÓN VEHÍCULO (SOLO MODO CHOFER) */}
             {modo === "chofer" && (
-              <div className="bg-white p-6 rounded-[35px] border shadow-sm space-y-4 border-green-100 animate-in fade-in">
+              <div className="bg-white p-6 rounded-[35px] border shadow-sm space-y-4 border-green-100">
                 <h3 className="text-[11px] font-black text-green-600 uppercase italic flex items-center gap-2"><Car size={14}/> Datos de mi Vehículo</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <input disabled={!editando} className="p-4 rounded-xl font-bold text-sm border bg-slate-50 outline-none" placeholder="Marca Auto" value={formVehiculo.marca} onChange={(e) => setFormVehiculo({ ...formVehiculo, marca: e.target.value })} />
@@ -303,7 +324,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               </div>
             )}
 
-            {/* BOTÓN GUARDAR (Aplica para Perfil y/o Vehículo según el modo) */}
             {editando && (
               <button onClick={async () => { 
                 await updateDoc(doc(db, "usuarios", user.uid), { ...formPerfil, vehiculo: formVehiculo }); 
@@ -316,30 +336,114 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* CHATS Y DEMÁS MODALES SE MANTIENEN IGUAL (Ocultos para ahorrar espacio en este mensaje, pero asume que están ahí tal cual como los programamos antes) */}
-        
-        {/* MODAL KYC */}
+        {/* CHAT DE SOPORTE BLINDADO */}
+        {vista === "chat_soporte" && (
+          <div className="absolute inset-0 z-50 flex flex-col bg-slate-900 text-white">
+            <div className="p-6 pt-12 border-b border-slate-800 flex items-center gap-4 shrink-0">
+              <button onClick={() => setVista("inicio")} className="p-2 bg-slate-800 rounded-full text-white"><ArrowLeft size={20} /></button>
+              <div className="text-left flex-1">
+                <p className="font-black uppercase text-sm italic">Soporte RutaCom</p>
+                <p className="text-[9px] text-green-500 font-black tracking-widest">• En línea</p>
+              </div>
+            </div>
+            <div className="flex-1 p-6 space-y-4 overflow-y-auto bg-slate-900">
+              {mensajesSoporte.map((m, i) => (
+                <div key={i} className={`p-4 rounded-2xl max-w-[80%] text-left shadow-sm ${m.yo ? "bg-blue-600 text-white ml-auto rounded-tr-none" : "bg-slate-800 border border-slate-700 rounded-tl-none"}`}>
+                  <p className="text-xs font-bold italic">{m.texto}</p>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t border-slate-800 flex gap-2 bg-slate-900 pb-8">
+              <input className="flex-1 bg-slate-800 p-4 rounded-2xl text-sm outline-none font-bold text-white placeholder-slate-400 border border-slate-700" placeholder="Escribe al soporte..." value={inputSoporte} onChange={(e) => setInputSoporte(e.target.value)} />
+              <button onClick={() => {
+                if (!inputSoporte) return;
+                setMensajesSoporte([...mensajesSoporte, { texto: inputSoporte, yo: true }]); 
+                setInputSoporte("");
+              }} className="p-4 bg-blue-600 text-white rounded-2xl"><Send size={20} /></button>
+            </div>
+          </div>
+        )}
+
+        {/* CHAT DE CONDUCTOR BLINDADO */}
+        {vista === "chat_conductor" && (
+          <div className="absolute inset-0 z-50 flex flex-col bg-white">
+            <div className="p-6 pt-12 border-b flex items-center gap-4 shrink-0 bg-white text-slate-900">
+              <button onClick={() => setVista("inicio")} className="p-2 bg-slate-100 rounded-full text-slate-900"><ArrowLeft size={20} /></button>
+              <div className="text-left flex-1">
+                <p className="font-black uppercase text-sm italic">{viajeActivo?.conductor || "Conductor"}</p>
+                <p className="text-[9px] text-green-500 font-black tracking-widest">• Activo ahora</p>
+              </div>
+            </div>
+            <div className="flex-1 p-6 space-y-4 overflow-y-auto bg-slate-50">
+              {mensajesConductor.map((m, i) => (
+                <div key={i} className={`p-4 rounded-2xl max-w-[80%] text-left shadow-sm ${m.yo ? "bg-blue-600 text-white ml-auto rounded-tr-none" : "bg-white border rounded-tl-none"}`}>
+                  <p className="text-xs font-bold italic">{m.texto}</p>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-2 bg-white flex flex-col gap-2 shadow-2xl border-t">
+                <div className="flex gap-2">
+                  <button onClick={() => alert("✅ Viaje Confirmado.")} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">Confirmar Viaje</button>
+                  <button onClick={() => { setVista('inicio'); setViajeActivo(null); }} className="px-4 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase italic text-[10px]">Cancelar</button>
+                </div>
+            </div>
+            <div className="p-4 border-t flex gap-2 bg-white pb-8">
+              <input className="flex-1 bg-slate-100 p-4 rounded-2xl text-sm outline-none font-bold" placeholder="Escribe al conductor..." value={inputConductor} onChange={(e) => setInputConductor(e.target.value)} />
+              <button onClick={() => {
+                if (!inputConductor) return;
+                setMensajesConductor([...mensajesConductor, { texto: inputConductor, yo: true }]); 
+                setInputConductor("");
+              }} className="p-4 bg-blue-600 text-white rounded-2xl"><Send size={20} /></button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL KYC DE 3 PASOS */}
         {verificandoKYC && (
           <div className="absolute inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-6">
              <div className="bg-white w-full rounded-[40px] p-8 relative shadow-2xl animate-in zoom-in">
                 <button onClick={() => setVerificandoKYC(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full"><X size={20}/></button>
                 <h3 className="font-black uppercase text-xl italic text-slate-800 mb-6">Verificación KYC</h3>
+                
                 <div className="space-y-3">
-                   <div className="bg-slate-50 p-5 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-2">
-                     <Camera size={24} className="text-blue-600"/>
-                     <p className="text-[10px] font-black uppercase text-slate-400">Subir foto de Cédula</p>
+                   {/* 1. Rostro */}
+                   <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <Camera size={20} className="text-blue-600"/>
+                       <p className="text-[10px] font-black uppercase text-slate-600">Rostro (Selfie)</p>
+                     </div>
+                     <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
                    </div>
+                   
+                   {/* 2. Cédula Frontal */}
+                   <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <Camera size={20} className="text-blue-600"/>
+                       <p className="text-[10px] font-black uppercase text-slate-600">Cédula Frontal</p>
+                     </div>
+                     <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
+                   </div>
+
+                   {/* 3. Cédula Posterior */}
+                   <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <Camera size={20} className="text-blue-600"/>
+                       <p className="text-[10px] font-black uppercase text-slate-600">Cédula Posterior</p>
+                     </div>
+                     <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
+                   </div>
+
                    <button onClick={async () => {
                      await updateDoc(doc(db, "usuarios", user.uid), { kycVerificado: true });
                      setVerificandoKYC(false);
                      alert("✅ Documentos en revisión.");
-                   }} className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[11px] italic mt-4 shadow-xl">Enviar Documentos</button>
+                   }} className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-[11px] italic mt-4 shadow-xl active:scale-95">Enviar Documentos</button>
                 </div>
              </div>
           </div>
         )}
 
-        {/* DETALLES DE VIAJE Y BOTÓN DE RESERVA */}
+        {/* DETALLES DE VIAJE AL SELECCIONAR (INTACTO) */}
         {viajeSeleccionado && (
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
             <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 shadow-2xl text-left animate-in slide-in-from-bottom">
