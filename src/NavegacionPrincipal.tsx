@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import {
   doc, onSnapshot, updateDoc, collection, query, addDoc, 
   serverTimestamp, orderBy
@@ -7,10 +8,66 @@ import {
 import {
   Search, Wallet, User, LogOut, Car, X, Send, ArrowLeft, Edit2, 
   Headset, PlusCircle, ShieldCheck, Camera, CheckCircle, MapPin, 
-  ChevronRight, Luggage, Info, MessageSquare, Star, ArrowUpRight, ArrowDownLeft
+  ChevronRight, Luggage, Info, MessageSquare, Star, ArrowUpRight, ArrowDownLeft, LogIn
 } from "lucide-react";
 
-// DICCIONARIO DE ESTADOS Y CIUDADES COMPLETO (24 Estados)
+// ==========================================
+// 1. PANTALLA DE INICIO (LOGIN / PORTADA)
+// ==========================================
+export function PantallaInicio() {
+  const [correo, setCorreo] = useState("");
+  const [contrasena, setContrasena] = useState("");
+
+  const manejarLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!correo || !contrasena) return alert("⚠️ Llena todos los campos.");
+    try {
+      await signInWithEmailAndPassword(auth, correo, contrasena);
+    } catch (error: any) {
+      alert(`❌ Error al entrar: ${error.message}`);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-md mx-auto h-screen bg-slate-950 flex flex-col items-center px-6 font-sans relative overflow-hidden text-center">
+      <div className="pt-32 flex flex-col items-center">
+        <div className="w-24 h-24 bg-blue-600 rounded-[35px] flex items-center justify-center text-white font-black italic shadow-2xl border-4 border-white/5">
+          <span className="text-white text-7xl font-black italic transform -skew-x-6">D</span>
+        </div>
+        <h1 className="text-white text-5xl font-extrabold italic mt-10 tracking-tight">
+          DameLaCola
+        </h1>
+        <p className="text-slate-400 text-xs uppercase tracking-widest mt-2">
+          Tu cola de confianza
+        </p>
+      </div>
+
+      <form onSubmit={manejarLogin} className="w-full mt-16 space-y-4 text-left">
+        <input 
+          type="email" placeholder="Correo" value={correo} onChange={(e) => setCorreo(e.target.value)}
+          className="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 text-white placeholder:text-slate-500 text-sm outline-none focus:border-blue-500"
+        />
+        <input 
+          type="password" placeholder="Contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)}
+          className="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 text-white placeholder:text-slate-500 text-sm outline-none focus:border-blue-500"
+        />
+        <button type="submit" className="w-full bg-blue-600 p-4 rounded-2xl text-white font-extrabold uppercase text-xs tracking-wider mt-8 shadow-lg flex items-center justify-center gap-2">
+          <LogIn size={16}/> Entrar a la App
+        </button>
+      </form>
+
+      <div className="mt-10 pb-12">
+        <p className="text-slate-400 text-xs">
+          ¿No tienes cuenta? <span className="text-blue-500 font-bold cursor-pointer hover:underline">Regístrate</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 2. NAVEGACIÓN PRINCIPAL (LA APP COMPLETA)
+// ==========================================
 const UBICACIONES = {
   "Amazonas": ["Puerto Ayacucho", "San Fernando de Atabapo"],
   "Anzoátegui": ["Puerto La Cruz", "Barcelona", "Lechería", "El Tigre", "Anaco", "Cantaura"],
@@ -138,7 +195,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         <header className="p-6 pt-12 bg-white border-b shrink-0 z-20 shadow-sm text-left">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-3">
-              {/* LOGO "D" ESTILIZADO */}
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg text-xl transform -skew-x-6">D</div>
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">DameLaCola {modo}</p>
@@ -169,11 +225,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         {vista === "inicio" && (
           <div className="p-6 space-y-4">
             
-            {/* BUSCADOR (Filtro Pasajero) */}
+            {/* BUSCADOR */}
             {modo === "pasajero" && (
                <div className="bg-white p-5 rounded-[25px] border shadow-sm space-y-3 text-left">
                  <p className="text-[9px] font-black text-slate-400 uppercase ml-1">¿A dónde vamos hoy?</p>
-                 
                  <div className="grid grid-cols-2 gap-2">
                    <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={busqueda.estadoOrigen} onChange={(e) => setBusqueda({...busqueda, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
                      <option value="">Estado Origen</option>
@@ -184,7 +239,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      {busqueda.estadoOrigen && (UBICACIONES as any)[busqueda.estadoOrigen]?.map((c: string) => <option key={c} value={c}>{c}</option>)}
                    </select>
                  </div>
-
                  <div className="grid grid-cols-2 gap-2">
                    <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={busqueda.estadoDestino} onChange={(e) => setBusqueda({...busqueda, estadoDestino: e.target.value, ciudadDestino: ""})}>
                      <option value="">Estado Destino</option>
@@ -198,11 +252,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                </div>
             )}
 
-            {/* MODO CHOFER: PUBLICAR */}
+            {/* PUBLICAR */}
             {modo === "chofer" && (
               <div className="bg-white p-6 rounded-[35px] border border-green-100 shadow-sm space-y-4 text-left">
                 <h3 className="text-sm font-black uppercase italic text-green-600 flex items-center gap-2"><PlusCircle size={18}/> Ofrecer una Cola</h3>
-                
                 <div className="grid grid-cols-2 gap-2">
                    <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.estadoOrigen} onChange={(e) => setFormViaje({...formViaje, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
                      <option value="">Origen</option>
@@ -223,12 +276,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      {formViaje.estadoDestino && (UBICACIONES as any)[formViaje.estadoDestino]?.map((c: string) => <option key={c} value={c}>{c}</option>)}
                    </select>
                 </div>
-
                 <div className="grid grid-cols-2 gap-2">
                    <input type="number" placeholder="Precio $" className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.precio} onChange={(e) => setFormViaje({...formViaje, precio: e.target.value})} />
                    <input type="number" placeholder="Asientos" className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.puestos} onChange={(e) => setFormViaje({...formViaje, puestos: e.target.value})} />
                 </div>
-
                 <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border">
                   <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1"><Luggage size={14}/> ¿Acepta Maleta?</span>
                   <input type="checkbox" checked={formViaje.aceptaMaleta} onChange={(e) => setFormViaje({...formViaje, aceptaMaleta: e.target.checked})} className="accent-green-600" />
@@ -236,14 +287,12 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                 {formViaje.aceptaMaleta && (
                    <input type="number" placeholder="Kilos permitidos (Ej: 20)" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.kilosMaleta} onChange={(e) => setFormViaje({...formViaje, kilosMaleta: e.target.value})} />
                 )}
-                
                 <textarea placeholder="Detalles (Punto de encuentro, aire, etc...)" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none h-16 resize-none" value={formViaje.detallesExtras} onChange={(e) => setFormViaje({...formViaje, detallesExtras: e.target.value})} />
-
                 <button onClick={publicarViaje} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase italic shadow-lg text-xs">Ofrecer Cola Ahora</button>
               </div>
             )}
 
-            {/* LISTADO DE COLAS DISPONIBLES */}
+            {/* LISTADO DE COLAS */}
             <p className="text-[10px] font-black text-slate-400 uppercase text-left ml-2 mt-4">Colas en tu Zona</p>
             {viajesReales.filter(v => 
               (!busqueda.estadoOrigen || (v.origen && v.origen.includes(busqueda.estadoOrigen))) &&
@@ -303,6 +352,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                  <button onClick={() => setEditando(!editando)} className="p-2 bg-slate-100 rounded-xl text-slate-600"><Edit2 size={14}/></button>
                </div>
                <input disabled={!editando} className="w-full p-4 rounded-xl font-bold text-sm border bg-slate-50 outline-none" placeholder="Nombre" value={formPerfil.nombre} onChange={(e) => setFormPerfil({ ...formPerfil, nombre: e.target.value })} />
+               
+               {/* ========================================================= */}
+               {/* AQUÍ ESTÁ LA PARTE QUE SE TE HABÍA CORTADO AL COPIAR/PEGAR */}
+               {/* ========================================================= */}
                <input disabled={!editando} className="w-full p-4 rounded-xl font-bold text-sm border bg-slate-50 outline-none" placeholder="Teléfono" value={formPerfil.telefono} onChange={(e) => setFormPerfil({ ...formPerfil, telefono: e.target.value })} />
                
                {!userData.kycVerificado && (
@@ -398,13 +451,12 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* MODAL KYC DE 3 PASOS */}
+        {/* MODAL KYC */}
         {verificandoKYC && (
           <div className="absolute inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-6">
-             <div className="bg-white w-full rounded-[40px] p-8 relative shadow-2xl animate-in zoom-in">
+             <div className="bg-white w-full rounded-[40px] p-8 relative shadow-2xl">
                 <button onClick={() => setVerificandoKYC(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full"><X size={20}/></button>
                 <h3 className="font-black uppercase text-xl italic text-slate-800 mb-6">Verificación KYC</h3>
-                
                 <div className="space-y-3">
                    <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
                      <div className="flex items-center gap-3">
@@ -413,7 +465,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      </div>
                      <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
                    </div>
-                   
                    <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
                      <div className="flex items-center gap-3">
                        <Camera size={20} className="text-blue-600"/>
@@ -421,7 +472,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      </div>
                      <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
                    </div>
-
                    <div className="bg-slate-50 p-4 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between">
                      <div className="flex items-center gap-3">
                        <Camera size={20} className="text-blue-600"/>
@@ -429,7 +479,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                      </div>
                      <button className="text-[9px] bg-slate-200 px-3 py-1 rounded-lg font-bold uppercase text-slate-600">Subir</button>
                    </div>
-
                    <button onClick={async () => {
                      await updateDoc(doc(db, "usuarios", user.uid), { kycVerificado: true });
                      setVerificandoKYC(false);
@@ -440,10 +489,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           </div>
         )}
 
-        {/* DETALLES DE VIAJE AL SELECCIONAR */}
+        {/* DETALLES DE VIAJE */}
         {viajeSeleccionado && (
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
-            <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 shadow-2xl text-left animate-in slide-in-from-bottom">
+            <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 shadow-2xl text-left">
               <div className="flex justify-between items-start">
                 <div className="flex gap-4">
                   <div className="w-14 h-14 bg-blue-600 rounded-[20px] flex items-center justify-center text-white text-2xl font-black italic shadow-lg transform -skew-x-6">D</div>
@@ -455,7 +504,6 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                 </div>
                 <button onClick={() => setViajeSeleccionado(null)} className="p-2 bg-slate-100 rounded-full text-slate-400"><X size={20} /></button>
               </div>
-
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100">
                   <p className="text-[8px] font-black text-slate-400 uppercase">Precio</p>
@@ -470,15 +518,13 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                   <p className="text-sm font-black text-slate-800 italic">{viajeSeleccionado.puestosDisponibles}</p>
                 </div>
               </div>
-
               <div className="bg-blue-50 p-4 rounded-3xl border border-blue-100">
                  <p className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-2 mb-1"><Info size={12}/> Info Extra</p>
                  <p className="text-xs font-bold text-slate-600 leading-relaxed italic">"{viajeSeleccionado.detallesExtras || "Sin detalles adicionales."}"</p>
               </div>
-
               <div className="flex gap-3">
-                 <button onClick={() => { setViajeActivo(viajeSeleccionado); setVista("chat_conductor"); setViajeSeleccionado(null); }} className="p-5 bg-slate-100 text-blue-600 rounded-3xl shadow-sm active:scale-90"><MessageSquare size={24}/></button>
-                 <button onClick={() => { setViajeActivo(viajeSeleccionado); setVista("chat_conductor"); setViajeSeleccionado(null); alert("✅ Pediste la cola. Confirma en el chat."); }} className="flex-1 py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic shadow-xl text-xs tracking-widest active:scale-95">Pedir la Cola</button>
+                 <button onClick={() => { setViajeActivo(viajeSeleccionado); setVista("chat_conductor"); setViajeSeleccionado(null); }} className="p-5 bg-slate-100 text-blue-600 rounded-3xl shadow-sm"><MessageSquare size={24}/></button>
+                 <button onClick={() => { setViajeActivo(viajeSeleccionado); setVista("chat_conductor"); setViajeSeleccionado(null); alert("✅ Pediste la cola. Confirma en el chat."); }} className="flex-1 py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic shadow-xl text-xs tracking-widest">Pedir la Cola</button>
               </div>
             </div>
           </div>
