@@ -100,6 +100,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         detallesExtras: formViaje.detalles,
         idCreador: user.uid,
         fecha: serverTimestamp(),
+        estado: 'buscando' // Estado inicial
       });
       alert("✅ ¡Ruta publicada con éxito!");
       setModo("pasajero");
@@ -118,6 +119,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       setViajeActivo(viaje);
       setViajeSeleccionado(null);
       setVista("chat_conductor");
+      setEstadoViaje("buscando");
     } catch (e) {
       alert("Error al procesar la reserva");
     }
@@ -236,20 +238,44 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                 </div>
               ))}
             </div>
-            {/* PANEL DE CONTROL DE ESTADO (BOTONES AZUL/ROJO/VERDE) */}
-            {vista === "chat_conductor" && (
+            
+            {/* PANEL DE CONTROL SINCRONIZADO CON FIREBASE */}
+            {vista === "chat_conductor" && viajeActivo && (
                 <div className="px-4 py-2 bg-white flex flex-col gap-2">
                   {estadoViaje === 'buscando' && (
                     <div className="flex gap-2">
-                      <button onClick={() => setEstadoViaje('confirmado')} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">Confirmar Viaje</button>
-                      <button onClick={() => { setVista('inicio'); setViajeActivo(null); }} className="px-4 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase italic text-[10px]">Cancelar Solicitud</button>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await updateDoc(doc(db, "Viajes", viajeActivo.id), { estado: 'confirmado' });
+                            setEstadoViaje('confirmado');
+                          } catch (e) { alert("Error al confirmar"); }
+                        }} 
+                        className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">
+                        Confirmar Viaje
+                      </button>
+                      <button onClick={() => { setVista('inicio'); setViajeActivo(null); }} className="px-4 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase italic text-[10px]">
+                        Cancelar Solicitud
+                      </button>
                     </div>
                   )}
                   {estadoViaje === 'confirmado' && (
-                    <button onClick={() => { setEstadoViaje('finalizado'); alert("¡Viaje Finalizado! Gracias por usar RutaCom."); setVista('inicio'); }} className="w-full py-3 bg-green-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">Ya llegué (Finalizar)</button>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, "Viajes", viajeActivo.id), { estado: 'finalizado' });
+                          setEstadoViaje('finalizado');
+                          alert("¡Viaje Finalizado! Gracias por usar RutaCom.");
+                          setVista('inicio');
+                        } catch (e) { alert("Error al finalizar"); }
+                      }} 
+                      className="w-full py-3 bg-green-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">
+                      Ya llegué (Finalizar)
+                    </button>
                   )}
                 </div>
             )}
+
             <div className="p-4 border-t flex gap-2 bg-white pb-8">
               <input className="flex-1 bg-slate-100 p-4 rounded-2xl text-sm outline-none font-bold" placeholder="Escribe un mensaje..." value={vista === "chat_conductor" ? inputConductor : inputSoporte} onChange={(e) => vista === "chat_conductor" ? setInputConductor(e.target.value) : setInputSoporte(e.target.value)} />
               <button onClick={() => {
@@ -305,4 +331,5 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       </nav>
     </div>
   );
-          }
+  }
+                                                                                 
