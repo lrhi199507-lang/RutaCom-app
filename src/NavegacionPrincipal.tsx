@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 // ==========================================
-// DICCIONARIO DE VENEZUELA (TU LÓGICA PERFECTA)
+// DICCIONARIO DE VENEZUELA (COMPLETO)
 // ==========================================
 const UBICACIONES = {
   "Amazonas": ["Puerto Ayacucho", "San Fernando de Atabapo"],
@@ -44,7 +44,7 @@ const UBICACIONES = {
 const ESTADOS = Object.keys(UBICACIONES);
 
 // ==========================================
-// PANTALLA DE INICIO (NUEVO BRANDING)
+// PANTALLA DE LOGIN (NUEVO BRANDING)
 // ==========================================
 function PantallaLogin() {
   const [correo, setCorreo] = useState("");
@@ -67,17 +67,17 @@ function PantallaLogin() {
           <span className="text-white text-7xl transform -skew-x-6">D</span>
         </div>
         <h1 className="text-white text-5xl font-extrabold italic mt-10 tracking-tight">DameLaCola</h1>
-        <p className="text-slate-400 text-[10px] uppercase tracking-[0.3em] mt-2 font-black">Tu cola de confianza</p>
+        <p className="text-slate-400 text-[10px] uppercase tracking-[0.3em] mt-2 font-black italic">Tu cola de confianza</p>
       </div>
 
       <form onSubmit={manejarLogin} className="w-full mt-16 space-y-4 text-left">
         <input 
-          type="email" placeholder="Correo" value={correo} onChange={(e) => setCorreo(e.target.value)}
-          className="w-full bg-slate-900 p-4 rounded-2xl border border-slate-800 text-white text-sm outline-none focus:border-blue-600 transition-all"
+          type="email" placeholder="Correo electrónico" value={correo} onChange={(e) => setCorreo(e.target.value)}
+          className="w-full bg-slate-900 p-4 rounded-2xl border border-slate-800 text-white text-sm outline-none focus:border-blue-600"
         />
         <input 
           type="password" placeholder="Contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)}
-          className="w-full bg-slate-900 p-4 rounded-2xl border border-slate-800 text-white text-sm outline-none focus:border-blue-600 transition-all"
+          className="w-full bg-slate-900 p-4 rounded-2xl border border-slate-800 text-white text-sm outline-none focus:border-blue-600"
         />
         <button type="submit" className="w-full bg-blue-600 p-4 rounded-2xl text-white font-black uppercase text-xs tracking-wider mt-8 flex items-center justify-center gap-2">
           <LogIn size={16}/> Entrar a la App
@@ -90,20 +90,37 @@ function NavegacionPrincipal({ user }: { user: any }) {
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [editando, setEditando] = useState(false);
+  const [verificandoKYC, setVerificandoKYC] = useState(false);
   const [busqueda, setBusqueda] = useState({ estadoOrigen: "", ciudadOrigen: "", estadoDestino: "", ciudadDestino: "" });
   const [viajesReales, setViajesReales] = useState<any[]>([]);
-  const [userData, setUserData] = useState<any>({ nombre: "", saldo: 0, kycVerificado: false, vehiculo: { marca: "", modelo: "", placa: "" } });
+  const [viajeSeleccionado, setViajeSeleccionado] = useState<any>(null);
+  const [mostrarChatFlotante, setMostrarChatFlotante] = useState(false);
   
+  const [userData, setUserData] = useState<any>({ 
+    nombre: "", saldo: 0, telefono: "", kycVerificado: false, estrellas: 5.0, tiempoApp: "1 mes",
+    vehiculo: { marca: "", modelo: "", placa: "", color: "" }
+  });
+  
+  const [formPerfil, setFormPerfil] = useState({ nombre: "", telefono: "" });
+  const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", placa: "", color: "" });
   const [formViaje, setFormViaje] = useState({
-    estadoOrigen: "", ciudadOrigen: "", estadoDestino: "", ciudadDestino: "", precio: "", puestos: "4"
+    estadoOrigen: "", ciudadOrigen: "", estadoDestino: "", ciudadDestino: "",
+    precio: "", puestos: "4", kilosMaleta: "20", aceptaMaleta: true, detallesExtras: ""
   });
 
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
-      if (snap.exists()) setUserData(snap.data());
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserData(data);
+        if (!editando) {
+          setFormPerfil({ nombre: data.nombre || "", telefono: data.telefono || "" });
+          setFormVehiculo(data.vehiculo || { marca: "", modelo: "", placa: "", color: "" });
+        }
+      }
     });
-  }, [user]);
+  }, [user, editando]);
 
   useEffect(() => {
     const q = query(collection(db, "Viajes"), orderBy("fecha", "desc"));
@@ -113,21 +130,29 @@ function NavegacionPrincipal({ user }: { user: any }) {
   }, []);
 
   const publicarViaje = async () => {
-    if (!formViaje.ciudadOrigen || !formViaje.ciudadDestino || !formViaje.precio) return alert("⚠️ Completa los campos.");
+    if (!formViaje.ciudadOrigen || !formViaje.ciudadDestino || !formViaje.precio) {
+      return alert("⚠️ Completa los campos básicos.");
+    }
+    if (!userData.vehiculo?.placa) {
+      return alert("⚠️ Registra tu placa en el Perfil.");
+    }
     try {
       await addDoc(collection(db, "Viajes"), {
-        conductor: userData.nombre || "Usuario",
+        conductor: userData.nombre || "Conductor",
+        estrellasConductor: userData.estrellas || 5.0,
         origen: `${formViaje.estadoOrigen}, ${formViaje.ciudadOrigen}`,
         destino: `${formViaje.estadoDestino}, ${formViaje.ciudadDestino}`,
         precio: Number(formViaje.precio),
+        vehiculoCompleto: `${userData.vehiculo.marca} ${userData.vehiculo.modelo}`,
+        puestosDisponibles: Number(formViaje.puestos),
+        aceptaMaleta: formViaje.aceptaMaleta,
         idCreador: user.uid,
         fecha: serverTimestamp(),
       });
       alert("✅ Cola publicada.");
-      setVista("inicio");
-    } catch (e) { alert("❌ Error al publicar."); }
+      setModo("pasajero");
+    } catch (e: any) { alert(`❌ Error: ${e.message}`); }
   };
-
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 relative overflow-hidden flex flex-col font-sans">
       <header className="p-6 pt-12 bg-white border-b flex justify-between items-center shadow-sm">
@@ -147,25 +172,83 @@ function NavegacionPrincipal({ user }: { user: any }) {
       <main className="flex-1 overflow-y-auto pb-32">
         {vista === "inicio" && (
           <div className="p-6 space-y-4">
-            <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-2 rounded-xl text-[10px] font-black uppercase border bg-blue-50 text-blue-600 mb-2">
+            <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase border transition-all ${modo === "pasajero" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-green-50 text-green-600 border-green-100"}`}>
               Cambiar a Modo {modo === "pasajero" ? "Chófer" : "Pasajero"}
             </button>
-            {/* LÓGICA DE BÚSQUEDA Y LISTA DE VIAJES AQUÍ */}
-            <p className="text-[10px] font-black text-slate-400 uppercase text-left ml-2">Colas Disponibles</p>
+
+            {modo === "pasajero" ? (
+              <div className="bg-white p-5 rounded-[25px] border shadow-sm space-y-3">
+                <p className="text-[9px] font-black text-slate-400 uppercase ml-1 italic">¿A dónde vamos hoy?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={busqueda.estadoOrigen} onChange={(e) => setBusqueda({...busqueda, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
+                    <option value="">Estado Origen</option>
+                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                  <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" disabled={!busqueda.estadoOrigen} value={busqueda.ciudadOrigen} onChange={(e) => setBusqueda({...busqueda, ciudadOrigen: e.target.value})}>
+                    <option value="">Ciudad Origen</option>
+                    {busqueda.estadoOrigen && (UBICACIONES as any)[busqueda.estadoOrigen]?.map((c: string) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white p-6 rounded-[35px] border border-green-100 shadow-sm space-y-4">
+                <h3 className="text-sm font-black uppercase italic text-green-600 flex items-center gap-2"><PlusCircle size={18}/> Ofrecer una Cola</h3>
+                <div className="grid grid-cols-2 gap-2">
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={formViaje.estadoOrigen} onChange={(e) => setFormViaje({...formViaje, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
+                     <option value="">Origen</option>
+                     {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                   </select>
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" disabled={!formViaje.estadoOrigen} value={formViaje.ciudadOrigen} onChange={(e) => setFormViaje({...formViaje, ciudadOrigen: e.target.value})}>
+                     <option value="">Ciudad</option>
+                     {formViaje.estadoOrigen && (UBICACIONES as any)[formViaje.estadoOrigen]?.map((c: string) => <option key={c} value={c}>{c}</option>)}
+                   </select>
+                </div>
+                <input type="number" placeholder="Precio $" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={formViaje.precio} onChange={(e) => setFormViaje({...formViaje, precio: e.target.value})} />
+                <button onClick={publicarViaje} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase italic shadow-lg text-xs">Ofrecer Cola Ahora</button>
+              </div>
+            )}
+
+            <p className="text-[10px] font-black text-slate-400 uppercase text-left ml-2 mt-4">Colas Disponibles</p>
             {viajesReales.map((v) => (
-              <div key={v.id} className="bg-white p-5 rounded-[30px] border flex justify-between items-center shadow-sm text-left">
-                <div>
-                  <p className="text-[9px] font-black text-blue-600 uppercase italic">{v.origen} → {v.destino}</p>
-                  <p className="font-black uppercase text-sm text-slate-800">{v.conductor}</p>
+              <div key={v.id} onClick={() => setViajeSeleccionado(v)} className="bg-white p-5 rounded-[30px] border flex justify-between items-center shadow-sm text-left">
+                <div className="flex gap-3">
+                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600"><Car size={22} /></div>
+                  <div>
+                    <p className="text-[9px] font-black text-blue-600 uppercase italic">{v.origen} → {v.destino}</p>
+                    <p className="font-black uppercase text-sm text-slate-800">{v.conductor}</p>
+                  </div>
                 </div>
                 <p className="text-lg font-black text-blue-600 italic">${v.precio}</p>
               </div>
             ))}
           </div>
         )}
+
+        {vista === "perfil" && (
+          <div className="p-6 space-y-6 text-left">
+            <div className="bg-slate-900 p-6 rounded-[35px] shadow-xl text-left">
+              <p className="text-blue-400 text-[10px] font-black uppercase italic">Billetera</p>
+              <p className="text-4xl font-black text-white italic mb-4">${Number(userData.saldo).toFixed(2)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                 <button className="bg-blue-600 text-white py-3 rounded-2xl font-black uppercase text-[10px]">Recargar</button>
+                 <button className="bg-slate-800 text-white py-3 rounded-2xl font-black uppercase text-[10px]">Retirar</button>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-[35px] border shadow-sm space-y-4">
+               <h3 className="text-[11px] font-black text-slate-400 uppercase italic">Datos del Usuario</h3>
+               <input className="w-full p-4 rounded-xl border bg-slate-50" placeholder="Nombre" value={formPerfil.nombre} onChange={(e) => setFormPerfil({...formPerfil, nombre: e.target.value})} />
+               <button onClick={() => auth.signOut()} className="w-full py-4 bg-red-50 text-red-500 font-black uppercase rounded-2xl text-xs">Cerrar Sesión</button>
+            </div>
+          </div>
+        )}
       </main>
 
-      <nav className="p-6 bg-white border-t flex justify-around items-center pb-10">
+      {/* BURBUJA DE CHAT FLOTANTE RECUPERADA */}
+      <button onClick={() => setMostrarChatFlotante(!mostrarChatFlotante)} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-2xl z-50 animate-bounce">
+        <MessageSquare size={24} />
+      </button>
+
+      <nav className="p-6 bg-white border-t flex justify-around items-center shrink-0 z-20 pb-10">
         <button onClick={() => setVista("inicio")} className={`flex flex-col items-center ${vista === "inicio" ? "text-blue-600" : "text-slate-400"}`}><Car size={24} /><span className="text-[9px] font-black uppercase">Colas</span></button>
         <button onClick={() => setVista("perfil")} className={`flex flex-col items-center ${vista === "perfil" ? "text-blue-600" : "text-slate-400"}`}><User size={24} /><span className="text-[9px] font-black uppercase">Perfil</span></button>
       </nav>
@@ -176,14 +259,7 @@ function NavegacionPrincipal({ user }: { user: any }) {
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
-
-  useEffect(() => {
-    return onAuthStateChanged(auth, (usuario) => {
-      setUser(usuario);
-      setCargando(false);
-    });
-  }, []);
-
-  if (cargando) return <div className="h-screen bg-slate-950 flex items-center justify-center text-white font-black italic">Iniciando DameLaCola...</div>;
+  useEffect(() => { return onAuthStateChanged(auth, (u) => { setUser(u); setCargando(false); }); }, []);
+  if (cargando) return <div className="h-screen bg-slate-950 flex items-center justify-center text-white font-black italic tracking-widest">DameLaCola...</div>;
   return user ? <NavegacionPrincipal user={user} /> : <PantallaLogin />;
 }
