@@ -6,6 +6,7 @@ import {
   updateDoc,
   collection,
   query,
+  where,
   addDoc,
   serverTimestamp,
 } from "firebase/firestore";
@@ -23,6 +24,7 @@ import {
   Edit2,
   Headset,
   PlusCircle,
+  Bell
 } from "lucide-react";
 
 const ESTADOS = [
@@ -64,6 +66,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   });
   const [estadoViaje, setEstadoViaje] = useState("buscando");
 
+  // 1. Carga de datos de usuario
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
@@ -79,12 +82,31 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
     });
   }, [user, editando]);
 
+  // 2. Carga de todos los viajes disponibles
   useEffect(() => {
     const q = query(collection(db, "Viajes"));
     return onSnapshot(q, (snap) => {
       setViajesReales(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
   }, []);
+
+  // 3. NUEVO: Detección de viajes para el CHOFER
+  // Si estoy en modo chófer, busco si alguien reservó un viaje que YO creé
+  useEffect(() => {
+    if (modo !== "chofer" || !user) return;
+    
+    const q = query(collection(db, "Viajes"), where("idCreador", "==", user.uid));
+    return onSnapshot(q, (snap) => {
+      const misViajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Si alguno de mis viajes tiene estado 'confirmado' o alguien lo reservó
+      const viajeConPasajero = misViajes.find(v => v.estado === 'buscando' || v.estado === 'confirmado');
+      
+      if (viajeConPasajero) {
+        setViajeActivo(viajeConPasajero);
+        if (viajeConPasajero.estado) setEstadoViaje(viajeConPasajero.estado);
+      }
+    });
+  }, [modo, user]);
 
   const publicarViaje = async () => {
     if (!formViaje.destino || !formViaje.precio || !formViaje.modeloAuto) {
@@ -100,10 +122,10 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         detallesExtras: formViaje.detalles,
         idCreador: user.uid,
         fecha: serverTimestamp(),
-        estado: 'buscando' // Estado inicial
+        estado: 'buscando' 
       });
       alert("✅ ¡Ruta publicada con éxito!");
-      setModo("pasajero");
+      // Al publicar, nos quedamos en modo chófer para esperar al pasajero
     } catch (e) {
       alert("❌ Error de conexión");
     }
@@ -116,6 +138,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
       await updateDoc(doc(db, "usuarios", user.uid), {
         saldo: userData.saldo - viaje.precio,
       });
+      // Importante: Al reservar, el pasajero entra al chat
       setViajeActivo(viaje);
       setViajeSeleccionado(null);
       setVista("chat_conductor");
@@ -183,6 +206,22 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
 
         {vista === "inicio" && modo === "chofer" && (
           <div className="p-6 space-y-4 text-left pb-32">
+            {/* AVISO DE VIAJE ACTIVO PARA EL CHOFER */}
+            {viajeActivo && (
+              <div className="bg-blue-600 p-6 rounded-[35px] text-white shadow-xl mb-6 flex justify-between items-center animate-pulse">
+                <div>
+                  <p className="text-[10px] font-black uppercase opacity-80 italic">¡Tienes un Pasajero!</p>
+                  <p className="text-lg font-black uppercase italic">Ruta a {viajeActivo.destino}</p>
+                </div>
+                <button 
+                  onClick={() => setVista("chat_conductor")}
+                  className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-md"
+                >
+                  Ver Detalles
+                </button>
+              </div>
+            )}
+
             <h2 className="text-lg font-black uppercase italic flex items-center gap-2 text-slate-800">
               <PlusCircle size={20} className="text-green-600" /> Publicar Mi Ruta
             </h2>
@@ -239,7 +278,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
               ))}
             </div>
             
-            {/* PANEL DE CONTROL SINCRONIZADO CON FIREBASE */}
+            {/* PANEL DE CONTROL SINCRONIZADO */}
             {vista === "chat_conductor" && viajeActivo && (
                 <div className="px-4 py-2 bg-white flex flex-col gap-2">
                   {estadoViaje === 'buscando' && (
@@ -267,6 +306,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
                           setEstadoViaje('finalizado');
                           alert("¡Viaje Finalizado! Gracias por usar RutaCom.");
                           setVista('inicio');
+                          setViajeActivo(null); // Limpiamos para poder crear otro
                         } catch (e) { alert("Error al finalizar"); }
                       }} 
                       className="w-full py-3 bg-green-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg">
@@ -289,6 +329,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         )}
       </main>
 
+      {/* MODAL DE DETALLES PARA EL PASAJERO */}
       {viajeSeleccionado && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
           <div className="w-full bg-white rounded-t-[50px] p-8 space-y-6 shadow-2xl">
@@ -325,11 +366,4 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
         <button onClick={() => setVista("chat_soporte")} className={`flex flex-col items-center gap-1 ${vista === "chat_soporte" ? "text-blue-600" : "text-slate-400"}`}>
           <Headset size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Soporte</span>
         </button>
-        <button onClick={() => setVista("perfil")} className={`flex flex-col items-center gap-1 ${vista === "perfil" ? "text-blue-600" : "text-slate-400"}`}>
-          <User size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Perfil</span>
-        </button>
-      </nav>
-    </div>
-  );
-  }
-                                                                                 
+        <button onClick={() => setVista("perfil")} className={`flex flex-c
