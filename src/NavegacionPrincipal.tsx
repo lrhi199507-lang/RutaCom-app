@@ -307,3 +307,4 @@ export function NavegacionPrincipal({ user }: { user: any }) {
     </div>
   );
           }
+export default NavegacionPrincipal;
