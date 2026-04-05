@@ -8,6 +8,7 @@ import {
   query,
   where,
   addDoc,
+  deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import {
@@ -23,11 +24,14 @@ import {
   Headset,
   PlusCircle,
   Bell,
-  MapPin
+  MapPin,
+  Star,
+  History,
+  Trash2,
+  Settings
 } from "lucide-react";
 
-// 1. DICCIONARIO DE ESTADOS Y CIUDADES
-// (Puedes agregar más ciudades a los arreglos si lo necesitas)
+// DICCIONARIO DE ESTADOS Y CIUDADES (VENEZUELA)
 const UBICACIONES: Record<string, string[]> = {
   "Amazonas": ["Puerto Ayacucho"],
   "Anzoátegui": ["Barcelona", "Puerto La Cruz", "El Tigre", "Anaco"],
@@ -62,7 +66,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   const [modo, setModo] = useState("pasajero");
   const [editando, setEditando] = useState(false);
   
-  // 2. ESTADOS DE BÚSQUEDA (PASAJERO)
+  // BÚSQUEDA (PASAJERO)
   const [busquedaEstadoOrigen, setBusquedaEstadoOrigen] = useState("");
   const [busquedaCiudadOrigen, setBusquedaCiudadOrigen] = useState("");
   const [busquedaEstadoDestino, setBusquedaEstadoDestino] = useState("");
@@ -76,15 +80,20 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   const [viajesReales, setViajesReales] = useState<any[]>([]);
   const [viajeSeleccionado, setViajeSeleccionado] = useState<any>(null);
   const [viajeActivo, setViajeActivo] = useState<any>(null);
+  const [perfilPublico, setPerfilPublico] = useState<any>(null);
+
   const [userData, setUserData] = useState<any>({
     nombre: "",
     saldo: 0,
     telefono: "",
+    estrellas: 5.0,
+    viajesRealizados: 0,
+    vehiculo: { modelo: "", color: "", placa: "" }
   });
-  const [formPerfil, setFormPerfil] = useState({ nombre: "", telefono: "" });
+  const [formPerfil, setFormPerfil] = useState({ nombre: "", telefono: "", modelo: "", color: "", placa: "" });
   
-  // 3. ESTADOS DE FORMULARIO DE VIAJE (CHÓFER)
   const [formViaje, setFormViaje] = useState({
+    id: "", // Para edición
     estadoOrigen: "",
     ciudadOrigen: "",
     estadoDestino: "",
@@ -96,6 +105,7 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
   });
   const [estadoViaje, setEstadoViaje] = useState("buscando");
 
+  // Sincronización de usuario
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
@@ -106,11 +116,15 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
           setFormPerfil({
             nombre: data.nombre || "",
             telefono: data.telefono || "",
+            modelo: data.vehiculo?.modelo || "",
+            color: data.vehiculo?.color || "",
+            placa: data.vehiculo?.placa || "",
           });
       }
     });
   }, [user, editando]);
 
+  // Escucha global de viajes
   useEffect(() => {
     const q = query(collection(db, "Viajes"));
     return onSnapshot(q, (snap) => {
@@ -118,400 +132,341 @@ export default function NavegacionPrincipal({ user }: { user: any }) {
     });
   }, []);
 
-  useEffect(() => {
-    if (!viajeActivo?.id) return;
-    return onSnapshot(doc(db, "Viajes", viajeActivo.id), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setEstadoViaje(data.estado || "buscando");
-      }
-    });
-  }, [viajeActivo]);
-
-  useEffect(() => {
-    if (modo !== "chofer" || !user) return;
-    const q = query(collection(db, "Viajes"), where("idCreador", "==", user.uid));
-    return onSnapshot(q, (snap) => {
-      const misViajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const activo = misViajes.find(v => v.estado === "buscando" || v.estado === "confirmado");
-      if (activo) setViajeActivo(activo);
-    });
-  }, [modo, user]);
-
+  // Publicar o Editar Viaje
   const publicarViaje = async () => {
-    // Validación más estricta
-    if (!formViaje.estadoOrigen || !formViaje.ciudadOrigen || !formViaje.estadoDestino || !formViaje.ciudadDestino || !formViaje.precio || !formViaje.modeloAuto) {
-      return alert("⚠️ Por favor completa el Origen, Destino, Precio y Auto");
+    if (!formViaje.estadoOrigen || !formViaje.ciudadOrigen || !formViaje.precio) {
+      return alert("⚠️ Completa los datos mínimos");
     }
-    
     try {
-      await addDoc(collection(db, "Viajes"), {
-        conductor: userData.nombre || "Chófer Profesional",
+      const dataViaje = {
+        conductor: userData.nombre,
+        idCreador: user.uid,
         estadoOrigen: formViaje.estadoOrigen,
         ciudadOrigen: formViaje.ciudadOrigen,
         estadoDestino: formViaje.estadoDestino,
         ciudadDestino: formViaje.ciudadDestino,
         precio: Number(formViaje.precio),
-        vehiculo: formViaje.modeloAuto,
+        vehiculo: userData.vehiculo?.modelo || formViaje.modeloAuto,
         puestos: Number(formViaje.puestos),
         detallesExtras: formViaje.detalles,
-        idCreador: user.uid,
         fecha: serverTimestamp(),
         estado: "buscando"
-      });
-      alert("✅ ¡Ruta publicada con éxito!");
-      setFormViaje({ ...formViaje, estadoOrigen: "", ciudadOrigen: "", estadoDestino: "", ciudadDestino: "", precio: "", detalles: "" });
-    } catch (e) {
-      alert("❌ Error de conexión");
-    }
+      };
+
+      if (formViaje.id) {
+        await updateDoc(doc(db, "Viajes", formViaje.id), dataViaje);
+        alert("✅ Viaje actualizado");
+      } else {
+        await addDoc(collection(db, "Viajes"), dataViaje);
+        alert("✅ ¡Viaje publicado!");
+      }
+      setFormViaje({ id: "", estadoOrigen: "", ciudadOrigen: "", estadoDestino: "", ciudadDestino: "", precio: "", modeloAuto: "", puestos: "4", detalles: "" });
+    } catch (e) { alert("Error al guardar"); }
   };
 
   const manejarReserva = async (viaje: any) => {
     if (userData.saldo < viaje.precio) return alert("⚠️ Saldo insuficiente");
     try {
-      await updateDoc(doc(db, "usuarios", user.uid), {
-        saldo: userData.saldo - viaje.precio,
-      });
+      await updateDoc(doc(db, "usuarios", user.uid), { saldo: userData.saldo - viaje.precio });
       setViajeActivo(viaje);
       setViajeSeleccionado(null);
       setVista("chat_conductor");
-    } catch (e) {
-      alert("Error al procesar la reserva");
-    }
+    } catch (e) { alert("Error"); }
   };
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 relative overflow-hidden flex flex-col font-sans">
+      
+      {/* HEADER DINÁMICO */}
       {!["chat_conductor", "chat_soporte"].includes(vista) && (
         <header className="p-6 pt-12 bg-white border-b shrink-0 z-20 shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-3 text-left">
+            <button onClick={() => setPerfilPublico(userData)} className="flex items-center gap-3 text-left">
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg italic">R</div>
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase">RutaCom {modo}</p>
-                <p className="text-xs font-bold uppercase text-slate-800">{userData.nombre || "Usuario"}</p>
+                <p className="text-xs font-bold uppercase text-slate-800 flex items-center gap-1">
+                  {userData.nombre || "Usuario"} 
+                  {modo === "chofer" && <Star size={10} className="text-yellow-500 fill-yellow-500"/>}
+                </p>
               </div>
-            </div>
+            </button>
             <div className="bg-slate-900 text-white px-4 py-2 rounded-2xl flex items-center gap-2 border border-slate-700">
               <Wallet size={12} className="text-blue-400" />
               <span className="text-[11px] font-black">${Number(userData.saldo).toFixed(2)}</span>
             </div>
           </div>
-          <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase border border-blue-100 shadow-sm transition-all active:scale-95">
+          <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase border shadow-sm transition-all active:scale-95 ${modo === "pasajero" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-green-50 text-green-600 border-green-100"}`}>
             Cambiar a Modo {modo === "pasajero" ? "Chófer" : "Pasajero"}
           </button>
         </header>
       )}
 
       <main className="flex-1 overflow-y-auto">
+        {/* VISTA INICIO - PASAJERO */}
         {vista === "inicio" && modo === "pasajero" && (
           <div className="p-6 space-y-4 pb-32">
-            
-            {/* PANEL DE BÚSQUEDA PASAJERO */}
             <div className="bg-white rounded-[25px] border shadow-sm p-4 space-y-4">
-              
-              {/* Selector de Origen */}
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2"><MapPin size={12} className="text-green-500"/> ¿Desde dónde viajas?</p>
-                <div className="flex gap-2">
-                  <select 
-                    className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none text-slate-700"
-                    value={busquedaEstadoOrigen} 
-                    onChange={(e) => { setBusquedaEstadoOrigen(e.target.value); setBusquedaCiudadOrigen(""); }}>
-                    <option value="">Estado...</option>
-                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                  <select 
-                    disabled={!busquedaEstadoOrigen}
-                    className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none text-slate-700 disabled:opacity-50"
-                    value={busquedaCiudadOrigen} 
-                    onChange={(e) => setBusquedaCiudadOrigen(e.target.value)}>
-                    <option value="">Ciudad...</option>
-                    {busquedaEstadoOrigen && UBICACIONES[busquedaEstadoOrigen].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+              <div className="space-y-4">
+                {/* Selector Origen */}
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2"><MapPin size={12} className="text-green-500"/> ¿Desde dónde?</p>
+                  <div className="flex gap-2">
+                    <select className="flex-1 bg-slate-50 p-3 rounded-xl border text-xs font-bold" value={busquedaEstadoOrigen} onChange={(e) => { setBusquedaEstadoOrigen(e.target.value); setBusquedaCiudadOrigen(""); }}>
+                      <option value="">Estado</option>
+                      {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                    </select>
+                    <select disabled={!busquedaEstadoOrigen} className="flex-1 bg-slate-50 p-3 rounded-xl border text-xs font-bold" value={busquedaCiudadOrigen} onChange={(e) => setBusquedaCiudadOrigen(e.target.value)}>
+                      <option value="">Ciudad</option>
+                      {busquedaEstadoOrigen && UBICACIONES[busquedaEstadoOrigen].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
                 </div>
-              </div>
-
-              <div className="h-px bg-slate-100 w-full"></div>
-
-              {/* Selector de Destino */}
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2"><Search size={12} className="text-blue-600"/> ¿A dónde vas?</p>
-                <div className="flex gap-2">
-                  <select 
-                    className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none text-slate-700"
-                    value={busquedaEstadoDestino} 
-                    onChange={(e) => { setBusquedaEstadoDestino(e.target.value); setBusquedaCiudadDestino(""); }}>
-                    <option value="">Estado...</option>
-                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                  <select 
-                    disabled={!busquedaEstadoDestino}
-                    className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none text-slate-700 disabled:opacity-50"
-                    value={busquedaCiudadDestino} 
-                    onChange={(e) => setBusquedaCiudadDestino(e.target.value)}>
-                    <option value="">Ciudad...</option>
-                    {busquedaEstadoDestino && UBICACIONES[busquedaEstadoDestino].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                {/* Selector Destino */}
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2"><Search size={12} className="text-blue-600"/> ¿A dónde vas?</p>
+                  <div className="flex gap-2">
+                    <select className="flex-1 bg-slate-50 p-3 rounded-xl border text-xs font-bold" value={busquedaEstadoDestino} onChange={(e) => { setBusquedaEstadoDestino(e.target.value); setBusquedaCiudadDestino(""); }}>
+                      <option value="">Estado</option>
+                      {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                    </select>
+                    <select disabled={!busquedaEstadoDestino} className="flex-1 bg-slate-50 p-3 rounded-xl border text-xs font-bold" value={busquedaCiudadDestino} onChange={(e) => setBusquedaCiudadDestino(e.target.value)}>
+                      <option value="">Ciudad</option>
+                      {busquedaEstadoDestino && UBICACIONES[busquedaEstadoDestino].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
-            
-            {/* LISTA DE VIAJES FILTRADA */}
-            {viajesReales.filter((v) => {
-              const origenOk = (!busquedaEstadoOrigen || v.estadoOrigen === busquedaEstadoOrigen) && (!busquedaCiudadOrigen || v.ciudadOrigen === busquedaCiudadOrigen);
-              const destinoOk = (!busquedaEstadoDestino || v.estadoDestino === busquedaEstadoDestino) && (!busquedaCiudadDestino || v.ciudadDestino === busquedaCiudadDestino);
-              return origenOk && destinoOk && v.estado !== "finalizado";
-            }).map((v) => (
-              <div key={v.id} onClick={() => setViajeSeleccionado(v)} className="bg-white p-4 rounded-[30px] border flex flex-col gap-3 shadow-sm cursor-pointer hover:border-blue-300 transition-colors text-left">
+
+            {/* Lista Viajes Pasajero */}
+            {viajesReales.filter(v => (!busquedaEstadoOrigen || v.estadoOrigen === busquedaEstadoOrigen) && (!busquedaCiudadOrigen || v.ciudadOrigen === busquedaCiudadOrigen) && v.estado !== "finalizado").map((v) => (
+              <div key={v.id} onClick={() => setViajeSeleccionado(v)} className="bg-white p-4 rounded-[25px] border flex flex-col gap-3 shadow-sm text-left">
                 <div className="flex justify-between items-start">
                   <div className="flex gap-3">
-                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100 shrink-0"><Car size={20} /></div>
+                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0"><Car size={20} /></div>
                     <div>
                       <p className="font-black uppercase text-sm text-slate-800">{v.conductor}</p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase">{v.vehiculo} • {v.puestos} Puestos Libres</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">{v.vehiculo} • ⭐️ 4.9</p>
                     </div>
                   </div>
                   <p className="text-lg font-black text-blue-600 italic">${v.precio}</p>
                 </div>
-                
-                <div className="bg-slate-50 p-2 rounded-xl flex items-center gap-2 border border-slate-100">
-                  <div className="flex flex-col items-center gap-1">
-                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                     <div className="w-0.5 h-3 bg-slate-300"></div>
-                     <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-                  </div>
-                  <div className="flex flex-col justify-between h-full text-[10px] font-bold text-slate-600 uppercase">
-                     <p>{v.ciudadOrigen}, {v.estadoOrigen}</p>
-                     <p className="mt-1">{v.ciudadDestino}, {v.estadoDestino}</p>
-                  </div>
+                <div className="bg-slate-50 p-2 rounded-xl flex flex-col text-[9px] font-bold text-slate-500 uppercase">
+                  <span>De: {v.ciudadOrigen}</span>
+                  <span className="text-blue-600">A: {v.ciudadDestino}</span>
                 </div>
               </div>
             ))}
-            
-            {viajesReales.filter(v => {
-              const origenOk = (!busquedaEstadoOrigen || v.estadoOrigen === busquedaEstadoOrigen) && (!busquedaCiudadOrigen || v.ciudadOrigen === busquedaCiudadOrigen);
-              const destinoOk = (!busquedaEstadoDestino || v.estadoDestino === busquedaEstadoDestino) && (!busquedaCiudadDestino || v.ciudadDestino === busquedaCiudadDestino);
-              return origenOk && destinoOk && v.estado !== "finalizado";
-            }).length === 0 && (
-              <p className="text-center text-slate-400 text-xs font-bold py-10 uppercase">No hay viajes disponibles para esta ruta.</p>
-            )}
           </div>
         )}
 
+        {/* VISTA INICIO - CHÓFER */}
         {vista === "inicio" && modo === "chofer" && (
-          <div className="p-6 space-y-4 text-left pb-32">
-            {viajeActivo && viajeActivo.estado !== "finalizado" && (
-              <div className="bg-blue-600 p-5 rounded-[25px] text-white shadow-xl mb-4 flex justify-between items-center animate-pulse">
-                <div className="flex items-center gap-3">
-                  <Bell size={20} className="text-blue-200" />
-                  <div>
-                    <p className="text-[9px] font-black uppercase opacity-80">Ruta Activa</p>
-                    <p className="text-[10px] font-black uppercase italic">{viajeActivo.ciudadOrigen} ➔ {viajeActivo.ciudadDestino}</p>
+          <div className="p-6 space-y-6 text-left pb-32">
+            
+            {/* Mis Publicaciones (Edición) */}
+            {viajesReales.filter(v => v.idCreador === user.uid && v.estado === "buscando").length > 0 && (
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-blue-600 uppercase italic">Mi Publicación Activa</p>
+                {viajesReales.filter(v => v.idCreador === user.uid && v.estado === "buscando").map(v => (
+                  <div key={v.id} className="bg-blue-600 p-4 rounded-[25px] text-white flex justify-between items-center shadow-lg">
+                    <div>
+                      <p className="text-[10px] font-black uppercase opacity-70">{v.ciudadOrigen} ➔ {v.ciudadDestino}</p>
+                      <p className="text-xl font-black italic">${v.precio}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setFormViaje({...v, id: v.id, modeloAuto: v.vehiculo, precio: v.precio.toString()})} className="p-3 bg-white/20 rounded-xl"><Edit2 size={16}/></button>
+                      <button onClick={async () => { if(confirm("¿Eliminar ruta?")) await deleteDoc(doc(db, "Viajes", v.id)) }} className="p-3 bg-red-500 rounded-xl"><Trash2 size={16}/></button>
+                    </div>
                   </div>
-                </div>
-                <button onClick={() => setVista("chat_conductor")} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[9px] uppercase shadow-md active:scale-95">Ver Chat</button>
+                ))}
               </div>
             )}
 
-            <h2 className="text-lg font-black uppercase italic flex items-center gap-2 text-slate-800">
-              <PlusCircle size={20} className="text-green-600" /> Publicar Mi Ruta
-            </h2>
-            <div className="bg-white p-5 rounded-[30px] border space-y-4 shadow-sm">
-              
-              {/* ORIGEN CHOFER */}
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Punto de Partida</p>
-                <div className="flex gap-2">
-                  <select className="flex-1 bg-white p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none" value={formViaje.estadoOrigen} onChange={(e) => setFormViaje({ ...formViaje, estadoOrigen: e.target.value, ciudadOrigen: "" })}>
-                    <option value="">Estado...</option>
-                    {ESTADOS.map((e) => (<option key={e} value={e}>{e}</option>))}
-                  </select>
-                  <select disabled={!formViaje.estadoOrigen} className="flex-1 bg-white p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none disabled:opacity-50" value={formViaje.ciudadOrigen} onChange={(e) => setFormViaje({ ...formViaje, ciudadOrigen: e.target.value })}>
-                    <option value="">Ciudad...</option>
-                    {formViaje.estadoOrigen && UBICACIONES[formViaje.estadoOrigen].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
+            {/* Crear / Editar Ruta */}
+            <div className="bg-white p-5 rounded-[30px] border shadow-sm space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <PlusCircle size={18} className="text-green-600" />
+                <h2 className="text-sm font-black uppercase italic text-slate-800">{formViaje.id ? "Editar Mi Ruta" : "Nueva Ruta"}</h2>
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={formViaje.estadoOrigen} onChange={(e) => setFormViaje({...formViaje, estadoOrigen: e.target.value, ciudadOrigen: ""})}>
+                  <option value="">Estado Origen</option>
+                  {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+                <select disabled={!formViaje.estadoOrigen} className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={formViaje.ciudadOrigen} onChange={(e) => setFormViaje({...formViaje, ciudadOrigen: e.target.value})}>
+                  <option value="">Ciudad Origen</option>
+                  {formViaje.estadoOrigen && UBICACIONES[formViaje.estadoOrigen].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={formViaje.estadoDestino} onChange={(e) => setFormViaje({...formViaje, estadoDestino: e.target.value, ciudadDestino: ""})}>
+                  <option value="">Estado Destino</option>
+                  {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+                <select disabled={!formViaje.estadoDestino} className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={formViaje.ciudadDestino} onChange={(e) => setFormViaje({...formViaje, ciudadDestino: e.target.value})}>
+                  <option value="">Ciudad Destino</option>
+                  {formViaje.estadoDestino && UBICACIONES[formViaje.estadoDestino].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <input className="flex-1 bg-slate-50 p-3 rounded-xl border font-bold text-xs" placeholder="Precio ($)" type="number" value={formViaje.precio} onChange={(e) => setFormViaje({...formViaje, precio: e.target.value})} />
+                <button onClick={publicarViaje} className="flex-[2] bg-green-600 text-white font-black uppercase italic rounded-xl py-3 text-xs shadow-md">{formViaje.id ? "Guardar Cambios" : "Publicar Ruta"}</button>
+              </div>
+            </div>
 
-              {/* DESTINO CHOFER */}
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Punto de Llegada</p>
-                <div className="flex gap-2">
-                  <select className="flex-1 bg-white p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none" value={formViaje.estadoDestino} onChange={(e) => setFormViaje({ ...formViaje, estadoDestino: e.target.value, ciudadDestino: "" })}>
-                    <option value="">Estado...</option>
-                    {ESTADOS.map((e) => (<option key={e} value={e}>{e}</option>))}
-                  </select>
-                  <select disabled={!formViaje.estadoDestino} className="flex-1 bg-white p-3 rounded-xl border border-slate-200 font-bold text-xs outline-none disabled:opacity-50" value={formViaje.ciudadDestino} onChange={(e) => setFormViaje({ ...formViaje, ciudadDestino: e.target.value })}>
-                    <option value="">Ciudad...</option>
-                    {formViaje.estadoDestino && UBICACIONES[formViaje.estadoDestino].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
+            {/* Feed Global para el Chófer (Comparar Precios) */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-2">🛒 Otros viajes activos (Para comparar)</p>
+              <div className="space-y-2 opacity-80">
+                {viajesReales.filter(v => v.idCreador !== user.uid && v.estado === "buscando").slice(0, 3).map(v => (
+                  <div key={v.id} className="bg-white p-3 rounded-2xl border flex justify-between items-center text-[10px] font-bold">
+                    <span className="text-slate-600">{v.ciudadOrigen} ➔ {v.ciudadDestino}</span>
+                    <span className="text-blue-600">${v.precio}</span>
+                  </div>
+                ))}
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <input className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 font-bold text-sm outline-none" placeholder="Auto (Ej: Corolla)" value={formViaje.modeloAuto} onChange={(e) => setFormViaje({ ...formViaje, modeloAuto: e.target.value })} />
-                <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 font-bold text-sm outline-none" placeholder="Precio ($)" value={formViaje.precio} onChange={(e) => setFormViaje({ ...formViaje, precio: e.target.value })} />
-              </div>
-              <textarea className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 font-bold text-sm h-20 outline-none resize-none" placeholder="Detalles extra (maletas, mascotas...)" value={formViaje.detalles} onChange={(e) => setFormViaje({ ...formViaje, detalles: e.target.value })} />
-              <button onClick={publicarViaje} className="w-full py-4 bg-green-600 text-white rounded-[20px] font-black uppercase italic shadow-lg active:scale-95 transition-transform">Publicar Ahora</button>
             </div>
           </div>
         )}
 
+        {/* VISTA PERFIL */}
         {vista === "perfil" && (
-          <div className="p-6 space-y-6 text-center pb-32">
-            <div className="w-24 h-24 bg-blue-600 rounded-[35px] mx-auto flex items-center justify-center text-white shadow-xl relative border-4 border-white">
-              <User size={40} />
-              <button onClick={() => setEditando(!editando)} className={`absolute -bottom-2 -right-2 p-2 rounded-xl text-white border-2 border-white shadow-md ${editando ? "bg-green-500" : "bg-slate-900"}`}><Edit2 size={14} /></button>
+          <div className="p-6 space-y-6 pb-32">
+            <div className="flex flex-col items-center gap-3">
+               <div className="w-20 h-20 bg-slate-900 rounded-[30px] flex items-center justify-center text-white relative">
+                 <User size={30} />
+                 <div className="absolute -bottom-1 -right-1 bg-blue-600 p-1.5 rounded-lg border-2 border-white"><Star size={10} className="fill-white"/></div>
+               </div>
+               <div className="text-center">
+                 <h2 className="font-black uppercase text-lg italic text-slate-800">{userData.nombre}</h2>
+                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Miembro desde 2026</p>
+               </div>
             </div>
-            <div className="text-left space-y-4">
-              <div className="bg-slate-900 p-6 rounded-[30px] shadow-xl border border-slate-800">
-                <p className="text-blue-400 text-[10px] font-black uppercase italic">Billetera Digital</p>
-                <p className="text-3xl font-black text-white italic">${Number(userData.saldo).toFixed(2)}</p>
-              </div>
-              <div className="bg-white p-6 rounded-[35px] border space-y-4 shadow-sm">
-                <input disabled={!editando} className="w-full p-4 rounded-2xl font-bold uppercase text-sm border bg-slate-50 disabled:opacity-70" value={formPerfil.nombre} onChange={(e) => setFormPerfil({ ...formPerfil, nombre: e.target.value })} />
-                <input disabled={!editando} className="w-full p-4 rounded-2xl font-bold text-sm border bg-slate-50 disabled:opacity-70" value={formPerfil.telefono} onChange={(e) => setFormPerfil({ ...formPerfil, telefono: e.target.value })} />
-                {editando && <button onClick={async () => { await updateDoc(doc(db, "usuarios", user.uid), formPerfil); setEditando(false); alert("✅ Perfil actualizado"); }} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg">Guardar Cambios</button>}
-              </div>
-            </div>
-            <button onClick={() => auth.signOut()} className="w-full py-4 bg-red-50 text-red-500 font-black uppercase rounded-2xl border border-red-100 flex items-center justify-center gap-2 italic text-xs active:bg-red-100"><LogOut size={16} /> Cerrar Sesión</button>
-          </div>
-        )}
 
-        {(vista === "chat_conductor" || vista === "chat_soporte") && (
-          <div className="absolute inset-0 z-50 flex flex-col bg-white animate-in slide-in-from-right duration-300">
-            <div className={`p-6 pt-12 border-b flex items-center gap-4 shrink-0 ${vista === "chat_soporte" ? "bg-slate-900 text-white" : "bg-white text-slate-900"}`}>
-              <button onClick={() => setVista("inicio")} className="p-2 bg-slate-100 rounded-full text-slate-900 active:scale-90"><ArrowLeft size={20} /></button>
-              <div className="text-left flex-1">
-                <p className="font-black uppercase text-sm italic">{vista === "chat_soporte" ? "Soporte RutaCom" : viajeActivo?.conductor}</p>
-                <p className="text-[9px] text-green-500 font-black uppercase tracking-widest">• En línea ahora</p>
-              </div>
+            <div className="bg-white rounded-[30px] border p-5 space-y-4 shadow-sm">
+               <div className="flex justify-between items-center border-b pb-4">
+                 <div>
+                   <p className="text-[9px] font-black text-slate-400 uppercase">Estado Cuenta</p>
+                   <p className="text-sm font-black text-green-600 uppercase italic">Verificado</p>
+                 </div>
+                 <div className="text-right">
+                   <p className="text-[9px] font-black text-slate-400 uppercase">Reputación</p>
+                   <div className="flex items-center gap-1"><Star size={12} className="text-yellow-500 fill-yellow-500"/><span className="text-sm font-black italic">{userData.estrellas || 5.0}</span></div>
+                 </div>
+               </div>
+
+               {/* Si es modo Chófer, mostramos el Vehículo */}
+               {modo === "chofer" ? (
+                 <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                     <p className="text-[10px] font-black text-blue-600 uppercase">Mi Vehículo</p>
+                     <button onClick={() => setEditando(!editando)} className="text-slate-400"><Settings size={14}/></button>
+                   </div>
+                   <div className="grid grid-cols-2 gap-3">
+                     <div className="bg-slate-50 p-3 rounded-xl">
+                       <p className="text-[8px] font-black text-slate-400 uppercase">Modelo</p>
+                       <input disabled={!editando} className="bg-transparent font-bold text-xs uppercase w-full outline-none" value={formPerfil.modelo} onChange={(e) => setFormPerfil({...formPerfil, modelo: e.target.value})}/>
+                     </div>
+                     <div className="bg-slate-50 p-3 rounded-xl">
+                       <p className="text-[8px] font-black text-slate-400 uppercase">Placa</p>
+                       <input disabled={!editando} className="bg-transparent font-bold text-xs uppercase w-full outline-none" value={formPerfil.placa} onChange={(e) => setFormPerfil({...formPerfil, placa: e.target.value})}/>
+                     </div>
+                   </div>
+                   {editando && (
+                     <button onClick={async () => {
+                       await updateDoc(doc(db, "usuarios", user.uid), { vehiculo: { modelo: formPerfil.modelo, placa: formPerfil.placa, color: formPerfil.color } });
+                       setEditando(false);
+                       alert("Vehículo actualizado");
+                     }} className="w-full py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] uppercase">Guardar Cambios</button>
+                   )}
+                 </div>
+               ) : (
+                 <div className="space-y-4">
+                    <p className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-2"><History size={14}/> Historial Pasajero</p>
+                    <div className="bg-slate-50 p-4 rounded-xl text-center">
+                       <p className="text-[9px] font-bold text-slate-400 uppercase">No tienes viajes realizados recientemente</p>
+                    </div>
+                 </div>
+               )}
             </div>
             
-            {vista === "chat_conductor" && viajeActivo && (
-               <div className="bg-slate-900 text-white p-2 text-center text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                 <MapPin size={12} className="text-green-400" /> {viajeActivo.ciudadOrigen} <ArrowLeft size={12} className="rotate-180 text-slate-500"/> {viajeActivo.ciudadDestino}
-               </div>
-            )}
-
-            <div className="flex-1 p-6 space-y-4 overflow-y-auto bg-slate-50">
-              {(vista === "chat_conductor" ? mensajesConductor : mensajesSoporte).map((m, i) => (
-                <div key={i} className={`p-4 rounded-2xl max-w-[80%] text-left shadow-sm ${m.yo ? "bg-blue-600 text-white ml-auto rounded-tr-none" : "bg-white border rounded-tl-none"}`}>
-                  <p className="text-xs font-bold italic">{m.texto}</p>
-                </div>
-              ))}
-            </div>
-
-            {vista === "chat_conductor" && viajeActivo && (
-                <div className="px-4 py-3 bg-white border-t flex flex-col gap-2">
-                  {estadoViaje === "buscando" && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={async () => { await updateDoc(doc(db, "Viajes", viajeActivo.id), { estado: "confirmado" }); }} 
-                        className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg active:scale-95 transition-transform">
-                        Confirmar Viaje
-                      </button>
-                      <button onClick={() => { setVista("inicio"); setViajeActivo(null); }} className="px-4 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase italic text-[10px]">
-                        Cancelar
-                      </button>
-                    </div>
-                  )}
-                  {estadoViaje === "confirmado" && (
-                    <button 
-                      onClick={async () => {
-                        await updateDoc(doc(db, "Viajes", viajeActivo.id), { estado: "finalizado" });
-                        alert("¡Viaje Finalizado! Gracias por usar RutaCom.");
-                        setVista("inicio");
-                        setViajeActivo(null);
-                      }} 
-                      className="w-full py-3 bg-green-600 text-white rounded-xl font-black uppercase italic text-[10px] shadow-lg animate-bounce">
-                      Ya llegué (Finalizar)
-                    </button>
-                  )}
-                </div>
-            )}
-
-            <div className="p-4 border-t flex gap-2 bg-white pb-8">
-              <input className="flex-1 bg-slate-100 p-4 rounded-2xl text-sm outline-none font-bold" placeholder="Escribe un mensaje..." value={vista === "chat_conductor" ? inputConductor : inputSoporte} onChange={(e) => vista === "chat_conductor" ? setInputConductor(e.target.value) : setInputSoporte(e.target.value)} />
-              <button onClick={() => {
-                const text = vista === "chat_conductor" ? inputConductor : inputSoporte;
-                if (!text) return;
-                if (vista === "chat_conductor") { setMensajesConductor([...mensajesConductor, { texto: text, yo: true }]); setInputConductor(""); }
-                else { setMensajesSoporte([...mensajesSoporte, { texto: text, yo: true }]); setInputSoporte(""); }
-              }} className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg active:scale-90"><Send size={20} /></button>
-            </div>
+            <button onClick={() => auth.signOut()} className="w-full py-4 bg-red-50 text-red-500 font-black uppercase rounded-2xl border border-red-100 flex items-center justify-center gap-2 italic text-xs active:bg-red-100"><LogOut size={16} /> Cerrar Sesión</button>
           </div>
         )}
       </main>
 
-      {/* MODAL RESERVA PASAJERO */}
-      {viajeSeleccionado && (
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end animate-in fade-in duration-300">
-          <div className="w-full bg-white rounded-t-[40px] p-8 space-y-6 shadow-2xl animate-in slide-in-from-bottom duration-500">
-            <div className="flex justify-between items-start">
-              <div className="flex gap-4 text-left flex-1">
-                <div className="w-14 h-14 bg-blue-600 rounded-[20px] flex items-center justify-center text-white text-2xl font-black italic shadow-lg shrink-0">R</div>
-                <div className="flex-1 pr-2">
-                  <p className="text-xl font-black uppercase text-slate-800 leading-tight">{viajeSeleccionado.conductor}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{viajeSeleccionado.vehiculo}</p>
+      {/* MODAL PERFIL PÚBLICO (REPUTACIÓN) */}
+      {perfilPublico && (
+        <div className="absolute inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6">
+           <div className="bg-white w-full rounded-[40px] p-8 relative shadow-2xl animate-in zoom-in duration-300">
+              <button onClick={() => setPerfilPublico(null)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full"><X size={20}/></button>
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="w-20 h-20 bg-blue-600 rounded-[30px] flex items-center justify-center text-white text-3xl font-black italic shadow-xl">
+                  {perfilPublico.nombre?.[0]}
                 </div>
+                <div>
+                  <h3 className="font-black uppercase text-xl italic text-slate-800">{perfilPublico.nombre}</h3>
+                  <div className="flex items-center justify-center gap-1 text-yellow-500">
+                    <Star size={16} fill="currentColor"/> <Star size={16} fill="currentColor"/> <Star size={16} fill="currentColor"/> <Star size={16} fill="currentColor"/> <Star size={16} fill="currentColor"/>
+                    <span className="text-slate-800 font-black ml-2">5.0</span>
+                  </div>
+                </div>
+                <div className="w-full grid grid-cols-2 gap-4 mt-4">
+                   <div className="bg-slate-50 p-4 rounded-3xl border">
+                      <p className="text-[9px] font-black text-slate-400 uppercase">Viajes</p>
+                      <p className="text-lg font-black italic text-slate-800">{perfilPublico.viajesRealizados || 12}</p>
+                   </div>
+                   <div className="bg-slate-50 p-4 rounded-3xl border">
+                      <p className="text-[9px] font-black text-slate-400 uppercase">Antigüedad</p>
+                      <p className="text-lg font-black italic text-slate-800">1 Año</p>
+                   </div>
+                </div>
+                <p className="text-xs font-bold text-slate-400 italic">"Usuario verificado y confiable en la comunidad de RutaCom"</p>
               </div>
-              <button onClick={() => setViajeSeleccionado(null)} className="p-2 bg-slate-100 rounded-full text-slate-400 shrink-0"><X size={20} /></button>
-            </div>
+           </div>
+        </div>
+      )}
 
-            <div className="bg-slate-50 p-4 rounded-2xl flex flex-col gap-2 border border-slate-100">
-                <div className="flex items-center gap-3">
-                   <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><MapPin size={12}/></div>
-                   <div>
-                     <p className="text-[9px] font-black text-slate-400 uppercase">Origen</p>
-                     <p className="text-xs font-black text-slate-700 uppercase">{viajeSeleccionado.ciudadOrigen}, {viajeSeleccionado.estadoOrigen}</p>
-                   </div>
+      {/* MODAL RESERVA PASAJERO (Se mantiene igual de bonito) */}
+      {viajeSeleccionado && (
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end">
+          <div className="w-full bg-white rounded-t-[40px] p-8 space-y-6 shadow-2xl">
+            <div className="flex justify-between items-start">
+              <button onClick={() => setPerfilPublico({nombre: viajeSeleccionado.conductor})} className="flex gap-4 text-left flex-1">
+                <div className="w-14 h-14 bg-blue-600 rounded-[20px] flex items-center justify-center text-white text-2xl font-black italic shadow-lg shrink-0">R</div>
+                <div className="flex-1">
+                  <p className="text-xl font-black uppercase text-slate-800 leading-tight">{viajeSeleccionado.conductor}</p>
+                  <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1">Ver Perfil <Star size={10} fill="currentColor"/></p>
                 </div>
-                <div className="flex items-center gap-3">
-                   <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><MapPin size={12}/></div>
-                   <div>
-                     <p className="text-[9px] font-black text-slate-400 uppercase">Destino</p>
-                     <p className="text-xs font-black text-slate-700 uppercase">{viajeSeleccionado.ciudadDestino}, {viajeSeleccionado.estadoDestino}</p>
-                   </div>
-                </div>
+              </button>
+              <button onClick={() => setViajeSeleccionado(null)} className="p-2 bg-slate-100 rounded-full text-slate-400"><X size={20} /></button>
             </div>
-
+            <div className="bg-slate-50 p-4 rounded-2xl flex flex-col gap-2 border border-slate-100 text-[10px] font-bold uppercase text-slate-600">
+               <p>De: {viajeSeleccionado.ciudadOrigen}, {viajeSeleccionado.estadoOrigen}</p>
+               <p className="text-blue-600">A: {viajeSeleccionado.ciudadDestino}, {viajeSeleccionado.estadoDestino}</p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 text-left">
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Precio Fijo</p>
+              <div className="bg-slate-50 p-4 rounded-[25px] text-left">
+                <p className="text-[9px] font-black text-slate-400 uppercase">Precio</p>
                 <p className="text-xl font-black text-blue-600 italic">${viajeSeleccionado.precio}</p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 text-left">
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Puestos</p>
-                <p className="text-xl font-black text-slate-800 italic">{viajeSeleccionado.puestos} Libres</p>
+              <div className="bg-slate-50 p-4 rounded-[25px] text-left">
+                <p className="text-[9px] font-black text-slate-400 uppercase">Cupos</p>
+                <p className="text-xl font-black text-slate-800 italic">{viajeSeleccionado.puestos}</p>
               </div>
             </div>
-            
-            {viajeSeleccionado.detallesExtras && (
-               <div className="text-left bg-orange-50 p-3 rounded-xl border border-orange-100">
-                 <p className="text-[9px] font-black text-orange-400 uppercase mb-1">Nota del conductor:</p>
-                 <p className="text-xs font-bold text-orange-800 italic">{viajeSeleccionado.detallesExtras}</p>
-               </div>
-            )}
-
-            <button onClick={() => manejarReserva(viajeSeleccionado)} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic shadow-xl active:scale-95 transition-transform text-sm tracking-widest">Reservar Cupo Ahora</button>
+            <button onClick={() => manejarReserva(viajeSeleccionado)} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic shadow-xl active:scale-95 text-sm tracking-widest">Reservar Cupo Ahora</button>
           </div>
         </div>
       )}
 
       {/* NAVBAR */}
-      <nav className="p-6 bg-white border-t flex justify-around items-center shrink-0 z-20 pb-10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
-        <button onClick={() => setVista("inicio")} className={vista === "inicio" ? "flex flex-col items-center gap-1 transition-colors text-blue-600" : "flex flex-col items-center gap-1 transition-colors text-slate-400"}>
-          <Car size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Rutas</span>
-        </button>
-        <button onClick={() => setVista("chat_soporte")} className={vista === "chat_soporte" ? "flex flex-col items-center gap-1 transition-colors text-blue-600" : "flex flex-col items-center gap-1 transition-colors text-slate-400"}>
-          <Headset size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Soporte</span>
-        </button>
-        <button onClick={() => setVista("perfil")} className={vista === "perfil" ? "flex flex-col items-center gap-1 transition-colors text-blue-600" : "flex flex-col items-center gap-1 transition-colors text-slate-400"}>
-          <User size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Perfil</span>
-        </button>
+      <nav className="p-6 bg-white border-t flex justify-around items-center shrink-0 z-20 pb-10 shadow-lg">
+        <button onClick={() => setVista("inicio")} className={vista === "inicio" ? "text-blue-600" : "text-slate-400"}><Car size={24} /></button>
+        <button onClick={() => setVista("chat_soporte")} className={vista === "chat_soporte" ? "text-blue-600" : "text-slate-400"}><Headset size={24} /></button>
+        <button onClick={() => setVista("perfil")} className={vista === "perfil" ? "text-blue-600" : "text-slate-400"}><User size={24} /></button>
       </nav>
     </div>
   );
