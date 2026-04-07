@@ -31,15 +31,14 @@ export default function NavegacionPrincipal({ user }) {
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
   const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
+  const [misSolicitudes, setMisSolicitudes] = useState([]); // NUEVO: Para que el pasajero vea sus chats
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [solicitudEnviada, setSolicitudEnviada] = useState(null);
   const [configOpen, setConfigOpen] = useState(false);
 
-  // ESTADOS DEL CHAT
   const [chatActivo, setChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
-  // NUEVO: Estado para notificaciones en vivo
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState([]);
 
   const [form, setForm] = useState({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "" });
@@ -52,7 +51,6 @@ export default function NavegacionPrincipal({ user }) {
   const [mensajeSoporte, setMensajeSoporte] = useState("");
   const [chatSoporte, setChatSoporte] = useState([]);
 
-  // ESCUCHADORES GLOBALES (Usuarios, Viajes, Solicitudes y Notificaciones)
   useEffect(() => {
     if (!user) return;
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
@@ -76,16 +74,20 @@ export default function NavegacionPrincipal({ user }) {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // NUEVO: Escuchador global de mensajes no leídos para TODA LA APP
+    // NUEVO: Escuchar las solicitudes que yo envié como pasajero
+    const qMisSoli = query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid));
+    const unsubMisSoli = onSnapshot(qMisSoli, (snap) => {
+      setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     const qNotificaciones = query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid), where("leido", "==", false));
     const unsubNotif = onSnapshot(qNotificaciones, (snap) => {
       setMensajesNoLeidos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubNotif(); };
+    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); unsubNotif(); };
   }, [user]);
 
-  // ESCUCHADOR DE CHAT ACTIVO
   useEffect(() => {
     if (!chatActivo) return;
     const qM = query(collection(db, "MensajesPrivados"), where("chatId", "==", chatActivo.id), orderBy("fecha", "asc"));
@@ -93,7 +95,6 @@ export default function NavegacionPrincipal({ user }) {
       const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setMensajesChat(msjs);
 
-      // NUEVO: Marcar como leídos los mensajes en cuanto entramos al chat
       snap.docs.forEach(docSnap => {
         const data = docSnap.data();
         if (data.receptorId === user.uid && data.leido === false) {
@@ -104,7 +105,6 @@ export default function NavegacionPrincipal({ user }) {
     return () => unsubMsg();
   }, [chatActivo]);
 
-  // NUEVO: Modificado para incluir quién recibe el mensaje (receptorId)
   const enviarMensajePrivado = async () => {
     if (!nuevoMensaje.trim() || !chatActivo) return;
     try {
@@ -114,8 +114,8 @@ export default function NavegacionPrincipal({ user }) {
         texto: nuevoMensaje.trim(),
         emisorId: user.uid,
         nombreEmisor: userData.nombre || "Usuario",
-        receptorId: chatActivo.idOtro, // Sabe a quién avisarle
-        leido: false, // Inicia como no leído
+        receptorId: chatActivo.idOtro,
+        leido: false, 
         fecha: serverTimestamp()
       });
       setNuevoMensaje("");
@@ -145,6 +145,7 @@ export default function NavegacionPrincipal({ user }) {
         idPasajero: user.uid,
         nombrePasajero: userData.nombre || "Pasajero",
         idChofer: viajeSeleccionado.idCreador,
+        nombreChofer: viajeSeleccionado.conductor, // NUEVO: Guardamos el nombre del chofer para verlo en la lista
         ruta: `${viajeSeleccionado.cO} → ${viajeSeleccionado.cD}`,
         estado: "pendiente",
         fechaSolicitud: serverTimestamp()
@@ -186,7 +187,6 @@ export default function NavegacionPrincipal({ user }) {
     setTimeout(() => setChatSoporte(p => [...p, { texto: "Recibido. Pronto te atenderemos.", mio: false }]), 1000);
   };
 
-  // NUEVO: Se actualizaron los parámetros para guardar el ID del otro usuario
   const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
     const chatId = [user.uid, idOtroUsuario].sort().join("_") + "_" + idViaje;
     setChatActivo({ id: chatId, nombre: nombreOtro, idOtro: idOtroUsuario, idViaje: idViaje });
@@ -201,7 +201,6 @@ export default function NavegacionPrincipal({ user }) {
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 flex flex-col relative overflow-hidden font-sans">
       
-      {/* NUEVO: NOTIFICACIÓN GLOBAL FLOTANTE DE MENSAJE NUEVO */}
       {mensajesNoLeidos.length > 0 && vista !== "chat_privado" && (
          <div className="absolute top-24 left-1/2 transform -translate-x-1/2 w-11/12 bg-blue-600 text-white p-4 rounded-3xl shadow-2xl z-50 animate-bounce border-4 border-white">
             <p className="text-xs font-black italic flex items-center gap-2"><Bell size={18} className="animate-pulse"/> ¡Tienes mensajes nuevos!</p>
@@ -238,8 +237,7 @@ export default function NavegacionPrincipal({ user }) {
                   ))}
                </div>
                <div className="p-4 bg-white border-t flex gap-2">
-                  <input type="text"
-value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajePrivado()} className="flex-1 bg-slate-100 p-3 rounded-xl text-xs font-bold outline-none" placeholder="Escribe..." />
+                  <input type="text" value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajePrivado()} className="flex-1 bg-slate-100 p-3 rounded-xl text-xs font-bold outline-none" placeholder="Escribe..." />
                   <button onClick={enviarMensajePrivado} className="bg-blue-600 w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-lg active:scale-95"><Send size={16}/></button>
                </div>
             </div>
@@ -295,7 +293,7 @@ value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress=
                 MODO: {modo === "pasajero" ? "PASAJERO" : "CHÓFER"} (CAMBIAR)
               </button>
 
-              {modo === "chofer" && (
+              {modo === "chofer" ? (
                 <div className="space-y-6">
                   {solicitudesRecibidas.length > 0 && (
                     <div className="space-y-3">
@@ -330,7 +328,6 @@ value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress=
                     <button onClick={publicarRuta} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic shadow-lg">Publicar Ahora</button>
                   </div>
 
-                  {/* VIAJES PUBLICADOS POR EL CHOFER */}
                   {misViajesPublicados.length > 0 && (
                     <div className="space-y-3 pt-4">
                       <p className="text-[10px] font-black text-slate-500 uppercase italic flex items-center gap-2"><Car size={14}/> Tus Viajes Activos:</p>
@@ -347,31 +344,49 @@ value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress=
                   )}
                   <hr className="my-6 border-slate-200"/>
                 </div>
-              )}
+              ) : (
+                <div className="space-y-4">
 
-              {/* BUSCADOR Y LISTA GENERAL (Visible para ambos modos ahora) */}
-              <div className="space-y-4">
-                <div className="bg-white p-5 rounded-[30px] shadow-sm border space-y-3">
-                  <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={14}/> Explorar Viajes</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fEO} onChange={(e)=>{setFEO(e.target.value); setFCO("");}}><option value="">DE: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
-                    <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fEO} value={fCO} onChange={(e)=>setFCO(e.target.value)}><option value="">DE: CIUDAD</option>{fEO && UBICACIONES[fEO].map(c => <option key={c} value={c}>{c}</option>)}</select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fED} onChange={(e)=>{setFED(e.target.value); setFCD("");}}><option value="">A: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
-                    <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fED} value={fCD} onChange={(e)=>setFCD(e.target.value)}><option value="">A: CIUDAD</option>{fED && UBICACIONES[fED].map(c => <option key={c} value={c}>{c}</option>)}</select>
-                  </div>
-                </div>
-                {viajesFiltrados.map(v => (
-                  <div key={v.id} className="bg-white p-5 rounded-[35px] border flex flex-col shadow-md space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1"><div className="flex items-center gap-1 mb-1">{v.verificado && <ShieldCheck size={12} className="text-blue-500" />}<p className="text-[9px] font-black text-slate-400 uppercase italic leading-none">{v.conductor}</p></div><p className="font-black uppercase text-xs text-slate-800 italic">{v.cO} → {v.cD}</p></div>
-                      <p className="text-xl font-black text-blue-600 italic leading-none">${v.precio}</p>
+                  {/* NUEVO: SECCIÓN PARA QUE EL PASAJERO VEA SUS CHATS Y SOLICITUDES */}
+                  {misSolicitudes.length > 0 && (
+                    <div className="space-y-3 mb-6">
+                      <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
+                        <MessageCircle size={14}/> Tus Solicitudes y Chats Activos:
+                      </p>
+                      {misSolicitudes.map(s => (
+                        <div key={s.id} className="bg-blue-50 p-4 rounded-3xl border border-blue-200 flex justify-between items-center shadow-sm">
+                           <div>
+                              <p className="text-[10px] font-black text-slate-800 uppercase italic">Con: {s.nombreChofer || "Chófer"}</p>
+                              <p className="text-[8px] font-bold text-blue-600 uppercase">{s.ruta}</p>
+                           </div>
+                           <button onClick={() => abrirChat(s.idViaje, s.idChofer, s.nombreChofer || "Chófer")} className="p-3 bg-blue-600 text-white rounded-xl shadow-md"><MessageCircle size={16}/></button>
+                        </div>
+                      ))}
                     </div>
-                    <button onClick={() => setViajeSeleccionado(v)} className="text-[9px] bg-slate-900 text-white px-8 py-2.5 rounded-full font-black uppercase italic shadow-lg">Ver Detalle</button>
+                  )}
+
+                  <div className="bg-white p-5 rounded-[30px] shadow-sm border space-y-3">
+                    <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={14}/> Explorar Viajes</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fEO} onChange={(e)=>{setFEO(e.target.value); setFCO("");}}><option value="">DE: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fEO} value={fCO} onChange={(e)=>setFCO(e.target.value)}><option value="">DE: CIUDAD</option>{fEO && UBICACIONES[fEO].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fED} onChange={(e)=>{setFED(e.target.value); setFCD("");}}><option value="">A: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fED} value={fCD} onChange={(e)=>setFCD(e.target.value)}><option value="">A: CIUDAD</option>{fED && UBICACIONES[fED].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  {viajesFiltrados.map(v => (
+                    <div key={v.id} className="bg-white p-5 rounded-[35px] border flex flex-col shadow-md space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1"><div className="flex items-center gap-1 mb-1">{v.verificado && <ShieldCheck size={12} className="text-blue-500" />}<p className="text-[9px] font-black text-slate-400 uppercase italic leading-none">{v.conductor}</p></div><p className="font-black uppercase text-xs text-slate-800 italic">{v.cO} → {v.cD}</p></div>
+                        <p className="text-xl font-black text-blue-600 italic leading-none">${v.precio}</p>
+                      </div>
+                      <button onClick={() => setViajeSeleccionado(v)} className="text-[9px] bg-slate-900 text-white px-8 py-2.5 rounded-full font-black uppercase italic shadow-lg">Ver Detalle</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )
         )}
