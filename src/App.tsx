@@ -5,7 +5,6 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from 'firebase/auth';
-// Importamos la app principal que acabas de crear arriba
 import NavegacionPrincipal from './NavegacionPrincipal';
 
 export default function App() {
@@ -37,37 +36,35 @@ export default function App() {
     setCargando(false);
   };
 
-  // SI HAY USUARIO, MUESTRA LA APP QUE RESCATAMOS
   if (usuario) {
     return <NavegacionPrincipal user={usuario} />;
   }
 
-  // SI NO, MUESTRA LA PANTALLA AZUL
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f172a] px-8 text-center text-white">
-      <div className="bg-blue-600 w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl">
-        <span className="text-5xl font-bold italic">R</span>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f172a] px-8 text-center text-white font-sans">
+      <div className="bg-blue-600 w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-blue-900/50 transform -skew-x-6 border-b-4 border-blue-800">
+        <span className="text-5xl font-black italic">D</span>
       </div>
-      <h1 className="text-4xl font-bold italic mb-2">RutaCom</h1>
-      <p className="text-gray-400 tracking-[4px] text-[10px] mb-10 uppercase">Conectando Destinos</p>
+      <h1 className="text-4xl font-black italic mb-2 tracking-tighter">Dame la cola</h1>
+      <p className="text-blue-400 font-bold tracking-[3px] text-[10px] mb-10 uppercase italic">La frase por excelencia</p>
 
       <form onSubmit={manejarAutenticacion} className="w-full max-w-xs space-y-4">
         <input 
           type="email" placeholder="Correo" 
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500"
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm"
           onChange={(e) => setEmail(e.target.value)} 
         />
         <input 
           type="password" placeholder="Contraseña" 
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500"
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm"
           onChange={(e) => setPassword(e.target.value)} 
         />
-        <button className="w-full bg-blue-600 p-5 rounded-2xl font-bold tracking-widest uppercase">
+        <button className="w-full bg-blue-600 hover:bg-blue-500 transition-colors p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg">
           {cargando ? "Cargando..." : (esRegistro ? "Crear Cuenta" : "Entrar a la App")}
         </button>
       </form>
 
-      <button onClick={() => setEsRegistro(!esRegistro)} className="mt-6 text-gray-400 text-sm underline">
+      <button onClick={() => setEsRegistro(!esRegistro)} className="mt-6 text-slate-400 text-xs font-bold underline hover:text-white transition-colors">
         {esRegistro ? "¿Ya tienes cuenta? Entra" : "¿No tienes cuenta? Regístrate"}
       </button>
     </div>
