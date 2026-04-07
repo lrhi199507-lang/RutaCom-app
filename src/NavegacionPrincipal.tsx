@@ -35,9 +35,12 @@ export default function NavegacionPrincipal({ user }) {
   const [solicitudEnviada, setSolicitudEnviada] = useState(null);
   const [configOpen, setConfigOpen] = useState(false);
 
+  // ESTADOS DEL CHAT
   const [chatActivo, setChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
+  // NUEVO: Estado para notificaciones en vivo
+  const [mensajesNoLeidos, setMensajesNoLeidos] = useState([]);
 
   const [form, setForm] = useState({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "" });
   const [fEO, setFEO] = useState(""); const [fCO, setFCO] = useState("");
@@ -49,6 +52,7 @@ export default function NavegacionPrincipal({ user }) {
   const [mensajeSoporte, setMensajeSoporte] = useState("");
   const [chatSoporte, setChatSoporte] = useState([]);
 
+  // ESCUCHADORES GLOBALES (Usuarios, Viajes, Solicitudes y Notificaciones)
   useEffect(() => {
     if (!user) return;
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
@@ -72,26 +76,46 @@ export default function NavegacionPrincipal({ user }) {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsubUser(); unsubViajes(); unsubSoli(); };
+    // NUEVO: Escuchador global de mensajes no leídos para TODA LA APP
+    const qNotificaciones = query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid), where("leido", "==", false));
+    const unsubNotif = onSnapshot(qNotificaciones, (snap) => {
+      setMensajesNoLeidos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubNotif(); };
   }, [user]);
 
+  // ESCUCHADOR DE CHAT ACTIVO
   useEffect(() => {
     if (!chatActivo) return;
     const qM = query(collection(db, "MensajesPrivados"), where("chatId", "==", chatActivo.id), orderBy("fecha", "asc"));
     const unsubMsg = onSnapshot(qM, (snap) => {
-      setMensajesChat(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setMensajesChat(msjs);
+
+      // NUEVO: Marcar como leídos los mensajes en cuanto entramos al chat
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.receptorId === user.uid && data.leido === false) {
+           updateDoc(doc(db, "MensajesPrivados", docSnap.id), { leido: true });
+        }
+      });
     });
     return () => unsubMsg();
   }, [chatActivo]);
 
+  // NUEVO: Modificado para incluir quién recibe el mensaje (receptorId)
   const enviarMensajePrivado = async () => {
     if (!nuevoMensaje.trim() || !chatActivo) return;
     try {
       await addDoc(collection(db, "MensajesPrivados"), {
         chatId: chatActivo.id,
+        idViaje: chatActivo.idViaje,
         texto: nuevoMensaje.trim(),
         emisorId: user.uid,
         nombreEmisor: userData.nombre || "Usuario",
+        receptorId: chatActivo.idOtro, // Sabe a quién avisarle
+        leido: false, // Inicia como no leído
         fecha: serverTimestamp()
       });
       setNuevoMensaje("");
@@ -162,9 +186,10 @@ export default function NavegacionPrincipal({ user }) {
     setTimeout(() => setChatSoporte(p => [...p, { texto: "Recibido. Pronto te atenderemos.", mio: false }]), 1000);
   };
 
+  // NUEVO: Se actualizaron los parámetros para guardar el ID del otro usuario
   const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
     const chatId = [user.uid, idOtroUsuario].sort().join("_") + "_" + idViaje;
-    setChatActivo({ id: chatId, nombre: nombreOtro });
+    setChatActivo({ id: chatId, nombre: nombreOtro, idOtro: idOtroUsuario, idViaje: idViaje });
     setVista("chat_privado");
   };
 
@@ -175,6 +200,20 @@ export default function NavegacionPrincipal({ user }) {
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 flex flex-col relative overflow-hidden font-sans">
+      
+      {/* NUEVO: NOTIFICACIÓN GLOBAL FLOTANTE DE MENSAJE NUEVO */}
+      {mensajesNoLeidos.length > 0 && vista !== "chat_privado" && (
+         <div className="absolute top-24 left-1/2 transform -translate-x-1/2 w-11/12 bg-blue-600 text-white p-4 rounded-3xl shadow-2xl z-50 animate-bounce border-4 border-white">
+            <p className="text-xs font-black italic flex items-center gap-2"><Bell size={18} className="animate-pulse"/> ¡Tienes mensajes nuevos!</p>
+            <p className="text-[10px] font-bold mt-1 opacity-80">{mensajesNoLeidos[0].nombreEmisor} te ha escrito.</p>
+            <button 
+               onClick={() => abrirChat(mensajesNoLeidos[0].idViaje, mensajesNoLeidos[0].emisorId, mensajesNoLeidos[0].nombreEmisor)}
+               className="mt-3 bg-white text-blue-600 px-4 py-3 rounded-2xl text-xs font-black uppercase w-full shadow-lg">
+               Abrir Chat
+            </button>
+         </div>
+      )}
+
       <header className="p-6 pt-12 bg-white border-b flex justify-between items-center shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic text-xl transform -skew-x-6 shadow-lg shadow-blue-200">D</div>
@@ -185,7 +224,7 @@ export default function NavegacionPrincipal({ user }) {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-5 pb-32">
+      <main className="flex-1 overflow-y-auto p-5 pb-32 relative">
         {vista === "chat_privado" ? (
           <div className="flex flex-col h-full space-y-4 animate-in slide-in-from-right duration-300">
              <button onClick={() => {setVista("inicio"); setChatActivo(null);}} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px] italic">
@@ -193,13 +232,14 @@ export default function NavegacionPrincipal({ user }) {
             </button>
             <div className="flex-1 bg-white rounded-[40px] border shadow-xl flex flex-col overflow-hidden">
                <div className="bg-slate-900 p-4 text-white text-center font-black italic text-[10px] uppercase tracking-widest">Chat con {chatActivo?.nombre}</div>
-               <div className="flex-1 p-5 overflow-y-auto space-y-3 bg-slate-50">
+               <div className="flex-1 p-5 overflow-y-auto space-y-3 bg-slate-50 flex flex-col">
                   {mensajesChat.map((m) => (
-                    <div key={m.id} className={`p-3 rounded-2xl max-w-[85%] text-xs font-bold ${m.emisorId === user.uid ? 'bg-blue-600 text-white self-end ml-auto' : 'bg-white border text-slate-700'}`}>{m.texto}</div>
+                    <div key={m.id} className={`p-3 rounded-2xl max-w-[85%] text-xs font-bold ${m.emisorId === user.uid ? 'bg-blue-600 text-white self-end' : 'bg-white border text-slate-700 self-start'}`}>{m.texto}</div>
                   ))}
                </div>
                <div className="p-4 bg-white border-t flex gap-2">
-                  <input type="text" value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajePrivado()} className="flex-1 bg-slate-100 p-3 rounded-xl text-xs font-bold outline-none" placeholder="Escribe..." />
+                  <input type="text"
+value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajePrivado()} className="flex-1 bg-slate-100 p-3 rounded-xl text-xs font-bold outline-none" placeholder="Escribe..." />
                   <button onClick={enviarMensajePrivado} className="bg-blue-600 w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-lg active:scale-95"><Send size={16}/></button>
                </div>
             </div>
@@ -336,7 +376,6 @@ export default function NavegacionPrincipal({ user }) {
           )
         )}
 
-        {/* PERFIL CORREGIDO CON EL FORMULARIO DE CONFIGURACIÓN */}
         {vista === "perfil" && (
            <div className="space-y-4 animate-in fade-in duration-300">
               <div className="bg-white p-6 rounded-[35px] shadow-sm border flex flex-col items-center relative">
@@ -352,7 +391,6 @@ export default function NavegacionPrincipal({ user }) {
                  </div>
               </div>
 
-              {/* AQUI ESTA EL MENÚ DE CONFIGURACIÓN QUE SE HABÍA BORRADO */}
               {configOpen && (
                 <div className="bg-white p-5 rounded-[30px] border shadow-lg space-y-3 animate-in slide-in-from-top-2">
                   <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2 mb-2"><Settings size={14}/> Configuración de Perfil</p>
