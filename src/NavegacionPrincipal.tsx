@@ -31,7 +31,7 @@ export default function NavegacionPrincipal({ user }) {
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
   const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
-  const [misSolicitudes, setMisSolicitudes] = useState([]); // NUEVO: Para que el pasajero vea sus chats
+  const [misSolicitudes, setMisSolicitudes] = useState([]); 
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [solicitudEnviada, setSolicitudEnviada] = useState(null);
   const [configOpen, setConfigOpen] = useState(false);
@@ -74,7 +74,6 @@ export default function NavegacionPrincipal({ user }) {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // NUEVO: Escuchar las solicitudes que yo envié como pasajero
     const qMisSoli = query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid));
     const unsubMisSoli = onSnapshot(qMisSoli, (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -145,7 +144,7 @@ export default function NavegacionPrincipal({ user }) {
         idPasajero: user.uid,
         nombrePasajero: userData.nombre || "Pasajero",
         idChofer: viajeSeleccionado.idCreador,
-        nombreChofer: viajeSeleccionado.conductor, // NUEVO: Guardamos el nombre del chofer para verlo en la lista
+        nombreChofer: viajeSeleccionado.conductor, 
         ruta: `${viajeSeleccionado.cO} → ${viajeSeleccionado.cD}`,
         estado: "pendiente",
         fechaSolicitud: serverTimestamp()
@@ -347,7 +346,6 @@ export default function NavegacionPrincipal({ user }) {
               ) : (
                 <div className="space-y-4">
 
-                  {/* NUEVO: SECCIÓN PARA QUE EL PASAJERO VEA SUS CHATS Y SOLICITUDES */}
                   {misSolicitudes.length > 0 && (
                     <div className="space-y-3 mb-6">
                       <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
@@ -356,7 +354,8 @@ export default function NavegacionPrincipal({ user }) {
                       {misSolicitudes.map(s => (
                         <div key={s.id} className="bg-blue-50 p-4 rounded-3xl border border-blue-200 flex justify-between items-center shadow-sm">
                            <div>
-                              <p className="text-[10px] font-black text-slate-800 uppercase italic">Con: {s.nombreChofer || "Chófer"}</p>
+                              {/* AQUÍ EL CAMBIO: Se eliminó el "Con: " para que muestre directo el nombre, igual que el chofer */}
+                              <p className="text-[10px] font-black text-slate-800 uppercase italic">{s.nombreChofer || "Chófer"}</p>
                               <p className="text-[8px] font-bold text-blue-600 uppercase">{s.ruta}</p>
                            </div>
                            <button onClick={() => abrirChat(s.idViaje, s.idChofer, s.nombreChofer || "Chófer")} className="p-3 bg-blue-600 text-white rounded-xl shadow-md"><MessageCircle size={16}/></button>
