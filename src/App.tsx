@@ -45,8 +45,8 @@ export default function App() {
       <div className="bg-blue-600 w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-blue-900/50 transform -skew-x-6 border-b-4 border-blue-800">
         <span className="text-5xl font-black italic">D</span>
       </div>
-      <h1 className="text-4xl font-black italic mb-2 tracking-tighter">DameLaCola</h1>
-      <p className="text-blue-400 font-bold tracking-[3px] text-[10px] mb-10 uppercase italic">LA SOLUCIÓN CRIOLLA PARA MOVERTE</p>
+      <h1 className="text-4xl font-black italic mb-2 tracking-tighter">LaCola</h1>
+      <p className="text-blue-400 font-bold tracking-[3px] text-[10px] mb-10 uppercase italic">PIDE Y DA LA COLA</p>
 
       <form onSubmit={manejarAutenticacion} className="w-full max-w-xs space-y-4">
         <input 
