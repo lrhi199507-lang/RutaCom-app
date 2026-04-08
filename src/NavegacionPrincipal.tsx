@@ -41,16 +41,18 @@ export default function NavegacionPrincipal({ user }) {
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState([]);
-  const [historialChats, setHistorialChats] = useState([]); // <-- NUEVO INBOX
+  const [historialChats, setHistorialChats] = useState([]); // <-- INBOX
 
   // Estados de Viajes y Edición
   const [form, setForm] = useState({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "" });
-  const [viajeEditando, setViajeEditando] = useState(null); // <-- NUEVO ESTADO PARA EDITAR
+  const [viajeEditando, setViajeEditando] = useState(null); 
 
   const [fEO, setFEO] = useState(""); const [fCO, setFCO] = useState("");
   const [fED, setFED] = useState(""); const [fCD, setFCD] = useState("");
 
   const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", cedula: "" });
+  
+  // Estados de Soporte Técnico
   const [mensajeSoporte, setMensajeSoporte] = useState("");
   const [chatSoporte, setChatSoporte] = useState([]);
 
@@ -88,7 +90,7 @@ export default function NavegacionPrincipal({ user }) {
       setMensajesNoLeidos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // --- NUEVO LÓGICA DE HISTORIAL DE CHATS (INBOX) ---
+    // --- LÓGICA DE HISTORIAL DE CHATS (INBOX) ---
     let docsRecibidos = [];
     let docsEnviados = [];
     
@@ -125,7 +127,18 @@ export default function NavegacionPrincipal({ user }) {
        docsEnviados = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
     });
 
-    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); unsubNotif(); unsubR(); unsubE(); };
+    // --- NUEVO: LÓGICA DEL CHAT DE SOPORTE TÉCNICO ---
+    const unsubSoporte = onSnapshot(query(collection(db, "MensajesSoporte"), where("usuarioId", "==", user.uid)), (snap) => {
+      const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Ordenamos en memoria para evitar errores si no hay un índice compuesto en Firebase aún
+      msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0));
+      setChatSoporte(msjs);
+    });
+
+    return () => { 
+      unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); 
+      unsubNotif(); unsubR(); unsubE(); unsubSoporte(); 
+    };
   }, [user]);
 
   useEffect(() => {
@@ -154,7 +167,7 @@ export default function NavegacionPrincipal({ user }) {
         emisorId: user.uid,
         nombreEmisor: userData.nombre || "Usuario",
         receptorId: chatActivo.idOtro,
-        nombreReceptor: chatActivo.nombre, // <-- CLAVE PARA EL HISTORIAL
+        nombreReceptor: chatActivo.nombre,
         leido: false, 
         fecha: serverTimestamp()
       });
@@ -162,19 +175,33 @@ export default function NavegacionPrincipal({ user }) {
     } catch (error) { alert("Error al enviar mensaje."); }
   };
 
+  // --- NUEVA FUNCIÓN: ENVIAR MENSAJE A SOPORTE ---
+  const enviarMensajeSoporte = async () => {
+    if (!mensajeSoporte.trim()) return;
+    try {
+      await addDoc(collection(db, "MensajesSoporte"), {
+        usuarioId: user.uid,
+        texto: mensajeSoporte.trim(),
+        mio: true, // true indica que es el usuario, false sería la respuesta del admin
+        fecha: serverTimestamp()
+      });
+      setMensajeSoporte("");
+    } catch (error) { 
+      alert("Error al enviar el mensaje de soporte."); 
+    }
+  };
+
   const publicarOEditarRuta = async () => {
     if (userData?.kycVerificado !== true) return alert("🚫 Debes estar verificado para publicar.");
     if (!form.cO || !form.cD || !form.precio) return alert("Llena origen, destino y precio.");
     try {
       if (viajeEditando) {
-         // ACTUALIZAR VIAJE EXISTENTE
          await updateDoc(doc(db, "Viajes", viajeEditando), {
             ...form, precio: Number(form.precio), puestos: Number(form.puestos)
          });
          alert("✅ Viaje Actualizado!");
          setViajeEditando(null);
       } else {
-         // CREAR VIAJE NUEVO
          await addDoc(collection(db, "Viajes"), {
             ...form, precio: Number(form.precio), puestos: Number(form.puestos),
             conductor: userData.nombre, idCreador: user.uid, fecha: serverTimestamp(), verificado: true
@@ -532,7 +559,10 @@ export default function NavegacionPrincipal({ user }) {
                   <div key={i} className={`p-4 rounded-2xl max-w-[85%] text-[11px] font-bold shadow-sm ${m.mio ? 'bg-blue-600 text-white self-end' : 'bg-white border text-slate-700 self-start'}`}>{m.texto}</div>
                 ))}
              </div>
-             <div className="p-4 bg-white border-t flex gap-2"><input type="text" value={mensajeSoporte} onChange={(e)=>setMensajeSoporte(e.target.value)} className="flex-1 bg-slate-100 p-4 rounded-2xl text-[11px] font-bold outline-none border" placeholder="Problema..." /><button onClick={enviarMensajeSoporte} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-lg"><Send size={18}/></button></div>
+             <div className="p-4 bg-white border-t flex gap-2">
+               <input type="text" value={mensajeSoporte} onChange={(e)=>setMensajeSoporte(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajeSoporte()} className="flex-1 bg-slate-100 p-4 rounded-2xl text-[11px] font-bold outline-none border" placeholder="Escribe tu problema..." />
+               <button onClick={enviarMensajeSoporte} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-lg active:scale-95"><Send size={18}/></button>
+             </div>
           </div>
         )}
       </main>
