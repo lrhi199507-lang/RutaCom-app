@@ -41,7 +41,7 @@ export default function NavegacionPrincipal({ user }) {
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState([]);
-  const [historialChats, setHistorialChats] = useState([]); // <-- INBOX
+  const [historialChats, setHistorialChats] = useState([]);
 
   // Estados de Viajes y Edición
   const [form, setForm] = useState({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "" });
@@ -90,7 +90,6 @@ export default function NavegacionPrincipal({ user }) {
       setMensajesNoLeidos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // --- LÓGICA DE HISTORIAL DE CHATS (INBOX) ---
     let docsRecibidos = [];
     let docsEnviados = [];
     
@@ -127,10 +126,8 @@ export default function NavegacionPrincipal({ user }) {
        docsEnviados = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
     });
 
-    // --- NUEVO: LÓGICA DEL CHAT DE SOPORTE TÉCNICO ---
     const unsubSoporte = onSnapshot(query(collection(db, "MensajesSoporte"), where("usuarioId", "==", user.uid)), (snap) => {
       const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Ordenamos en memoria para evitar errores si no hay un índice compuesto en Firebase aún
       msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0));
       setChatSoporte(msjs);
     });
@@ -175,17 +172,30 @@ export default function NavegacionPrincipal({ user }) {
     } catch (error) { alert("Error al enviar mensaje."); }
   };
 
-  // --- NUEVA FUNCIÓN: ENVIAR MENSAJE A SOPORTE ---
+  // --- FUNCIÓN DE SOPORTE MEJORADA CON RESPUESTA ---
   const enviarMensajeSoporte = async () => {
     if (!mensajeSoporte.trim()) return;
+    const textoUsuario = mensajeSoporte.trim();
     try {
+      // 1. Enviamos mensaje del usuario
       await addDoc(collection(db, "MensajesSoporte"), {
         usuarioId: user.uid,
-        texto: mensajeSoporte.trim(),
-        mio: true, // true indica que es el usuario, false sería la respuesta del admin
+        texto: textoUsuario,
+        mio: true, 
         fecha: serverTimestamp()
       });
       setMensajeSoporte("");
+
+      // 2. Respuesta automática después de un pequeño delay
+      setTimeout(async () => {
+        await addDoc(collection(db, "MensajesSoporte"), {
+          usuarioId: user.uid,
+          texto: "¡Hola! 👋 Hemos recibido tu reporte. Un asesor de atención al cliente revisará tu mensaje y te contactará por este medio lo antes posible. ¡Gracias por tu paciencia!",
+          mio: false,
+          fecha: serverTimestamp()
+        });
+      }, 1500);
+
     } catch (error) { 
       alert("Error al enviar el mensaje de soporte."); 
     }
@@ -389,7 +399,6 @@ export default function NavegacionPrincipal({ user }) {
                 MODO: {modo === "pasajero" ? "PASAJERO" : "CHÓFER"} (CAMBIAR)
               </button>
 
-              {/* SECCIÓN UNIVERSAL DE BANDEJA DE CHATS */}
               {historialChats.length > 0 && (
                  <div className="bg-white p-4 rounded-[30px] shadow-sm border space-y-3 mb-6">
                     <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
@@ -471,7 +480,6 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
               ) : (
                 <div className="space-y-4">
-
                   {misSolicitudes.length > 0 && (
                     <div className="space-y-3 mb-6">
                       <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
@@ -552,16 +560,20 @@ export default function NavegacionPrincipal({ user }) {
         )}
 
         {vista === "soporte" && (
-          <div className="flex flex-col h-[65vh] bg-white rounded-[40px] border shadow-lg overflow-hidden">
-             <div className="bg-blue-600 p-4 text-white text-center font-black italic text-xs uppercase flex items-center justify-center gap-2 tracking-widest"><MessageCircle size={16} /> Soporte Técnico</div>
+          <div className="flex flex-col h-[65vh] bg-white rounded-[40px] border shadow-lg overflow-hidden animate-in zoom-in-95">
+             <div className="bg-blue-600 p-4 text-white text-center font-black italic text-xs uppercase flex items-center justify-center gap-2 tracking-widest shadow-md">
+               <MessageCircle size={16} /> Soporte Técnico
+             </div>
              <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-50 flex flex-col">
                 {chatSoporte.map((m, i) => (
-                  <div key={i} className={`p-4 rounded-2xl max-w-[85%] text-[11px] font-bold shadow-sm ${m.mio ? 'bg-blue-600 text-white self-end' : 'bg-white border text-slate-700 self-start'}`}>{m.texto}</div>
+                  <div key={i} className={`p-4 rounded-2xl max-w-[85%] text-[11px] font-bold shadow-sm ${m.mio ? 'bg-blue-600 text-white self-end' : 'bg-white border text-slate-700 self-start'}`}>
+                    {m.texto}
+                  </div>
                 ))}
              </div>
              <div className="p-4 bg-white border-t flex gap-2">
                <input type="text" value={mensajeSoporte} onChange={(e)=>setMensajeSoporte(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajeSoporte()} className="flex-1 bg-slate-100 p-4 rounded-2xl text-[11px] font-bold outline-none border" placeholder="Escribe tu problema..." />
-               <button onClick={enviarMensajeSoporte} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-lg active:scale-95"><Send size={18}/></button>
+               <button onClick={enviarMensajeSoporte} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-lg active:scale-95 transition-all"><Send size={18}/></button>
              </div>
           </div>
         )}
