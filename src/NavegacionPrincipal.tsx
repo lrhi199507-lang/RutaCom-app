@@ -69,14 +69,14 @@ export default function NavegacionPrincipal({ user }) {
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const motivosOpciones = ["Ya no quiero viajar", "Conseguí otra cola", "Surgió un imprevisto", "Cambiaré de ruta o fecha"];
 
-  // --- NUEVO: ESTADO DE VIAJE ACTIVO (GPS) ---
+  // --- ESTADO DE VIAJE ACTIVO Y GPS ---
   const [viajeActivo, setViajeActivo] = useState(null);
+  const [miUbicacion, setMiUbicacion] = useState(null); // Nuevo estado para guardar las coordenadas
 
   // --- EFECTOS DE FIREBASE (SINCRONIZACIÓN TOTAL) ---
   useEffect(() => {
     if (!user) return;
 
-    // 1. Datos del Usuario
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
@@ -88,27 +88,22 @@ export default function NavegacionPrincipal({ user }) {
       }
     });
 
-    // 2. Cargar Viajes
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 3. Solicitudes recibidas (Modo Chofer)
     const unsubSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid)), (snap) => {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 4. Mis solicitudes enviadas (Modo Pasajero)
     const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 5. Notificaciones
     const unsubNotif = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid), where("leido", "==", false)), (snap) => {
       setMensajesNoLeidos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 6. Inbox / Historial
     let docsRecibidos = [];
     let docsEnviados = [];
     const actualizarHistorial = (todosLosDocs) => {
@@ -135,13 +130,12 @@ export default function NavegacionPrincipal({ user }) {
        docsEnviados = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
     });
 
-    // 7. Soporte
     const unsubSoporte = onSnapshot(query(collection(db, "MensajesSoporte"), where("usuarioId", "==", user.uid)), (snap) => {
       const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setChatSoporte(msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0)));
     });
 
-    // 8. ESCUCHA DE VIAJE ACTIVO (GPS/Confirmados)
+    // ESCUCHA DE VIAJE ACTIVO (GPS/Confirmados)
     const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes"), where("estado", "==", "confirmado")), (snap) => {
       const actual = snap.docs.map(d => ({id: d.id, ...d.data()})).find(s => s.idPasajero === user.uid || s.idChofer === user.uid);
       setViajeActivo(actual || null);
@@ -152,6 +146,46 @@ export default function NavegacionPrincipal({ user }) {
       unsubNotif(); unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo();
     };
   }, [user]);
+
+  // --- NUEVO: EFECTO DE RASTREO GPS ---
+  useEffect(() => {
+    let watchId;
+    // Solo activamos el GPS si estamos dentro de un viaje
+    if (vista === "en_viaje" && viajeActivo) {
+      if ("geolocation" in navigator) {
+        // watchPosition se ejecuta cada vez que el celular detecta que te moviste
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setMiUbicacion({ lat: latitude, lng: longitude });
+
+            // Si soy el chofer, inyecto mis coordenadas en Firebase para que el pasajero las lea
+            if (modo === "chofer") {
+              updateDoc(doc(db, "Solicitudes", viajeActivo.id), {
+                latChofer: latitude,
+                lngChofer: longitude,
+                ultimaActualizacionGPS: serverTimestamp()
+              }).catch(e => console.error("Error subiendo GPS:", e));
+            }
+          },
+          (error) => {
+            console.warn("Error de GPS:", error);
+            // Si el usuario niega el permiso, lanzamos la alerta
+            if(error.code === 1) alert("⚠️ Debes darle permiso a la aplicación para usar tu ubicación.");
+          },
+          // Configuraciones para que sea en tiempo real y preciso
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+      } else {
+        alert("Tu dispositivo no soporta geolocalización.");
+      }
+    }
+
+    // Limpiamos el rastreador al salir de la vista
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [vista, viajeActivo?.id, modo]);
 
   // --- LÓGICA DE CHAT ---
   useEffect(() => {
@@ -217,7 +251,6 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { alert("Error."); }
   };
 
-  // --- NUEVAS FUNCIONES DE VIAJE/GPS ---
   const confirmarViajeChofer = async (idSolicitud) => {
     try {
       await updateDoc(doc(db, "Solicitudes", idSolicitud), { 
@@ -426,7 +459,7 @@ export default function NavegacionPrincipal({ user }) {
            </div>
         )}
 
-        {/* --- VISTA: EN VIAJE (GPS SIMULADO Y CONTROLES) --- */}
+        {/* --- VISTA: EN VIAJE (GPS REAL IMPLEMENTADO) --- */}
         {vista === "en_viaje" && viajeActivo && (
           <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
              <div className="bg-white p-4 rounded-[30px] shadow-sm border flex justify-between items-center">
@@ -438,21 +471,41 @@ export default function NavegacionPrincipal({ user }) {
                 <button onClick={() => setModalCancelacion({visible: true, idSolicitud: viajeActivo.id})} className="text-red-500"><AlertTriangle size={20}/></button>
              </div>
 
-             {/* Contenedor de Mapa/GPS */}
+             {/* Contenedor de Mapa/GPS REAL con OpenStreetMap */}
              <div className="flex-1 bg-slate-200 rounded-[40px] border-4 border-white shadow-2xl relative overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                   <p className="text-slate-400 font-black italic uppercase text-[10px] tracking-widest animate-pulse">Sincronizando GPS...</p>
-                </div>
-                {/* Marcador Chofer */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                   <div className="bg-blue-600 p-2 rounded-full shadow-lg border-2 border-white animate-bounce">
-                      <Car size={24} className="text-white"/>
-                   </div>
-                   <div className="bg-blue-600/20 w-12 h-4 rounded-[100%] blur-md mt-1"></div>
-                </div>
+                {/* Lógica para saber qué coordenadas mostrar: si soy chofer, las mías. Si soy pasajero, las del chofer desde Firebase */}
+                {(() => {
+                   const latMostrar = modo === "chofer" ? miUbicacion?.lat : viajeActivo?.latChofer;
+                   const lngMostrar = modo === "chofer" ? miUbicacion?.lng : viajeActivo?.lngChofer;
 
-                {/* Flotante de Información */}
-                <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-5 rounded-[30px] shadow-xl border flex justify-between items-center">
+                   if (latMostrar && lngMostrar) {
+                      return (
+                         <iframe 
+                           width="100%" 
+                           height="100%" 
+                           frameBorder="0" 
+                           scrolling="no" 
+                           marginHeight="0" 
+                           marginWidth="0" 
+                           // Usamos un pequeño offset para el bounding box (bbox) para que el mapa haga un zoom perfecto centrado en el carro
+                           src={`https://www.openstreetmap.org/export/embed.html?bbox=${lngMostrar-0.005},${latMostrar-0.005},${lngMostrar+0.005},${latMostrar+0.005}&layer=mapnik&marker=${latMostrar},${lngMostrar}`}
+                           className="w-full h-full opacity-90 pointer-events-none"
+                         ></iframe>
+                      )
+                   } else {
+                      return (
+                         <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+                            <p className="text-slate-400 font-black italic uppercase text-[10px] tracking-widest animate-pulse flex flex-col items-center gap-2">
+                               <Navigation size={24} className="animate-spin"/>
+                               {modo === "chofer" ? "Conectando GPS..." : "Esperando señal del chofer..."}
+                            </p>
+                         </div>
+                      )
+                   }
+                })()}
+
+                {/* Flotante de Información del usuario */}
+                <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-5 rounded-[30px] shadow-xl border flex justify-between items-center z-10">
                    <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><User size={20} className="text-slate-400"/></div>
                       <div>
@@ -465,7 +518,7 @@ export default function NavegacionPrincipal({ user }) {
              </div>
 
              {/* Controles de Estado de Viaje */}
-             <div className="bg-white p-6 rounded-[35px] border shadow-lg space-y-3">
+             <div className="bg-white p-6 rounded-[35px] border shadow-lg space-y-3 z-10">
                 {modo === "chofer" ? (
                   <>
                     {viajeActivo.fase === "chofer_en_camino" && (
