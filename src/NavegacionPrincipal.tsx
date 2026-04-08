@@ -9,7 +9,8 @@ import {
   Wallet, User, LogOut, Car, Send, ShieldCheck, 
   CheckCircle, Navigation, Search, 
   Settings, Trash2, MessageCircle, CreditCard, Users, 
-  ChevronLeft, MapPin, Bell, Edit2, AlertTriangle, Star, X
+  ChevronLeft, MapPin, Bell, Edit2, AlertTriangle, Star, X,
+  Map as MapIcon, Flag
 } from "lucide-react";
 
 // --- CONSTANTES DE UBICACIÓN ---
@@ -67,6 +68,9 @@ export default function NavegacionPrincipal({ user }) {
   const [modalCancelacion, setModalCancelacion] = useState({ visible: false, idSolicitud: null });
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const motivosOpciones = ["Ya no quiero viajar", "Conseguí otra cola", "Surgió un imprevisto", "Cambiaré de ruta o fecha"];
+
+  // --- NUEVO: ESTADO DE VIAJE ACTIVO (GPS) ---
+  const [viajeActivo, setViajeActivo] = useState(null);
 
   // --- EFECTOS DE FIREBASE (SINCRONIZACIÓN TOTAL) ---
   useEffect(() => {
@@ -137,9 +141,15 @@ export default function NavegacionPrincipal({ user }) {
       setChatSoporte(msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0)));
     });
 
+    // 8. ESCUCHA DE VIAJE ACTIVO (GPS/Confirmados)
+    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes"), where("estado", "==", "confirmado")), (snap) => {
+      const actual = snap.docs.map(d => ({id: d.id, ...d.data()})).find(s => s.idPasajero === user.uid || s.idChofer === user.uid);
+      setViajeActivo(actual || null);
+    });
+
     return () => { 
       unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); 
-      unsubNotif(); unsubR(); unsubE(); unsubSoporte(); 
+      unsubNotif(); unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo();
     };
   }, [user]);
 
@@ -207,12 +217,37 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { alert("Error."); }
   };
 
+  // --- NUEVAS FUNCIONES DE VIAJE/GPS ---
+  const confirmarViajeChofer = async (idSolicitud) => {
+    try {
+      await updateDoc(doc(db, "Solicitudes", idSolicitud), { 
+        estado: "confirmado", 
+        fase: "chofer_en_camino",
+        fechaConfirmacion: serverTimestamp() 
+      });
+      setVista("en_viaje");
+    } catch (e) { alert("Error al confirmar."); }
+  };
+
+  const actualizarFaseViaje = async (nuevaFase) => {
+    if(!viajeActivo) return;
+    try {
+      await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { fase: nuevaFase });
+      if(nuevaFase === "finalizado") {
+        await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { estado: "completado" });
+        setVista("inicio");
+        alert("¡Viaje completado!");
+      }
+    } catch (e) { console.error(e); }
+  };
+
   const procesarCancelacion = async () => {
     if (!motivoCancelacion) return alert("Selecciona un motivo.");
     try {
       await deleteDoc(doc(db, "Solicitudes", modalCancelacion.idSolicitud));
       setModalCancelacion({ visible: false, idSolicitud: null });
       setMotivoCancelacion("");
+      if(vista === "en_viaje") setVista("inicio");
       alert("Cancelado correctamente.");
     } catch (e) { alert("Error."); }
   };
@@ -287,8 +322,13 @@ export default function NavegacionPrincipal({ user }) {
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic text-xl transform -skew-x-12 shadow-lg">D</div>
           <div><p className="text-[9px] font-black text-slate-400 uppercase">Modo {modo}</p><p className="text-sm font-black text-slate-800 italic leading-none">{userData.nombre}</p></div>
         </div>
-        <div onClick={() => cambiarVista("wallet")} className="cursor-pointer bg-slate-900 text-white px-4 py-2 rounded-2xl flex items-center gap-2 font-black italic text-xs shadow-xl active:scale-95">
-          <Wallet size={14} className="text-blue-400" /> ${userData.saldo?.toFixed(2) || "0.00"}
+        <div className="flex items-center gap-2">
+           {viajeActivo && (
+             <button onClick={() => setVista("en_viaje")} className="bg-green-500 text-white p-2 rounded-xl animate-pulse"><MapIcon size={18}/></button>
+           )}
+           <div onClick={() => cambiarVista("wallet")} className="cursor-pointer bg-slate-900 text-white px-4 py-2 rounded-2xl flex items-center gap-2 font-black italic text-xs shadow-xl active:scale-95">
+             <Wallet size={14} className="text-blue-400" /> ${userData.saldo?.toFixed(2) || "0.00"}
+           </div>
         </div>
       </header>
 
@@ -345,7 +385,7 @@ export default function NavegacionPrincipal({ user }) {
                               <button onClick={() => abrirChat(s.idViaje, s.idPasajero, s.nombrePasajero)} className="p-3 bg-blue-600 text-white rounded-xl"><MessageCircle size={16}/></button>
                            </div>
                            <div className="flex gap-2">
-                              <button onClick={() => alert("¡Listo! El viaje ahora está confirmado.")} className="flex-1 p-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase italic">Dar la cola</button>
+                              <button onClick={() => confirmarViajeChofer(s.id)} className="flex-1 p-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase italic">Dar la cola</button>
                               <button onClick={() => setModalCancelacion({ visible: true, idSolicitud: s.id })} className="flex-1 p-2 bg-red-100 text-red-500 rounded-xl text-[10px] font-black uppercase">Rechazar</button>
                            </div>
                         </div>
@@ -384,6 +424,72 @@ export default function NavegacionPrincipal({ user }) {
                  ))}
               </div>
            </div>
+        )}
+
+        {/* --- VISTA: EN VIAJE (GPS SIMULADO Y CONTROLES) --- */}
+        {vista === "en_viaje" && viajeActivo && (
+          <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
+             <div className="bg-white p-4 rounded-[30px] shadow-sm border flex justify-between items-center">
+                <button onClick={() => setVista("inicio")} className="text-slate-400"><ChevronLeft/></button>
+                <div className="text-center">
+                   <p className="text-[8px] font-black uppercase text-blue-600">Ruta Activa</p>
+                   <p className="text-[11px] font-black italic">{viajeActivo.ruta}</p>
+                </div>
+                <button onClick={() => setModalCancelacion({visible: true, idSolicitud: viajeActivo.id})} className="text-red-500"><AlertTriangle size={20}/></button>
+             </div>
+
+             {/* Contenedor de Mapa/GPS */}
+             <div className="flex-1 bg-slate-200 rounded-[40px] border-4 border-white shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                   <p className="text-slate-400 font-black italic uppercase text-[10px] tracking-widest animate-pulse">Sincronizando GPS...</p>
+                </div>
+                {/* Marcador Chofer */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                   <div className="bg-blue-600 p-2 rounded-full shadow-lg border-2 border-white animate-bounce">
+                      <Car size={24} className="text-white"/>
+                   </div>
+                   <div className="bg-blue-600/20 w-12 h-4 rounded-[100%] blur-md mt-1"></div>
+                </div>
+
+                {/* Flotante de Información */}
+                <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-5 rounded-[30px] shadow-xl border flex justify-between items-center">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><User size={20} className="text-slate-400"/></div>
+                      <div>
+                         <p className="text-[8px] font-black text-slate-400 uppercase">Viajando con</p>
+                         <p className="text-xs font-black italic">{modo === "chofer" ? viajeActivo.nombrePasajero : viajeActivo.nombreChofer}</p>
+                      </div>
+                   </div>
+                   <button onClick={() => abrirChat(viajeActivo.idViaje, modo === "chofer" ? viajeActivo.idPasajero : viajeActivo.idChofer, modo === "chofer" ? viajeActivo.nombrePasajero : viajeActivo.nombreChofer)} className="bg-slate-900 text-white p-3 rounded-2xl shadow-lg active:scale-90"><MessageCircle size={20}/></button>
+                </div>
+             </div>
+
+             {/* Controles de Estado de Viaje */}
+             <div className="bg-white p-6 rounded-[35px] border shadow-lg space-y-3">
+                {modo === "chofer" ? (
+                  <>
+                    {viajeActivo.fase === "chofer_en_camino" && (
+                      <button onClick={() => actualizarFaseViaje("en_punto_de_encuentro")} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg tracking-widest">Ya llegué al punto</button>
+                    )}
+                    {viajeActivo.fase === "en_punto_de_encuentro" && (
+                      <button onClick={() => actualizarFaseViaje("viajando")} className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg tracking-widest">Iniciar Viaje</button>
+                    )}
+                    {viajeActivo.fase === "viajando" && (
+                      <button onClick={() => actualizarFaseViaje("finalizado")} className="w-full py-5 bg-slate-900 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg tracking-widest flex items-center justify-center gap-2"><Flag size={18}/> Finalizar Viaje</button>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-2">
+                     <p className="text-[10px] font-black text-blue-600 uppercase italic mb-1">Estatus del Viaje</p>
+                     <p className="font-black italic uppercase text-sm">
+                        {viajeActivo.fase === "chofer_en_camino" && "El chofer viene por ti"}
+                        {viajeActivo.fase === "en_punto_de_encuentro" && "¡El chofer ha llegado!"}
+                        {viajeActivo.fase === "viajando" && "Disfruta el camino..."}
+                     </p>
+                  </div>
+                )}
+             </div>
+          </div>
         )}
 
         {/* DETALLE DEL VIAJE SELECCIONADO */}
