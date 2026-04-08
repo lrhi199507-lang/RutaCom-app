@@ -3,12 +3,12 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import {
   doc, onSnapshot, collection, query, addDoc, 
-  serverTimestamp, orderBy, updateDoc, deleteDoc, where, getDocs
+  serverTimestamp, orderBy, updateDoc, deleteDoc, where
 } from "firebase/firestore";
 import {
-  Wallet, User, LogOut, Car, X, Send, ShieldCheck, 
+  Wallet, User, LogOut, Car, Send, ShieldCheck, 
   CheckCircle, Navigation, Search, 
-  Settings, Trash2, MessageCircle, CreditCard, Users, ChevronLeft, MapPin, Bell
+  Settings, Trash2, MessageCircle, CreditCard, Users, ChevronLeft, MapPin, Bell, Edit2, AlertTriangle
 } from "lucide-react";
 
 const UBICACIONES = {
@@ -36,20 +36,28 @@ export default function NavegacionPrincipal({ user }) {
   const [solicitudEnviada, setSolicitudEnviada] = useState(null);
   const [configOpen, setConfigOpen] = useState(false);
 
+  // Estados de Chat e Inbox
   const [chatActivo, setChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState([]);
+  const [historialChats, setHistorialChats] = useState([]); // <-- NUEVO INBOX
 
+  // Estados de Viajes y Edición
   const [form, setForm] = useState({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "" });
+  const [viajeEditando, setViajeEditando] = useState(null); // <-- NUEVO ESTADO PARA EDITAR
+
   const [fEO, setFEO] = useState(""); const [fCO, setFCO] = useState("");
   const [fED, setFED] = useState(""); const [fCD, setFCD] = useState("");
 
-  const [editandoPerfil, setEditandoPerfil] = useState(false);
   const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", cedula: "" });
-
   const [mensajeSoporte, setMensajeSoporte] = useState("");
   const [chatSoporte, setChatSoporte] = useState([]);
+
+  // Estado Modal Cancelación
+  const [modalCancelacion, setModalCancelacion] = useState({ visible: false, idSolicitud: null });
+  const [motivoCancelacion, setMotivoCancelacion] = useState("");
+  const motivosOpciones = ["Ya no quiero viajar", "Conseguí otra cola", "Surgió un imprevisto", "Cambiaré de ruta o fecha"];
 
   useEffect(() => {
     if (!user) return;
@@ -64,27 +72,60 @@ export default function NavegacionPrincipal({ user }) {
       }
     });
 
-    const qViajes = query(collection(db, "Viajes"), orderBy("fecha", "desc"));
-    const unsubViajes = onSnapshot(qViajes, (snap) => {
+    const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    const qSoli = query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid), where("estado", "==", "pendiente"));
-    const unsubSoli = onSnapshot(qSoli, (snap) => {
+    const unsubSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid)), (snap) => {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    const qMisSoli = query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid));
-    const unsubMisSoli = onSnapshot(qMisSoli, (snap) => {
+    const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    const qNotificaciones = query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid), where("leido", "==", false));
-    const unsubNotif = onSnapshot(qNotificaciones, (snap) => {
+    const unsubNotif = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid), where("leido", "==", false)), (snap) => {
       setMensajesNoLeidos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); unsubNotif(); };
+    // --- NUEVO LÓGICA DE HISTORIAL DE CHATS (INBOX) ---
+    let docsRecibidos = [];
+    let docsEnviados = [];
+    
+    const actualizarHistorial = (todosLosDocs) => {
+       const mapChats = new Map();
+       todosLosDocs.forEach(d => {
+          const data = d.data();
+          const soyEmisor = data.emisorId === user.uid;
+          const idOtro = soyEmisor ? data.receptorId : data.emisorId;
+          const nombreOtro = soyEmisor ? (data.nombreReceptor || "Usuario") : data.nombreEmisor;
+          const fechaMs = data.fecha ? data.fecha.toMillis() : Date.now();
+
+          if (!mapChats.has(data.chatId)) {
+             mapChats.set(data.chatId, {
+                chatId: data.chatId, idViaje: data.idViaje, idOtro, nombreOtro,
+                ultimoMensaje: data.texto, fecha: fechaMs
+             });
+          } else {
+             const existente = mapChats.get(data.chatId);
+             if (fechaMs > existente.fecha) {
+                existente.ultimoMensaje = data.texto;
+                existente.fecha = fechaMs;
+                mapChats.set(data.chatId, existente);
+             }
+          }
+       });
+       setHistorialChats(Array.from(mapChats.values()).sort((a,b) => b.fecha - a.fecha));
+    };
+
+    const unsubR = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid)), snap => {
+       docsRecibidos = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
+    });
+    const unsubE = onSnapshot(query(collection(db, "MensajesPrivados"), where("emisorId", "==", user.uid)), snap => {
+       docsEnviados = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
+    });
+
+    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); unsubNotif(); unsubR(); unsubE(); };
   }, [user]);
 
   useEffect(() => {
@@ -93,7 +134,6 @@ export default function NavegacionPrincipal({ user }) {
     const unsubMsg = onSnapshot(qM, (snap) => {
       const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setMensajesChat(msjs);
-
       snap.docs.forEach(docSnap => {
         const data = docSnap.data();
         if (data.receptorId === user.uid && data.leido === false) {
@@ -102,7 +142,7 @@ export default function NavegacionPrincipal({ user }) {
       });
     });
     return () => unsubMsg();
-  }, [chatActivo]);
+  }, [chatActivo, user.uid]);
 
   const enviarMensajePrivado = async () => {
     if (!nuevoMensaje.trim() || !chatActivo) return;
@@ -114,26 +154,41 @@ export default function NavegacionPrincipal({ user }) {
         emisorId: user.uid,
         nombreEmisor: userData.nombre || "Usuario",
         receptorId: chatActivo.idOtro,
+        nombreReceptor: chatActivo.nombre, // <-- CLAVE PARA EL HISTORIAL
         leido: false, 
         fecha: serverTimestamp()
       });
       setNuevoMensaje("");
-    } catch (error) {
-      alert("Error al enviar mensaje.");
-    }
+    } catch (error) { alert("Error al enviar mensaje."); }
   };
 
-  const publicarRuta = async () => {
+  const publicarOEditarRuta = async () => {
     if (userData?.kycVerificado !== true) return alert("🚫 Debes estar verificado para publicar.");
     if (!form.cO || !form.cD || !form.precio) return alert("Llena origen, destino y precio.");
     try {
-      await addDoc(collection(db, "Viajes"), {
-        ...form, precio: Number(form.precio), puestos: Number(form.puestos),
-        conductor: userData.nombre, idCreador: user.uid, fecha: serverTimestamp(), verificado: true
-      });
-      alert("🚀 ¡Viaje Publicado!");
+      if (viajeEditando) {
+         // ACTUALIZAR VIAJE EXISTENTE
+         await updateDoc(doc(db, "Viajes", viajeEditando), {
+            ...form, precio: Number(form.precio), puestos: Number(form.puestos)
+         });
+         alert("✅ Viaje Actualizado!");
+         setViajeEditando(null);
+      } else {
+         // CREAR VIAJE NUEVO
+         await addDoc(collection(db, "Viajes"), {
+            ...form, precio: Number(form.precio), puestos: Number(form.puestos),
+            conductor: userData.nombre, idCreador: user.uid, fecha: serverTimestamp(), verificado: true
+         });
+         alert("🚀 ¡Viaje Publicado!");
+      }
       setForm({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "" });
-    } catch (e) { alert("Error al publicar."); }
+    } catch (e) { alert("Error al guardar."); }
+  };
+
+  const cargarParaEditar = (v) => {
+     setViajeEditando(v.id);
+     setForm({ eO: v.eO, cO: v.cO, eD: v.eD, cD: v.cD, precio: v.precio, puestos: v.puestos, extras: v.extras || "" });
+     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const enviarSolicitud = async () => {
@@ -151,21 +206,18 @@ export default function NavegacionPrincipal({ user }) {
       });
       setSolicitudEnviada(docRef.id);
       alert("✅ Solicitud enviada al chofer.");
-    } catch (e) { 
-      console.error(e);
-      alert("Error al solicitar. Verifica las reglas de Firebase."); 
-    }
+    } catch (e) { alert("Error al solicitar."); }
   };
 
-  const cancelarSolicitud = async () => {
-    if (!solicitudEnviada) return;
-    if (confirm("¿Quieres cancelar tu petición de cola?")) {
-      try {
-        await deleteDoc(doc(db, "Solicitudes", solicitudEnviada));
-        setSolicitudEnviada(null);
-        alert("Petición cancelada.");
-      } catch (e) { alert("Error al cancelar."); }
-    }
+  const procesarCancelacion = async () => {
+    if (!motivoCancelacion) return alert("Por favor selecciona un motivo.");
+    try {
+      await deleteDoc(doc(db, "Solicitudes", modalCancelacion.idSolicitud));
+      setModalCancelacion({ visible: false, idSolicitud: null });
+      setMotivoCancelacion("");
+      if (solicitudEnviada === modalCancelacion.idSolicitud) setSolicitudEnviada(null);
+      alert("Petición cancelada exitosamente.");
+    } catch (e) { alert("Error al cancelar."); }
   };
 
   const guardarDatosPerfil = async () => {
@@ -177,13 +229,6 @@ export default function NavegacionPrincipal({ user }) {
       setConfigOpen(false);
       alert("✅ Datos guardados exitosamente.");
     } catch (e) { alert("Error al guardar datos."); }
-  };
-
-  const enviarMensajeSoporte = () => {
-    if (!mensajeSoporte.trim()) return;
-    setChatSoporte([...chatSoporte, { texto: mensajeSoporte, mio: true }]);
-    setMensajeSoporte("");
-    setTimeout(() => setChatSoporte(p => [...p, { texto: "Recibido. Pronto te atenderemos.", mio: false }]), 1000);
   };
 
   const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
@@ -200,6 +245,31 @@ export default function NavegacionPrincipal({ user }) {
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 flex flex-col relative overflow-hidden font-sans">
       
+      {/* MODAL DE CANCELACIÓN */}
+      {modalCancelacion.visible && (
+        <div className="absolute inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4">
+           <div className="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl animate-in zoom-in-95">
+              <div className="flex items-center gap-2 text-red-500 mb-4">
+                 <AlertTriangle size={24}/> <h3 className="font-black italic uppercase text-lg leading-none">Cancelar Viaje</h3>
+              </div>
+              <p className="text-xs font-bold text-slate-500 mb-4">Por favor, indícanos por qué deseas cancelar esta solicitud:</p>
+              
+              <div className="space-y-2 mb-6">
+                 {motivosOpciones.map(m => (
+                    <button key={m} onClick={()=>setMotivoCancelacion(m)} className={`w-full p-3 rounded-xl text-xs font-black uppercase text-left border-2 transition-all ${motivoCancelacion === m ? 'border-red-500 bg-red-50 text-red-600' : 'border-slate-100 bg-slate-50 text-slate-500'}`}>
+                       {m}
+                    </button>
+                 ))}
+              </div>
+
+              <div className="flex gap-2">
+                 <button onClick={()=>setModalCancelacion({visible:false, idSolicitud:null})} className="flex-1 p-3 bg-slate-200 text-slate-600 rounded-xl font-black uppercase text-xs">Atrás</button>
+                 <button onClick={procesarCancelacion} className="flex-1 p-3 bg-red-500 text-white rounded-xl font-black uppercase text-xs shadow-lg shadow-red-200">Confirmar</button>
+              </div>
+           </div>
+        </div>
+      )}
+
       {mensajesNoLeidos.length > 0 && vista !== "chat_privado" && (
          <div className="absolute top-24 left-1/2 transform -translate-x-1/2 w-11/12 bg-blue-600 text-white p-4 rounded-3xl shadow-2xl z-50 animate-bounce border-4 border-white">
             <p className="text-xs font-black italic flex items-center gap-2"><Bell size={18} className="animate-pulse"/> ¡Tienes mensajes nuevos!</p>
@@ -272,7 +342,7 @@ export default function NavegacionPrincipal({ user }) {
                            <MessageCircle size={18}/> Chat
                         </button>
                         {solicitudEnviada ? (
-                          <button onClick={cancelarSolicitud} className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg">
+                          <button onClick={() => setModalCancelacion({ visible: true, idSolicitud: solicitudEnviada })} className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg">
                              Cancelar
                           </button>
                         ) : (
@@ -292,25 +362,45 @@ export default function NavegacionPrincipal({ user }) {
                 MODO: {modo === "pasajero" ? "PASAJERO" : "CHÓFER"} (CAMBIAR)
               </button>
 
+              {/* SECCIÓN UNIVERSAL DE BANDEJA DE CHATS */}
+              {historialChats.length > 0 && (
+                 <div className="bg-white p-4 rounded-[30px] shadow-sm border space-y-3 mb-6">
+                    <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
+                       <MessageCircle size={14}/> Conversaciones Activas
+                    </p>
+                    {historialChats.map(c => (
+                       <div key={c.chatId} onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} className="bg-slate-50 p-3 rounded-2xl border flex flex-col shadow-sm cursor-pointer active:scale-95 transition-all">
+                          <p className="text-[11px] font-black text-slate-800 uppercase italic">{c.nombreOtro}</p>
+                          <p className="text-[10px] font-bold text-slate-500 truncate">{c.ultimoMensaje}</p>
+                       </div>
+                    ))}
+                 </div>
+              )}
+
               {modo === "chofer" ? (
                 <div className="space-y-6">
                   {solicitudesRecibidas.length > 0 && (
                     <div className="space-y-3">
                       <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2 animate-pulse"><Bell size={14}/> Solicitudes Entrantes:</p>
                       {solicitudesRecibidas.map(s => (
-                        <div key={s.id} className="bg-white p-4 rounded-3xl border-2 border-blue-500 flex justify-between items-center shadow-lg">
-                           <div>
-                              <p className="text-[10px] font-black text-slate-800 uppercase italic">{s.nombrePasajero}</p>
-                              <p className="text-[8px] font-bold text-blue-600 uppercase">{s.ruta}</p>
+                        <div key={s.id} className="bg-white p-4 rounded-3xl border-2 border-blue-500 flex flex-col gap-3 shadow-lg">
+                           <div className="flex justify-between items-center">
+                              <div>
+                                 <p className="text-[10px] font-black text-slate-800 uppercase italic">{s.nombrePasajero}</p>
+                                 <p className="text-[8px] font-bold text-blue-600 uppercase">{s.ruta}</p>
+                              </div>
+                              <button onClick={() => abrirChat(s.idViaje, s.idPasajero, s.nombrePasajero)} className="p-3 bg-blue-600 text-white rounded-xl shadow-lg"><MessageCircle size={16}/></button>
                            </div>
-                           <button onClick={() => abrirChat(s.idViaje, s.idPasajero, s.nombrePasajero)} className="p-3 bg-blue-600 text-white rounded-xl shadow-lg"><MessageCircle size={16}/></button>
+                           <button onClick={() => setModalCancelacion({ visible: true, idSolicitud: s.id })} className="w-full p-2 bg-red-100 text-red-500 rounded-xl text-[10px] font-black uppercase">Rechazar / Cancelar</button>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  <div className="bg-white p-6 rounded-[35px] border shadow-xl space-y-3">
-                    <h3 className="text-xs font-black uppercase text-blue-600 italic flex items-center gap-2"><Navigation size={16}/> Publicar Nueva Ruta</h3>
+                  <div className={`bg-white p-6 rounded-[35px] border shadow-xl space-y-3 ${viajeEditando ? 'border-4 border-yellow-400' : ''}`}>
+                    <h3 className="text-xs font-black uppercase text-blue-600 italic flex items-center gap-2">
+                       {viajeEditando ? <><Edit2 size={16}/> Editando Ruta Activa</> : <><Navigation size={16}/> Publicar Nueva Ruta</>}
+                    </h3>
                     <div className="grid grid-cols-2 gap-2">
                       <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" value={form.eO} onChange={(e)=>setForm({...form, eO: e.target.value, cO: ""})}><option value="">Edo. Origen</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
                       <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold outline-none" disabled={!form.eO} value={form.cO} onChange={(e)=>setForm({...form, cO: e.target.value})}><option value="">Ciudad Origen</option>{form.eO && UBICACIONES[form.eO].map(c => <option key={c} value={c}>{c}</option>)}</select>
@@ -324,7 +414,13 @@ export default function NavegacionPrincipal({ user }) {
                       <input type="number" placeholder="Precio $" className="bg-slate-50 p-4 rounded-xl border text-xs font-black text-blue-600 outline-none" value={form.precio} onChange={(e)=>setForm({...form, precio: e.target.value})} />
                     </div>
                     <input type="text" placeholder="Extras (Maletas, AC...)" className="w-full bg-slate-50 p-4 rounded-xl border text-xs font-bold outline-none" value={form.extras} onChange={(e)=>setForm({...form, extras: e.target.value})} />
-                    <button onClick={publicarRuta} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic shadow-lg">Publicar Ahora</button>
+                    
+                    <div className="flex gap-2">
+                       {viajeEditando && <button onClick={() => {setViajeEditando(null); setForm({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "" });}} className="w-1/3 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black uppercase italic">Cancelar</button>}
+                       <button onClick={publicarOEditarRuta} className={`flex-1 py-4 text-white rounded-2xl font-black uppercase italic shadow-lg ${viajeEditando ? 'bg-yellow-500' : 'bg-blue-600'}`}>
+                          {viajeEditando ? "Guardar Cambios" : "Publicar Ahora"}
+                       </button>
+                    </div>
                   </div>
 
                   {misViajesPublicados.length > 0 && (
@@ -336,7 +432,10 @@ export default function NavegacionPrincipal({ user }) {
                               <p className="font-black uppercase text-[10px] text-slate-800 italic">{v.cO} → {v.cD}</p>
                               <p className="text-[9px] text-slate-400 font-bold">{v.puestos} Puestos | ${v.precio}</p>
                            </div>
-                           <button onClick={async () => { if(confirm("¿Borrar ruta?")) await deleteDoc(doc(db, "Viajes", v.id)); }} className="text-red-500 p-2"><Trash2 size={16}/></button>
+                           <div className="flex gap-1">
+                              <button onClick={() => cargarParaEditar(v)} className="text-yellow-500 bg-yellow-50 p-2 rounded-xl hover:bg-yellow-100 transition"><Edit2 size={16}/></button>
+                              <button onClick={async () => { if(confirm("¿Borrar ruta permanentemente?")) await deleteDoc(doc(db, "Viajes", v.id)); }} className="text-red-500 bg-red-50 p-2 rounded-xl hover:bg-red-100 transition"><Trash2 size={16}/></button>
+                           </div>
                         </div>
                       ))}
                     </div>
@@ -349,16 +448,18 @@ export default function NavegacionPrincipal({ user }) {
                   {misSolicitudes.length > 0 && (
                     <div className="space-y-3 mb-6">
                       <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
-                        <MessageCircle size={14}/> Tus Solicitudes y Chats Activos:
+                        <CheckCircle size={14}/> Solicitudes de Cola Enviadas:
                       </p>
                       {misSolicitudes.map(s => (
-                        <div key={s.id} className="bg-blue-50 p-4 rounded-3xl border border-blue-200 flex justify-between items-center shadow-sm">
-                           <div>
-                              {/* AQUÍ EL CAMBIO: Se eliminó el "Con: " para que muestre directo el nombre, igual que el chofer */}
-                              <p className="text-[10px] font-black text-slate-800 uppercase italic">{s.nombreChofer || "Chófer"}</p>
-                              <p className="text-[8px] font-bold text-blue-600 uppercase">{s.ruta}</p>
+                        <div key={s.id} className="bg-blue-50 p-4 rounded-3xl border border-blue-200 flex flex-col gap-3 shadow-sm">
+                           <div className="flex justify-between items-center">
+                              <div>
+                                 <p className="text-[10px] font-black text-slate-800 uppercase italic">{s.nombreChofer || "Chófer"}</p>
+                                 <p className="text-[8px] font-bold text-blue-600 uppercase">{s.ruta}</p>
+                              </div>
+                              <button onClick={() => abrirChat(s.idViaje, s.idChofer, s.nombreChofer || "Chófer")} className="p-3 bg-blue-600 text-white rounded-xl shadow-md"><MessageCircle size={16}/></button>
                            </div>
-                           <button onClick={() => abrirChat(s.idViaje, s.idChofer, s.nombreChofer || "Chófer")} className="p-3 bg-blue-600 text-white rounded-xl shadow-md"><MessageCircle size={16}/></button>
+                           <button onClick={() => setModalCancelacion({ visible: true, idSolicitud: s.id })} className="w-full p-2 bg-red-100 text-red-500 rounded-xl text-[10px] font-black uppercase">Cancelar Petición</button>
                         </div>
                       ))}
                     </div>
