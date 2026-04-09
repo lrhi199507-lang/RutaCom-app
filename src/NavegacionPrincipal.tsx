@@ -10,7 +10,7 @@ import {
   CheckCircle, Navigation, Search, 
   Settings, Trash2, MessageCircle, CreditCard, Users, 
   ChevronLeft, MapPin, Bell, Edit2, AlertTriangle, Star, X,
-  Map as MapIcon, Flag, Info, Clock, ArrowRight, Share2
+  Map as MapIcon, Flag, Info, Clock, ArrowRight, Share2, Key, Lock
 } from "lucide-react";
 
 // --- CONSTANTES DE UBICACIÓN ---
@@ -69,13 +69,13 @@ export default function NavegacionPrincipal({ user }) {
 
   // --- ESTADO DE VIAJE ACTIVO Y GPS ---
   const [viajeActivo, setViajeActivo] = useState(null);
-  const [miUbicacion, setMiUbicacion] = useState(null); 
+  const [miUbicacion, setMiUbicacion] = useState(null);
+  const [pinIngresado, setPinIngresado] = useState("");
 
-  // --- EFECTOS DE FIREBASE (SINCRONIZACIÓN EN TIEMPO REAL) ---
+  // --- EFECTOS DE FIREBASE ---
   useEffect(() => {
     if (!user) return;
 
-    // 1. Datos del usuario actual
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
@@ -87,22 +87,23 @@ export default function NavegacionPrincipal({ user }) {
       }
     });
 
-    // 2. Escuchar todos los viajes disponibles
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 3. Solicitudes recibidas (si eres chofer)
     const unsubSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid), where("estado", "==", "pendiente")), (snap) => {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 4. Mis solicitudes enviadas (si eres pasajero)
     const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 5. Historial de Chats (Basado en mensajes)
+    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes"), where("estado", "==", "confirmado")), (snap) => {
+      const actual = snap.docs.map(d => ({id: d.id, ...d.data()})).find(s => s.idPasajero === user.uid || s.idChofer === user.uid);
+      setViajeActivo(actual || null);
+    });
+
     let docsRecibidos = [];
     let docsEnviados = [];
     const actualizarHistorial = (todosLosDocs) => {
@@ -129,16 +130,9 @@ export default function NavegacionPrincipal({ user }) {
        docsEnviados = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
     });
 
-    // 6. Chat de Soporte
     const unsubSoporte = onSnapshot(query(collection(db, "MensajesSoporte"), where("usuarioId", "==", user.uid)), (snap) => {
       const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setChatSoporte(msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0)));
-    });
-
-    // 7. Viaje Activo (Confirmado)
-    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes"), where("estado", "==", "confirmado")), (snap) => {
-      const actual = snap.docs.map(d => ({id: d.id, ...d.data()})).find(s => s.idPasajero === user.uid || s.idChofer === user.uid);
-      setViajeActivo(actual || null);
     });
 
     return () => { 
@@ -147,20 +141,18 @@ export default function NavegacionPrincipal({ user }) {
     };
   }, [user]);
 
-  // --- RASTREO GPS (SOLO EN VIAJE) ---
+  // GPS
   useEffect(() => {
     let watchId;
-    if (vista === "en_viaje" && viajeActivo) {
+    if (vista === "en_viaje" && viajeActivo && user.uid === viajeActivo.idChofer) {
       if ("geolocation" in navigator) {
         watchId = navigator.geolocation.watchPosition(
           (position) => {
             const { latitude, longitude } = position.coords;
             setMiUbicacion({ lat: latitude, lng: longitude });
-            if (modo === "chofer") {
-              updateDoc(doc(db, "Solicitudes", viajeActivo.id), {
-                latChofer: latitude, lngChofer: longitude, ultimaActualizacionGPS: serverTimestamp()
-              }).catch(e => console.error("Error GPS:", e));
-            }
+            updateDoc(doc(db, "Solicitudes", viajeActivo.id), {
+              latChofer: latitude, lngChofer: longitude, ultimaActualizacionGPS: serverTimestamp()
+            }).catch(e => console.error("Error GPS:", e));
           },
           (error) => console.warn("GPS Error:", error),
           { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
@@ -168,9 +160,9 @@ export default function NavegacionPrincipal({ user }) {
       }
     }
     return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
-  }, [vista, viajeActivo?.id, modo]);
+  }, [vista, viajeActivo?.id, user.uid]);
 
-  // --- LÓGICA DE CHAT EN TIEMPO REAL ---
+  // Mensajes de Chat
   useEffect(() => {
     if (!chatActivo) return;
     const qM = query(collection(db, "MensajesPrivados"), where("chatId", "==", chatActivo.id), orderBy("fecha", "asc"));
@@ -230,7 +222,8 @@ export default function NavegacionPrincipal({ user }) {
       await addDoc(collection(db, "Solicitudes"), {
         idViaje: viaje.id, idPasajero: user.uid, nombrePasajero: userData.nombre || "Pasajero",
         idChofer: viaje.idCreador, nombreChofer: viaje.conductor, 
-        ruta: `${viaje.cO} → ${viaje.cD}`, estado: "pendiente", fechaSolicitud: serverTimestamp()
+        ruta: `${viaje.cO} → ${viaje.cD}`, estado: "pendiente", fechaSolicitud: serverTimestamp(),
+        precioViaje: viaje.precio, pagoEstado: "pendiente"
       });
       alert("✅ ¡Cola pedida! El chofer te avisará por chat.");
     } catch (e) { alert("Error al pedir cola."); }
@@ -245,14 +238,55 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { alert("Error al confirmar."); }
   };
 
-  const actualizarFaseViaje = async (nuevaFase) => {
+  const generarPIN = () => Math.floor(1000 + Math.random() * 9000).toString();
+
+  const pasajeroConfirmaEncuentro = async () => {
+    const pin = generarPIN();
+    try {
+      await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
+        fase: "pasajero_confirmado_encuentro", 
+        pinVerificacion: pin
+      });
+      alert("Muéstrale este código al chofer para iniciar el viaje.");
+    } catch (e) { console.error(e); }
+  };
+
+  const choferVerificaPIN = async () => {
+    if (pinIngresado === viajeActivo.pinVerificacion) {
+      // Al validar PIN, el dinero pasa a RETENIDO
+      await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
+        fase: "viajando",
+        pagoEstado: "retenido" 
+      });
+      alert("✅ PIN Correcto. El pago ha sido RETENIDO. ¡Viaje iniciado!");
+      setPinIngresado("");
+    } else {
+      alert("❌ PIN Incorrecto. Pídele el código al pasajero.");
+    }
+  };
+
+  const finalizarViaje = async (rol) => {
     if(!viajeActivo) return;
     try {
-      await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { fase: nuevaFase });
-      if(nuevaFase === "finalizado") {
-        await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { estado: "completado" });
+      const actualizacion = {};
+      if (rol === "chofer") actualizacion.finalizadoChofer = true;
+      if (rol === "pasajero") actualizacion.finalizadoPasajero = true;
+
+      await updateDoc(doc(db, "Solicitudes", viajeActivo.id), actualizacion);
+
+      // Si ambos finalizaron, se procesa el dinero
+      if ((rol === "chofer" && viajeActivo.finalizadoPasajero) || (rol === "pasajero" && viajeActivo.finalizadoChofer)) {
+        const montoFinal = viajeActivo.precioViaje * 0.95; 
+        await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
+          fase: "finalizado", 
+          estado: "completado",
+          pagoEstado: "completado",
+          montoNetoChofer: montoFinal
+        });
+        alert(`🏁 ¡Viaje Completado! Fondos liberados.`);
         setVista("inicio");
-        alert("🏁 ¡Viaje finalizado con éxito!");
+      } else {
+        alert("Esperando que la otra parte también finalice el viaje...");
       }
     } catch (e) { console.error(e); }
   };
@@ -293,7 +327,6 @@ export default function NavegacionPrincipal({ user }) {
                        <p className="text-xl font-black italic text-slate-800">+50</p>
                     </div>
                  </div>
-                 <div className="mt-4 w-full bg-blue-50 p-3 rounded-2xl text-[10px] font-black uppercase text-blue-700 text-center italic">Usuario Verificado</div>
               </div>
            </div>
         </div>
@@ -346,23 +379,7 @@ export default function NavegacionPrincipal({ user }) {
                 CAMBIAR A MODO {modo === "pasajero" ? "CHÓFER" : "PASAJERO"} ➔
               </button>
 
-              {/* Chats Recientes */}
-              {historialChats.length > 0 && (
-                <div className="bg-white p-4 rounded-[30px] shadow-sm border space-y-3">
-                   <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><MessageCircle size={14}/> Chats Recientes</p>
-                   {historialChats.slice(0, 2).map(c => (
-                      <div key={c.chatId} onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} className="bg-slate-50 p-3 rounded-2xl border flex items-center justify-between cursor-pointer active:scale-95">
-                         <div className="flex-1">
-                            <p className="text-[11px] font-black text-slate-800 uppercase italic">{c.nombreOtro}</p>
-                            <p className="text-[10px] font-bold text-slate-500 truncate">{c.ultimoMensaje}</p>
-                         </div>
-                         <ArrowRight size={14} className="text-blue-500" />
-                      </div>
-                   ))}
-                </div>
-              )}
-
-              {/* --- PANEL CHOFER --- */}
+              {/* PANEL CHOFER */}
               {modo === "chofer" && (
                 <div className="space-y-6">
                   <div className={`bg-white p-6 rounded-[35px] border shadow-xl space-y-3 ${viajeEditando ? 'ring-4 ring-yellow-400' : ''}`}>
@@ -424,7 +441,7 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
               </div>
 
-              {/* LISTA DE VIAJES DISPONIBLES */}
+              {/* LISTA DE VIAJES */}
               <div className="space-y-4">
                  {viajes.filter(v => (fCO === "" || v.cO === fCO) && (fCD === "" || v.cD === fCD)).map(v => (
                    <div key={v.id} className="bg-white p-5 rounded-[35px] border flex flex-col shadow-md space-y-4 hover:border-blue-200 transition-colors">
@@ -436,19 +453,15 @@ export default function NavegacionPrincipal({ user }) {
                                 <ShieldCheck size={10} className="text-green-500"/> {v.conductor}
                               </p>
                               <p className="font-black uppercase text-sm text-slate-800 italic">{v.cO} → {v.cD}</p>
-                              {v.vehiculoInfo && <p className="text-[8px] font-bold text-slate-400">{v.vehiculoInfo.marca} {v.vehiculoInfo.modelo} • {v.vehiculoInfo.placa}</p>}
                            </div>
                         </div>
                         <div className="text-right">
                            <p className="text-2xl font-black text-blue-600 italic leading-none">${v.precio}</p>
-                           <p className="text-[8px] font-black text-slate-300 uppercase mt-1">por puesto</p>
                         </div>
                      </div>
-                     
                      <div className="flex gap-2">
-                        <button onClick={() => setViajeSeleccionado(v)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-2xl text-[9px] font-black uppercase italic active:scale-95 transition-transform">Ver Más</button>
-                        <button onClick={() => abrirChat(v.id, v.idCreador, v.conductor)} className="bg-blue-100 text-blue-600 p-3 rounded-2xl active:scale-95 transition-transform"><MessageCircle size={18}/></button>
-                        <button onClick={() => enviarSolicitudDirecta(v)} className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-[9px] font-black uppercase italic shadow-lg active:scale-95 transition-all">Pedir Cola</button>
+                        <button onClick={() => setViajeSeleccionado(v)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-2xl text-[9px] font-black uppercase italic">Ver Más</button>
+                        <button onClick={() => enviarSolicitudDirecta(v)} className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-[9px] font-black uppercase italic shadow-lg active:scale-95">Pedir Cola</button>
                      </div>
                    </div>
                  ))}
@@ -459,108 +472,111 @@ export default function NavegacionPrincipal({ user }) {
         {/* --- VISTA: EN VIAJE --- */}
         {vista === "en_viaje" && viajeActivo && (
           <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
+             
+             {/* INDICADOR DE PAGO RETENIDO */}
+             {viajeActivo.pagoEstado === "retenido" && (
+                <div className="bg-amber-100 p-3 rounded-2xl border border-amber-200 flex items-center justify-center gap-2 shadow-sm animate-pulse">
+                   <Lock size={14} className="text-amber-600"/>
+                   <p className="text-[10px] font-black uppercase text-amber-700">Pago de ${viajeActivo.precioViaje} retenido por seguridad</p>
+                </div>
+             )}
+
              <div className="bg-white p-4 rounded-[30px] shadow-sm border flex justify-between items-center">
                 <button onClick={() => setVista("inicio")} className="text-slate-400"><ChevronLeft/></button>
                 <div className="text-center">
-                   <p className="text-[8px] font-black uppercase text-blue-600">Ruta Activa</p>
+                   <p className="text-[8px] font-black uppercase text-blue-600">Viaje Activo</p>
                    <p className="text-[11px] font-black italic">{viajeActivo.ruta}</p>
                 </div>
                 <button onClick={() => setModalCancelacion({visible: true, idSolicitud: viajeActivo.id})} className="text-red-500"><AlertTriangle size={20}/></button>
              </div>
 
+             {/* MAPA */}
              <div className="flex-1 bg-slate-200 rounded-[40px] border-4 border-white shadow-2xl relative overflow-hidden">
-                {(() => {
-                   const latMostrar = modo === "chofer" ? miUbicacion?.lat : viajeActivo?.latChofer;
-                   const lngMostrar = modo === "chofer" ? miUbicacion?.lng : viajeActivo?.lngChofer;
-
-                   if (latMostrar && lngMostrar) {
-                      return (
-                         <iframe 
-                           width="100%" height="100%" frameBorder="0" scrolling="no" 
-                           src={`https://www.openstreetmap.org/export/embed.html?bbox=${lngMostrar-0.005},${latMostrar-0.005},${lngMostrar+0.005},${latMostrar+0.005}&layer=mapnik&marker=${latMostrar},${lngMostrar}`}
-                           className="w-full h-full opacity-90 pointer-events-none"
-                         ></iframe>
-                      )
-                   } else {
-                      return (
-                         <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
-                            <p className="text-slate-400 font-black italic uppercase text-[10px] tracking-widest animate-pulse flex flex-col items-center gap-2 text-center px-6">
-                               <Navigation size={24} className="animate-spin text-blue-600"/>
-                               {modo === "chofer" ? "Transmitiendo GPS a tu pasajero..." : "Sincronizando ubicación del chofer..."}
-                            </p>
-                         </div>
-                      )
-                   }
-                })()}
-
-                <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-5 rounded-[30px] shadow-xl border flex justify-between items-center z-10">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><User size={20} className="text-slate-400"/></div>
-                      <div>
-                         <p className="text-[8px] font-black text-slate-400 uppercase">Viajando con</p>
-                         <p className="text-xs font-black italic">{modo === "chofer" ? viajeActivo.nombrePasajero : viajeActivo.nombreChofer}</p>
-                      </div>
+                {viajeActivo.latChofer && (
+                   <iframe 
+                     width="100%" height="100%" frameBorder="0" scrolling="no" 
+                     src={`https://www.openstreetmap.org/export/embed.html?bbox=${viajeActivo.lngChofer-0.005},${viajeActivo.latChofer-0.005},${viajeActivo.lngChofer+0.005},${viajeActivo.latChofer+0.005}&layer=mapnik&marker=${viajeActivo.latChofer},${viajeActivo.lngChofer}`}
+                     className="w-full h-full opacity-90 pointer-events-none"
+                   ></iframe>
+                )}
+                
+                {viajeActivo.idPasajero === user.uid && viajeActivo.pinVerificacion && viajeActivo.fase === "pasajero_confirmado_encuentro" && (
+                   <div className="absolute top-6 left-6 right-6 bg-blue-600 p-4 rounded-2xl text-white text-center shadow-xl z-20 animate-bounce">
+                      <p className="text-[10px] font-black uppercase">Código para el Chofer:</p>
+                      <p className="text-3xl font-black tracking-[10px]">{viajeActivo.pinVerificacion}</p>
                    </div>
-                   <button onClick={() => abrirChat(viajeActivo.idViaje, modo === "chofer" ? viajeActivo.idPasajero : viajeActivo.idChofer, modo === "chofer" ? viajeActivo.nombrePasajero : viajeActivo.nombreChofer)} className="bg-slate-900 text-white p-3 rounded-2xl shadow-lg active:scale-90"><MessageCircle size={20}/></button>
-                </div>
+                )}
              </div>
 
              <div className="bg-white p-6 rounded-[35px] border shadow-lg space-y-3 z-10">
-                {modo === "chofer" ? (
-                  <>
+                {user.uid === viajeActivo.idChofer ? (
+                  <div className="space-y-3">
                     {viajeActivo.fase === "chofer_en_camino" && (
-                      <button onClick={() => actualizarFaseViaje("en_punto_de_encuentro")} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg tracking-widest active:scale-95">Llegué al Punto</button>
+                      <button onClick={() => updateDoc(doc(db,"Solicitudes",viajeActivo.id), {fase: "en_punto_de_encuentro"})} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg">Llegué al Punto</button>
                     )}
+                    
                     {viajeActivo.fase === "en_punto_de_encuentro" && (
-                      <button onClick={() => actualizarFaseViaje("viajando")} className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg tracking-widest active:scale-95">Iniciar Viaje Ahora</button>
+                      <div className="bg-slate-50 p-4 rounded-2xl text-center">
+                         <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Esperando al pasajero...</p>
+                         <div className="animate-pulse flex justify-center"><Clock className="text-blue-500"/></div>
+                      </div>
                     )}
+
+                    {viajeActivo.fase === "pasajero_confirmado_encuentro" && (
+                      <div className="space-y-3">
+                         <p className="text-[10px] font-black text-blue-600 uppercase italic text-center">Ingresa el PIN del Pasajero</p>
+                         <input type="number" placeholder="0000" className="w-full p-4 bg-slate-100 rounded-2xl text-center text-2xl font-black" value={pinIngresado} onChange={(e)=>setPinIngresado(e.target.value)} />
+                         <button onClick={choferVerificaPIN} className="w-full py-4 bg-green-500 text-white rounded-2xl font-black uppercase italic">Validar PIN e Iniciar</button>
+                      </div>
+                    )}
+
                     {viajeActivo.fase === "viajando" && (
-                      <button onClick={() => actualizarFaseViaje("finalizado")} className="w-full py-5 bg-slate-900 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg tracking-widest flex items-center justify-center gap-2 active:scale-95"><Flag size={18}/> Finalizar Viaje</button>
+                      <button 
+                        onClick={() => finalizarViaje("chofer")} 
+                        disabled={viajeActivo.finalizadoChofer}
+                        className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoChofer ? 'bg-slate-400' : 'bg-slate-900 text-white'}`}
+                      >
+                        {viajeActivo.finalizadoChofer ? "Esperando Pasajero..." : "Finalizar Viaje"} <Flag size={18}/>
+                      </button>
                     )}
-                  </>
+                  </div>
                 ) : (
-                  <div className="text-center py-2 flex flex-col items-center">
-                     <Clock size={20} className="text-blue-500 mb-2 animate-bounce"/>
-                     <p className="text-[10px] font-black text-blue-600 uppercase italic">Estatus</p>
-                     <p className="font-black italic uppercase text-sm">
-                        {viajeActivo.fase === "chofer_en_camino" && "El chofer viene por ti"}
-                        {viajeActivo.fase === "en_punto_de_encuentro" && "¡El chofer ha llegado!"}
-                        {viajeActivo.fase === "viajando" && "En camino a tu destino..."}
-                     </p>
+                  <div className="space-y-3">
+                    {viajeActivo.fase === "chofer_en_camino" && <p className="text-center font-black italic text-sm text-blue-600 animate-pulse">El chofer va en camino...</p>}
+                    {viajeActivo.fase === "en_punto_de_encuentro" && (
+                      <button onClick={pasajeroConfirmaEncuentro} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg">Ya estoy con el Chofer</button>
+                    )}
+                    {viajeActivo.fase === "pasajero_confirmado_encuentro" && <p className="text-center font-black italic text-sm text-green-600 uppercase">Dale el código al chofer</p>}
+                    {viajeActivo.fase === "viajando" && (
+                       <button 
+                        onClick={() => finalizarViaje("pasajero")} 
+                        disabled={viajeActivo.finalizadoPasajero}
+                        className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoPasajero ? 'bg-slate-400' : 'bg-blue-600 text-white'}`}
+                      >
+                        {viajeActivo.finalizadoPasajero ? "Esperando Confirmación..." : "He llegado a mi destino"} <CheckCircle size={18}/>
+                      </button>
+                    )}
                   </div>
                 )}
              </div>
           </div>
         )}
 
-        {/* DETALLE COMPLETO DEL VIAJE */}
+        {/* DETALLE VIAJE */}
         {viajeSeleccionado && vista === "inicio" && (
            <div className="space-y-6 animate-in slide-in-from-right">
               <button onClick={() => setViajeSeleccionado(null)} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px] italic"><ChevronLeft size={16}/> Volver</button>
               <div className="bg-white rounded-[40px] border shadow-2xl p-8 space-y-6">
                  <div className="flex justify-between items-center border-b pb-4">
                     <p className="text-4xl font-black italic text-blue-600 leading-none">${viajeSeleccionado.precio}</p>
-                    <div className="text-right">
-                       <p className="text-[10px] font-black uppercase italic text-slate-400">Asientos</p>
-                       <p className="text-xl font-black italic text-slate-800">{viajeSeleccionado.puestos}</p>
-                    </div>
                  </div>
                  <div className="space-y-4">
                     <div className="flex items-center gap-3"><MapPin size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic">{viajeSeleccionado.cO} → {viajeSeleccionado.cD}</p></div>
                     <div onClick={() => setPerfilPublico({ nombre: viajeSeleccionado.conductor, id: viajeSeleccionado.idCreador })} className="flex items-center gap-3 cursor-pointer"><User size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic underline">{viajeSeleccionado.conductor}</p></div>
-                    {viajeSeleccionado.vehiculoInfo && (
-                       <div className="bg-slate-50 p-4 rounded-3xl border flex items-center gap-3">
-                          <Car size={20} className="text-slate-400"/>
-                          <div>
-                             <p className="text-[8px] font-black text-slate-400 uppercase">Vehículo</p>
-                             <p className="text-[10px] font-black italic">{viajeSeleccionado.vehiculoInfo.marca} {viajeSeleccionado.vehiculoInfo.modelo} • {viajeSeleccionado.vehiculoInfo.placa}</p>
-                          </div>
-                       </div>
-                    )}
                  </div>
                  <div className="flex gap-2">
-                    <button onClick={() => abrirChat(viajeSeleccionado.id, viajeSeleccionado.idCreador, viajeSeleccionado.conductor)} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-xs flex items-center justify-center gap-2 active:scale-95 shadow-lg"><MessageCircle size={18}/> Chat</button>
-                    <button onClick={() => enviarSolicitudDirecta(viajeSeleccionado)} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg active:scale-95">Pedir Cola</button>
+                    <button onClick={() => abrirChat(viajeSeleccionado.id, viajeSeleccionado.idCreador, viajeSeleccionado.conductor)} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-xs flex items-center justify-center gap-2 shadow-lg"><MessageCircle size={18}/> Chat</button>
+                    <button onClick={() => enviarSolicitudDirecta(viajeSeleccionado)} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg">Pedir Cola</button>
                  </div>
               </div>
            </div>
@@ -575,11 +591,6 @@ export default function NavegacionPrincipal({ user }) {
                   const v = viajes.find(v => v.id === chatActivo.idViaje);
                   if(v) enviarSolicitudDirecta(v);
                }} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px]">Pedir Cola</button>
-               <button onClick={() => {
-                  const soli = misSolicitudes.find(s => s.idViaje === chatActivo.idViaje);
-                  if(soli) setModalCancelacion({ visible: true, idSolicitud: soli.id });
-                  else alert("Sin solicitud activa.");
-               }} className="flex-1 py-3 bg-red-100 text-red-500 rounded-xl font-black uppercase italic text-[10px]">Cancelar</button>
             </div>
 
             <div className="flex-1 bg-white rounded-[40px] border shadow-xl flex flex-col overflow-hidden">
@@ -591,7 +602,7 @@ export default function NavegacionPrincipal({ user }) {
                </div>
                <div className="p-4 bg-white border-t flex gap-2">
                   <input type="text" value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajePrivado()} className="flex-1 bg-slate-100 p-3 rounded-2xl text-[11px] font-bold outline-none" placeholder="Escribe..." />
-                  <button onClick={enviarMensajePrivado} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"><Send size={18}/></button>
+                  <button onClick={enviarMensajePrivado} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg"><Send size={18}/></button>
                </div>
             </div>
           </div>
@@ -606,16 +617,6 @@ export default function NavegacionPrincipal({ user }) {
                  <p className="text-6xl font-black italic leading-none">${userData.saldo?.toFixed(2) || "0.00"}</p>
                  <div className="absolute top-10 right-10 opacity-20"><Wallet size={80}/></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <button onClick={() => alert("Módulo de Pago próximamente")} className="bg-slate-900 text-white p-6 rounded-[30px] font-black uppercase italic text-xs shadow-lg flex flex-col items-center gap-3 active:scale-95"><CreditCard size={24} className="text-blue-400"/> Recargar</button>
-                 <button onClick={() => alert("Módulo de Retiro próximamente")} className="bg-white border text-slate-700 p-6 rounded-[30px] font-black uppercase italic text-xs flex flex-col items-center gap-3 active:scale-95"><Wallet size={24} className="text-slate-400"/> Retirar</button>
-              </div>
-              <div className="bg-white p-6 rounded-[30px] border">
-                 <p className="text-[10px] font-black uppercase text-blue-600 mb-4">Actividad Reciente</p>
-                 <div className="space-y-4 opacity-50">
-                    <p className="text-[10px] font-bold text-center italic uppercase">No hay movimientos recientes</p>
-                 </div>
-              </div>
            </div>
         )}
 
@@ -624,18 +625,17 @@ export default function NavegacionPrincipal({ user }) {
           <div className="flex flex-col h-full bg-white rounded-[40px] border shadow-lg overflow-hidden animate-in fade-in">
              <div className="bg-blue-600 p-4 text-white text-center font-black italic text-[10px] uppercase">Soporte Técnico</div>
              <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-50 flex flex-col">
-                <div className="bg-blue-100 p-4 rounded-2xl text-[10px] font-bold text-blue-800 italic uppercase">¡Hola! Cuéntanos tu problema, responderemos pronto.</div>
                 {chatSoporte.map((m, i) => (
                   <div key={i} className={`p-4 rounded-3xl max-w-[85%] text-[11px] font-bold shadow-sm ${m.usuarioId === user.uid ? 'bg-blue-600 text-white self-end' : 'bg-white border text-slate-700 self-start'}`}>{m.texto}</div>
                 ))}
              </div>
              <div className="p-4 bg-white border-t flex gap-2">
-               <input type="text" value={mensajeSoporte} onChange={(e)=>setMensajeSoporte(e.target.value)} className="flex-1 bg-slate-100 p-4 rounded-2xl text-[11px] font-bold outline-none" placeholder="Escribe al soporte..." />
+               <input type="text" value={mensajeSoporte} onChange={(e)=>setMensajeSoporte(e.target.value)} className="flex-1 bg-slate-100 p-4 rounded-2xl text-[11px] font-bold outline-none" placeholder="Escribe..." />
                <button onClick={async () => {
                   if(!mensajeSoporte.trim()) return;
                   await addDoc(collection(db, "MensajesSoporte"), { usuarioId: user.uid, texto: mensajeSoporte.trim(), fecha: serverTimestamp() });
                   setMensajeSoporte("");
-               }} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center active:scale-90"><Send size={18}/></button>
+               }} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center"><Send size={18}/></button>
              </div>
           </div>
         )}
@@ -644,49 +644,36 @@ export default function NavegacionPrincipal({ user }) {
         {vista === "perfil" && (
            <div className="space-y-4 animate-in fade-in">
               <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative">
-                 <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100 active:rotate-90 transition-transform"><Settings size={22}/></button>
+                 <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100"><Settings size={22}/></button>
                  <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-xl relative">
                    <User size={56} className="text-slate-400" />
                    {userData.kycVerificado && <div className="absolute bottom-1 right-1 bg-blue-600 p-2 rounded-full border-4 border-white"><CheckCircle size={16} className="text-white"/></div>}
                  </div>
                  <h2 className="font-black italic text-2xl text-slate-800 uppercase">{userData.nombre}</h2>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{userData.kycVerificado ? "Socio Verificado" : "Verificación Pendiente"}</p>
               </div>
 
               {configOpen && (
-                <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3 animate-in slide-in-from-top">
-                  <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Edit2 size={12}/> Datos del Vehículo / ID</p>
-                  <input type="text" placeholder="Cédula de Identidad" className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
+                <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3">
+                  <input type="text" placeholder="Cédula" className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
                   <div className="grid grid-cols-2 gap-2">
                     <input type="text" placeholder="Marca" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.marca} onChange={(e)=>setPerfilForm({...perfilForm, marca: e.target.value})} />
                     <input type="text" placeholder="Modelo" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.modelo} onChange={(e)=>setPerfilForm({...perfilForm, modelo: e.target.value})} />
                   </div>
                   <input type="text" placeholder="Placa" className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase" value={perfilForm.placa} onChange={(e)=>setPerfilForm({...perfilForm, placa: e.target.value})} />
-                  <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg active:scale-95 transition-transform">Guardar Datos</button>
+                  <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg">Guardar Datos</button>
                 </div>
               )}
 
-              <div className="bg-white p-2 rounded-[30px] border shadow-sm">
-                  <button onClick={() => alert("ID Usuario: " + user.uid)} className="w-full p-4 flex justify-between items-center text-[10px] font-black uppercase italic text-slate-600 border-b active:bg-slate-50 transition-colors">
-                     <div className="flex items-center gap-3"><Info size={16} className="text-blue-500"/> Información de Cuenta</div>
-                     <ArrowRight size={14}/>
-                  </button>
-                  <button className="w-full p-4 flex justify-between items-center text-[10px] font-black uppercase italic text-slate-600 active:bg-slate-50 transition-colors">
-                     <div className="flex items-center gap-3"><Share2 size={16} className="text-blue-500"/> Compartir App</div>
-                     <ArrowRight size={14}/>
-                  </button>
-              </div>
-
-              <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors"><LogOut size={20} /> Cerrar Sesión</button>
+              <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50"><LogOut size={20} /> Cerrar Sesión</button>
            </div>
         )}
       </main>
 
-      {/* --- BARRA DE NAVEGACIÓN INFERIOR --- */}
+      {/* --- BARRA DE NAVEGACIÓN --- */}
       <nav className="p-6 bg-white border-t flex justify-around items-center pb-10 fixed bottom-0 w-full max-w-md shadow-2xl z-50">
-        <button onClick={() => cambiarVista("inicio")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" ? "text-blue-600 scale-110" : "text-slate-300 hover:text-slate-400"}`}><Car size={28} /><span className="text-[8px] font-black uppercase italic">Viajes</span></button>
-        <button onClick={() => cambiarVista("soporte")} className={`flex flex-col items-center gap-1 transition-all ${vista === "soporte" ? "text-blue-600 scale-110" : "text-slate-300 hover:text-slate-400"}`}><MessageCircle size={28} /><span className="text-[8px] font-black uppercase italic">Ayuda</span></button>
-        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300 hover:text-slate-400"}`}><User size={28} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
+        <button onClick={() => cambiarVista("inicio")} className={`flex flex-col items-center gap-1 ${vista === "inicio" ? "text-blue-600" : "text-slate-300"}`}><Car size={28} /><span className="text-[8px] font-black uppercase italic">Viajes</span></button>
+        <button onClick={() => cambiarVista("soporte")} className={`flex flex-col items-center gap-1 ${vista === "soporte" ? "text-blue-600" : "text-slate-300"}`}><MessageCircle size={28} /><span className="text-[8px] font-black uppercase italic">Ayuda</span></button>
+        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 ${vista === "perfil" ? "text-blue-600" : "text-slate-300"}`}><User size={28} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
       </nav>
     </div>
   );
