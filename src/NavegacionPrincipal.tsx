@@ -10,7 +10,7 @@ import {
   CheckCircle, Navigation, Search, 
   Settings, Trash2, MessageCircle, CreditCard, Users, 
   ChevronLeft, MapPin, Bell, Edit2, AlertTriangle, Star, X,
-  Map as MapIcon, Flag, Info, Clock, ArrowRight, Share2, Key, Lock
+  Map as MapIcon, Flag, Info, Clock, ArrowRight, Share2, Key, Lock, Trophy
 } from "lucide-react";
 
 // --- CONSTANTES DE UBICACIÓN ---
@@ -27,6 +27,23 @@ const UBICACIONES = {
   "Zulia": ["Maracaibo", "San Francisco"]
 };
 const ESTADOS = Object.keys(UBICACIONES);
+
+// --- COMPONENTES DE APOYO (MÓDULO 1: REPUTACIÓN) ---
+const BadgeEstatus = ({ nivel }) => {
+  const configs = {
+    "Bronce": { color: "text-slate-500", bg: "bg-slate-100", label: "Novato" },
+    "Plata": { color: "text-zinc-500", bg: "bg-zinc-100", label: "Viajero" },
+    "Oro": { color: "text-amber-600", bg: "bg-amber-100", label: "Super Driver" },
+    "Diamante": { color: "text-blue-600", bg: "bg-blue-100", label: "Elite" }
+  };
+  const c = configs[nivel] || configs["Bronce"];
+  return (
+    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${c.bg} border border-white shadow-sm`}>
+      <ShieldCheck size={10} className={c.color} />
+      <span className={`text-[8px] font-black uppercase italic ${c.color}`}>{c.label}</span>
+    </div>
+  );
+};
 
 export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
@@ -71,6 +88,14 @@ export default function NavegacionPrincipal({ user }) {
   const [viajeActivo, setViajeActivo] = useState(null);
   const [miUbicacion, setMiUbicacion] = useState(null);
   const [pinIngresado, setPinIngresado] = useState("");
+
+  // --- LÓGICA DE REPUTACIÓN (MÓDULO 1) ---
+  const calcularEstatus = (viajesCompletados = 0, calificacion = 0) => {
+    if (viajesCompletados >= 80 && calificacion >= 4.9) return "Diamante";
+    if (viajesCompletados >= 30 && calificacion >= 4.7) return "Oro";
+    if (viajesCompletados >= 10 && calificacion >= 4.5) return "Plata";
+    return "Bronce";
+  };
 
   // --- EFECTOS DE FIREBASE ---
   useEffect(() => {
@@ -200,6 +225,9 @@ export default function NavegacionPrincipal({ user }) {
         ...form, 
         precio: Number(form.precio), 
         puestos: Number(form.puestos),
+        // Inyectamos datos de reputación para la card (simulados por ahora o traídos del user)
+        viajesTotales: userData.viajesCompletados || 0,
+        rating: userData.rating || 5.0,
         vehiculoInfo: { marca: userData.vehiculo?.marca || "", modelo: userData.vehiculo?.modelo || "", placa: userData.vehiculo?.placa || "" }
       };
       if (viajeEditando) {
@@ -253,7 +281,6 @@ export default function NavegacionPrincipal({ user }) {
 
   const choferVerificaPIN = async () => {
     if (pinIngresado === viajeActivo.pinVerificacion) {
-      // Al validar PIN, el dinero pasa a RETENIDO
       await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
         fase: "viajando",
         pagoEstado: "retenido" 
@@ -274,7 +301,6 @@ export default function NavegacionPrincipal({ user }) {
 
       await updateDoc(doc(db, "Solicitudes", viajeActivo.id), actualizacion);
 
-      // Si ambos finalizaron, se procesa el dinero
       if ((rol === "chofer" && viajeActivo.finalizadoPasajero) || (rol === "pasajero" && viajeActivo.finalizadoChofer)) {
         const montoFinal = viajeActivo.precioViaje * 0.95; 
         await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
@@ -315,16 +341,24 @@ export default function NavegacionPrincipal({ user }) {
            <div className="bg-white rounded-[40px] p-8 w-full max-w-xs shadow-2xl relative">
               <button onClick={() => setPerfilPublico(null)} className="absolute top-4 right-4 text-slate-300"><X size={24}/></button>
               <div className="flex flex-col items-center">
-                 <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-4 border-2 border-blue-200"><User size={48} className="text-blue-600"/></div>
+                 <div className="relative mb-4">
+                    <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
+                      <User size={48} className="text-blue-600"/>
+                    </div>
+                    <div className="absolute -bottom-2 right-0">
+                      <BadgeEstatus nivel={perfilPublico.estatus || "Bronce"} />
+                    </div>
+                 </div>
                  <h3 className="font-black italic uppercase text-2xl text-slate-800 text-center">{perfilPublico.nombre}</h3>
                  <div className="flex gap-2 mt-6 w-full">
                     <div className="flex-1 bg-slate-50 p-4 rounded-3xl text-center border">
                        <Star size={20} className="text-yellow-400 fill-yellow-400 mx-auto mb-1"/>
-                       <p className="text-xl font-black italic text-slate-800">4.9</p>
+                       <p className="text-xl font-black italic text-slate-800">{perfilPublico.rating || "5.0"}</p>
                     </div>
                     <div className="flex-1 bg-slate-50 p-4 rounded-3xl text-center border">
-                       <Car size={20} className="text-blue-500 mx-auto mb-1"/>
-                       <p className="text-xl font-black italic text-slate-800">+50</p>
+                       <Trophy size={20} className="text-blue-500 mx-auto mb-1"/>
+                       <p className="text-[10px] font-black uppercase text-slate-400">Viajes</p>
+                       <p className="text-xl font-black italic text-slate-800">{perfilPublico.viajesTotales || "0"}</p>
                     </div>
                  </div>
               </div>
@@ -441,30 +475,52 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
               </div>
 
-              {/* LISTA DE VIAJES */}
+              {/* LISTA DE VIAJES (MODIFICADA CON MÓDULO 1) */}
               <div className="space-y-4">
-                 {viajes.filter(v => (fCO === "" || v.cO === fCO) && (fCD === "" || v.cD === fCD)).map(v => (
-                   <div key={v.id} className="bg-white p-5 rounded-[35px] border flex flex-col shadow-md space-y-4 hover:border-blue-200 transition-colors">
-                     <div className="flex justify-between items-start">
-                        <div className="flex gap-3">
-                           <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-inner"><Car size={24}/></div>
-                           <div>
-                              <p onClick={() => setPerfilPublico({nombre: v.conductor, id: v.idCreador})} className="text-[9px] font-black text-slate-400 uppercase italic mb-1 flex items-center gap-1 cursor-pointer underline">
-                                <ShieldCheck size={10} className="text-green-500"/> {v.conductor}
-                              </p>
-                              <p className="font-black uppercase text-sm text-slate-800 italic">{v.cO} → {v.cD}</p>
-                           </div>
-                        </div>
-                        <div className="text-right">
-                           <p className="text-2xl font-black text-blue-600 italic leading-none">${v.precio}</p>
-                        </div>
+                 {viajes.filter(v => (fCO === "" || v.cO === fCO) && (fCD === "" || v.cD === fCD)).map(v => {
+                   const estatusChofer = calcularEstatus(v.viajesTotales || 0, v.rating || 0);
+                   
+                   return (
+                     <div key={v.id} className="bg-white p-5 rounded-[35px] border flex flex-col shadow-md space-y-4 hover:border-blue-200 transition-all relative overflow-hidden">
+                       
+                       {/* Banner Super Driver (Módulo 1) */}
+                       {estatusChofer === "Oro" && (
+                         <div className="absolute top-0 right-0 bg-amber-500 text-white px-4 py-1 rounded-bl-2xl text-[8px] font-black uppercase italic shadow-sm z-10">
+                           ⭐ Super Driver
+                         </div>
+                       )}
+
+                       <div className="flex justify-between items-start">
+                          <div className="flex gap-3">
+                             <div className="relative">
+                                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-inner"><Car size={24}/></div>
+                                <div className="absolute -bottom-2 -right-2">
+                                  <BadgeEstatus nivel={estatusChofer} />
+                                </div>
+                             </div>
+                             <div>
+                                <p onClick={() => setPerfilPublico({nombre: v.conductor, id: v.idCreador, estatus: estatusChofer, rating: v.rating, viajesTotales: v.viajesTotales})} className="text-[9px] font-black text-slate-400 uppercase italic mb-1 flex items-center gap-1 cursor-pointer underline">
+                                  <ShieldCheck size={10} className="text-green-500"/> {v.conductor}
+                                </p>
+                                <p className="font-black uppercase text-sm text-slate-800 italic leading-none">{v.cO} → {v.cD}</p>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Star size={10} className="text-yellow-400 fill-yellow-400" />
+                                  <span className="text-[10px] font-black text-slate-600">{v.rating?.toFixed(1) || "5.0"}</span>
+                                </div>
+                             </div>
+                          </div>
+                          <div className="text-right">
+                             <p className="text-2xl font-black text-blue-600 italic leading-none">${v.precio}</p>
+                             <p className="text-[8px] font-black text-slate-400 uppercase mt-1">{v.puestos} puestos</p>
+                          </div>
+                       </div>
+                       <div className="flex gap-2">
+                          <button onClick={() => setViajeSeleccionado(v)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-2xl text-[9px] font-black uppercase italic">Ver Más</button>
+                          <button onClick={() => enviarSolicitudDirecta(v)} className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-[9px] font-black uppercase italic shadow-lg active:scale-95">Pedir Cola</button>
+                       </div>
                      </div>
-                     <div className="flex gap-2">
-                        <button onClick={() => setViajeSeleccionado(v)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-2xl text-[9px] font-black uppercase italic">Ver Más</button>
-                        <button onClick={() => enviarSolicitudDirecta(v)} className="flex-[2] bg-blue-600 text-white py-3 rounded-2xl text-[9px] font-black uppercase italic shadow-lg active:scale-95">Pedir Cola</button>
-                     </div>
-                   </div>
-                 ))}
+                   );
+                 })}
               </div>
            </div>
         )}
@@ -473,7 +529,6 @@ export default function NavegacionPrincipal({ user }) {
         {vista === "en_viaje" && viajeActivo && (
           <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
              
-             {/* INDICADOR DE PAGO RETENIDO */}
              {viajeActivo.pagoEstado === "retenido" && (
                 <div className="bg-amber-100 p-3 rounded-2xl border border-amber-200 flex items-center justify-center gap-2 shadow-sm animate-pulse">
                    <Lock size={14} className="text-amber-600"/>
@@ -490,7 +545,6 @@ export default function NavegacionPrincipal({ user }) {
                 <button onClick={() => setModalCancelacion({visible: true, idSolicitud: viajeActivo.id})} className="text-red-500"><AlertTriangle size={20}/></button>
              </div>
 
-             {/* MAPA */}
              <div className="flex-1 bg-slate-200 rounded-[40px] border-4 border-white shadow-2xl relative overflow-hidden">
                 {viajeActivo.latChofer && (
                    <iframe 
@@ -572,7 +626,7 @@ export default function NavegacionPrincipal({ user }) {
                  </div>
                  <div className="space-y-4">
                     <div className="flex items-center gap-3"><MapPin size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic">{viajeSeleccionado.cO} → {viajeSeleccionado.cD}</p></div>
-                    <div onClick={() => setPerfilPublico({ nombre: viajeSeleccionado.conductor, id: viajeSeleccionado.idCreador })} className="flex items-center gap-3 cursor-pointer"><User size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic underline">{viajeSeleccionado.conductor}</p></div>
+                    <div onClick={() => setPerfilPublico({ nombre: viajeSeleccionado.conductor, id: viajeSeleccionado.idCreador, rating: viajeSeleccionado.rating, viajesTotales: viajeSeleccionado.viajesTotales, estatus: calcularEstatus(viajeSeleccionado.viajesTotales, viajeSeleccionado.rating) })} className="flex items-center gap-3 cursor-pointer"><User size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic underline">{viajeSeleccionado.conductor}</p></div>
                  </div>
                  <div className="flex gap-2">
                     <button onClick={() => abrirChat(viajeSeleccionado.id, viajeSeleccionado.idCreador, viajeSeleccionado.conductor)} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-xs flex items-center justify-center gap-2 shadow-lg"><MessageCircle size={18}/> Chat</button>
@@ -645,11 +699,22 @@ export default function NavegacionPrincipal({ user }) {
            <div className="space-y-4 animate-in fade-in">
               <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative">
                  <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100"><Settings size={22}/></button>
-                 <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-xl relative">
-                   <User size={56} className="text-slate-400" />
-                   {userData.kycVerificado && <div className="absolute bottom-1 right-1 bg-blue-600 p-2 rounded-full border-4 border-white"><CheckCircle size={16} className="text-white"/></div>}
+                 <div className="relative mb-4">
+                    <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl">
+                      <User size={56} className="text-slate-400" />
+                    </div>
+                    {/* Badge de Estatus Automático en Perfil (Módulo 1) */}
+                    <div className="absolute -bottom-2 -right-2">
+                      <BadgeEstatus nivel={calcularEstatus(userData.viajesCompletados || 0, userData.rating || 0)} />
+                    </div>
                  </div>
                  <h2 className="font-black italic text-2xl text-slate-800 uppercase">{userData.nombre}</h2>
+                 {userData.kycVerificado && (
+                   <div className="flex items-center gap-1 mt-1 text-blue-600">
+                     <CheckCircle size={14} />
+                     <span className="text-[10px] font-black uppercase italic tracking-widest">Verificado</span>
+                   </div>
+                 )}
               </div>
 
               {configOpen && (
