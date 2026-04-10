@@ -11,7 +11,8 @@ import {
   Settings, Trash2, MessageCircle, CreditCard, Users, 
   ChevronLeft, MapPin, Bell, Edit2, AlertTriangle, Star, X,
   Map as MapIcon, Flag, Info, Clock, ArrowRight, Share2, Key, Lock, Trophy,
-  FileText, Camera, ShieldAlert, Wind, CigaretteOff, PawPrint, MessageSquare, Briefcase, Zap, Palette
+  FileText, Camera, ShieldAlert, Wind, CigaretteOff, PawPrint, MessageSquare, Briefcase, Zap, Palette,
+  PlusCircle, History
 } from "lucide-react";
 
 // --- CONSTANTES DE UBICACIÓN ---
@@ -305,9 +306,10 @@ export default function NavegacionPrincipal({ user }) {
   });
   const [viajeEditando, setViajeEditando] = useState(null); 
 
-  // Filtros
+  // Filtros y MÓDULO 10 (Búsquedas Recientes)
   const [fEO, setFEO] = useState(""); const [fCO, setFCO] = useState("");
   const [fED, setFED] = useState(""); const [fCD, setFCD] = useState("");
+  const [busquedasRecientes, setBusquedasRecientes] = useState([]);
 
   // Config Perfil (Se añade COLOR - MÓDULO 8)
   const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", color: "", cedula: "" });
@@ -341,6 +343,10 @@ export default function NavegacionPrincipal({ user }) {
   // EFECTOS FIREBASE
   useEffect(() => {
     if (!user) return;
+
+    // Cargar búsquedas recientes del LocalStorage (MÓDULO 10)
+    const savedSearches = JSON.parse(localStorage.getItem("busquedasRecientesDLC") || "[]");
+    setBusquedasRecientes(savedSearches);
 
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) {
@@ -402,15 +408,11 @@ export default function NavegacionPrincipal({ user }) {
       setChatSoporte(msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0)));
     });
 
-    // MÓDULO 9: LÓGICA DE TRIGGER AUTOMÁTICO (SIMULADO EN CLIENTE)
-    // En un entorno de producción real, esto sería una Cloud Function de Firebase ejecutada con un cron job diario.
-    // Aquí simulamos que el cliente verifica si tiene viajes completados antiguos sin reseña para autogenerarlas.
     const revisarResenasAutomaticas = async () => {
       const q = query(collection(db, "Solicitudes"), where("estado", "==", "completado"), where("idPasajero", "==", user.uid));
       const snap = await getDocs(q);
       snap.forEach(async (docSnap) => {
          const data = docSnap.data();
-         // Si pasaron varios días (simulamos 3 días) y no hay reseña:
          const diasPasados = data.fechaFinalizacion ? (Date.now() - data.fechaFinalizacion.toMillis()) / (1000 * 60 * 60 * 24) : 0;
          if (diasPasados > 3 && !data.resenaGenerada) {
             await addDoc(collection(db, "Opiniones"), {
@@ -432,6 +434,26 @@ export default function NavegacionPrincipal({ user }) {
       unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo();
     };
   }, [user]);
+
+  // MÓDULO 10: Efecto para Guardar Búsquedas Recientes automáticamente
+  useEffect(() => {
+    if (fCO && fCD) {
+      const timer = setTimeout(() => {
+        const b = { fEO, fCO, fED, fCD };
+        const existe = busquedasRecientes.some(x => x.fCO === fCO && x.fCD === fCD);
+        if (!existe) {
+           const nuevas = [b, ...busquedasRecientes].slice(0, 5);
+           setBusquedasRecientes(nuevas);
+           localStorage.setItem("busquedasRecientesDLC", JSON.stringify(nuevas));
+        }
+      }, 1000); // Debounce de 1 segundo
+      return () => clearTimeout(timer);
+    }
+  }, [fCD, fCO]);
+
+  const aplicarBusquedaReciente = (b) => {
+     setFEO(b.fEO); setFCO(b.fCO); setFED(b.fED); setFCD(b.fCD);
+  };
 
   // GPS
   useEffect(() => {
@@ -487,7 +509,8 @@ export default function NavegacionPrincipal({ user }) {
     });
     return () => unsubOps();
   }, [perfilPublico]);
-// --- MÓDULO 5: LÓGICA DE FLUJO (SOLICITUD -> APROBACIÓN -> RETENCIÓN) ---
+
+  // --- LÓGICA DE FLUJO ---
   
   const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
     const chatId = [user.uid, idOtroUsuario].sort().join("_") + "_" + idViaje;
@@ -536,7 +559,6 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { alert("Error al guardar."); }
   };
 
-  // MÓDULO 5: Paso 1 - Solicitud de Pasajero
   const enviarSolicitudDirecta = async (viaje) => {
     if (user.uid === viaje.idCreador) return alert("No puedes pedirte una cola a ti mismo.");
     const yaExiste = misSolicitudes.some(s => s.idViaje === viaje.id && s.estado === "pendiente");
@@ -556,7 +578,6 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { alert("Error al pedir cola."); }
   };
 
-  // MÓDULO 5: Paso 2 - Aprobación del Chofer
   const confirmarViajeChofer = async (idSolicitud) => {
     try {
       await updateDoc(doc(db, "Solicitudes", idSolicitud), { 
@@ -582,7 +603,6 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { console.error(e); }
   };
 
-  // MÓDULO 5: Paso 3 - Validación de PIN y Retención de Fondos
   const choferVerificaPIN = async () => {
     if (pinIngresado === viajeActivo.pinVerificacion) {
       await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
@@ -596,7 +616,6 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-  // MÓDULO 5: Paso 4 - Finalización Cruzada (CON TRIGGER MODAL MÓDULO 9)
   const finalizarViaje = async (rol) => {
     if(!viajeActivo) return;
     
@@ -621,7 +640,6 @@ export default function NavegacionPrincipal({ user }) {
         });
         alert(`🏁 ¡Cola Completada con éxito! Fondos liberados.`);
         
-        // MÓDULO 9: Disparar modal de reseñas al finalizar
         setModalResena({
            visible: true,
            idSolicitud: viajeActivo.id,
@@ -636,7 +654,6 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { console.error(e); }
   };
 
-  // MÓDULO 9: Enviar Reseña Manual
   const enviarResena = async () => {
     if(!modalResena.evaluadoId) return;
     try {
@@ -649,7 +666,6 @@ export default function NavegacionPrincipal({ user }) {
          fecha: serverTimestamp(),
          viajeId: modalResena.idSolicitud
       });
-      // Marcar solicitud como reseñada
       await updateDoc(doc(db, "Solicitudes", modalResena.idSolicitud), { resenaGenerada: true });
       
       setModalResena({ visible: false, idSolicitud: null, evaluadoId: null, nombreEvaluado: "" });
@@ -854,8 +870,9 @@ return (
         
         {vista === "inicio" && !viajeSeleccionado && (
            <div className="space-y-6">
+              {/* Botón rápido para alternar si el usuario lo desea (aunque la barra inferior ya lo hace) */}
               <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-4 rounded-2xl text-[10px] font-black uppercase border-2 border-blue-600 text-blue-600 bg-white shadow-sm active:scale-95 transition-all">
-                CAMBIAR A MODO {modo === "pasajero" ? "CHÓFER" : "PASAJERO"} ➔
+                ESTÁS EN MODO {modo === "pasajero" ? "PASAJERO" : "CHÓFER"} (CAMBIAR) ➔
               </button>
 
               {/* MÓDULO 6: BANNER PROMOCIONAL INTELIGENTE */}
@@ -869,7 +886,7 @@ return (
               </div>
 
               {modo === "chofer" && (
-                <div className="space-y-6">
+                <div className="space-y-6 animate-in slide-in-from-right">
                   <div className={`bg-white p-6 rounded-[35px] border shadow-xl space-y-4 ${viajeEditando ? 'ring-4 ring-yellow-400' : ''}`}>
                     <h3 className="text-xs font-black uppercase text-blue-600 italic flex items-center gap-2">{viajeEditando ? "Editando Ruta" : "Publicar Nueva Ruta"}</h3>
                     
@@ -883,7 +900,6 @@ return (
                       <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" disabled={!form.eD} value={form.cD} onChange={(e)=>setForm({...form, cD: e.target.value})}><option value="">Ciudad Destino</option>{form.eD && UBICACIONES[form.eD].map(c => <option key={c} value={c}>{c}</option>)}</select>
                     </div>
 
-                    {/* MÓDULO 7: CAMPOS DE HORA AÑADIDOS */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="relative">
                         <Clock size={14} className="absolute left-3 top-3.5 text-slate-400"/>
@@ -922,63 +938,64 @@ return (
                     </div>
                     <button onClick={publicarOEditarRuta} className={`w-full py-4 text-white rounded-2xl font-black uppercase italic shadow-lg ${viajeEditando ? 'bg-yellow-500' : 'bg-blue-600'}`}>{viajeEditando ? "Actualizar" : "Publicar"}</button>
                   </div>
-
-                  {solicitudesRecibidas.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Bell size={14}/> Solicitudes Pendientes:</p>
-                      {solicitudesRecibidas.map(s => (
-                        <div key={s.id} className="bg-white p-4 rounded-3xl border flex flex-col gap-3 shadow-md border-l-4 border-l-blue-500">
-                           <div className="flex justify-between items-center">
-                              <div onClick={() => setPerfilPublico({ nombre: s.nombrePasajero, id: s.idPasajero, kycVerificado: true })} className="flex items-center gap-2 cursor-pointer">
-                                 <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500"><User size={14}/></div>
-                                 <span className="underline font-black text-xs italic">{s.nombrePasajero}</span>
-                              </div>
-                              <button onClick={() => abrirChat(s.idViaje, s.idPasajero, s.nombrePasajero)} className="p-3 bg-blue-600 text-white rounded-xl"><MessageCircle size={16}/></button>
-                           </div>
-                           <div className="flex gap-2">
-                              <button onClick={() => confirmarViajeChofer(s.id)} className="flex-1 p-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase italic flex items-center justify-center gap-2">Aprobar Cola <CheckCircle size={12}/></button>
-                              <button onClick={() => setModalCancelacion({ visible: true, idSolicitud: s.id })} className="flex-1 p-3 bg-red-100 text-red-500 rounded-xl text-[10px] font-black uppercase">Rechazar</button>
-                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
               {/* BUSCADOR */}
-              <div className="bg-white p-5 rounded-[30px] shadow-sm border space-y-3">
-                <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={14}/> ¿A dónde vamos hoy?</p>
-                <div className="grid grid-cols-2 gap-2">
-                   <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fEO} onChange={(e)=>{setFEO(e.target.value); setFCO("");}}><option value="">DESDE: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
-                   <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fEO} value={fCO} onChange={(e)=>setFCO(e.target.value)}><option value="">DESDE: CIUDAD</option>{fEO && UBICACIONES[fEO].map(c => <option key={c} value={c}>{c}</option>)}</select>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fED} onChange={(e)=>{setFED(e.target.value); setFCD("");}}><option value="">HASTA: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
-                   <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fED} value={fCD} onChange={(e)=>setFCD(e.target.value)}><option value="">HASTA: CIUDAD</option>{fED && UBICACIONES[fED].map(c => <option key={c} value={c}>{c}</option>)}</select>
-                </div>
-              </div>
+              {modo === "pasajero" && (
+                <div className="bg-white p-5 rounded-[30px] shadow-sm border space-y-3 animate-in slide-in-from-left">
+                  <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={14}/> ¿A dónde vamos hoy?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fEO} onChange={(e)=>{setFEO(e.target.value); setFCO("");}}><option value="">DESDE: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fEO} value={fCO} onChange={(e)=>setFCO(e.target.value)}><option value="">DESDE: CIUDAD</option>{fEO && UBICACIONES[fEO].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fED} onChange={(e)=>{setFED(e.target.value); setFCD("");}}><option value="">HASTA: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fED} value={fCD} onChange={(e)=>setFCD(e.target.value)}><option value="">HASTA: CIUDAD</option>{fED && UBICACIONES[fED].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                  </div>
 
-              {/* LISTA DE VIAJES (MÓDULO 7 INTEGRADO AQUÍ) */}
-              <div className="space-y-5">
-                 {viajes.filter(v => (fCO === "" || v.cO === fCO) && (fCD === "" || v.cD === fCD)).map(v => (
-                    <CardViajeOptimizada 
-                      key={v.id}
-                      viaje={v}
-                      estatusChofer={calcularEstatus(v.viajesTotales || 0, v.rating || 0)}
-                      onClickDetalle={() => setViajeSeleccionado(v)}
-                      onClickPedir={() => enviarSolicitudDirecta(v)}
-                      onClickPerfil={() => setPerfilPublico({
-                        nombre: v.conductor, id: v.idCreador, 
-                        estatus: calcularEstatus(v.viajesTotales, v.rating), 
-                        rating: v.rating, viajesTotales: v.viajesTotales, 
-                        kycVerificado: true, vehiculo: v.vehiculoInfo, 
-                        fotoVerificada: true, cancelaciones: v.cancelaciones, 
-                        preferencias: v.preferencias
-                      })}
-                    />
-                 ))}
-              </div>
+                  {/* MÓDULO 10: BÚSQUEDAS RECIENTES */}
+                  {busquedasRecientes.length > 0 && (
+                     <div className="pt-3 border-t border-slate-100 mt-2">
+                       <p className="text-[9px] font-black uppercase text-slate-400 mb-2 flex items-center gap-1"><History size={12}/> Búsquedas Recientes</p>
+                       <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
+                          {busquedasRecientes.map((b, i) => (
+                            <button key={i} onClick={() => aplicarBusquedaReciente(b)} className="shrink-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 hover:bg-blue-50 hover:border-blue-200 transition-colors active:scale-95">
+                              <History size={12} className="text-slate-400"/>
+                              <div className="text-left">
+                                 <p className="text-[9px] font-black italic text-slate-700 leading-none mb-0.5">{b.fCO} <span className="text-blue-500">→</span></p>
+                                 <p className="text-[9px] font-black italic text-slate-700 leading-none">{b.fCD}</p>
+                              </div>
+                            </button>
+                          ))}
+                       </div>
+                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* LISTA DE VIAJES */}
+              {modo === "pasajero" && (
+                <div className="space-y-5">
+                   {viajes.filter(v => (fCO === "" || v.cO === fCO) && (fCD === "" || v.cD === fCD)).map(v => (
+                      <CardViajeOptimizada 
+                        key={v.id}
+                        viaje={v}
+                        estatusChofer={calcularEstatus(v.viajesTotales || 0, v.rating || 0)}
+                        onClickDetalle={() => setViajeSeleccionado(v)}
+                        onClickPedir={() => enviarSolicitudDirecta(v)}
+                        onClickPerfil={() => setPerfilPublico({
+                          nombre: v.conductor, id: v.idCreador, 
+                          estatus: calcularEstatus(v.viajesTotales, v.rating), 
+                          rating: v.rating, viajesTotales: v.viajesTotales, 
+                          kycVerificado: true, vehiculo: v.vehiculoInfo, 
+                          fotoVerificada: true, cancelaciones: v.cancelaciones, 
+                          preferencias: v.preferencias
+                        })}
+                      />
+                   ))}
+                </div>
+              )}
            </div>
         )}
 {/* --- VISTA MÓDULO 5: FLUJO ACTIVO --- */}
@@ -1067,7 +1084,6 @@ return (
                  <div className="space-y-6">
                     <div className="flex items-center gap-3"><MapPin size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic">{viajeSeleccionado.cO} → {viajeSeleccionado.cD}</p></div>
 
-                    {/* MÓDULO 8: Detalles del Vehículo */}
                     <div className="bg-slate-50 p-4 rounded-3xl border flex items-center gap-4">
                        <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner"><Car size={24}/></div>
                        <div>
@@ -1090,7 +1106,6 @@ return (
                        </div>
                     </div>
 
-                    {/* MÓDULO 8: Pasajeros Confirmados */}
                     <div className="bg-slate-50 p-5 rounded-[30px] border">
                        <p className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest flex items-center gap-2"><Users size={14}/> Pasajeros Confirmados ({pasajerosViaje.length}/{viajeSeleccionado.puestos + pasajerosViaje.length})</p>
                        {pasajerosViaje.length === 0 ? (
@@ -1111,7 +1126,6 @@ return (
                              ))}
                           </div>
                        )}
-                       {/* Mostrar asientos vacíos (visuales) */}
                        <div className="space-y-2">
                          {Array.from({ length: viajeSeleccionado.puestos }).map((_, i) => (
                             <div key={`empty-${i}`} className="flex items-center gap-3 bg-transparent p-3 rounded-2xl border border-dashed border-slate-300 opacity-60">
@@ -1167,6 +1181,74 @@ return (
                </div>
             </div>
           </div>
+        )}
+
+        {/* MÓDULO 10: TUS VIAJES (MIS VIAJES) */}
+        {vista === "mis_viajes" && (
+           <div className="space-y-4 animate-in fade-in">
+             <div className="bg-blue-600 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden">
+                <MapIcon size={60} className="absolute -right-2 -bottom-2 opacity-10" />
+                <p className="font-black italic text-xl uppercase tracking-tighter">Tus Viajes</p>
+                <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Historial y Rutas Activas</p>
+             </div>
+             {misSolicitudes.length === 0 && solicitudesRecibidas.length === 0 ? (
+                <div className="bg-white p-10 rounded-[30px] border text-center shadow-sm">
+                   <Car size={32} className="text-slate-200 mx-auto mb-3" />
+                   <p className="text-xs text-slate-400 font-bold italic">No tienes viajes activos o recientes.</p>
+                </div>
+             ) : (
+                <div className="space-y-3">
+                   {misSolicitudes.map(s => (
+                     <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-blue-500">
+                       <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
+                       <div className="flex justify-between items-center mt-2">
+                          <p className="text-[9px] font-black text-slate-500 flex items-center gap-1"><User size={10}/> {s.nombreChofer}</p>
+                          <p className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${s.estado === 'completado' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                             {s.estado}
+                          </p>
+                       </div>
+                     </div>
+                   ))}
+                   {solicitudesRecibidas.map(s => (
+                     <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-amber-500">
+                       <p className="text-[9px] font-black uppercase text-amber-500 mb-1">Solicitud Recibida</p>
+                       <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
+                       <p className="text-[9px] font-black text-slate-500 mt-1 flex items-center gap-1"><User size={10}/> {s.nombrePasajero}</p>
+                     </div>
+                   ))}
+                </div>
+             )}
+           </div>
+        )}
+
+        {/* MÓDULO 10: BANDEJA DE MENSAJES (INBOX) */}
+        {vista === "inbox" && (
+           <div className="space-y-4 animate-in fade-in">
+             <div className="bg-slate-900 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden">
+                <MessageSquare size={60} className="absolute -left-2 -top-2 opacity-10" />
+                <p className="font-black italic text-xl uppercase tracking-tighter">Mensajes</p>
+                <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Tu bandeja de entrada</p>
+             </div>
+             {historialChats.length === 0 ? (
+                <div className="bg-white p-10 rounded-[30px] border text-center shadow-sm">
+                   <MessageCircle size={32} className="text-slate-200 mx-auto mb-3" />
+                   <p className="text-xs text-slate-400 font-bold italic">No tienes mensajes aún.</p>
+                </div>
+             ) : (
+                <div className="space-y-3">
+                   {historialChats.map(c => (
+                     <div key={c.chatId} onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group">
+                        <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors"><User size={20} className="text-blue-500 group-hover:text-white"/></div>
+                        <div className="flex-1 overflow-hidden">
+                           <p className="text-xs font-black italic uppercase text-slate-800">{c.nombreOtro}</p>
+                           <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">{c.ultimoMensaje}</p>
+                        </div>
+                        <ChevronLeft size={16} className="text-slate-300 transform rotate-180"/>
+                     </div>
+                   ))}
+                </div>
+             )}
+           </div>
         )}
 
         {/* WALLET */}
@@ -1236,11 +1318,23 @@ return (
         )}
       </main>
 
-      {/* BARRA DE NAVEGACIÓN */}
-      <nav className="p-6 bg-white border-t flex justify-around items-center pb-10 fixed bottom-0 w-full max-w-md shadow-2xl z-50">
-        <button onClick={() => cambiarVista("inicio")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" ? "text-blue-600 scale-110" : "text-slate-300"}`}><Car size={28} /><span className="text-[8px] font-black uppercase italic">Viajes</span></button>
-        <button onClick={() => cambiarVista("soporte")} className={`flex flex-col items-center gap-1 transition-all ${vista === "soporte" ? "text-blue-600 scale-110" : "text-slate-300"}`}><MessageCircle size={28} /><span className="text-[8px] font-black uppercase italic">Ayuda</span></button>
-        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}><User size={28} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
+      {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR (5 PILARES) */}
+      <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl">
+        <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+           <Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span>
+        </button>
+        <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "chofer" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+           <PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span>
+        </button>
+        <button onClick={() => cambiarVista("mis_viajes")} className={`flex flex-col items-center gap-1 transition-all ${vista === "mis_viajes" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+           <MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Tus Viajes</span>
+        </button>
+        <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inbox" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+           <MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span>
+        </button>
+        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+           <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
+        </button>
       </nav>
     </div>
   );
