@@ -3,7 +3,7 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import {
   doc, onSnapshot, collection, query, addDoc, 
-  serverTimestamp, orderBy, updateDoc, deleteDoc, where
+  serverTimestamp, orderBy, updateDoc, deleteDoc, where, getDocs
 } from "firebase/firestore";
 import {
   Wallet, User, LogOut, Car, Send, ShieldCheck, 
@@ -272,7 +272,6 @@ const ProgresoGamificacion = ({ userData, onAbrirConfig }) => {
     </div>
   );
 };
-
 export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
@@ -290,8 +289,13 @@ export default function NavegacionPrincipal({ user }) {
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [historialChats, setHistorialChats] = useState([]); 
 
-  // Perfil Público
+  // Perfil Público y MÓDULO 9 (Reseñas)
   const [perfilPublico, setPerfilPublico] = useState(null);
+  const [modalResena, setModalResena] = useState({ visible: false, idSolicitud: null, evaluadoId: null, nombreEvaluado: "" });
+  const [calificacion, setCalificacion] = useState(5);
+  const [textoResena, setTextoResena] = useState("");
+  const [opinionesPerfil, setOpinionesPerfil] = useState([]); 
+  const [modalOpinionesVisible, setModalOpinionesVisible] = useState(false);
 
   // Estados de Viajes y Edición
   const [form, setForm] = useState({ 
@@ -398,6 +402,31 @@ export default function NavegacionPrincipal({ user }) {
       setChatSoporte(msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0)));
     });
 
+    // MÓDULO 9: LÓGICA DE TRIGGER AUTOMÁTICO (SIMULADO EN CLIENTE)
+    // En un entorno de producción real, esto sería una Cloud Function de Firebase ejecutada con un cron job diario.
+    // Aquí simulamos que el cliente verifica si tiene viajes completados antiguos sin reseña para autogenerarlas.
+    const revisarResenasAutomaticas = async () => {
+      const q = query(collection(db, "Solicitudes"), where("estado", "==", "completado"), where("idPasajero", "==", user.uid));
+      const snap = await getDocs(q);
+      snap.forEach(async (docSnap) => {
+         const data = docSnap.data();
+         // Si pasaron varios días (simulamos 3 días) y no hay reseña:
+         const diasPasados = data.fechaFinalizacion ? (Date.now() - data.fechaFinalizacion.toMillis()) / (1000 * 60 * 60 * 24) : 0;
+         if (diasPasados > 3 && !data.resenaGenerada) {
+            await addDoc(collection(db, "Opiniones"), {
+               evaluadoId: data.idChofer,
+               evaluadorId: "sistema_auto",
+               estrellas: 5,
+               comentario: "El viaje se completó sin problemas. (Reseña Automática)",
+               fecha: serverTimestamp(),
+               viajeId: docSnap.id
+            });
+            await updateDoc(doc(db, "Solicitudes", docSnap.id), { resenaGenerada: true });
+         }
+      });
+    };
+    revisarResenasAutomaticas();
+
     return () => { 
       unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); 
       unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo();
@@ -448,6 +477,16 @@ export default function NavegacionPrincipal({ user }) {
     });
     return () => unsubPasajeros();
   }, [viajeSeleccionado]);
+
+  // MÓDULO 9: Cargar opiniones cuando se abre el perfil público
+  useEffect(() => {
+    if (!perfilPublico) return;
+    const q = query(collection(db, "Opiniones"), where("evaluadoId", "==", perfilPublico.id), orderBy("fecha", "desc"));
+    const unsubOps = onSnapshot(q, (snap) => {
+       setOpinionesPerfil(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsubOps();
+  }, [perfilPublico]);
 // --- MÓDULO 5: LÓGICA DE FLUJO (SOLICITUD -> APROBACIÓN -> RETENCIÓN) ---
   
   const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
@@ -557,7 +596,7 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-  // MÓDULO 5: Paso 4 - Finalización Cruzada
+  // MÓDULO 5: Paso 4 - Finalización Cruzada (CON TRIGGER MODAL MÓDULO 9)
   const finalizarViaje = async (rol) => {
     if(!viajeActivo) return;
     
@@ -577,14 +616,46 @@ export default function NavegacionPrincipal({ user }) {
           fase: "finalizado", 
           estado: "completado",
           pagoEstado: "completado",
-          montoNetoChofer: montoFinal
+          montoNetoChofer: montoFinal,
+          fechaFinalizacion: serverTimestamp()
         });
         alert(`🏁 ¡Cola Completada con éxito! Fondos liberados.`);
+        
+        // MÓDULO 9: Disparar modal de reseñas al finalizar
+        setModalResena({
+           visible: true,
+           idSolicitud: viajeActivo.id,
+           evaluadoId: rol === "chofer" ? viajeActivo.idPasajero : viajeActivo.idChofer,
+           nombreEvaluado: rol === "chofer" ? viajeActivo.nombrePasajero : viajeActivo.nombreChofer
+        });
+        
         setVista("inicio");
       } else {
         alert("Anotado. Esperando que la otra parte también confirme la llegada.");
       }
     } catch (e) { console.error(e); }
+  };
+
+  // MÓDULO 9: Enviar Reseña Manual
+  const enviarResena = async () => {
+    if(!modalResena.evaluadoId) return;
+    try {
+      await addDoc(collection(db, "Opiniones"), {
+         evaluadoId: modalResena.evaluadoId,
+         evaluadorId: user.uid,
+         evaluadorNombre: userData.nombre,
+         estrellas: calificacion,
+         comentario: textoResena,
+         fecha: serverTimestamp(),
+         viajeId: modalResena.idSolicitud
+      });
+      // Marcar solicitud como reseñada
+      await updateDoc(doc(db, "Solicitudes", modalResena.idSolicitud), { resenaGenerada: true });
+      
+      setModalResena({ visible: false, idSolicitud: null, evaluadoId: null, nombreEvaluado: "" });
+      setCalificacion(5); setTextoResena("");
+      alert("✅ Reseña publicada. ¡Gracias por contribuir a la comunidad!");
+    } catch(e) { console.error(e); }
   };
 
   const guardarDatosPerfil = async () => {
@@ -601,10 +672,96 @@ export default function NavegacionPrincipal({ user }) {
   const cambiarVista = (v) => { setVista(v); setViajeSeleccionado(null); setChatActivo(null); };
 
   if (!userData) return <div className="h-screen bg-slate-950 flex items-center justify-center text-blue-500 font-black italic animate-pulse">CARGANDO DAME LA COLA...</div>;
-
-  return (
+return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 flex flex-col relative overflow-hidden font-sans border-x shadow-2xl">
       
+      {/* MODAL MÓDULO 9: DEJAR RESEÑA */}
+      {modalResena.visible && (
+        <div className="absolute inset-0 bg-slate-900/95 z-[300] flex items-center justify-center p-6 backdrop-blur-md animate-in zoom-in duration-300">
+           <div className="bg-white rounded-[40px] p-8 w-full shadow-2xl space-y-5 text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-blue-600 mb-2">
+                 <Star size={32} className="fill-blue-600"/>
+              </div>
+              <h3 className="font-black italic uppercase text-2xl text-slate-800 leading-tight">Califica a {modalResena.nombreEvaluado}</h3>
+              <p className="text-[10px] font-black uppercase text-slate-400">Tu opinión construye nuestra reputación</p>
+              
+              <div className="flex justify-center gap-2 my-4">
+                 {[1,2,3,4,5].map(star => (
+                   <button key={star} onClick={() => setCalificacion(star)} className="focus:outline-none transition-transform hover:scale-110 active:scale-95">
+                      <Star size={36} className={`${calificacion >= star ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`} />
+                   </button>
+                 ))}
+              </div>
+              
+              <textarea 
+                 value={textoResena} onChange={(e) => setTextoResena(e.target.value)}
+                 placeholder="¿Cómo estuvo la cola? Deja un comentario corto..."
+                 className="w-full bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 text-xs font-bold outline-none focus:border-blue-600 resize-none h-24"
+              ></textarea>
+
+              <button onClick={enviarResena} className="w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg bg-blue-600 text-white transition-all active:scale-95">
+                 Publicar Reseña
+              </button>
+              <button onClick={() => setModalResena({visible: false})} className="text-[10px] font-black uppercase text-slate-400 mt-2 hover:text-slate-600">Omitir por ahora</button>
+           </div>
+        </div>
+      )}
+
+      {/* MODAL MÓDULO 9: DESGLOSE DE OPINIONES */}
+      {modalOpinionesVisible && (
+        <div className="absolute inset-0 bg-slate-900/95 z-[200] flex flex-col p-6 backdrop-blur-md animate-in slide-in-from-bottom duration-300">
+           <div className="flex justify-between items-center mb-6 pt-10">
+              <h3 className="font-black italic uppercase text-2xl text-white">Desglose de Puntuaciones</h3>
+              <button onClick={() => setModalOpinionesVisible(false)} className="text-slate-400 bg-white/10 p-2 rounded-full"><X size={20}/></button>
+           </div>
+           
+           <div className="bg-white rounded-[40px] p-8 w-full shadow-2xl flex-1 overflow-y-auto space-y-6">
+              <div className="flex items-center gap-6 border-b pb-6">
+                 <div className="text-center">
+                    <p className="text-5xl font-black italic text-slate-800">{perfilPublico?.rating || "5.0"}</p>
+                    <div className="flex items-center justify-center text-amber-400 fill-amber-400 mt-1"><Star size={16} className="fill-amber-400"/></div>
+                    <p className="text-[10px] font-black uppercase text-slate-400 mt-1">{opinionesPerfil.length} Opiniones</p>
+                 </div>
+                 <div className="flex-1 space-y-1">
+                    {[5, 4, 3, 2, 1].map(nivel => {
+                       const count = opinionesPerfil.filter(o => o.estrellas === nivel).length;
+                       const percent = opinionesPerfil.length ? (count / opinionesPerfil.length) * 100 : 0;
+                       return (
+                          <div key={nivel} className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500">
+                             <span className="w-2">{nivel}</span>
+                             <Star size={10} className="fill-slate-300 text-slate-300"/>
+                             <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${nivel >= 4 ? 'bg-green-500' : nivel === 3 ? 'bg-amber-400' : 'bg-red-500'}`} style={{width: `${percent}%`}}></div>
+                             </div>
+                             <span className="w-4 text-right">{count}</span>
+                          </div>
+                       )
+                    })}
+                 </div>
+              </div>
+
+              <div className="space-y-4">
+                 <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Reseñas Recientes</p>
+                 {opinionesPerfil.length === 0 ? (
+                    <p className="text-xs font-bold text-slate-400 italic text-center py-4">No hay reseñas aún.</p>
+                 ) : (
+                    opinionesPerfil.map(op => (
+                       <div key={op.id} className="bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                          <div className="flex justify-between items-start mb-2">
+                             <span className="text-[11px] font-black italic uppercase text-slate-800">{op.evaluadorNombre || "Usuario Anónimo"} {op.evaluadorId === "sistema_auto" && <span className="text-blue-500 ml-1 text-[8px] bg-blue-50 px-1 rounded">Auto</span>}</span>
+                             <div className="flex text-amber-400">
+                                {[...Array(op.estrellas)].map((_, i) => <Star key={i} size={10} className="fill-amber-400"/>)}
+                             </div>
+                          </div>
+                          <p className="text-xs font-bold text-slate-600">{op.comentario}</p>
+                       </div>
+                    ))
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
+
       {/* MODAL CHECKLIST (MÓDULO 2) */}
       {mostrarChecklist && (
         <div className="absolute inset-0 bg-slate-900/95 z-[250] flex items-center justify-center p-6 backdrop-blur-md animate-in zoom-in duration-300">
@@ -646,7 +803,7 @@ export default function NavegacionPrincipal({ user }) {
       )}
 
       {/* MODAL PERFIL PÚBLICO */}
-      {perfilPublico && (
+      {perfilPublico && !modalOpinionesVisible && (
         <div className="absolute inset-0 bg-black/60 z-[150] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
            <div className="bg-white rounded-[40px] p-8 w-full max-w-xs shadow-2xl relative text-center">
               <button onClick={() => setPerfilPublico(null)} className="absolute top-4 right-4 text-slate-300"><X size={24}/></button>
@@ -661,8 +818,9 @@ export default function NavegacionPrincipal({ user }) {
               <h3 className="font-black italic uppercase text-2xl text-slate-800">{perfilPublico.nombre}</h3>
               <SenalesConfianza data={perfilPublico} />
               <div className="flex gap-2 mt-6 w-full">
-                 <div className="flex-1 bg-slate-50 p-4 rounded-3xl border">
-                    <Star size={20} className="text-amber-500 fill-amber-500 mx-auto mb-1"/>
+                 <div onClick={() => setModalOpinionesVisible(true)} className="flex-1 bg-slate-50 p-4 rounded-3xl border cursor-pointer hover:bg-blue-50 transition-colors group">
+                    <Star size={20} className="text-amber-500 fill-amber-500 mx-auto mb-1 group-hover:scale-110 transition-transform"/>
+                    <p className="text-[10px] font-black uppercase text-blue-600 leading-none mb-1 opacity-0 group-hover:opacity-100 transition-opacity">Ver Reseñas</p>
                     <p className="text-xl font-black italic text-slate-800">{perfilPublico.rating || "5.0"}</p>
                  </div>
                  <div className="flex-1 bg-slate-50 p-4 rounded-3xl border">
@@ -1041,7 +1199,7 @@ export default function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* PERFIL (Se añade COLOR en los inputs - MÓDULO 8) */}
+        {/* PERFIL */}
         {vista === "perfil" && (
            <div className="space-y-4 animate-in fade-in pb-10">
               <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
