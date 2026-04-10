@@ -197,30 +197,6 @@ const VisualizadorPreferencias = ({ prefs }) => {
     </div>
   );
 };
-// --- MÓDULO 11: DEFINICIÓN DEL BANNER KYC ---
-const BannerIncentivoKYC = ({ onVerificar }) => (
-  <div className="mx-0 my-4 p-6 rounded-[24px] bg-gradient-to-br from-indigo-900 via-blue-800 to-blue-600 shadow-2xl text-white overflow-hidden relative border border-white/10">
-    <div className="flex items-center gap-4 mb-4">
-      <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm text-amber-400">
-        <ShieldCheck size={32} />
-      </div>
-      <div>
-        <h3 className="font-black italic uppercase text-xl leading-none">
-          CONDUCTOR<br/><span className="text-amber-400 text-2xl">VERIFICADO</span>
-        </h3>
-      </div>
-    </div>
-    <p className="text-sm font-medium text-blue-100 mb-6 leading-snug">
-      ¡Dale seguridad a tus pasajeros! Los perfiles verificados consiguen <span className="font-black text-white italic">3 veces más viajes</span>.
-    </p>
-    <button 
-      onClick={onVerificar}
-      className="w-full py-4 bg-amber-400 text-slate-900 font-black italic uppercase rounded-xl shadow-lg active:scale-[0.98]"
-    >
-      Verificar mi cuenta ahora
-    </button>
-  </div>
-);
 
 const SenalesConfianza = ({ data }) => {
   const items = [
@@ -1304,21 +1280,7 @@ return (
              </div>
           </div>
         )}
-{/* ... línea 1324 ... */}
-{vista === "perfil" && (
-  <div className="pb-24">
-    <div className="px-4 pt-6">
-      <h2 className="font-black italic uppercase text-2xl mb-4">Perfil de {user?.displayName}</h2>
-      
-      {/* AQUÍ PEGAS EL MÓDULO 11 */}
-      <BannerIncentivoKYC onVerificar={() => setVista("config_perfil")} />
-
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-black italic uppercase text-slate-500">Viajes Publicados</h3>
-{/* ... continúa tu código de viajes ... */}
-        
-        
-        {/* PERFIL */}
+             {/* PERFIL */}
         {vista === "perfil" && (
            <div className="space-y-4 animate-in fade-in pb-10">
               <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
