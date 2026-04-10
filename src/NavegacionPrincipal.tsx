@@ -29,7 +29,7 @@ const UBICACIONES = {
 };
 const ESTADOS = Object.keys(UBICACIONES);
 
-// --- COMPONENTES DE APOYO (MÓDULO 1 & 4: REPUTACIÓN Y BADGES) ---
+// --- MÓDULO 1 & 4: REPUTACIÓN Y BADGES ---
 const BadgeEstatus = ({ nivel, mini = false }) => {
   const configs = {
     "Bronce": { color: "text-slate-500", bg: "bg-slate-100", label: "Novato" },
@@ -46,16 +46,38 @@ const BadgeEstatus = ({ nivel, mini = false }) => {
   );
 };
 
+// --- MÓDULO 5: INDICADOR DE PROGRESO DE FLUJO ---
+const PasosProgreso = ({ fase }) => {
+  const pasos = [
+    { id: "solicitado", label: "Pedido", activo: ["pendiente", "confirmado", "chofer_en_camino", "en_punto_de_encuentro", "pasajero_confirmado_encuentro", "viajando"].includes(fase) },
+    { id: "aprobado", label: "Aprobado", activo: ["confirmado", "chofer_en_camino", "en_punto_de_encuentro", "pasajero_confirmado_encuentro", "viajando"].includes(fase) },
+    { id: "retenido", label: "Retenido", activo: ["viajando"].includes(fase) },
+    { id: "finalizado", label: "Llegada", activo: ["finalizado"].includes(fase) }
+  ];
+
+  return (
+    <div className="flex justify-between items-center px-4 py-2 bg-white rounded-2xl border mb-4">
+      {pasos.map((p, i) => (
+        <React.Fragment key={p.id}>
+          <div className="flex flex-col items-center gap-1">
+            <div className={`w-3 h-3 rounded-full ${p.activo ? 'bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.5)]' : 'bg-slate-200'}`} />
+            <span className={`text-[7px] font-black uppercase ${p.activo ? 'text-blue-600' : 'text-slate-300'}`}>{p.label}</span>
+          </div>
+          {i < pasos.length - 1 && <div className={`flex-1 h-[2px] mx-1 mb-3 ${pasos[i+1].activo ? 'bg-blue-600' : 'bg-slate-100'}`} />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 // --- MÓDULO 4: TARJETA DE VIAJE REDISEÑADA ---
 const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfil, estatusChofer }) => {
   const ultimosPuestos = viaje.puestos <= 2;
   
   return (
     <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all duration-300 overflow-hidden group">
-      {/* Header de la tarjeta: Info del Chofer y Precio */}
       <div className="p-5 flex justify-between items-start">
         <div className="flex gap-4">
-          {/* Foto/Avatar Prominente (Módulo 4) */}
           <div className="relative" onClick={() => onClickPerfil()}>
             <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 rounded-[22px] flex items-center justify-center text-slate-400 border-2 border-white shadow-md group-hover:scale-105 transition-transform">
               <User size={32} />
@@ -65,7 +87,6 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
             </div>
           </div>
 
-          {/* Info Texto */}
           <div className="flex flex-col justify-center">
             <div className="flex items-center gap-1">
               <h4 className="font-black italic uppercase text-sm text-slate-800 leading-none underline cursor-pointer" onClick={() => onClickPerfil()}>
@@ -83,7 +104,6 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{viaje.viajesTotales || 0} opiniones</span>
             </div>
 
-            {/* Preferencias Clave (Módulo 4) */}
             <div className="flex gap-1 mt-2">
               {viaje.preferencias?.ac && <div className="p-1 bg-blue-50 text-blue-500 rounded-md"><Wind size={10}/></div>}
               {viaje.preferencias?.noFumar && <div className="p-1 bg-slate-50 text-slate-400 rounded-md"><CigaretteOff size={10}/></div>}
@@ -92,7 +112,6 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
           </div>
         </div>
 
-        {/* Precio */}
         <div className="text-right">
           <div className="bg-blue-600 text-white px-3 py-1.5 rounded-2xl shadow-lg shadow-blue-200">
             <p className="text-xl font-black italic leading-none">${viaje.precio}</p>
@@ -103,7 +122,6 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
         </div>
       </div>
 
-      {/* Cuerpo: Ruta */}
       <div className="px-5 pb-4 flex items-center gap-3">
         <div className="flex flex-col items-center gap-1">
           <div className="w-2 h-2 rounded-full border-2 border-blue-600 bg-white" />
@@ -116,7 +134,6 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
         </div>
       </div>
 
-      {/* Footer: Acciones rápidas */}
       <div className="px-3 pb-3 flex gap-2">
         <button onClick={onClickDetalle} className="flex-1 py-3 rounded-2xl bg-slate-50 text-slate-500 font-black uppercase italic text-[9px] hover:bg-slate-100 transition-colors">
           Info del viaje
@@ -129,7 +146,7 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
   );
 };
 
-// --- RESTO DE COMPONENTES IGUAL ---
+// --- COMPONENTES DE APOYO ---
 const VisualizadorPreferencias = ({ prefs }) => {
   if (!prefs) return null;
   const items = [
@@ -188,21 +205,21 @@ export default function NavegacionPrincipal({ user }) {
   // Perfil Público
   const [perfilPublico, setPerfilPublico] = useState(null);
 
-  // Estados de Viajes y Edición (Modo Chofer)
+  // Estados de Viajes y Edición
   const [form, setForm] = useState({ 
     eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", extras: "",
     preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true }
   });
   const [viajeEditando, setViajeEditando] = useState(null); 
 
-  // Filtros de búsqueda
+  // Filtros
   const [fEO, setFEO] = useState(""); const [fCO, setFCO] = useState("");
   const [fED, setFED] = useState(""); const [fCD, setFCD] = useState("");
 
-  // Configuración Perfil
+  // Config Perfil
   const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", cedula: "" });
   
-  // Soporte Técnico
+  // Soporte
   const [mensajeSoporte, setMensajeSoporte] = useState("");
   const [chatSoporte, setChatSoporte] = useState([]);
 
@@ -211,20 +228,16 @@ export default function NavegacionPrincipal({ user }) {
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const motivosOpciones = ["Ya no quiero viajar", "Conseguí otra cola", "Surgió un imprevisto", "Cambiaré de ruta o fecha"];
 
-  // --- ESTADOS MÓDULO 2: CHECKLIST DE VERIFICACIÓN ---
+  // MÓDULO 2: CHECKLIST
   const [mostrarChecklist, setMostrarChecklist] = useState(false);
-  const [checkSeguridad, setCheckSeguridad] = useState({
-    placaOk: false,
-    modeloOk: false,
-    conductorOk: false
-  });
+  const [checkSeguridad, setCheckSeguridad] = useState({ placaOk: false, modeloOk: false, conductorOk: false });
 
-  // --- ESTADO DE VIAJE ACTIVO Y GPS ---
+  // VIAJE ACTIVO Y GPS
   const [viajeActivo, setViajeActivo] = useState(null);
   const [miUbicacion, setMiUbicacion] = useState(null);
   const [pinIngresado, setPinIngresado] = useState("");
 
-  // --- LÓGICA DE REPUTACIÓN (MÓDULO 1) ---
+  // LÓGICA REPUTACIÓN
   const calcularEstatus = (viajesCompletados = 0, calificacion = 0) => {
     if (viajesCompletados >= 80 && calificacion >= 4.9) return "Diamante";
     if (viajesCompletados >= 30 && calificacion >= 4.7) return "Oro";
@@ -232,7 +245,7 @@ export default function NavegacionPrincipal({ user }) {
     return "Bronce";
   };
 
-  // --- EFECTOS DE FIREBASE ---
+  // EFECTOS FIREBASE
   useEffect(() => {
     if (!user) return;
 
@@ -259,8 +272,10 @@ export default function NavegacionPrincipal({ user }) {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes"), where("estado", "==", "confirmado")), (snap) => {
-      const actual = snap.docs.map(d => ({id: d.id, ...d.data()})).find(s => s.idPasajero === user.uid || s.idChofer === user.uid);
+    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes")), (snap) => {
+      const actual = snap.docs
+        .map(d => ({id: d.id, ...d.data()}))
+        .find(s => (s.idPasajero === user.uid || s.idChofer === user.uid) && s.estado !== "completado" && s.estado !== "rechazado");
       setViajeActivo(actual || null);
     });
 
@@ -272,10 +287,9 @@ export default function NavegacionPrincipal({ user }) {
           const data = d.data();
           const soyEmisor = data.emisorId === user.uid;
           const idOtro = soyEmisor ? data.receptorId : data.emisorId;
-          const nombreOtro = soyEmisor ? (data.nombreReceptor || "Usuario") : data.nombreEmisor;
           const fechaMs = data.fecha ? data.fecha.toMillis() : Date.now();
           if (!mapChats.has(data.chatId)) {
-             mapChats.set(data.chatId, { chatId: data.chatId, idViaje: data.idViaje, idOtro, nombreOtro, ultimoMensaje: data.texto, fecha: fechaMs });
+             mapChats.set(data.chatId, { chatId: data.chatId, idViaje: data.idViaje, idOtro, nombreOtro: soyEmisor ? (data.nombreReceptor || "Usuario") : data.nombreEmisor, ultimoMensaje: data.texto, fecha: fechaMs });
           } else if (fechaMs > mapChats.get(data.chatId).fecha) {
              mapChats.set(data.chatId, { ...mapChats.get(data.chatId), ultimoMensaje: data.texto, fecha: fechaMs });
           }
@@ -322,7 +336,7 @@ export default function NavegacionPrincipal({ user }) {
     return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
   }, [vista, viajeActivo?.id, user.uid]);
 
-  // Mensajes de Chat
+  // Chat
   useEffect(() => {
     if (!chatActivo) return;
     const qM = query(collection(db, "MensajesPrivados"), where("chatId", "==", chatActivo.id), orderBy("fecha", "asc"));
@@ -332,7 +346,8 @@ export default function NavegacionPrincipal({ user }) {
     return () => unsubMsg();
   }, [chatActivo]);
 
-  // --- FUNCIONES DE ACCIÓN ---
+  // --- MÓDULO 5: LÓGICA DE FLUJO (SOLICITUD -> APROBACIÓN -> RETENCIÓN) ---
+  
   const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
     const chatId = [user.uid, idOtroUsuario].sort().join("_") + "_" + idViaje;
     setChatActivo({ id: chatId, nombre: nombreOtro, idOtro: idOtroUsuario, idViaje: idViaje });
@@ -379,6 +394,7 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { alert("Error al guardar."); }
   };
 
+  // MÓDULO 5: Paso 1 - Solicitud de Pasajero
   const enviarSolicitudDirecta = async (viaje) => {
     if (user.uid === viaje.idCreador) return alert("No puedes pedirte una cola a ti mismo.");
     const yaExiste = misSolicitudes.some(s => s.idViaje === viaje.id && s.estado === "pendiente");
@@ -388,20 +404,25 @@ export default function NavegacionPrincipal({ user }) {
       await addDoc(collection(db, "Solicitudes"), {
         idViaje: viaje.id, idPasajero: user.uid, nombrePasajero: userData.nombre || "Pasajero",
         idChofer: viaje.idCreador, nombreChofer: viaje.conductor, 
-        ruta: `${viaje.cO} → ${viaje.cD}`, estado: "pendiente", fechaSolicitud: serverTimestamp(),
+        ruta: `${viaje.cO} → ${viaje.cD}`, estado: "pendiente", fase: "solicitado", 
+        fechaSolicitud: serverTimestamp(),
         precioViaje: viaje.precio, pagoEstado: "pendiente",
         vehiculoInfo: viaje.vehiculoInfo,
         preferenciasViaje: viaje.preferencias || null
       });
-      alert("✅ ¡Cola pedida! El chofer te avisará por chat.");
+      alert("✅ ¡Cola pedida! Espera la aprobación del chofer.");
     } catch (e) { alert("Error al pedir cola."); }
   };
 
+  // MÓDULO 5: Paso 2 - Aprobación del Chofer
   const confirmarViajeChofer = async (idSolicitud) => {
     try {
       await updateDoc(doc(db, "Solicitudes", idSolicitud), { 
-        estado: "confirmado", fase: "chofer_en_camino", fechaConfirmacion: serverTimestamp() 
+        estado: "confirmado", 
+        fase: "chofer_en_camino", 
+        fechaConfirmacion: serverTimestamp() 
       });
+      alert("✅ Has aceptado al pasajero. El sistema monitorea el encuentro.");
       setVista("en_viaje");
     } catch (e) { alert("Error al confirmar."); }
   };
@@ -419,21 +440,28 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { console.error(e); }
   };
 
+  // MÓDULO 5: Paso 3 - Validación de PIN y Retención de Fondos
   const choferVerificaPIN = async () => {
     if (pinIngresado === viajeActivo.pinVerificacion) {
       await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
         fase: "viajando",
-        pagoEstado: "retenido" 
+        pagoEstado: "retenido" // Se simula que el dinero ya no está con el pasajero
       });
-      alert("✅ PIN Correcto. El pago ha sido RETENIDO. ¡Viaje iniciado!");
+      alert("✅ PIN Correcto. ¡Fondos RETENIDOS! Inicia el trayecto con seguridad.");
       setPinIngresado("");
     } else {
       alert("❌ PIN Incorrecto. Pídele el código al pasajero.");
     }
   };
 
+  // MÓDULO 5: Paso 4 - Finalización Cruzada
   const finalizarViaje = async (rol) => {
     if(!viajeActivo) return;
+    
+    // Validación de Seguridad: Solo el chofer real puede marcar como finalizadoChofer
+    if(rol === "chofer" && user.uid !== viajeActivo.idChofer) return alert("Acción no autorizada.");
+    if(rol === "pasajero" && user.uid !== viajeActivo.idPasajero) return alert("Acción no autorizada.");
+
     try {
       const actualizacion = {};
       if (rol === "chofer") actualizacion.finalizadoChofer = true;
@@ -441,6 +469,7 @@ export default function NavegacionPrincipal({ user }) {
 
       await updateDoc(doc(db, "Solicitudes", viajeActivo.id), actualizacion);
 
+      // Si ambos finalizaron, se completa el workflow
       if ((rol === "chofer" && viajeActivo.finalizadoPasajero) || (rol === "pasajero" && viajeActivo.finalizadoChofer)) {
         const montoFinal = viajeActivo.precioViaje * 0.95; 
         await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
@@ -449,10 +478,10 @@ export default function NavegacionPrincipal({ user }) {
           pagoEstado: "completado",
           montoNetoChofer: montoFinal
         });
-        alert(`🏁 ¡Viaje Completado! Fondos liberados.`);
+        alert(`🏁 ¡Cola Completada con éxito! Fondos liberados.`);
         setVista("inicio");
       } else {
-        alert("Esperando que la otra parte también finalice el viaje...");
+        alert("Anotado. Esperando que la otra parte también confirme la llegada.");
       }
     } catch (e) { console.error(e); }
   };
@@ -475,21 +504,20 @@ export default function NavegacionPrincipal({ user }) {
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 flex flex-col relative overflow-hidden font-sans border-x shadow-2xl">
       
-      {/* --- MODAL: CHECKLIST DE SEGURIDAD (MÓDULO 2) --- */}
+      {/* MODAL CHECKLIST (MÓDULO 2) */}
       {mostrarChecklist && (
         <div className="absolute inset-0 bg-slate-900/95 z-[250] flex items-center justify-center p-6 backdrop-blur-md animate-in zoom-in duration-300">
            <div className="bg-white rounded-[40px] p-8 w-full shadow-2xl space-y-6">
               <div className="text-center">
                  <ShieldCheck size={48} className="text-blue-600 mx-auto mb-2 drop-shadow-lg"/>
                  <h3 className="font-black italic uppercase text-xl text-slate-800 leading-tight">Protocolo de Confianza</h3>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Verifica antes de subirte:</p>
               </div>
 
               <div className="space-y-3">
                  {[
-                   { id: 'placaOk', label: `Placa coincide: ${viajeActivo?.vehiculoInfo?.placa || 'ABC-123'}`, icon: <CreditCard size={14}/> },
-                   { id: 'modeloOk', label: `Vehículo: ${viajeActivo?.vehiculoInfo?.marca || 'Auto'} ${viajeActivo?.vehiculoInfo?.modelo || ''}`, icon: <Car size={14}/> },
-                   { id: 'conductorOk', label: "El conductor es el de la foto", icon: <User size={14}/> }
+                   { id: 'placaOk', label: `Placa coincide: ${viajeActivo?.vehiculoInfo?.placa}`, icon: <CreditCard size={14}/> },
+                   { id: 'modeloOk', label: `Vehículo: ${viajeActivo?.vehiculoInfo?.marca} ${viajeActivo?.vehiculoInfo?.modelo}`, icon: <Car size={14}/> },
+                   { id: 'conductorOk', label: "El chofer es el de la foto", icon: <User size={14}/> }
                  ].map((item) => (
                     <button 
                       key={item.id}
@@ -505,82 +533,48 @@ export default function NavegacionPrincipal({ user }) {
                  ))}
               </div>
 
-              <div className="pt-2">
-                 <button 
-                   disabled={!(checkSeguridad.placaOk && checkSeguridad.modeloOk && checkSeguridad.conductorOk)}
-                   onClick={() => {
-                      setMostrarChecklist(false);
-                      pasajeroConfirmaEncuentro();
-                   }}
-                   className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg transition-all ${checkSeguridad.placaOk && checkSeguridad.modeloOk && checkSeguridad.conductorOk ? 'bg-blue-600 text-white translate-y-0 opacity-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50 translate-y-2'}`}
-                 >
-                    {checkSeguridad.placaOk && checkSeguridad.modeloOk && checkSeguridad.conductorOk ? "Todo Seguro - Generar PIN" : "Completa la verificación"}
-                 </button>
-                 <button onClick={() => setMostrarChecklist(false)} className="w-full mt-4 text-[10px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors">Cancelar / No estoy seguro</button>
-              </div>
+              <button 
+                disabled={!(checkSeguridad.placaOk && checkSeguridad.modeloOk && checkSeguridad.conductorOk)}
+                onClick={() => { setMostrarChecklist(false); pasajeroConfirmaEncuentro(); }}
+                className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg transition-all ${checkSeguridad.placaOk && checkSeguridad.modeloOk && checkSeguridad.conductorOk ? 'bg-blue-600 text-white opacity-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50'}`}
+              >
+                 Confirmar y Ver PIN
+              </button>
            </div>
         </div>
       )}
 
-      {/* --- MODALES GENERALES --- */}
+      {/* MODAL PERFIL PÚBLICO */}
       {perfilPublico && (
         <div className="absolute inset-0 bg-black/60 z-[150] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-           <div className="bg-white rounded-[40px] p-8 w-full max-w-xs shadow-2xl relative">
+           <div className="bg-white rounded-[40px] p-8 w-full max-w-xs shadow-2xl relative text-center">
               <button onClick={() => setPerfilPublico(null)} className="absolute top-4 right-4 text-slate-300"><X size={24}/></button>
-              <div className="flex flex-col items-center">
-                 <div className="relative mb-4">
-                    <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200 shadow-inner">
-                      <User size={48} className="text-blue-600"/>
-                    </div>
-                    <div className="absolute -bottom-2 right-0">
-                      <BadgeEstatus nivel={perfilPublico.estatus || "Bronce"} />
-                    </div>
+              <div className="relative mb-4 inline-block">
+                <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200 shadow-inner">
+                  <User size={48} className="text-blue-600"/>
+                </div>
+                <div className="absolute -bottom-2 right-0">
+                  <BadgeEstatus nivel={perfilPublico.estatus || "Bronce"} />
+                </div>
+              </div>
+              <h3 className="font-black italic uppercase text-2xl text-slate-800">{perfilPublico.nombre}</h3>
+              <SenalesConfianza data={perfilPublico} />
+              <div className="flex gap-2 mt-6 w-full">
+                 <div className="flex-1 bg-slate-50 p-4 rounded-3xl border">
+                    <Star size={20} className="text-amber-500 fill-amber-500 mx-auto mb-1"/>
+                    <p className="text-xl font-black italic text-slate-800">{perfilPublico.rating || "5.0"}</p>
                  </div>
-                 <h3 className="font-black italic uppercase text-2xl text-slate-800 text-center">{perfilPublico.nombre}</h3>
-                 
-                 {/* MÓDULO 2: SEÑALES DE CONFIANZA EN PERFIL */}
-                 <SenalesConfianza data={perfilPublico} />
-
-                 <div className="flex gap-2 mt-6 w-full">
-                    <div className="flex-1 bg-slate-50 p-4 rounded-3xl text-center border">
-                       <Star size={20} className="text-amber-500 fill-amber-500 mx-auto mb-1"/>
-                       <p className="text-xl font-black italic text-slate-800">{perfilPublico.rating || "5.0"}</p>
-                    </div>
-                    <div className="flex-1 bg-slate-50 p-4 rounded-3xl text-center border">
-                       <ShieldAlert size={20} className="text-red-400 mx-auto mb-1"/>
-                       <p className="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Cancelaciones</p>
-                       <p className="text-xl font-black italic text-slate-800">{perfilPublico.cancelaciones || "0"}</p>
-                    </div>
+                 <div className="flex-1 bg-slate-50 p-4 rounded-3xl border">
+                    <ShieldAlert size={20} className="text-red-400 mx-auto mb-1"/>
+                    <p className="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Cancelaciones</p>
+                    <p className="text-xl font-black italic text-slate-800">{perfilPublico.cancelaciones || "0"}</p>
                  </div>
               </div>
            </div>
         </div>
       )}
 
-      {modalCancelacion.visible && (
-        <div className="absolute inset-0 bg-black/60 z-[160] flex items-center justify-center p-4 backdrop-blur-sm">
-           <div className="bg-white rounded-[35px] p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="font-black italic uppercase text-red-500 flex items-center gap-2 mb-4"><AlertTriangle/> ¿Cancelar?</h3>
-              <p className="text-[9px] font-bold text-slate-400 uppercase mb-4 tracking-tighter">Nota: Las cancelaciones afectan tu índice de confianza y reputación.</p>
-              <div className="space-y-2 mb-6">
-                 {motivosOpciones.map(m => (
-                    <button key={m} onClick={()=>setMotivoCancelacion(m)} className={`w-full p-3 rounded-xl text-[10px] font-black uppercase text-left border-2 transition-all ${motivoCancelacion === m ? 'border-red-500 bg-red-50 text-red-600' : 'border-slate-100 bg-slate-50 text-slate-500'}`}>{m}</button>
-                 ))}
-              </div>
-              <div className="flex gap-2">
-                 <button onClick={()=>setModalCancelacion({visible:false})} className="flex-1 p-3 bg-slate-100 rounded-xl font-black text-xs">NO</button>
-                 <button onClick={async () => {
-                    await deleteDoc(doc(db, "Solicitudes", modalCancelacion.idSolicitud));
-                    setModalCancelacion({ visible: false, idSolicitud: null });
-                    if(vista === "en_viaje") setVista("inicio");
-                    alert("Cola cancelada.");
-                 }} className="flex-1 p-3 bg-red-500 text-white rounded-xl font-black text-xs shadow-lg">SÍ, CANCELAR</button>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* --- HEADER --- */}
+      {/* HEADER */}
       <header className="p-6 pt-12 bg-white border-b flex justify-between items-center shrink-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic text-xl transform -skew-x-12 shadow-lg">D</div>
@@ -596,7 +590,7 @@ export default function NavegacionPrincipal({ user }) {
         </div>
       </header>
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
+      {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto p-5 pb-32">
         
         {vista === "inicio" && !viajeSeleccionado && (
@@ -605,12 +599,10 @@ export default function NavegacionPrincipal({ user }) {
                 CAMBIAR A MODO {modo === "pasajero" ? "CHÓFER" : "PASAJERO"} ➔
               </button>
 
-              {/* PANEL CHOFER */}
               {modo === "chofer" && (
                 <div className="space-y-6">
                   <div className={`bg-white p-6 rounded-[35px] border shadow-xl space-y-4 ${viajeEditando ? 'ring-4 ring-yellow-400' : ''}`}>
                     <h3 className="text-xs font-black uppercase text-blue-600 italic flex items-center gap-2">{viajeEditando ? "Editando Ruta" : "Publicar Nueva Ruta"}</h3>
-                    
                     <div className="grid grid-cols-2 gap-2">
                       <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={form.eO} onChange={(e)=>setForm({...form, eO: e.target.value, cO: ""})}><option value="">Edo. Origen</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
                       <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" disabled={!form.eO} value={form.cO} onChange={(e)=>setForm({...form, cO: e.target.value})}><option value="">Ciudad Origen</option>{form.eO && UBICACIONES[form.eO].map(c => <option key={c} value={c}>{c}</option>)}</select>
@@ -619,8 +611,6 @@ export default function NavegacionPrincipal({ user }) {
                       <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={form.eD} onChange={(e)=>setForm({...form, eD: e.target.value, cD: ""})}><option value="">Edo. Destino</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
                       <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" disabled={!form.eD} value={form.cD} onChange={(e)=>setForm({...form, cD: e.target.value})}><option value="">Ciudad Destino</option>{form.eD && UBICACIONES[form.eD].map(c => <option key={c} value={c}>{c}</option>)}</select>
                     </div>
-                    
-                    {/* MÓDULO 3: SELECTOR DE PREFERENCIAS (CHOFER) */}
                     <div className="bg-slate-50 p-4 rounded-2xl space-y-3">
                        <p className="text-[9px] font-black uppercase text-slate-400 italic">Preferencias del Viaje:</p>
                        <div className="flex flex-wrap gap-2">
@@ -641,16 +631,9 @@ export default function NavegacionPrincipal({ user }) {
                           ))}
                        </div>
                     </div>
-
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="relative">
-                         <Users size={14} className="absolute left-3 top-3.5 text-slate-400"/>
-                         <input type="number" placeholder="Asientos" className="w-full bg-slate-50 p-3 pl-8 rounded-xl border text-xs font-bold" value={form.puestos} onChange={(e)=>setForm({...form, puestos: e.target.value})} />
-                      </div>
-                      <div className="relative">
-                         <CreditCard size={14} className="absolute left-3 top-3.5 text-blue-500"/>
-                         <input type="number" placeholder="Precio $" className="w-full bg-slate-50 p-3 pl-8 rounded-xl border text-xs font-black text-blue-600" value={form.precio} onChange={(e)=>setForm({...form, precio: e.target.value})} />
-                      </div>
+                      <div className="relative"><Users size={14} className="absolute left-3 top-3.5 text-slate-400"/><input type="number" placeholder="Asientos" className="w-full bg-slate-50 p-3 pl-8 rounded-xl border text-xs font-bold" value={form.puestos} onChange={(e)=>setForm({...form, puestos: e.target.value})} /></div>
+                      <div className="relative"><CreditCard size={14} className="absolute left-3 top-3.5 text-blue-500"/><input type="number" placeholder="Precio $" className="w-full bg-slate-50 p-3 pl-8 rounded-xl border text-xs font-black text-blue-600" value={form.precio} onChange={(e)=>setForm({...form, precio: e.target.value})} /></div>
                     </div>
                     <button onClick={publicarOEditarRuta} className={`w-full py-4 text-white rounded-2xl font-black uppercase italic shadow-lg ${viajeEditando ? 'bg-yellow-500' : 'bg-blue-600'}`}>{viajeEditando ? "Actualizar" : "Publicar"}</button>
                   </div>
@@ -668,7 +651,7 @@ export default function NavegacionPrincipal({ user }) {
                               <button onClick={() => abrirChat(s.idViaje, s.idPasajero, s.nombrePasajero)} className="p-3 bg-blue-600 text-white rounded-xl"><MessageCircle size={16}/></button>
                            </div>
                            <div className="flex gap-2">
-                              <button onClick={() => confirmarViajeChofer(s.id)} className="flex-1 p-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase italic flex items-center justify-center gap-2">Aceptar Cola <CheckCircle size={12}/></button>
+                              <button onClick={() => confirmarViajeChofer(s.id)} className="flex-1 p-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase italic flex items-center justify-center gap-2">Aprobar Cola <CheckCircle size={12}/></button>
                               <button onClick={() => setModalCancelacion({ visible: true, idSolicitud: s.id })} className="flex-1 p-3 bg-red-100 text-red-500 rounded-xl text-[10px] font-black uppercase">Rechazar</button>
                            </div>
                         </div>
@@ -691,7 +674,7 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
               </div>
 
-              {/* LISTA DE VIAJES (CON MÓDULO 1, 2, 3 Y MÓDULO 4 REDISEÑADO) */}
+              {/* LISTA DE VIAJES */}
               <div className="space-y-5">
                  {viajes.filter(v => (fCO === "" || v.cO === fCO) && (fCD === "" || v.cD === fCD)).map(v => (
                     <CardViajeOptimizada 
@@ -714,16 +697,15 @@ export default function NavegacionPrincipal({ user }) {
            </div>
         )}
 
-        {/* --- VISTA: EN VIAJE --- */}
-        {/* (Mantengo tu lógica de en_viaje pero pulo la UI para que sea más limpia) */}
+        {/* --- VISTA MÓDULO 5: FLUJO ACTIVO --- */}
         {vista === "en_viaje" && viajeActivo && (
           <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
              <div className="bg-blue-600 p-3 rounded-2xl flex items-center justify-between shadow-lg mx-1">
                 <div className="flex items-center gap-2">
                    <ShieldCheck size={16} className="text-white"/>
-                   <span className="text-[9px] font-black text-white uppercase italic">Viaje Monitoreado</span>
+                   <span className="text-[9px] font-black text-white uppercase italic">Protocolo de Retención Activo</span>
                 </div>
-                <button className="bg-red-500 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase animate-pulse border-2 border-red-400 shadow-md">S.O.S</button>
+                <button className="bg-red-500 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase animate-pulse border-2 border-red-400">S.O.S</button>
              </div>
 
              <div className="bg-white p-4 rounded-[30px] shadow-sm border flex justify-between items-center">
@@ -734,6 +716,9 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
                 <button onClick={() => setModalCancelacion({visible: true, idSolicitud: viajeActivo.id})} className="text-red-500"><AlertTriangle size={20}/></button>
              </div>
+
+             {/* INDICADOR DE FASES MÓDULO 5 */}
+             <PasosProgreso fase={viajeActivo.fase} />
 
              <div className="flex-1 bg-slate-200 rounded-[40px] border-4 border-white shadow-2xl relative overflow-hidden">
                 {viajeActivo.latChofer && (
@@ -749,7 +734,7 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
                 {viajeActivo.idPasajero === user.uid && viajeActivo.pinVerificacion && viajeActivo.fase === "pasajero_confirmado_encuentro" && (
                    <div className="absolute top-6 left-6 right-6 bg-blue-600 p-4 rounded-2xl text-white text-center shadow-xl z-20 animate-bounce">
-                      <p className="text-[10px] font-black uppercase">PIN para el Chofer:</p>
+                      <p className="text-[10px] font-black uppercase">PIN de Encuentro (Módulo 5):</p>
                       <p className="text-3xl font-black tracking-[10px]">{viajeActivo.pinVerificacion}</p>
                    </div>
                 )}
@@ -761,20 +746,20 @@ export default function NavegacionPrincipal({ user }) {
                     {viajeActivo.fase === "chofer_en_camino" && <button onClick={() => updateDoc(doc(db,"Solicitudes",viajeActivo.id), {fase: "en_punto_de_encuentro"})} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg">He llegado al punto</button>}
                     {viajeActivo.fase === "pasajero_confirmado_encuentro" && (
                       <div className="space-y-3">
-                         <p className="text-[10px] font-black text-blue-600 uppercase italic text-center">Ingresa el PIN del Pasajero</p>
+                         <p className="text-[10px] font-black text-blue-600 uppercase italic text-center">Valida el PIN del Pasajero</p>
                          <input type="number" placeholder="0000" className="w-full p-4 bg-slate-100 rounded-2xl text-center text-2xl font-black outline-none border-2 border-transparent focus:border-blue-600" value={pinIngresado} onChange={(e)=>setPinIngresado(e.target.value)} />
-                         <button onClick={choferVerificaPIN} className="w-full py-4 bg-green-500 text-white rounded-2xl font-black uppercase italic">Validar PIN e Iniciar</button>
+                         <button onClick={choferVerificaPIN} className="w-full py-4 bg-green-500 text-white rounded-2xl font-black uppercase italic">Validar PIN y Retener Pago</button>
                       </div>
                     )}
                     {viajeActivo.fase === "viajando" && (
-                      <button onClick={() => finalizarViaje("chofer")} disabled={viajeActivo.finalizadoChofer} className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoChofer ? 'bg-slate-400' : 'bg-slate-900 text-white'}`}>{viajeActivo.finalizadoChofer ? "Esperando Pasajero..." : "Finalizar Viaje"} <Flag size={18}/></button>
+                      <button onClick={() => finalizarViaje("chofer")} disabled={viajeActivo.finalizadoChofer} className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoChofer ? 'bg-slate-400' : 'bg-slate-900 text-white'}`}>{viajeActivo.finalizadoChofer ? "Esperando Confirmación Pasajero..." : "Marcar Llegada"} <Flag size={18}/></button>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {viajeActivo.fase === "en_punto_de_encuentro" && <button onClick={() => setMostrarChecklist(true)} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95"><ShieldCheck size={18}/> Iniciar Verificación</button>}
+                    {viajeActivo.fase === "en_punto_de_encuentro" && <button onClick={() => setMostrarChecklist(true)} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95"><ShieldCheck size={18}/> Iniciar Protocolo de Seguridad</button>}
                     {viajeActivo.fase === "viajando" && (
-                       <button onClick={() => finalizarViaje("pasajero")} disabled={viajeActivo.finalizadoPasajero} className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoPasajero ? 'bg-slate-400' : 'bg-blue-600 text-white'}`}>{viajeActivo.finalizadoPasajero ? "Confirmación Pendiente..." : "Confirmar Destino"} <CheckCircle size={18}/></button>
+                       <button onClick={() => finalizarViaje("pasajero")} disabled={viajeActivo.finalizadoPasajero} className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoPasajero ? 'bg-slate-400' : 'bg-blue-600 text-white'}`}>{viajeActivo.finalizadoPasajero ? "Pago en proceso de liberación..." : "Confirmar Llegada al Destino"} <CheckCircle size={18}/></button>
                     )}
                   </div>
                 )}
@@ -782,7 +767,7 @@ export default function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* DETALLE VIAJE (MÓDULO 3) */}
+        {/* DETALLE VIAJE */}
         {viajeSeleccionado && vista === "inicio" && (
            <div className="space-y-6 animate-in slide-in-from-right">
               <button onClick={() => setViajeSeleccionado(null)} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px] italic"><ChevronLeft size={16}/> Volver</button>
@@ -795,7 +780,7 @@ export default function NavegacionPrincipal({ user }) {
                     <div className="space-y-4">
                        <div className="flex items-center gap-3"><MapPin size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic">{viajeSeleccionado.cO} → {viajeSeleccionado.cD}</p></div>
                        <div className="bg-slate-50 p-5 rounded-[30px] border">
-                          <p className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Preferencias del Viaje</p>
+                          <p className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Preferencias</p>
                           <div className="grid grid-cols-2 gap-3">
                              {[
                                { id: 'ac', icon: <Wind size={14}/>, label: "A/C", active: viajeSeleccionado.preferencias?.ac },
@@ -818,11 +803,6 @@ export default function NavegacionPrincipal({ user }) {
                           </div>
                        </div>
                     </div>
-                    <div className="bg-slate-900 p-6 rounded-[30px] text-white">
-                       <p className="text-[10px] font-black uppercase text-blue-400 mb-3 tracking-widest">Información del Auto</p>
-                       <div className="flex items-center gap-3 mb-2"><Car size={16} className="text-white"/><p className="text-xs font-black uppercase italic">{viajeSeleccionado.vehiculoInfo?.marca} {viajeSeleccionado.vehiculoInfo?.modelo}</p></div>
-                       <p className="text-[10px] font-black text-blue-400 bg-white/10 px-3 py-1 rounded-lg inline-block border border-white/10">{viajeSeleccionado.vehiculoInfo?.placa}</p>
-                    </div>
                  </div>
                  <div className="flex gap-2 pt-4">
                     <button onClick={() => abrirChat(viajeSeleccionado.id, viajeSeleccionado.idCreador, viajeSeleccionado.conductor)} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-xs flex items-center justify-center gap-2 shadow-lg"><MessageCircle size={18}/> Chat</button>
@@ -832,13 +812,10 @@ export default function NavegacionPrincipal({ user }) {
            </div>
         )}
 
-        {/* --- CHAT PRIVADO --- */}
+        {/* CHAT PRIVADO */}
         {vista === "chat_privado" && chatActivo && (
           <div className="flex flex-col h-full space-y-4 animate-in slide-in-from-right">
             <button onClick={() => setVista("inicio")} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px]"><ChevronLeft size={16}/> Volver</button>
-            <div className="bg-white p-3 rounded-3xl border shadow-sm flex gap-2">
-               <button onClick={() => { const v = viajes.find(v => v.id === chatActivo.idViaje); if(v) enviarSolicitudDirecta(v); }} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px]">Pedir Cola</button>
-            </div>
             <div className="flex-1 bg-white rounded-[40px] border shadow-xl flex flex-col overflow-hidden">
                <div className="bg-slate-900 p-4 text-white text-center font-black italic text-[10px] uppercase flex items-center justify-center gap-2"><ShieldCheck size={12} className="text-blue-400"/> Chat Seguro: {chatActivo.nombre}</div>
                <div className="flex-1 p-5 overflow-y-auto space-y-3 bg-slate-50 flex flex-col">
@@ -854,7 +831,7 @@ export default function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* --- WALLET --- */}
+        {/* WALLET */}
         {vista === "wallet" && (
            <div className="space-y-6 animate-in fade-in">
               <h2 className="text-3xl font-black italic text-slate-800 uppercase tracking-tighter">Mi Wallet</h2>
@@ -867,12 +844,12 @@ export default function NavegacionPrincipal({ user }) {
            </div>
         )}
 
-        {/* --- SOPORTE --- */}
+        {/* SOPORTE */}
         {vista === "soporte" && (
           <div className="flex flex-col h-full bg-white rounded-[40px] border shadow-lg overflow-hidden animate-in fade-in">
              <div className="bg-blue-600 p-4 text-white text-center font-black italic text-[10px] uppercase">Soporte Técnico</div>
              <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-50 flex flex-col">
-                <div className="p-4 bg-white border rounded-3xl self-start text-[11px] font-bold text-slate-700 shadow-sm">👋 ¡Hola {userData.nombre}! ¿En qué podemos ayudarte?</div>
+                <div className="p-4 bg-white border rounded-3xl self-start text-[11px] font-bold text-slate-700 shadow-sm">👋 ¡Hola {userData.nombre}! Reporta cualquier incidente aquí.</div>
                 {chatSoporte.map((m, i) => (
                   <div key={i} className={`p-4 rounded-3xl max-w-[85%] text-[11px] font-bold shadow-sm ${m.usuarioId === user.uid ? 'bg-blue-600 text-white self-end rounded-tr-none' : 'bg-white border text-slate-700 self-start rounded-tl-none'}`}>{m.texto}</div>
                 ))}
@@ -884,12 +861,11 @@ export default function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* --- PERFIL --- */}
+        {/* PERFIL */}
         {vista === "perfil" && (
            <div className="space-y-4 animate-in fade-in pb-10">
               <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
-                 <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 shadow-lg"></div>
-                 <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100 active:scale-90 transition-transform"><Settings size={22}/></button>
+                 <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100"><Settings size={22}/></button>
                  <div className="relative mb-4">
                     <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden"><User size={56} className="text-slate-400" /></div>
                     <div className="absolute -bottom-2 -right-2"><BadgeEstatus nivel={calcularEstatus(userData.viajesCompletados || 0, userData.rating || 0)} /></div>
@@ -915,7 +891,7 @@ export default function NavegacionPrincipal({ user }) {
         )}
       </main>
 
-      {/* --- BARRA DE NAVEGACIÓN --- */}
+      {/* BARRA DE NAVEGACIÓN */}
       <nav className="p-6 bg-white border-t flex justify-around items-center pb-10 fixed bottom-0 w-full max-w-md shadow-2xl z-50">
         <button onClick={() => cambiarVista("inicio")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" ? "text-blue-600 scale-110" : "text-slate-300"}`}><Car size={28} /><span className="text-[8px] font-black uppercase italic">Viajes</span></button>
         <button onClick={() => cambiarVista("soporte")} className={`flex flex-col items-center gap-1 transition-all ${vista === "soporte" ? "text-blue-600 scale-110" : "text-slate-300"}`}><MessageCircle size={28} /><span className="text-[8px] font-black uppercase italic">Ayuda</span></button>
