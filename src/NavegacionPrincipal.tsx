@@ -11,7 +11,7 @@ import {
   Settings, Trash2, MessageCircle, CreditCard, Users, 
   ChevronLeft, MapPin, Bell, Edit2, AlertTriangle, Star, X,
   Map as MapIcon, Flag, Info, Clock, ArrowRight, Share2, Key, Lock, Trophy,
-  FileText, Camera, ShieldAlert, Wind, CigaretteOff, PawPrint, MessageSquare, Briefcase, Zap, Inbox
+  FileText, Camera, ShieldAlert, Wind, CigaretteOff, PawPrint, MessageSquare, Briefcase, Zap, Paintbrush
 } from "lucide-react";
 
 // --- CONSTANTES DE UBICACIÓN ---
@@ -29,8 +29,7 @@ const UBICACIONES = {
 };
 const ESTADOS = Object.keys(UBICACIONES);
 
-// --- COMPONENTES VISUALES ---
-
+// --- MÓDULO 1 & 4: REPUTACIÓN Y BADGES ---
 const BadgeEstatus = ({ nivel, mini = false }) => {
   const configs = {
     "Bronce": { color: "text-slate-500", bg: "bg-slate-100", label: "Novato" },
@@ -48,6 +47,7 @@ const BadgeEstatus = ({ nivel, mini = false }) => {
   );
 };
 
+// --- MÓDULO 5: INDICADOR DE PROGRESO DE FLUJO ---
 const PasosProgreso = ({ fase }) => {
   const pasos = [
     { id: "solicitado", label: "Pedido", activo: ["pendiente", "confirmado", "chofer_en_camino", "en_punto_de_encuentro", "pasajero_confirmado_encuentro", "viajando"].includes(fase) },
@@ -55,6 +55,7 @@ const PasosProgreso = ({ fase }) => {
     { id: "retenido", label: "Retenido", activo: ["viajando"].includes(fase) },
     { id: "finalizado", label: "Llegada", activo: ["finalizado"].includes(fase) }
   ];
+
   return (
     <div className="flex justify-between items-center px-4 py-2 bg-white rounded-2xl border mb-4">
       {pasos.map((p, i) => (
@@ -70,9 +71,11 @@ const PasosProgreso = ({ fase }) => {
   );
 };
 
+// --- MÓDULO 7: TARJETA DE VIAJE (RESULTADOS DE BÚSQUEDA) ---
 const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfil, estatusChofer }) => {
   const sinPuestos = viaje.puestos === 0;
   const ultimoPuesto = viaje.puestos === 1;
+
   const calcularDuracion = (inicio, fin) => {
     if (!inicio || !fin) return "--h --m";
     const [h1, m1] = inicio.split(':').map(Number);
@@ -107,21 +110,37 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
           </div>
           <div className="text-right flex flex-col items-end">
             <span className="text-3xl font-black italic text-slate-800 leading-none">${viaje.precio}</span>
-            {sinPuestos ? <span className="text-[10px] font-black text-slate-500 uppercase mt-2 bg-slate-200 px-3 py-1 rounded-lg">Completo</span> :
-             ultimoPuesto ? <span className="text-[9px] font-black text-amber-600 uppercase mt-2 bg-amber-100 px-3 py-1 rounded-lg animate-pulse">¡Último puesto!</span> :
-             <span className="text-[9px] font-bold text-green-600 uppercase mt-2 bg-green-50 px-2 py-0.5 rounded-md border border-green-100">{viaje.puestos} disponibles</span>}
+            {sinPuestos ? (
+               <span className="text-[10px] font-black text-slate-500 uppercase mt-2 bg-slate-200 px-3 py-1 rounded-lg">Completo</span>
+            ) : ultimoPuesto ? (
+               <span className="text-[9px] font-black text-amber-600 uppercase mt-2 bg-amber-100 px-3 py-1 rounded-lg animate-pulse border border-amber-200">¡Último!</span>
+            ) : (
+               <span className="text-[9px] font-bold text-green-600 uppercase mt-2 bg-green-50 px-2 py-0.5 rounded-md border border-green-100">{viaje.puestos} puestos</span>
+            )}
           </div>
         </div>
+
         <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
           <div className="relative" onClick={(e) => { e.stopPropagation(); onClickPerfil(); }}>
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 border-2 border-white shadow-sm cursor-pointer"><User size={24} /></div>
-            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm"><ShieldCheck size={16} className="text-blue-600 fill-blue-50" /></div>
+            <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center text-slate-400 border-2 border-white shadow-sm cursor-pointer hover:scale-105 transition-transform">
+              <User size={24} />
+            </div>
+            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+              <ShieldCheck size={16} className="text-blue-600 fill-blue-50" />
+            </div>
           </div>
           <div className="flex-1">
-            <h4 className="font-black italic uppercase text-sm text-slate-800">{viaje.conductor}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-black italic uppercase text-sm text-slate-800 cursor-pointer" onClick={(e) => { e.stopPropagation(); onClickPerfil(); }}>{viaje.conductor}</h4>
+              {(estatusChofer === "Oro" || estatusChofer === "Diamante") && <Star size={10} className="fill-amber-500 text-amber-500" />}
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <Star size={10} className="fill-amber-500 text-amber-500" /><span className="text-[10px] font-black">{viaje.rating?.toFixed(1) || "5.0"}</span>
-              <span className="text-slate-300 text-[10px]">•</span><span className="text-[9px] font-bold text-slate-400 uppercase">{estatusChofer}</span>
+              <div className="flex items-center text-slate-700">
+                <Star size={10} className="fill-amber-500 text-amber-500" />
+                <span className="text-[10px] font-black ml-0.5">{viaje.rating?.toFixed(1) || "5.0"}</span>
+              </div>
+              <span className="text-slate-300 text-[10px]">•</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase">{estatusChofer}</span>
             </div>
           </div>
           <div className="flex gap-1">
@@ -133,13 +152,14 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
       {!sinPuestos && (
         <div className="px-3 pb-3 flex gap-2">
           <button onClick={onClickDetalle} className="flex-1 py-3 rounded-2xl bg-slate-50 text-slate-500 font-black uppercase italic text-[9px]">Ver Viaje</button>
-          <button onClick={onClickPedir} className="flex-[2] py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-[9px] shadow-md">Reservar ahora</button>
+          <button onClick={onClickPedir} className="flex-[2] py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-[9px] shadow-md active:scale-95">Reservar ahora</button>
         </div>
       )}
     </div>
   );
 };
 
+// --- COMPONENTES DE APOYO ---
 const SenalesConfianza = ({ data }) => {
   const items = [
     { icon: <FileText size={12}/>, label: "Cédula", verificado: data?.kycVerificado },
@@ -150,7 +170,7 @@ const SenalesConfianza = ({ data }) => {
     <div className="flex flex-wrap gap-2 mt-3 justify-center">
       {items.map((item, i) => (
         <div key={i} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase italic ${item.verificado ? 'bg-green-50 border-green-200 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-          {item.icon}{item.label}{item.verificado ? <CheckCircle size={10} className="fill-green-600 text-white"/> : <X size={10}/>}
+          {item.icon} {item.label} {item.verificado && <CheckCircle size={10} className="fill-green-600 text-white"/>}
         </div>
       ))}
     </div>
@@ -167,36 +187,40 @@ const ProgresoGamificacion = ({ userData, onAbrirConfig }) => {
   const viajesActuales = userData?.viajesCompletados || 0;
   let metaViajes = 10; let proxEstatus = "Plata";
   if (viajesActuales >= 10) { metaViajes = 30; proxEstatus = "Oro"; }
+  if (viajesActuales >= 30) { metaViajes = 80; proxEstatus = "Diamante"; }
   const faltan = metaViajes > viajesActuales ? metaViajes - viajesActuales : 0;
 
   return (
-    <div className="bg-white p-6 rounded-[35px] border shadow-sm space-y-4 mt-4">
+    <div className="bg-white p-6 rounded-[35px] border shadow-sm space-y-4 relative overflow-hidden mt-4">
+      <div className="absolute top-[-10px] right-[-10px] opacity-[0.03] pointer-events-none"><Trophy size={100} /></div>
       <div>
         <div className="flex justify-between items-center mb-2">
-           <p className="text-[10px] font-black uppercase text-amber-500 tracking-widest flex items-center gap-1"><Zap size={14}/> Nivel</p>
+           <p className="text-[10px] font-black uppercase text-amber-500 flex items-center gap-1"><Zap size={14}/> Sube de Nivel</p>
            <div className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">Próximo: {proxEstatus}</div>
         </div>
-        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border">
-           <div className="bg-gradient-to-r from-amber-400 to-amber-500 h-full" style={{width: `${(viajesActuales/metaViajes)*100}%`}}></div>
+        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
+           <div className="bg-gradient-to-r from-amber-400 to-amber-500 h-full transition-all duration-1000" style={{width: `${(viajesActuales/metaViajes)*100}%`}}></div>
         </div>
         <p className="text-[9px] font-bold text-slate-400 mt-1 text-right">Faltan {faltan} viajes para {proxEstatus}</p>
       </div>
-      <div className="space-y-2">
+      <div className="h-px w-full bg-slate-100 my-1"></div>
+      <div>
+        <p className="text-[10px] font-black uppercase text-blue-600 mb-3 flex justify-between items-center">Misiones de Confianza <span className="text-slate-400">{completadas}/{misiones.length}</span></p>
+        <div className="space-y-2">
            {misiones.map(m => (
-              <div key={m.id} className={`flex justify-between items-center p-3 rounded-2xl border ${m.completado ? 'bg-green-50' : 'bg-slate-50'}`}>
+              <div key={m.id} className={`flex justify-between items-center p-3 rounded-2xl border ${m.completado ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}`}>
                  <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-xl ${m.completado ? 'bg-green-200 text-green-700' : 'bg-slate-200'}`}>{m.icono}</div>
-                    <span className="text-[10px] font-black uppercase italic">{m.label}</span>
+                    <div className={`p-1.5 rounded-xl ${m.completado ? 'bg-green-200 text-green-700' : 'bg-slate-200 text-slate-400'}`}>{m.icono}</div>
+                    <span className={`text-[10px] font-black uppercase italic ${m.completado ? 'text-green-700' : 'text-slate-500'}`}>{m.label}</span>
                  </div>
-                 {m.completado ? <CheckCircle size={14} className="text-green-500"/> : <button onClick={onAbrirConfig} className="text-[8px] font-black uppercase bg-blue-600 text-white px-3 py-1.5 rounded-lg shadow-md">Ir</button>}
+                 {m.completado ? <CheckCircle size={14} className="text-green-500"/> : <button onClick={onAbrirConfig} className="text-[8px] font-black uppercase italic bg-blue-600 text-white px-3 py-1.5 rounded-lg active:scale-95">Completar</button>}
               </div>
            ))}
+        </div>
       </div>
     </div>
   );
 };
-
-// --- COMPONENTE PRINCIPAL ---
 
 export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
@@ -206,15 +230,15 @@ export default function NavegacionPrincipal({ user }) {
   const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
   const [misSolicitudes, setMisSolicitudes] = useState([]); 
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
+  const [pasajerosConfirmados, setPasajerosConfirmados] = useState([]); // MÓDULO 8
   const [configOpen, setConfigOpen] = useState(false);
 
-  // Estados Chat e Inbox (Módulo 8 Integrado)
   const [chatActivo, setChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [historialChats, setHistorialChats] = useState([]); 
-
   const [perfilPublico, setPerfilPublico] = useState(null);
+
   const [form, setForm] = useState({ 
     eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", 
     horaSalida: "", horaLlegada: "",
@@ -223,7 +247,8 @@ export default function NavegacionPrincipal({ user }) {
   const [viajeEditando, setViajeEditando] = useState(null); 
   const [fEO, setFEO] = useState(""); const [fCO, setFCO] = useState("");
   const [fED, setFED] = useState(""); const [fCD, setFCD] = useState("");
-  const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", cedula: "" });
+  const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", color: "", cedula: "" });
+  
   const [mensajeSoporte, setMensajeSoporte] = useState("");
   const [chatSoporte, setChatSoporte] = useState([]);
   const [modalCancelacion, setModalCancelacion] = useState({ visible: false, idSolicitud: null });
@@ -232,75 +257,63 @@ export default function NavegacionPrincipal({ user }) {
   const [viajeActivo, setViajeActivo] = useState(null);
   const [pinIngresado, setPinIngresado] = useState("");
 
-  const calcularEstatus = (v = 0, c = 0) => {
-    if (v >= 80 && c >= 4.9) return "Diamante";
-    if (v >= 30 && c >= 4.7) return "Oro";
-    if (v >= 10 && c >= 4.5) return "Plata";
+  const calcularEstatus = (v = 0, r = 0) => {
+    if (v >= 80 && r >= 4.9) return "Diamante";
+    if (v >= 30 && r >= 4.7) return "Oro";
+    if (v >= 10 && r >= 4.5) return "Plata";
     return "Bronce";
   };
 
-  // FIREBASE LISTENERS
   useEffect(() => {
     if (!user) return;
-    const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), snap => {
+    const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) {
-        const d = snap.data(); setUserData(d);
-        setPerfilForm({ marca: d.vehiculo?.marca || "", modelo: d.vehiculo?.modelo || "", placa: d.vehiculo?.placa || "", cedula: d.cedula || "" });
+        const data = snap.data();
+        setUserData(data);
+        setPerfilForm({
+          marca: data.vehiculo?.marca || "", modelo: data.vehiculo?.modelo || "",
+          placa: data.vehiculo?.placa || "", color: data.vehiculo?.color || "", cedula: data.cedula || ""
+        });
       }
     });
-    const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), snap => {
+
+    const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    const unsubSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid), where("estado", "==", "pendiente")), snap => {
+
+    const unsubSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid), where("estado", "==", "pendiente")), (snap) => {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), snap => {
+
+    const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes")), snap => {
-      const act = snap.docs.map(d => ({id: d.id, ...d.data()}))
-        .find(s => (s.idPasajero === user.uid || s.idChofer === user.uid) && !["completado", "rechazado"].includes(s.estado));
-      setViajeActivo(act || null);
+
+    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes")), (snap) => {
+      const actual = snap.docs.map(d => ({id: d.id, ...d.data()}))
+        .find(s => (s.idPasajero === user.uid || s.idChofer === user.uid) && s.estado !== "completado" && s.estado !== "rechazado");
+      setViajeActivo(actual || null);
     });
 
-    // Lógica Inbox (Módulo 8)
-    let docsRecibidos = []; let docsEnviados = [];
-    const actHistorial = (todos) => {
-       const mapChats = new Map();
-       todos.forEach(d => {
-          const data = d.data();
-          const soyEmisor = data.emisorId === user.uid;
-          const idOtro = soyEmisor ? data.receptorId : data.emisorId;
-          const fechaMs = data.fecha ? data.fecha.toMillis() : Date.now();
-          if (!mapChats.has(data.chatId) || fechaMs > mapChats.get(data.chatId).fecha) {
-             mapChats.set(data.chatId, { 
-               chatId: data.chatId, idViaje: data.idViaje, idOtro, 
-               nombreOtro: soyEmisor ? (data.nombreReceptor || "Usuario") : data.nombreEmisor, 
-               ultimoMensaje: data.texto, fecha: fechaMs, leido: data.leido 
-             });
-          }
-       });
-       setHistorialChats(Array.from(mapChats.values()).sort((a,b) => b.fecha - a.fecha));
-    };
-    const unsubR = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid)), snap => { docsRecibidos = snap.docs; actHistorial([...docsRecibidos, ...docsEnviados]); });
-    const unsubE = onSnapshot(query(collection(db, "MensajesPrivados"), where("emisorId", "==", user.uid)), snap => { docsEnviados = snap.docs; actHistorial([...docsRecibidos, ...docsEnviados]); });
-
-    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); unsubR(); unsubE(); unsubViajeActivo(); };
+    return () => { unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); unsubViajeActivo(); };
   }, [user]);
 
-  // Chat individual
+  // --- MÓDULO 8: Lógica para cargar pasajeros confirmados al seleccionar un viaje ---
   useEffect(() => {
-    if (!chatActivo) return;
-    const unsubMsg = onSnapshot(query(collection(db, "MensajesPrivados"), where("chatId", "==", chatActivo.id), orderBy("fecha", "asc")), snap => {
-      setMensajesChat(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    if (!viajeSeleccionado) {
+      setPasajerosConfirmados([]);
+      return;
+    }
+    const qP = query(collection(db, "Solicitudes"), where("idViaje", "==", viajeSeleccionado.id), where("estado", "==", "confirmado"));
+    const unsubPasajeros = onSnapshot(qP, (snap) => {
+      setPasajerosConfirmados(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return () => unsubMsg();
-  }, [chatActivo]);
+    return () => unsubPasajeros();
+  }, [viajeSeleccionado]);
 
-  // FUNCIONES LOGICA
-  const abrirChat = (idViaje, idOtro, nombreOtro) => {
-    const cid = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
-    setChatActivo({ id: cid, nombre: nombreOtro, idOtro, idViaje });
+  const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
+    const chatId = [user.uid, idOtroUsuario].sort().join("_") + "_" + idViaje;
+    setChatActivo({ id: chatId, nombre: nombreOtro, idOtro: idOtroUsuario, idViaje: idViaje });
     setVista("chat_privado");
   };
 
@@ -318,134 +331,362 @@ export default function NavegacionPrincipal({ user }) {
   };
 
   const publicarOEditarRuta = async () => {
-    if (userData?.kycVerificado !== true) return alert("Verifícate primero.");
-    if (!form.cO || !form.cD || !form.precio || !form.horaSalida) return alert("Campos incompletos.");
+    if (userData?.kycVerificado !== true) return alert("🚫 Debes estar verificado.");
+    if (!form.cO || !form.cD || !form.precio || !form.horaSalida) return alert("Completa los campos.");
     try {
-      const vData = { ...form, precio: Number(form.precio), puestos: Number(form.puestos), viajesTotales: userData.viajesCompletados || 0, rating: userData.rating || 5.0, vehiculoInfo: userData.vehiculo };
-      if (viajeEditando) { await updateDoc(doc(db, "Viajes", viajeEditando), vData); setViajeEditando(null); }
-      else { await addDoc(collection(db, "Viajes"), { ...vData, conductor: userData.nombre, idCreador: user.uid, fecha: serverTimestamp() }); }
-      setForm({ eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", horaSalida: "", horaLlegada: "", preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true } });
-      alert("Ruta publicada.");
+      const dataViaje = { 
+        ...form, precio: Number(form.precio), puestos: Number(form.puestos),
+        viajesTotales: userData.viajesCompletados || 0, rating: userData.rating || 5.0,
+        vehiculoInfo: { 
+          marca: userData.vehiculo?.marca || "", 
+          modelo: userData.vehiculo?.modelo || "", 
+          placa: userData.vehiculo?.placa || "",
+          color: userData.vehiculo?.color || "No especificado" // Módulo 8
+        }
+      };
+      if (viajeEditando) {
+         await updateDoc(doc(db, "Viajes", viajeEditando), dataViaje);
+         setViajeEditando(null);
+      } else {
+         await addDoc(collection(db, "Viajes"), { ...dataViaje, conductor: userData.nombre, idCreador: user.uid, fecha: serverTimestamp() });
+      }
+      setForm({ 
+        eO: "", cO: "", eD: "", cD: "", precio: "", puestos: "4", 
+        horaSalida: "", horaLlegada: "",
+        preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true }
+      });
+      alert("✅ ¡Ruta guardada!");
     } catch (e) { alert("Error."); }
   };
 
-  const enviarSolicitudDirecta = async (v) => {
-    if (user.uid === v.idCreador) return;
+  const enviarSolicitudDirecta = async (viaje) => {
+    if (user.uid === viaje.idCreador) return alert("No puedes pedirte cola a ti mismo.");
     try {
       await addDoc(collection(db, "Solicitudes"), {
-        idViaje: v.id, idPasajero: user.uid, nombrePasajero: userData.nombre, idChofer: v.idCreador, nombreChofer: v.conductor, 
-        ruta: `${v.cO} → ${v.cD}`, estado: "pendiente", fase: "solicitado", fechaSolicitud: serverTimestamp(),
-        precioViaje: v.precio, vehiculoInfo: v.vehiculoInfo, preferenciasViaje: v.preferencias
+        idViaje: viaje.id, idPasajero: user.uid, nombrePasajero: userData.nombre || "Pasajero",
+        idChofer: viaje.idCreador, nombreChofer: viaje.conductor, 
+        ruta: `${viaje.cO} → ${viaje.cD}`, estado: "pendiente", fase: "solicitado", 
+        fechaSolicitud: serverTimestamp(), precioViaje: viaje.precio,
+        vehiculoInfo: viaje.vehiculoInfo
       });
-      alert("Solicitud enviada.");
-    } catch (e) { console.error(e); }
+      alert("✅ ¡Solicitud enviada!");
+    } catch (e) { alert("Error."); }
+  };
+
+  const confirmarViajeChofer = async (idS) => {
+    try {
+      await updateDoc(doc(db, "Solicitudes", idS), { estado: "confirmado", fase: "chofer_en_camino", fechaConfirmacion: serverTimestamp() });
+      alert("✅ Aceptado.");
+      setVista("en_viaje");
+    } catch (e) { alert("Error."); }
   };
 
   const choferVerificaPIN = async () => {
     if (pinIngresado === viajeActivo.pinVerificacion) {
       await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { fase: "viajando", pagoEstado: "retenido" });
-      alert("PIN Correcto. Pago Retenido."); setPinIngresado("");
-    } else alert("PIN Incorrecto.");
+      alert("✅ PIN Correcto. ¡Viaje iniciado!");
+      setPinIngresado("");
+    } else { alert("❌ PIN Incorrecto."); }
   };
 
   const finalizarViaje = async (rol) => {
-    const upd = rol === "chofer" ? { finalizadoChofer: true } : { finalizadoPasajero: true };
-    await updateDoc(doc(db, "Solicitudes", viajeActivo.id), upd);
-    if ((rol === "chofer" && viajeActivo.finalizadoPasajero) || (rol === "pasajero" && viajeActivo.finalizadoChofer)) {
-      await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { fase: "finalizado", estado: "completado", pagoEstado: "completado" });
-      alert("Viaje finalizado."); setVista("inicio");
-    }
+    if(!viajeActivo) return;
+    try {
+      const act = {};
+      if (rol === "chofer") act.finalizadoChofer = true;
+      if (rol === "pasajero") act.finalizadoPasajero = true;
+      await updateDoc(doc(db, "Solicitudes", viajeActivo.id), act);
+      if ((rol === "chofer" && viajeActivo.finalizadoPasajero) || (rol === "pasajero" && viajeActivo.finalizadoChofer)) {
+        await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { fase: "finalizado", estado: "completado" });
+        alert(`🏁 ¡Llegamos!`);
+        setVista("inicio");
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const guardarDatosPerfil = async () => {
+    try {
+      await updateDoc(doc(db, "usuarios", user.uid), { 
+        vehiculo: { 
+          marca: perfilForm.marca, 
+          modelo: perfilForm.modelo, 
+          placa: perfilForm.placa.toUpperCase(),
+          color: perfilForm.color 
+        },
+        cedula: perfilForm.cedula
+      });
+      setConfigOpen(false);
+      alert("✅ Perfil actualizado.");
+    } catch (e) { alert("Error."); }
   };
 
   const cambiarVista = (v) => { setVista(v); setViajeSeleccionado(null); setChatActivo(null); };
 
-  if (!userData) return <div className="h-screen bg-slate-950 flex items-center justify-center text-blue-500 font-black italic animate-pulse">CARGANDO DAME LA COLA...</div>;
+  if (!userData) return <div className="h-screen bg-slate-950 flex items-center justify-center text-blue-500 font-black italic animate-pulse">DAME LA COLA...</div>;
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 flex flex-col relative overflow-hidden font-sans border-x shadow-2xl">
       
+      {/* MODAL CHECKLIST */}
+      {mostrarChecklist && (
+        <div className="absolute inset-0 bg-slate-900/95 z-[250] flex items-center justify-center p-6 backdrop-blur-md">
+           <div className="bg-white rounded-[40px] p-8 w-full shadow-2xl space-y-6">
+              <div className="text-center">
+                 <ShieldCheck size={48} className="text-blue-600 mx-auto mb-2"/>
+                 <h3 className="font-black italic uppercase text-xl text-slate-800">Protocolo de Confianza</h3>
+              </div>
+              <div className="space-y-3">
+                 {[
+                   { id: 'placaOk', label: `Placa: ${viajeActivo?.vehiculoInfo?.placa}`, icon: <CreditCard size={14}/> },
+                   { id: 'modeloOk', label: `Carro: ${viajeActivo?.vehiculoInfo?.marca} ${viajeActivo?.vehiculoInfo?.modelo}`, icon: <Car size={14}/> },
+                   { id: 'conductorOk', label: "Es el chofer de la foto", icon: <User size={14}/> }
+                 ].map((item) => (
+                    <button key={item.id} onClick={() => setCheckSeguridad({...checkSeguridad, [item.id]: !checkSeguridad[item.id]})} className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between ${checkSeguridad[item.id] ? 'border-blue-600 bg-blue-50' : 'border-slate-100 bg-slate-50'}`}>
+                       <div className="flex items-center gap-3">
+                          {item.icon} <span className="text-[11px] font-black uppercase italic">{item.label}</span>
+                       </div>
+                       {checkSeguridad[item.id] ? <CheckCircle size={20} className="fill-blue-600 text-white" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-200"/>}
+                    </button>
+                 ))}
+              </div>
+              <button disabled={!(checkSeguridad.placaOk && checkSeguridad.modeloOk && checkSeguridad.conductorOk)} onClick={() => { setMostrarChecklist(false); updateDoc(doc(db,"Solicitudes",viajeActivo.id), {fase: "pasajero_confirmado_encuentro", pinVerificacion: Math.floor(1000 + Math.random()*9000).toString()}); }} className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs ${checkSeguridad.placaOk && checkSeguridad.modeloOk && checkSeguridad.conductorOk ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400'}`}>Confirmar y Ver PIN</button>
+           </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="p-6 pt-12 bg-white border-b flex justify-between items-center shrink-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black italic text-xl transform -skew-x-12">D</div>
           <div><p className="text-[9px] font-black text-slate-400 uppercase">Modo {modo}</p><p className="text-sm font-black text-slate-800 italic leading-none">{userData.nombre}</p></div>
         </div>
-        <div onClick={() => cambiarVista("wallet")} className="cursor-pointer bg-slate-900 text-white px-4 py-2 rounded-2xl flex items-center gap-2 font-black italic text-xs shadow-xl active:scale-95">
-          <Wallet size={14} className="text-blue-400" /> ${userData.saldo?.toFixed(2) || "0.00"}
+        <div className="flex items-center gap-2">
+           <div onClick={() => cambiarVista("wallet")} className="cursor-pointer bg-slate-900 text-white px-4 py-2 rounded-2xl flex items-center gap-2 font-black italic text-xs shadow-xl">
+             <Wallet size={14} className="text-blue-400" /> ${userData.saldo?.toFixed(2) || "0.00"}
+           </div>
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* CONTENIDO */}
       <main className="flex-1 overflow-y-auto p-5 pb-32">
-        
-        {vista === "inicio" && (
+        {vista === "inicio" && !viajeSeleccionado && (
            <div className="space-y-6">
-              <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-4 rounded-2xl text-[10px] font-black uppercase border-2 border-blue-600 text-blue-600 bg-white">
-                CAMBIAR A MODO {modo === "pasajero" ? "CHÓFER" : "PASAJERO"} ➔
-              </button>
+              <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-4 rounded-2xl text-[10px] font-black uppercase border-2 border-blue-600 text-blue-600 bg-white">CAMBIAR A MODO {modo === "pasajero" ? "CHÓFER" : "PASAJERO"} ➔</button>
 
               {modo === "chofer" && (
-                <div className="bg-white p-6 rounded-[35px] border shadow-xl space-y-4">
-                  <h3 className="text-[10px] font-black uppercase text-blue-600 italic">Publicar Nueva Ruta</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-bold" value={form.eO} onChange={(e)=>setForm({...form, eO: e.target.value})}><option value="">Edo. Origen</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
-                    <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-bold" value={form.cO} onChange={(e)=>setForm({...form, cO: e.target.value})}><option value="">Ciudad Origen</option>{form.eO && UBICACIONES[form.eO].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                <div className="space-y-6">
+                  <div className="bg-white p-6 rounded-[35px] border shadow-xl space-y-4">
+                    <h3 className="text-xs font-black uppercase text-blue-600 italic">Publicar Nueva Ruta</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={form.eO} onChange={(e)=>setForm({...form, eO: e.target.value, cO: ""})}><option value="">Edo. Origen</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" disabled={!form.eO} value={form.cO} onChange={(e)=>setForm({...form, cO: e.target.value})}><option value="">Ciudad Origen</option>{form.eO && UBICACIONES[form.eO].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={form.eD} onChange={(e)=>setForm({...form, eD: e.target.value, cD: ""})}><option value="">Edo. Destino</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                      <select className="bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" disabled={!form.eD} value={form.cD} onChange={(e)=>setForm({...form, cD: e.target.value})}><option value="">Ciudad Destino</option>{form.eD && UBICACIONES[form.eD].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="time" title="Salida" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={form.horaSalida} onChange={(e)=>setForm({...form, horaSalida: e.target.value})} required/>
+                      <input type="time" title="Llegada" className="w-full bg-slate-50 p-3 rounded-xl border text-[10px] font-bold" value={form.horaLlegada} onChange={(e)=>setForm({...form, horaLlegada: e.target.value})} required/>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="number" placeholder="Asientos" className="w-full bg-slate-50 p-3 rounded-xl border text-xs font-bold" value={form.puestos} onChange={(e)=>setForm({...form, puestos: e.target.value})} />
+                      <input type="number" placeholder="Precio $" className="w-full bg-slate-50 p-3 rounded-xl border text-xs font-black text-blue-600" value={form.precio} onChange={(e)=>setForm({...form, precio: e.target.value})} />
+                    </div>
+                    <button onClick={publicarOEditarRuta} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic shadow-lg">Publicar</button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="time" className="bg-slate-50 p-3 rounded-xl border text-[10px]" value={form.horaSalida} onChange={(e)=>setForm({...form, horaSalida: e.target.value})} />
-                    <input type="number" placeholder="Precio $" className="bg-slate-50 p-3 rounded-xl border text-xs font-black text-blue-600" value={form.precio} onChange={(e)=>setForm({...form, precio: e.target.value})} />
-                  </div>
-                  <button onClick={publicarOEditarRuta} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic shadow-lg">Publicar Viaje</button>
+                  {solicitudesRecibidas.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black text-blue-600 uppercase italic">Pendientes:</p>
+                      {solicitudesRecibidas.map(s => (
+                        <div key={s.id} className="bg-white p-4 rounded-3xl border flex flex-col gap-3 shadow-md border-l-4 border-l-blue-500">
+                           <div className="flex justify-between items-center">
+                              <span className="font-black text-xs italic underline">{s.nombrePasajero}</span>
+                              <button onClick={() => abrirChat(s.idViaje, s.idPasajero, s.nombrePasajero)} className="p-3 bg-blue-600 text-white rounded-xl"><MessageCircle size={16}/></button>
+                           </div>
+                           <button onClick={() => confirmarViajeChofer(s.id)} className="w-full p-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase italic">Aprobar Cola</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {viajes.map(v => (
-                <CardViajeOptimizada key={v.id} viaje={v} estatusChofer={calcularEstatus(v.viajesTotales, v.rating)} onClickDetalle={() => setViajeSeleccionado(v)} onClickPedir={() => enviarSolicitudDirecta(v)} onClickPerfil={() => setPerfilPublico(v)} />
-              ))}
+              <div className="bg-white p-5 rounded-[30px] border space-y-3 shadow-sm">
+                <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={14}/> Buscar Cola</p>
+                <div className="grid grid-cols-2 gap-2">
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fEO} onChange={(e)=>setFEO(e.target.value)}><option value="">DESDE EDO.</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                   <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fED} onChange={(e)=>setFED(e.target.value)}><option value="">HASTA EDO.</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                 {viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).map(v => (
+                    <CardViajeOptimizada 
+                      key={v.id} viaje={v} estatusChofer={calcularEstatus(v.viajesTotales, v.rating)}
+                      onClickDetalle={() => setViajeSeleccionado(v)}
+                      onClickPedir={() => enviarSolicitudDirecta(v)}
+                      onClickPerfil={() => setPerfilPublico({nombre: v.conductor, rating: v.rating, kycVerificado: true})}
+                    />
+                 ))}
+              </div>
            </div>
         )}
 
-        {/* --- VISTA INBOX (MÓDULO 8 INTEGRADO) --- */}
-        {vista === "inbox" && (
-          <div className="space-y-4 animate-in fade-in">
-            <h2 className="text-2xl font-black italic text-slate-800 uppercase">Mensajes</h2>
-            {historialChats.length === 0 ? (
-              <div className="p-10 text-center text-slate-300 font-black uppercase italic text-xs">No hay conversaciones activas</div>
-            ) : (
-              historialChats.map((c) => (
-                <div key={c.chatId} onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} className="bg-white p-5 rounded-[30px] border shadow-sm flex items-center gap-4 active:scale-95 transition-all">
-                  <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 border border-blue-100 shadow-inner relative">
-                    <User size={28} />
-                    {!c.leido && <div className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white"></div>}
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="font-black uppercase italic text-sm text-slate-800 leading-none">{c.nombreOtro}</p>
-                      <p className="text-[8px] font-bold text-slate-400">{new Date(c.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+        {/* --- MÓDULO 8: VISTA DE DETALLE COMPLETA --- */}
+        {viajeSeleccionado && vista === "inicio" && (
+           <div className="space-y-6 animate-in slide-in-from-right duration-300">
+              <button onClick={() => setViajeSeleccionado(null)} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px] italic"><ChevronLeft size={16}/> Regresar</button>
+              
+              <div className="bg-white rounded-[40px] border shadow-2xl p-8 space-y-6 overflow-hidden relative">
+                 <div className="flex justify-between items-center border-b pb-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400">Costo del asiento</p>
+                      <p className="text-4xl font-black italic text-blue-600 leading-none">${viajeSeleccionado.precio}</p>
                     </div>
-                    <p className="text-xs text-slate-500 truncate font-bold italic opacity-70">{c.ultimoMensaje}</p>
-                  </div>
-                  <ChevronLeft size={16} className="text-slate-200 rotate-180" />
-                </div>
-              ))
-            )}
+                    <BadgeEstatus nivel={calcularEstatus(viajeSeleccionado.viajesTotales, viajeSeleccionado.rating)} />
+                 </div>
+
+                 {/* INFO DEL VEHÍCULO (Módulo 8 - Requisito 1) */}
+                 <div className="bg-slate-900 p-5 rounded-[30px] text-white space-y-3 shadow-lg">
+                    <p className="text-[10px] font-black uppercase text-blue-400 tracking-widest">Vehículo del Viaje</p>
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center"><Car size={24}/></div>
+                          <div>
+                             <p className="text-sm font-black italic uppercase leading-none">{viajeSeleccionado.vehiculoInfo?.marca} {viajeSeleccionado.vehiculoInfo?.modelo}</p>
+                             <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">Placa: {viajeSeleccionado.vehiculoInfo?.placa || "N/A"}</p>
+                          </div>
+                       </div>
+                       <div className="text-right">
+                          <div className="flex items-center gap-1 justify-end text-blue-400"><Paintbrush size={12}/><span className="text-[9px] font-black uppercase italic">Color</span></div>
+                          <p className="text-[11px] font-black uppercase">{viajeSeleccionado.vehiculoInfo?.color || "No indicado"}</p>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* RUTA Y HORARIOS */}
+                 <div className="space-y-4 px-2">
+                    <div className="flex items-start gap-4">
+                       <div className="flex flex-col items-center gap-1 mt-1">
+                          <div className="w-3 h-3 rounded-full border-2 border-slate-800 bg-white" />
+                          <div className="w-[2px] h-8 bg-slate-200" />
+                          <div className="w-3 h-3 rounded-full bg-blue-600" />
+                       </div>
+                       <div className="flex-1 space-y-5">
+                          <div>
+                             <p className="text-[9px] font-black text-slate-400 uppercase leading-none">Salida: {viajeSeleccionado.horaSalida}</p>
+                             <p className="font-black text-sm italic uppercase text-slate-800">{viajeSeleccionado.cO}, {viajeSeleccionado.eO}</p>
+                          </div>
+                          <div>
+                             <p className="text-[9px] font-black text-slate-400 uppercase leading-none">Llegada aprox: {viajeSeleccionado.horaLlegada}</p>
+                             <p className="font-black text-sm italic uppercase text-slate-800">{viajeSeleccionado.cD}, {viajeSeleccionado.eD}</p>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* PASAJEROS CONFIRMADOS (Módulo 8 - Requisito 2, 3 y 4) */}
+                 <div className="bg-slate-50 p-6 rounded-[35px] border border-slate-100">
+                    <div className="flex justify-between items-center mb-4">
+                       <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2"><Users size={14}/> Pasajeros en el carro</p>
+                       <span className="text-[9px] font-black bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{pasajerosConfirmados.length} confirmados</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                       {pasajerosConfirmados.length > 0 ? (
+                         pasajerosConfirmados.map((pas) => (
+                           <div key={pas.id} className="bg-white p-3 rounded-2xl flex items-center justify-between border shadow-sm">
+                              <div className="flex items-center gap-3">
+                                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border text-slate-400"><User size={20}/></div>
+                                 <div>
+                                    <p className="text-xs font-black uppercase italic text-slate-800 leading-none">{pas.nombrePasajero}</p>
+                                    <div className="flex items-center gap-1 mt-1"><MapPin size={10} className="text-blue-500"/><p className="text-[9px] font-bold text-slate-400 uppercase leading-none">{pas.ruta}</p></div>
+                                 </div>
+                              </div>
+                              <div className="bg-green-50 p-1.5 rounded-lg"><ShieldCheck size={14} className="text-green-600"/></div>
+                           </div>
+                         ))
+                       ) : (
+                         <div className="text-center py-4 border-2 border-dashed border-slate-200 rounded-3xl">
+                            <p className="text-[10px] font-bold text-slate-400 italic">Aún no hay otros pasajeros confirmados.<br/>¡Sé el primero en reservar!</p>
+                         </div>
+                       )}
+                    </div>
+                 </div>
+
+                 {/* BOTONES DE ACCIÓN */}
+                 <div className="flex gap-2 pt-4">
+                    <button onClick={() => abrirChat(viajeSeleccionado.id, viajeSeleccionado.idCreador, viajeSeleccionado.conductor)} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-xs flex items-center justify-center gap-2"><MessageCircle size={18}/> Chat</button>
+                    <button onClick={() => enviarSolicitudDirecta(viajeSeleccionado)} className="flex-[1.5] py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg active:scale-95 transition-all">Solicitar mi Asiento</button>
+                 </div>
+              </div>
+           </div>
+        )}
+
+        {/* --- VISTA EN VIAJE --- */}
+        {vista === "en_viaje" && viajeActivo && (
+          <div className="h-full flex flex-col space-y-4">
+             <PasosProgreso fase={viajeActivo.fase} />
+             <div className="flex-1 bg-slate-200 rounded-[40px] border-4 border-white shadow-2xl flex items-center justify-center">
+                <MapIcon size={40} className="text-slate-400 animate-pulse"/>
+             </div>
+             <div className="bg-white p-6 rounded-[35px] border shadow-lg space-y-3">
+                {user.uid === viajeActivo.idChofer ? (
+                  <button onClick={() => updateDoc(doc(db,"Solicitudes",viajeActivo.id), {fase: "en_punto_de_encuentro"})} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs">He llegado al punto</button>
+                ) : (
+                  <button onClick={() => setMostrarChecklist(true)} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs">Iniciar Protocolo Seguridad</button>
+                )}
+             </div>
           </div>
+        )}
+
+        {/* PERFIL Y CONFIGURACIÓN */}
+        {vista === "perfil" && (
+           <div className="space-y-4 pb-10">
+              <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
+                 <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100"><Settings size={22}/></button>
+                 <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl mb-4"><User size={56} className="text-slate-400" /></div>
+                 <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">{userData.nombre}</h2>
+                 <SenalesConfianza data={userData} />
+              </div>
+
+              <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
+
+              {configOpen && (
+                <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3">
+                  <p className="text-[10px] font-black uppercase text-blue-600 italic px-2">Identidad</p>
+                  <input type="text" placeholder="Cédula" className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
+                  <p className="text-[10px] font-black uppercase text-blue-600 italic px-2 pt-2">Vehículo</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" placeholder="Marca" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.marca} onChange={(e)=>setPerfilForm({...perfilForm, marca: e.target.value})} />
+                    <input type="text" placeholder="Modelo" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.modelo} onChange={(e)=>setPerfilForm({...perfilForm, modelo: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" placeholder="Placa" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase" value={perfilForm.placa} onChange={(e)=>setPerfilForm({...perfilForm, placa: e.target.value})} />
+                    <input type="text" placeholder="Color del Carro" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase" value={perfilForm.color} onChange={(e)=>setPerfilForm({...perfilForm, color: e.target.value})} />
+                  </div>
+                  <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs mt-2">Guardar Cambios</button>
+                </div>
+              )}
+              <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] italic bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors"><LogOut size={20} /> Cerrar Sesión</button>
+           </div>
         )}
 
         {/* CHAT PRIVADO */}
         {vista === "chat_privado" && chatActivo && (
           <div className="flex flex-col h-full space-y-4">
-            <button onClick={() => setVista("inbox")} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px]"><ChevronLeft size={16}/> Volver al Inbox</button>
+            <button onClick={() => setVista("inicio")} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px]"><ChevronLeft size={16}/> Regresar</button>
             <div className="flex-1 bg-white rounded-[40px] border shadow-xl flex flex-col overflow-hidden">
                <div className="bg-slate-900 p-4 text-white text-center font-black italic text-[10px] uppercase">{chatActivo.nombre}</div>
                <div className="flex-1 p-5 overflow-y-auto space-y-3 bg-slate-50 flex flex-col">
                   {mensajesChat.map((m) => (
-                    <div key={m.id} className={`p-4 rounded-3xl max-w-[80%] text-[11px] font-bold shadow-sm ${m.emisorId === user.uid ? 'bg-blue-600 text-white self-end rounded-tr-none' : 'bg-white border text-slate-700 self-start rounded-tl-none'}`}>{m.texto}</div>
+                    <div key={m.id} className={`p-4 rounded-3xl max-w-[80%] text-[11px] font-bold shadow-sm ${m.emisorId === user.uid ? 'bg-blue-600 text-white self-end' : 'bg-white border text-slate-700 self-start'}`}>{m.texto}</div>
                   ))}
                </div>
                <div className="p-4 bg-white border-t flex gap-2">
-                  <input type="text" value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajePrivado()} className="flex-1 bg-slate-100 p-3 rounded-2xl text-[11px] font-bold outline-none" placeholder="Escribe..." />
-                  <button onClick={enviarMensajePrivado} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg"><Send size={18}/></button>
+                  <input type="text" value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} className="flex-1 bg-slate-100 p-3 rounded-2xl text-[11px] font-bold outline-none" placeholder="Mensaje..." />
+                  <button onClick={enviarMensajePrivado} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center"><Send size={18}/></button>
                </div>
             </div>
           </div>
@@ -454,38 +695,21 @@ export default function NavegacionPrincipal({ user }) {
         {/* WALLET */}
         {vista === "wallet" && (
            <div className="space-y-6 animate-in fade-in">
-              <h2 className="text-3xl font-black italic text-slate-800 uppercase">Mi Wallet</h2>
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-10 rounded-[40px] shadow-2xl text-white">
-                 <p className="text-[10px] font-black uppercase opacity-80 mb-2">Saldo Disponible</p>
+              <h2 className="text-3xl font-black italic text-slate-800 uppercase tracking-tighter">Mi Billetera</h2>
+              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-10 rounded-[40px] shadow-2xl text-white relative overflow-hidden">
+                 <p className="text-[10px] font-black uppercase opacity-80 mb-2">Saldo</p>
                  <p className="text-6xl font-black italic leading-none">${userData.saldo?.toFixed(2) || "0.00"}</p>
-                 <div className="mt-8 flex items-center gap-2 bg-white/10 p-3 rounded-2xl"><Lock size={14}/><p className="text-[9px] font-black uppercase">Fondos protegidos por el sistema inteligente.</p></div>
+                 <div className="absolute top-10 right-10 opacity-20"><Wallet size={80}/></div>
               </div>
-           </div>
-        )}
-
-        {/* PERFIL */}
-        {vista === "perfil" && (
-           <div className="space-y-4 animate-in fade-in pb-10">
-              <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center">
-                 <div className="relative mb-4">
-                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center"><User size={48} className="text-slate-400" /></div>
-                    <div className="absolute -bottom-2 -right-2"><BadgeEstatus nivel={calcularEstatus(userData.viajesCompletados, userData.rating)} /></div>
-                 </div>
-                 <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">{userData.nombre}</h2>
-                 <SenalesConfianza data={userData} />
-              </div>
-              <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
-              <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 bg-white rounded-[30px] border shadow-sm mt-4 italic"><LogOut size={20} /> Cerrar Sesión</button>
            </div>
         )}
       </main>
 
-      {/* BARRA DE NAVEGACIÓN (Módulo 8 Integrado) */}
+      {/* BARRA DE NAVEGACIÓN */}
       <nav className="p-6 bg-white border-t flex justify-around items-center pb-10 fixed bottom-0 w-full max-w-md shadow-2xl z-50">
-        <button onClick={() => cambiarVista("inicio")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" ? "text-blue-600 scale-110" : "text-slate-300"}`}><Car size={26} /><span className="text-[7px] font-black uppercase italic">Viajes</span></button>
-        <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 transition-all ${["inbox", "chat_privado"].includes(vista) ? "text-blue-600 scale-110" : "text-slate-300"}`}><Inbox size={26} /><span className="text-[7px] font-black uppercase italic">Inbox</span></button>
-        <button onClick={() => cambiarVista("wallet")} className={`flex flex-col items-center gap-1 transition-all ${vista === "wallet" ? "text-blue-600 scale-110" : "text-slate-300"}`}><CreditCard size={26} /><span className="text-[7px] font-black uppercase italic">Wallet</span></button>
-        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}><User size={26} /><span className="text-[7px] font-black uppercase italic">Perfil</span></button>
+        <button onClick={() => cambiarVista("inicio")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" ? "text-blue-600 scale-110" : "text-slate-300"}`}><Car size={28} /><span className="text-[8px] font-black uppercase italic">Viajes</span></button>
+        <button onClick={() => cambiarVista("wallet")} className={`flex flex-col items-center gap-1 transition-all ${vista === "wallet" ? "text-blue-600 scale-110" : "text-slate-300"}`}><Wallet size={28} /><span className="text-[8px] font-black uppercase italic">Wallet</span></button>
+        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}><User size={28} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
       </nav>
     </div>
   );
