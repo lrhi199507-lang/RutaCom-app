@@ -1759,7 +1759,7 @@ return (
                 </div>
 
                 {/* SEGURIDAD Y CONFIGURACIÓN */}
-                <div className="bg-white p-6 rounded-[35px] border shadow-sm">
+                <div className="bg-white p-6 rounded-[35px] border shadow-sm mt-6">
                   <p className="text-[10px] font-black uppercase text-slate-400 italic tracking-widest mb-4 px-2">Configuración de Cuenta</p>
                   <div className="space-y-2">
                     <button 
@@ -1773,7 +1773,6 @@ return (
                       <ChevronRight size={16} className={`text-slate-400 transition-transform ${configOpen ? 'rotate-90' : ''}`}/>
                     </button>
                     
-                    {/* PANEL DE EDICIÓN (SOLO SI configOpen ES TRUE) */}
                     {configOpen && (
                       <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-100 space-y-3 animate-in slide-in-from-top">
                         <div className="grid grid-cols-4 gap-2">
@@ -1792,23 +1791,20 @@ return (
                       </div>
                       <ChevronRight size={16} className="text-slate-400"/>
                     </button>
+
+                    <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 active:scale-95 transition-all mt-4">
+                      <div className="flex items-center gap-3 text-red-600">
+                        <LogOut size={18}/>
+                        <span className="text-xs font-black uppercase italic">Cerrar Sesión</span>
+                      </div>
+                    </button>
                   </div>
                 </div>
-
-               </div>
-
-                    <button 
-                      onClick={() => enviarSolicitudDirecta(viajeSeleccionado)}
-                      className="w-full py-6 bg-blue-600 text-white rounded-[30px] font-black uppercase italic text-sm shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3"
-                    >
-                      <Send size={20}/> Solicitar Puesto ahora
-                    </button>
-                 </div>
               </div>
-           </div>
+            )}
+          </div>
         )}
-
-        </main>
+      </main>
 
       {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR */}
       <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl">
@@ -1829,17 +1825,12 @@ return (
         </button>
       </nav>
 
-      {/* RENDER MODAL MÓDULO 14: INSTRUCCIONES FOTO */}
+      {/* COMPONENTES GLOBALES */}
       <ModalInstruccionesFoto 
         isOpen={showFotoInstrucciones} 
         onClose={() => setShowFotoInstrucciones(false)} 
-        onConfirm={() => {
-          setShowFotoInstrucciones(false);
-          abrirCamara(); 
-        }}
+        onConfirm={() => { setShowFotoInstrucciones(false); abrirCamara(); }}
       />
-
-      {/* RENDER MODAL MÓDULO 17: ÉXITO */}
       <PantallaExito 
         visible={successData.show}
         titulo={successData.titulo}
