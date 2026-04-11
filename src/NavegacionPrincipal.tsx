@@ -1807,7 +1807,7 @@ return (
       </main>
 
       {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR */}
-      <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl">
+      <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
         <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
           <Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span>
         </button>
@@ -1825,7 +1825,6 @@ return (
         </button>
       </nav>
 
-      {/* COMPONENTES GLOBALES */}
       <ModalInstruccionesFoto 
         isOpen={showFotoInstrucciones} 
         onClose={() => setShowFotoInstrucciones(false)} 
