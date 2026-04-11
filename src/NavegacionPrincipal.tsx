@@ -63,6 +63,60 @@ const KYCProgressBar = ({ userData, onAbrirConfig }) => {
     </div>
   );
 };
+// --- MÓDULO 14: UX DE SEGURIDAD EN FOTOS DE PERFIL ---
+const ModalInstruccionesFoto = ({ isOpen, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm">
+      <div className="bg-white w-full max-w-sm rounded-[40px] p-8 space-y-6 shadow-2xl animate-in zoom-in duration-300">
+        <div className="text-center space-y-2">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-blue-600 mb-4">
+            <Camera size={40} />
+          </div>
+          <h3 className="text-2xl font-black italic uppercase text-slate-800 leading-tight">Foto de Perfil</h3>
+          <p className="text-slate-500 text-sm font-medium">Para tu seguridad y la de los demás, sigue estas reglas:</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="bg-red-100 text-red-600 p-2 rounded-lg"><CigaretteOff size={20} /></div>
+            <p className="text-[11px] font-black uppercase italic text-slate-700">Sin lentes de sol ni gorras</p>
+          </div>
+          <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="bg-blue-100 text-blue-600 p-2 rounded-lg"><User size={20} /></div>
+            <p className="text-[11px] font-black uppercase italic text-slate-700">De frente y donde se vea tu cara</p>
+          </div>
+          <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="bg-green-100 text-green-600 p-2 rounded-lg"><Users size={20} /></div>
+            <p className="text-[11px] font-black uppercase italic text-slate-700">Tú solo, sin acompañantes</p>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+          <p className="text-[10px] text-blue-800 font-bold text-center leading-relaxed">
+            "Tómate una foto clara: sin gorra, sin lentes de sol y de frente. ¡Queremos saber quién eres!"
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <button 
+            onClick={onConfirm}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase italic py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-sm"
+          >
+            Entendido, subir foto
+          </button>
+          <button 
+            onClick={onClose}
+            className="w-full text-slate-400 font-black uppercase italic py-2 text-[10px]"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- CONSTANTES DE UBICACIÓN ---
 const UBICACIONES = {
@@ -333,6 +387,8 @@ export default function NavegacionPrincipal({ user }) {
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [pasajerosViaje, setPasajerosViaje] = useState([]); 
   const [configOpen, setConfigOpen] = useState(false);
+  // ESTADO DEL MÓDULO 14
+  const [showFotoInstrucciones, setShowFotoInstrucciones] = useState(false);
 
   // Estados de Chat e Inbox
   const [chatActivo, setChatActivo] = useState(null);
@@ -1360,17 +1416,45 @@ return (
         )}
              {/* PERFIL */}
         {vista === "perfil" && (
-  <div className="space-y-4 animate-in fade-in pb-10">
-    <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
-      <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100"><Settings size={22}/></button>
-      <div className="relative mb-4">
-        <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden"><User size={56} className="text-slate-400" /></div>
-        <div className="absolute -bottom-2 -right-2"><BadgeEstatus nivel={calcularEstatus(userData.viajesCompletados || 0, userData.rating || 0)} /></div>
-      </div>
-      <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">{userData.nombre}</h2>
-      <SenalesConfianza data={userData} />
-    </div>
+          <div className="space-y-4 animate-in fade-in pb-10">
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
+              <button 
+                onClick={() => setConfigOpen(!configOpen)} 
+                className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100"
+              >
+                <Settings size={22}/>
+              </button>
 
+              <div className="relative mb-4">
+                {/* MODIFICADO MÓDULO 14: Click abre instrucciones */}
+                <div 
+                  onClick={() => setShowFotoInstrucciones(true)}
+                  className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden cursor-pointer active:scale-95 transition-all"
+                >
+                  {userData?.fotoPerfil ? (
+                    <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover"/>
+                  ) : (
+                    <User size={56} className="text-slate-400" />
+                  )}
+                </div>
+                <div className="absolute -bottom-2 -right-2">
+                  <BadgeEstatus nivel={calcularEstatus(userData?.viajesCompletados || 0, userData?.rating || 0)} />
+                </div>
+              </div>
+
+              <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">
+                {userData?.nombre}
+              </h2>
+              <SenalesConfianza data={userData} />
+            </div>
+
+            {/* INTEGRACIÓN MÓDULO 13: Barra de progreso */}
+            <KYCProgressBar 
+              userData={userData} 
+              onAbrirConfig={() => setConfigOpen(true)} 
+            />
+          </div>
+        )}
     {/* AQUÍ SE INTEGRA EL MÓDULO 13 */}
     <KYCProgressBar 
       userData={userData} 
@@ -1418,6 +1502,17 @@ return (
            <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
         </button>
       </nav>
+  
+        {/* RENDER MODAL MÓDULO 14 */}
+      <ModalInstruccionesFoto 
+        isOpen={showFotoInstrucciones} 
+        onClose={() => setShowFotoInstrucciones(false)} 
+        onConfirm={() => {
+          setShowFotoInstrucciones(false);
+          // Cambia 'abrirCamara' por el nombre real de tu función para subir fotos
+          abrirCamara(); 
+        }}
+      />
     </div>
   );
 }
