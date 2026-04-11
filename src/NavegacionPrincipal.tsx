@@ -1672,172 +1672,165 @@ return (
              </div>
           </div>
         )}
-           {/* VISTA: PERFIL - MÓDULO 16 (TABS & CUENTA) */}
-        {vista === "perfil" && (
-          <div className="space-y-4 animate-in fade-in pb-10">
-            
-            {/* SELECTOR DE PESTAÑAS (TABS) */}
-            <div className="flex bg-slate-100 p-1.5 rounded-[25px] border shadow-inner">
-              <button 
-                onClick={() => setPestañaActiva("perfil")}
-                className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "perfil" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
-              >
-                Mi Perfil
-              </button>
-              <button 
-                onClick={() => setPestañaActiva("cuenta")}
-                className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "cuenta" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
-              >
-                Cuenta
-              </button>
-            </div>
-
-            {/* CONTENIDO PESTAÑA: MI PERFIL (LO PÚBLICO) */}
-            {pestañaActiva === "perfil" && (
-              <div className="space-y-4 animate-in slide-in-from-left">
-                {/* TARJETA PRINCIPAL */}
-                <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
-                  <div className="relative mb-4">
-                    <div onClick={() => setShowFotoInstrucciones(true)} className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden cursor-pointer">
-                      {userData?.fotoPerfil ? (
-                        <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover"/>
-                      ) : (
-                        <User size={56} className="text-slate-400" />
-                      )}
-                    </div>
-                    <div className="absolute -bottom-2 -right-2">
-                      <BadgeEstatus nivel={calcularEstatus(userData?.viajesCompletados || 0, userData?.rating || 0)} />
-                    </div>
-                  </div>
-
-                  <div className="text-center mt-2 space-y-1">
-                    <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">
-                      {userData?.nombre}{userData?.edad ? `, ${userData.edad}` : ""}
-                    </h2>
-                    <div className="flex items-center justify-center gap-2">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${obtenerNivel(userData?.viajesCompletados || 0).clase}`}>
-                        {obtenerNivel(userData?.viajesCompletados || 0).etiqueta}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="w-full mt-4 px-4 border-t pt-4">
-                     <p className="text-center text-slate-600 text-[11px] italic font-medium leading-relaxed">
-                        "{userData?.bio || "Viajando con buena vibra y compartiendo la cola."}"
-                     </p>
-                  </div>
-                  <SenalesConfianza data={userData} />
-                </div>
-
-                <KYCProgressBar userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
-                <ProgresoGamificacion userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
-              </div>
-            )}
-
-            {/* CONTENIDO PESTAÑA: CUENTA (LO PRIVADO) */}
-            {pestañaActiva === "cuenta" && (
-              <div className="space-y-3 animate-in slide-in-from-right">
-                {/* GESTIÓN FINANCIERA */}
-                <div className="bg-white p-6 rounded-[35px] border shadow-sm">
-                  <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest mb-4 px-2">Gestión Financiera</p>
-                  <div className="space-y-2">
-                    <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><CreditCard size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Métodos de Pago</span>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-400"/>
-                    </button>
-                    <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 text-green-600 rounded-xl"><DollarSign size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Preferencias de Cobro</span>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-400"/>
-                    </button>
-                  </div>
-                </div>
-
-                {/* SEGURIDAD Y CONFIGURACIÓN */}
-                <div className="bg-white p-6 rounded-[35px] border shadow-sm mt-6">
-                  <p className="text-[10px] font-black uppercase text-slate-400 italic tracking-widest mb-4 px-2">Configuración de Cuenta</p>
-                  <div className="space-y-2">
-                    <button 
-                      onClick={() => setConfigOpen(!configOpen)} 
-                      className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 text-orange-600 rounded-xl"><Settings size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Editar Información Personal</span>
-                      </div>
-                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${configOpen ? 'rotate-90' : ''}`}/>
-                    </button>
-                    
-                    {configOpen && (
-                      <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-100 space-y-3 animate-in slide-in-from-top">
-                        <div className="grid grid-cols-4 gap-2">
-                          <input type="text" placeholder="Cédula" className="col-span-3 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
-                          <input type="number" placeholder="Edad" className="col-span-1 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none text-center" value={perfilForm.edad} onChange={(e)=>setPerfilForm({...perfilForm, edad: e.target.value})} />
-                        </div>
-                        <input type="text" placeholder="Biografía" className="w-full bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.bio} onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} />
-                        <button onClick={guardarDatosPerfil} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px]">Guardar Cambios</button>
-                      </div>
-                    )}
-
-                    <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 text-purple-600 rounded-xl"><LifeBuoy size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Centro de Ayuda</span>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-400"/>
-                    </button>
-
-                    <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 active:scale-95 transition-all mt-4">
-                      <div className="flex items-center gap-3 text-red-600">
-                        <LogOut size={18}/>
-                        <span className="text-xs font-black uppercase italic">Cerrar Sesión</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* VISTA: PERFIL - MÓDULO 16 (TABS & CUENTA) */}
+      {vista === "perfil" && (
+        <div className="space-y-4 animate-in fade-in pb-10">
+          
+          {/* SELECTOR DE PESTAÑAS (TABS) */}
+          <div className="flex bg-slate-100 p-1.5 rounded-[25px] border shadow-inner">
+            <button 
+              onClick={() => setPestañaActiva("perfil")}
+              className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "perfil" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
+            >
+              Mi Perfil
+            </button>
+            <button 
+              onClick={() => setPestañaActiva("cuenta")}
+              className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "cuenta" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
+            >
+              Cuenta
+            </button>
           </div>
-        )}
-      </main>
 
-      {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR */}
-      <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
-        <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span>
-        </button>
-        <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "chofer" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span>
-        </button>
-        <button onClick={() => cambiarVista("mis_viajes")} className={`flex flex-col items-center gap-1 transition-all ${vista === "mis_viajes" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Tus Viajes</span>
-        </button>
-        <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inbox" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span>
-        </button>
-        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
-        </button>
-      </nav>
+          {/* CONTENIDO PESTAÑA: MI PERFIL (LO PÚBLICO) */}
+          {pestañaActiva === "perfil" && (
+            <div className="space-y-4 animate-in slide-in-from-left">
+              <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
+                <div className="relative mb-4">
+                  <div onClick={() => setShowFotoInstrucciones(true)} className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden cursor-pointer">
+                    {userData?.fotoPerfil ? (
+                      <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover"/>
+                    ) : (
+                      <User size={56} className="text-slate-400" />
+                    )}
+                  </div>
+                  <div className="absolute -bottom-2 -right-2">
+                    <BadgeEstatus nivel={calcularEstatus(userData?.viajesCompletados || 0, userData?.rating || 0)} />
+                  </div>
+                </div>
 
-      <ModalInstruccionesFoto 
-        isOpen={showFotoInstrucciones} 
-        onClose={() => setShowFotoInstrucciones(false)} 
-        onConfirm={() => { setShowFotoInstrucciones(false); abrirCamara(); }}
-      />
-      <PantallaExito 
-        visible={successData.show}
-        titulo={successData.titulo}
-        subtitulo={successData.subtitulo}
-        onClose={() => setSuccessData({ ...successData, show: false })}
-      />
-    </div>
-  );
+                <div className="text-center mt-2 space-y-1">
+                  <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">
+                    {userData?.nombre}{userData?.edad ? `, ${userData.edad}` : ""}
+                  </h2>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${obtenerNivel(userData?.viajesCompletados || 0).clase}`}>
+                      {obtenerNivel(userData?.viajesCompletados || 0).etiqueta}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-full mt-4 px-4 border-t pt-4">
+                   <p className="text-center text-slate-600 text-[11px] italic font-medium leading-relaxed">
+                      "{userData?.bio || "Viajando con buena vibra y compartiendo la cola."}"
+                   </p>
+                </div>
+                <SenalesConfianza data={userData} />
+              </div>
+
+              <KYCProgressBar userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
+              <ProgresoGamificacion userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
+            </div>
+          )}
+
+          {/* CONTENIDO PESTAÑA: CUENTA (LO PRIVADO) */}
+          {pestañaActiva === "cuenta" && (
+            <div className="space-y-3 animate-in slide-in-from-right">
+              <div className="bg-white p-6 rounded-[35px] border shadow-sm">
+                <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest mb-4 px-2">Gestión Financiera</p>
+                <div className="space-y-2">
+                  <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><CreditCard size={18}/></div>
+                      <span className="text-xs font-bold text-slate-700">Métodos de Pago</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-400"/>
+                  </button>
+                  <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 text-green-600 rounded-xl"><DollarSign size={18}/></div>
+                      <span className="text-xs font-bold text-slate-700">Preferencias de Cobro</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-400"/>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-[35px] border shadow-sm mt-6">
+                <p className="text-[10px] font-black uppercase text-slate-400 italic tracking-widest mb-4 px-2">Configuración de Cuenta</p>
+                <div className="space-y-2">
+                  <button onClick={() => setConfigOpen(!configOpen)} className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 text-orange-600 rounded-xl"><Settings size={18}/></div>
+                      <span className="text-xs font-bold text-slate-700">Editar Información Personal</span>
+                    </div>
+                    <ChevronRight size={16} className={`text-slate-400 transition-transform ${configOpen ? 'rotate-90' : ''}`}/>
+                  </button>
+                  
+                  {configOpen && (
+                    <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-100 space-y-3 animate-in slide-in-from-top">
+                      <div className="grid grid-cols-4 gap-2">
+                        <input type="text" placeholder="Cédula" className="col-span-3 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
+                        <input type="number" placeholder="Edad" className="col-span-1 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none text-center" value={perfilForm.edad} onChange={(e)=>setPerfilForm({...perfilForm, edad: e.target.value})} />
+                      </div>
+                      <input type="text" placeholder="Biografía" className="w-full bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.bio} onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} />
+                      <button onClick={guardarDatosPerfil} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px]">Guardar Cambios</button>
+                    </div>
+                  )}
+
+                  <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 text-purple-600 rounded-xl"><LifeBuoy size={18}/></div>
+                      <span className="text-xs font-bold text-slate-700">Centro de Ayuda</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-400"/>
+                  </button>
+
+                  <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 active:scale-95 transition-all mt-4">
+                    <div className="flex items-center gap-3 text-red-600">
+                      <LogOut size={18}/>
+                      <span className="text-xs font-black uppercase italic">Cerrar Sesión</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </main>
+
+    <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
+      <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+        <Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span>
+      </button>
+      <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "chofer" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+        <PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span>
+      </button>
+      <button onClick={() => cambiarVista("mis_viajes")} className={`flex flex-col items-center gap-1 transition-all ${vista === "mis_viajes" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+        <MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Tus Viajes</span>
+      </button>
+      <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inbox" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+        <MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span>
+      </button>
+      <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
+        <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
+      </button>
+    </nav>
+
+    <ModalInstruccionesFoto 
+      isOpen={showFotoInstrucciones} 
+      onClose={() => setShowFotoInstrucciones(false)} 
+      onConfirm={() => { setShowFotoInstrucciones(false); abrirCamara(); }}
+    />
+    <PantallaExito 
+      visible={successData.show}
+      titulo={successData.titulo}
+      subtitulo={successData.subtitulo}
+      onClose={() => setSuccessData({ ...successData, show: false })}
+    />
+  </div>
+);
 };
 
 export default NavegacionPrincipal;
