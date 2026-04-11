@@ -1063,6 +1063,53 @@ return (
               )}
            </div>
         )}
+        
+        {/* VISTA PERFIL CON MÓDULO 13 */}
+        {vista === "perfil" && (
+          <div className="space-y-4 animate-in fade-in pb-10">
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative">
+               <button onClick={()=>setConfigOpen(!configOpen)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-blue-600 border border-blue-100"><Settings size={22}/></button>
+               <div className="relative mb-4">
+                  <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl overflow-hidden">
+                    {userData.fotoUrl ? <img src={userData.fotoUrl} className="w-full h-full object-cover" /> : <User size={56} className="text-slate-400" />}
+                  </div>
+                  <div className="absolute -bottom-2 -right-2"><BadgeEstatus nivel={calcularEstatus(userData.viajesCompletados || 0, userData.rating || 0)} /></div>
+               </div>
+               <h2 className="font-black italic text-2xl text-slate-800 uppercase">{userData.nombre}</h2>
+            </div>
+
+            {/* BARRA DE PROGRESO KYC (Módulo 13) */}
+            <KYCProgressBar userData={userData} />
+
+            {configOpen && (
+              <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3">
+                <p className="text-[10px] font-black uppercase text-blue-600 italic px-2">Identidad y Bio</p>
+                <input type="text" placeholder="Cédula" className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
+                <textarea placeholder="Cuéntanos un poco de ti (Mini-bio)..." className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold h-20 resize-none" value={perfilForm.bio} onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} />
+                <p className="text-[10px] font-black uppercase text-blue-600 italic px-2 pt-2">Vehículo</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" placeholder="Placa" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black" value={perfilForm.placa} onChange={(e)=>setPerfilForm({...perfilForm, placa: e.target.value})} />
+                  <input type="text" placeholder="Color" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black" value={perfilForm.color} onChange={(e)=>setPerfilForm({...perfilForm, color: e.target.value})} />
+                </div>
+                <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-xl active:scale-95 transition-all mt-2">Actualizar Credenciales</button>
+              </div>
+            )}
+            <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic bg-white rounded-[30px] border shadow-sm mt-4"><LogOut size={20} /> Salir</button>
+          </div>
+        )}
+      </main>
+
+      {/* NAVBAR INFERIOR */}
+      <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl">
+        <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 ${vista === "inicio" && modo === "pasajero" ? "text-blue-600" : "text-slate-300"}`}><Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span></button>
+        <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 ${vista === "inicio" && modo === "chofer" ? "text-blue-600" : "text-slate-300"}`}><PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span></button>
+        <button onClick={() => cambiarVista("mis_viajes")} className={`flex flex-col items-center gap-1 ${vista === "mis_viajes" ? "text-blue-600" : "text-slate-300"}`}><MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Mis Viajes</span></button>
+        <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 ${vista === "inbox" ? "text-blue-600" : "text-slate-300"}`}><MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span></button>
+        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 ${vista === "perfil" ? "text-blue-600" : "text-slate-300"}`}><User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
+      </nav>
+    </div>
+  );
+}
         {/* --- VISTA MÓDULO 5: FLUJO ACTIVO --- */}
         {vista === "en_viaje" && viajeActivo && (
           <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
