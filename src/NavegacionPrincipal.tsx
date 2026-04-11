@@ -177,6 +177,55 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
     </div>
   );
 };
+// --- MÓDULO 13: GAMIFICACIÓN KYC (NUEVO) ---
+const KYCProgressBar = ({ userData }) => {
+  const hitos = [
+    { id: 1, label: 'Foto Real', cumplido: !!userData?.fotoUrl },
+    { id: 2, label: 'Teléfono', cumplido: !!userData?.telefonoVerificado },
+    { id: 3, label: 'Email', cumplido: !!userData?.emailVerificado },
+    { id: 4, label: 'Cédula (KYC)', cumplido: !!userData?.cedula },
+    { id: 5, label: 'Vehículo', cumplido: !!userData?.vehiculo?.placa },
+    { id: 6, label: 'Biografía', cumplido: !!userData?.bio && userData?.bio.length > 10 }
+  ];
+
+  const completados = hitos.filter(h => h.cumplido).length;
+  const porcentaje = (completados / hitos.length) * 100;
+
+  return (
+    <div className="bg-white p-5 rounded-[30px] border shadow-sm space-y-3">
+      <div className="flex justify-between items-end">
+        <div>
+          <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest leading-none">Nivel de Confianza</p>
+          <p className="text-xl font-black italic text-slate-800">{completados} de {hitos.length} completados</p>
+        </div>
+        <div className="text-right">
+          <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">{Math.round(porcentaje)}%</span>
+        </div>
+      </div>
+
+      <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden p-1 border">
+        <div 
+          className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(37,99,235,0.3)]"
+          style={{ width: `${porcentaje}%` }}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5 pt-2">
+        {hitos.map(h => (
+          <div key={h.id} className={`flex items-center gap-1 px-2 py-1.5 rounded-xl border text-[7px] font-black uppercase italic transition-all ${h.cumplido ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
+            {h.cumplido ? <CheckCircle size={8} className="fill-green-600 text-white"/> : <div className="w-2 h-2 rounded-full border border-slate-200"/>}
+            <span className="truncate">{h.label}</span>
+          </div>
+        ))}
+      </div>
+      
+      {porcentaje < 100 && (
+        <p className="text-[8px] font-bold text-slate-400 italic text-center pt-1">Completa tu perfil para ser "Chofer de Confianza" y evitar comisiones.</p>
+      )}
+    </div>
+  );
+};
+
 
 // --- COMPONENTES DE APOYO ---
 const VisualizadorPreferencias = ({ prefs }) => {
