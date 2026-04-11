@@ -117,7 +117,32 @@ const ModalInstruccionesFoto = ({ isOpen, onClose, onConfirm }) => {
     </div>
   );
 };
+// --- MÓDULO 17: FEEDBACK POST-ACCIÓN (Success Screen) ---
+const PantallaExito = ({ visible, titulo, subtitulo, onClose }) => {
+  if (!visible) return null;
+  return (
+    <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-10 animate-in fade-in zoom-in duration-300">
+      <div className="w-32 h-32 bg-green-100 rounded-full flex items-center justify-center mb-8 animate-bounce">
+        <CheckCircle size={60} className="text-green-600" />
+      </div>
+      
+      <h2 className="text-3xl font-black italic text-slate-800 uppercase text-center leading-none mb-4 tracking-tighter">
+        {titulo}
+      </h2>
+      
+      <p className="text-slate-500 text-center font-medium text-sm mb-10 leading-relaxed">
+        {subtitulo}
+      </p>
 
+      <button 
+        onClick={onClose}
+        className="w-full py-5 bg-slate-900 text-white rounded-[25px] font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all"
+      >
+        Entendido
+      </button>
+    </div>
+  );
+};
 // --- CONSTANTES DE UBICACIÓN ---
 const UBICACIONES = {
   "Amazonas": ["Puerto Ayacucho"], "Anzoátegui": ["Barcelona", "Puerto La Cruz"],
@@ -388,6 +413,7 @@ export default function NavegacionPrincipal({ user }) {
   const [pasajerosViaje, setPasajerosViaje] = useState([]); 
   const [configOpen, setConfigOpen] = useState(false);
   const [pestañaActiva, setPestañaActiva] = useState("perfil"); // "perfil" o "cuenta";
+  const [successData, setSuccessData] = useState({ show: false, titulo: "", subtitulo: "" });
   // ESTADO DEL MÓDULO 14
   const [showFotoInstrucciones, setShowFotoInstrucciones] = useState(false);
   // FUNCIÓN PARA EL MÓDULO 14 (Placeholder)
@@ -833,13 +859,20 @@ export default function NavegacionPrincipal({ user }) {
         bio: perfilForm.bio
       });
       setConfigOpen(false);
-      alert("✅ Perfil actualizado correctamente.");
-    } catch (e) { 
-      console.error(e);
-      alert("Error al guardar los cambios."); 
-    }
-  };
+    
+    // Cambiamos el alert por la nueva pantalla de éxito
+    setSuccessData({
+      show: true,
+      titulo: "¡Perfil Actualizado!",
+      subtitulo: "Tus cambios se guardaron correctamente. Ahora tu perfil genera más confianza."
+    });
 
+  } catch (e) { 
+    console.error(e);
+    // Para el error sí podemos dejar un alert o podrías crear una "PantallaError" después
+    alert("Error al guardar los cambios."); 
+  }
+};
   const cambiarVista = (v) => { setVista(v); setViajeSeleccionado(null); setChatActivo(null); };
 
   if (!userData) return <div className="h-screen bg-slate-950 flex items-center justify-center text-blue-500 font-black italic animate-pulse">CARGANDO DAME LA COLA...</div>;
@@ -1617,6 +1650,13 @@ return (
           setShowFotoInstrucciones(false);
           abrirCamara(); 
         }}
+      />
+      {/* RENDER MODAL MÓDULO 17: ÉXITO */}
+      <PantallaExito 
+        visible={successData.show}
+        titulo={successData.titulo}
+        subtitulo={successData.subtitulo}
+        onClose={() => setSuccessData({ ...successData, show: false })}
       />
     </div>
   );
