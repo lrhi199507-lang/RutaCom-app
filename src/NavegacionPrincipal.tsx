@@ -466,6 +466,7 @@ export default function NavegacionPrincipal({ user }) {
     if (viajesCompletados >= 10 && calificacion >= 4.5) return "Plata";
     return "Bronce";
   };
+
 // EFECTOS FIREBASE
   useEffect(() => {
     if (!user) return;
@@ -489,12 +490,11 @@ export default function NavegacionPrincipal({ user }) {
           edad: data.edad || "",
           bio: data.bio || ""
         });
-      }
-    });
+      } // <-- Esta cerraba el if(snap.exists)
+    }); // <-- ESTA LLAVE FALTABA para cerrar el onSnapshot
 
     return () => unsubUser();
   }, [user]);
-
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
