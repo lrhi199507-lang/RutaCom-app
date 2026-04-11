@@ -1502,17 +1502,17 @@ return (
            <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
         </button>
       </nav>
-  
-        {/* RENDER MODAL MÓDULO 14 */}
+      {/* RENDER MODAL MÓDULO 14 */}
       <ModalInstruccionesFoto 
         isOpen={showFotoInstrucciones} 
         onClose={() => setShowFotoInstrucciones(false)} 
         onConfirm={() => {
           setShowFotoInstrucciones(false);
-          // Cambia 'abrirCamara' por el nombre real de tu función para subir fotos
+          // Asegúrate de usar el nombre de tu función real para subir fotos
           abrirCamara(); 
         }}
       />
-    </div>
-  );
+    </main>
+  </div>
+ );
 }
