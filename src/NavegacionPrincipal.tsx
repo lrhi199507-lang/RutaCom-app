@@ -414,6 +414,16 @@ export default function NavegacionPrincipal({ user }) {
   const [configOpen, setConfigOpen] = useState(false);
   const [pestañaActiva, setPestañaActiva] = useState("perfil"); // "perfil" o "cuenta";
   const [successData, setSuccessData] = useState({ show: false, titulo: "", subtitulo: "" });
+  // Estados para el Módulo 18 (El Wizard de Publicación)
+const [pasoWizard, setPasoWizard] = useState(1); 
+const [viajeForm, setViajeForm] = useState({
+  origen: "",
+  destino: "",
+  paradas: [],
+  rutaSeleccionada: null,
+  precio: "",
+  asientos: 3
+});
   // ESTADO DEL MÓDULO 14
   const [showFotoInstrucciones, setShowFotoInstrucciones] = useState(false);
   // FUNCIÓN PARA EL MÓDULO 14 (Placeholder)
@@ -1061,6 +1071,140 @@ return (
               <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-4 rounded-2xl text-[10px] font-black uppercase border-2 border-blue-600 text-blue-600 bg-white shadow-sm active:scale-95 transition-all">
                 ESTÁS EN MODO {modo === "pasajero" ? "PASAJERO" : "CHÓFER"} (CAMBIAR) ➔
               </button>
+             {/* MÓDULO 18: WIZARD DE PUBLICACIÓN (MODO CHOFER) */}
+        {vista === "inicio" && modo === "chofer" && (
+          <div className="space-y-6 animate-in fade-in pb-20 mt-4">
+            
+            {/* INDICADOR DE PASOS */}
+            <div className="flex justify-between items-center px-2">
+              <div className="flex gap-2">
+                {[1, 2, 3].map((num) => (
+                  <div 
+                    key={num} 
+                    className={`h-2 w-10 rounded-full transition-all duration-500 ${pasoWizard >= num ? "bg-blue-600" : "bg-slate-200"}`}
+                  />
+                ))}
+              </div>
+              <span className="text-[10px] font-black uppercase italic text-slate-400 font-bold">Paso {pasoWizard} de 3</span>
+            </div>
+
+            {/* PASO 1: DIRECCIONES */}
+            {pasoWizard === 1 && (
+              <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
+                <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">¿A dónde<br/>vas hoy?</h2>
+                <div className="space-y-3 relative">
+                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+                    <MapPin size={22} className="text-blue-600"/>
+                    <input 
+                      type="text" 
+                      placeholder="Punto de salida" 
+                      className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
+                      value={viajeForm.origen}
+                      onChange={(e) => setViajeForm({...viajeForm, origen: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+                    <Navigation size={22} className="text-green-600"/>
+                    <input 
+                      type="text" 
+                      placeholder="Punto de llegada" 
+                      className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
+                      value={viajeForm.destino}
+                      onChange={(e) => setViajeForm({...viajeForm, destino: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setPasoWizard(2)}
+                  disabled={!viajeForm.origen || !viajeForm.destino}
+                  className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30 transition-all active:scale-95"
+                >
+                  Continuar a la ruta
+                </button>
+              </div>
+            )}
+
+            {/* PASO 2: RUTAS Y PARADAS */}
+            {pasoWizard === 2 && (
+              <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
+                <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Selecciona<br/>tu ruta</h2>
+                
+                <div className="space-y-3">
+                  {[
+                    { id: 1, nombre: "Autopista Regional", tiempo: "2h 10m", paradas: ["Maracay", "San Joaquín", "Guacara"] },
+                    { id: 2, nombre: "Carretera Panamericana", tiempo: "3h 45m", paradas: ["Los Teques", "Las Tejerías"] }
+                  ].map((ruta) => (
+                    <div 
+                      key={ruta.id}
+                      onClick={() => setViajeForm({...viajeForm, rutaSeleccionada: ruta.id, paradas: ruta.paradas})}
+                      className={`p-5 rounded-[30px] border-2 transition-all cursor-pointer ${viajeForm.rutaSeleccionada === ruta.id ? "border-blue-600 bg-blue-50" : "border-slate-100 bg-slate-50"}`}
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-[12px] font-black uppercase italic text-slate-700">{ruta.nombre}</span>
+                        <span className="text-[10px] font-bold bg-white px-2 py-1 rounded-lg shadow-sm text-blue-600">{ruta.tiempo}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {ruta.paradas.map((p) => (
+                          <span key={p} className="text-[9px] bg-white/80 px-2.5 py-1 rounded-full border border-slate-200 text-slate-500 font-bold">
+                            + {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setPasoWizard(1)} className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-[25px] font-black uppercase italic text-xs">Atrás</button>
+                  <button 
+                    onClick={() => setPasoWizard(3)} 
+                    disabled={!viajeForm.rutaSeleccionada}
+                    className="flex-1 py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASO 3: PRECIO Y ASIENTOS */}
+            {pasoWizard === 3 && (
+              <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
+                <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Últimos<br/>detalles</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-2 italic font-bold">Precio c/u</label>
+                    <div className="flex items-center gap-3 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+                      <DollarSign size={18} className="text-green-600"/>
+                      <input type="number" placeholder="5" className="bg-transparent w-full text-sm font-bold outline-none" value={viajeForm.precio} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-2 italic font-bold">Puestos</label>
+                    <div className="flex items-center gap-3 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+                      <Users size={18} className="text-blue-600"/>
+                      <input type="number" placeholder="3" className="bg-transparent w-full text-sm font-bold outline-none" value={viajeForm.asientos} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} />
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    setSuccessData({
+                      show: true,
+                      titulo: "¡Viaje Publicado!",
+                      subtitulo: `Tu ruta hacia ${viajeForm.destino} está activa. Busca pasajeros en tu lista.`
+                    });
+                    setPasoWizard(1);
+                  }}
+                  className="w-full py-6 bg-blue-600 text-white rounded-[30px] font-black uppercase italic text-sm shadow-2xl active:scale-95 transition-all"
+                >
+                  Confirmar y Publicar
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
               {/* MÓDULO 11: INCENTIVOS PARA EL KYC (BANNER INTELIGENTE) */}
               {(!userData?.cedula || !userData?.vehiculo?.placa) ? (
