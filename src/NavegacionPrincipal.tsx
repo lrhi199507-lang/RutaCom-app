@@ -1508,11 +1508,11 @@ return (
         onClose={() => setShowFotoInstrucciones(false)} 
         onConfirm={() => {
           setShowFotoInstrucciones(false);
-          // Asegúrate de usar el nombre de tu función real para subir fotos
+          // Asegúrate de que este sea el nombre de tu función
           abrirCamara(); 
         }}
       />
-    </main>
+    </main> 
   </div>
- );
+  );
 }
