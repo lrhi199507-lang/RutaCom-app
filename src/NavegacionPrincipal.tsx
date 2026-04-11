@@ -1419,7 +1419,7 @@ return (
              </div>
           </div>
         )}
-            {/* PERFIL */}
+            {/* VISTA: PERFIL */}
         {vista === "perfil" && (
           <div className="space-y-4 animate-in fade-in pb-10">
             <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
@@ -1431,7 +1431,6 @@ return (
               </button>
 
               <div className="relative mb-4">
-                {/* MODIFICADO MÓDULO 14: Click abre instrucciones */}
                 <div 
                   onClick={() => setShowFotoInstrucciones(true)}
                   className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden cursor-pointer active:scale-95 transition-all"
@@ -1453,43 +1452,48 @@ return (
               <SenalesConfianza data={userData} />
             </div>
 
-            {/* INTEGRACIÓN MÓDULO 13: Barra de progreso */}
+            {/* MÓDULO 13: BARRA DE PROGRESO */}
             <KYCProgressBar 
               userData={userData} 
               onAbrirConfig={() => setConfigOpen(true)} 
             />
+
+            {/* MÓDULO 6: TRACKER DE PROGRESO */}
+            <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
+
+            {configOpen && (
+              <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3 animate-in slide-in-from-top">
+                <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2">Identidad</p>
+                <input 
+                  type="text" 
+                  placeholder="Cédula" 
+                  className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" 
+                  value={perfilForm.cedula} 
+                  onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} 
+                />
+                <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2 pt-2">Vehículo</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" placeholder="Marca" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.marca} onChange={(e)=>setPerfilForm({...perfilForm, marca: e.target.value})} />
+                  <input type="text" placeholder="Modelo" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.modelo} onChange={(e)=>setPerfilForm({...perfilForm, modelo: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" placeholder="Placa" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.placa} onChange={(e)=>setPerfilForm({...perfilForm, placa: e.target.value})} />
+                  <input type="text" placeholder="Color" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.color} onChange={(e)=>setPerfilForm({...perfilForm, color: e.target.value})} />
+                </div>
+                <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-xl active:scale-95 transition-all mt-2">
+                  Actualizar Credenciales
+                </button>
+              </div>
+            )}
+
+            <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors">
+              <LogOut size={20} /> Salir de la plataforma
+            </button>
           </div>
         )}
-    {/* AQUÍ SE INTEGRA EL MÓDULO 13 */}
-    <KYCProgressBar 
-      userData={userData} 
-      onAbrirConfig={() => setConfigOpen(true)} 
-    />
-              {/* MÓDULO 6: TRACKER DE PROGRESO */}
-              <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
 
-              {configOpen && (
-                <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3 animate-in slide-in-from-top">
-                  <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2">Identidad</p>
-                  <input type="text" placeholder="Cédula" className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
-                  <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2 pt-2">Vehículo</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="text" placeholder="Marca" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.marca} onChange={(e)=>setPerfilForm({...perfilForm, marca: e.target.value})} />
-                    <input type="text" placeholder="Modelo" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.modelo} onChange={(e)=>setPerfilForm({...perfilForm, modelo: e.target.value})} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="text" placeholder="Placa" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.placa} onChange={(e)=>setPerfilForm({...perfilForm, placa: e.target.value})} />
-                    <input type="text" placeholder="Color" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.color} onChange={(e)=>setPerfilForm({...perfilForm, color: e.target.value})} />
-                  </div>
-                  <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-xl active:scale-95 transition-all mt-2">Actualizar Credenciales</button>
-                </div>
-              )}
-              <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors">
-                <LogOut size={20} /> Salir de la plataforma
-              </button>
-            </div>
-          )
-        }
+        {/* Aquí puedes añadir otras vistas como {vista === "inicio" && ...} */}
+
       </main>
 
       {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR */}
