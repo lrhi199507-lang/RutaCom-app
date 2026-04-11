@@ -394,7 +394,23 @@ export default function NavegacionPrincipal({ user }) {
     console.log("Iniciando flujo de foto...");
     alert("Próximamente: Aquí conectaremos el selector de fotos.");
   };
+  const obtenerNivel = (viajes = 0) => {
+  if (viajes >= 50) return { etiqueta: "Embajador", clase: "bg-purple-100 text-purple-700" };
+  if (viajes >= 10) return { etiqueta: "Viajero Frecuente", clase: "bg-blue-100 text-blue-700" };
+  return { etiqueta: "Principiante", clase: "bg-slate-100 text-slate-600" };
+};
+// MÓDULO 15: LÓGICA DE NIVELES
+  const obtenerNivelExperiencia = (viajes = 0) => {
+    if (viajes >= 50) return { nombre: "Embajador", color: "text-purple-600", bg: "bg-purple-50" };
+    if (viajes >= 10) return { nombre: "Viajero Frecuente", color: "text-blue-600", bg: "bg-blue-50" };
+    return { nombre: "Novato", color: "text-slate-500", bg: "bg-slate-50" };
+  };
 
+  const formatearFechaMiembro = (fecha) => {
+    if (!fecha) return "Enero 2026";
+    const d = new Date(fecha.seconds * 1000);
+    return d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  };
   // Estados de Chat e Inbox
   const [chatActivo, setChatActivo] = useState(null);
   const [mensajesChat, setMensajesChat] = useState([]);
@@ -423,7 +439,7 @@ export default function NavegacionPrincipal({ user }) {
   const [busquedasRecientes, setBusquedasRecientes] = useState([]);
 
   // Config Perfil (Se añade COLOR - MÓDULO 8)
-  const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", color: "", cedula: "" });
+  const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", color: "", cedula: "", edad: "", bio: "" });
   
   // Soporte
   const [mensajeSoporte, setMensajeSoporte] = useState("");
@@ -451,23 +467,33 @@ export default function NavegacionPrincipal({ user }) {
     return "Bronce";
   };
   // EFECTOS FIREBASE
-  useEffect(() => {
-    if (!user) return;
+useEffect(() => {
+  if (!user) return;
 
-    // Cargar búsquedas recientes del LocalStorage (MÓDULO 10)
-    const savedSearches = JSON.parse(localStorage.getItem("busquedasRecientesDLC") || "[]");
-    setBusquedasRecientes(savedSearches);
+  // Cargar búsquedas recientes del LocalStorage (MÓDULO 10)
+  const savedSearches = JSON.parse(localStorage.getItem("busquedasRecientesDLC") || "[]");
+  setBusquedasRecientes(savedSearches);
 
-    const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setUserData(data);
-        setPerfilForm({
-          marca: data.vehiculo?.marca || "", modelo: data.vehiculo?.modelo || "",
-          placa: data.vehiculo?.placa || "", color: data.vehiculo?.color || "", cedula: data.cedula || ""
-        });
-      }
-    });
+  const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      setUserData(data);
+      
+      // MODIFICADO PARA MÓDULO 15: Cargamos edad y bio al formulario
+      setPerfilForm({
+        marca: data.vehiculo?.marca || "", 
+        modelo: data.vehiculo?.modelo || "",
+        placa: data.vehiculo?.placa || "", 
+        color: data.vehiculo?.color || "", 
+        cedula: data.cedula || "",
+        edad: data.edad || "", // <-- AÑADIDO
+        bio: data.bio || ""    // <-- AÑADIDO
+      });
+    }
+  });
+
+  return () => unsubUser(); // Es buena práctica retornar el unsub para evitar fugas de memoria
+}, [user]);
 
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -793,12 +819,23 @@ export default function NavegacionPrincipal({ user }) {
   const guardarDatosPerfil = async () => {
     try {
       await updateDoc(doc(db, "usuarios", user.uid), { 
-        vehiculo: { marca: perfilForm.marca, modelo: perfilForm.modelo, placa: perfilForm.placa.toUpperCase(), color: perfilForm.color },
-        cedula: perfilForm.cedula
+        vehiculo: { 
+          marca: perfilForm.marca, 
+          modelo: perfilForm.modelo, 
+          placa: perfilForm.placa.toUpperCase(), 
+          color: perfilForm.color 
+        },
+        cedula: perfilForm.cedula,
+        // NUEVOS CAMPOS MÓDULO 15
+        edad: perfilForm.edad,
+        bio: perfilForm.bio
       });
       setConfigOpen(false);
-      alert("✅ Perfil actualizado.");
-    } catch (e) { alert("Error al guardar."); }
+      alert("✅ Perfil actualizado correctamente.");
+    } catch (e) { 
+      console.error(e);
+      alert("Error al guardar los cambios."); 
+    }
   };
 
   const cambiarVista = (v) => { setVista(v); setViajeSeleccionado(null); setChatActivo(null); };
@@ -1419,7 +1456,7 @@ return (
              </div>
           </div>
         )}
-            {/* VISTA: PERFIL */}
+            {/* VISTA: PERFIL - MÓDULO 15 INTEGRADO */}
         {vista === "perfil" && (
           <div className="space-y-4 animate-in fade-in pb-10">
             <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
@@ -1446,11 +1483,41 @@ return (
                 </div>
               </div>
 
-              <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">
-                {userData?.nombre}
-              </h2>
+              {/* INFO DE TRANSPARENCIA (NIVELES Y EDAD) */}
+              <div className="text-center mt-2 space-y-1">
+                <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">
+                  {userData?.nombre}{userData?.edad ? `, ${userData.edad}` : ""}
+                </h2>
+                
+                <div className="flex items-center justify-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${obtenerNivel(userData?.viajesCompletados || 0).clase}`}>
+                    {obtenerNivel(userData?.viajesCompletados || 0).etiqueta}
+                  </span>
+                </div>
+
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">
+                  Miembro desde {userData?.fechaRegistro ? new Date(userData.fechaRegistro.seconds * 1000).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : "Abril 2026"}
+                </p>
+              </div>
+
+              {/* BIOGRAFÍA */}
+              <div className="w-full mt-4 px-4 border-t pt-4">
+                 <p className="text-center text-slate-600 text-[11px] italic font-medium leading-relaxed">
+                   "{userData?.bio || "Viajando con buena vibra y compartiendo la cola."}"
+                 </p>
+              </div>
+
               <SenalesConfianza data={userData} />
             </div>
+
+            {/* BARRA DE PROGRESO KYC */}
+            <KYCProgressBar 
+              userData={userData} 
+              onAbrirConfig={() => setConfigOpen(true)} 
+            />
+            
+            {/* TRACKER DE GAMIFICACIÓN */}
+            <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
 
             {/* MÓDULO 13: BARRA DE PROGRESO */}
             <KYCProgressBar 
@@ -1463,14 +1530,33 @@ return (
 
             {configOpen && (
               <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3 animate-in slide-in-from-top">
-                <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2">Identidad</p>
+                <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2">Identidad y Perfil</p>
+                
+                <div className="grid grid-cols-4 gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Cédula" 
+                    className="col-span-3 bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" 
+                    value={perfilForm.cedula} 
+                    onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} 
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Edad" 
+                    className="col-span-1 bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none text-center" 
+                    value={perfilForm.edad} 
+                    onChange={(e)=>setPerfilForm({...perfilForm, edad: e.target.value})} 
+                  />
+                </div>
+
                 <input 
                   type="text" 
-                  placeholder="Cédula" 
+                  placeholder="Escribe una breve biografía..." 
                   className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" 
-                  value={perfilForm.cedula} 
-                  onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} 
+                  value={perfilForm.bio} 
+                  onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} 
                 />
+
                 <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2 pt-2">Vehículo</p>
                 <div className="grid grid-cols-2 gap-2">
                   <input type="text" placeholder="Marca" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.marca} onChange={(e)=>setPerfilForm({...perfilForm, marca: e.target.value})} />
@@ -1480,12 +1566,12 @@ return (
                   <input type="text" placeholder="Placa" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.placa} onChange={(e)=>setPerfilForm({...perfilForm, placa: e.target.value})} />
                   <input type="text" placeholder="Color" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.color} onChange={(e)=>setPerfilForm({...perfilForm, color: e.target.value})} />
                 </div>
+
                 <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-xl active:scale-95 transition-all mt-2">
                   Actualizar Credenciales
                 </button>
               </div>
             )}
-
             <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors">
               <LogOut size={20} /> Salir de la plataforma
             </button>
