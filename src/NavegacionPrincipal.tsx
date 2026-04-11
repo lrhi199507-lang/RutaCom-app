@@ -1457,9 +1457,10 @@ return (
              </div>
           </div>
         )}
-            {/* VISTA: PERFIL - MÓDULO 15 INTEGRADO */}
+            {/* VISTA: PERFIL - CORREGIDA Y BALANCEADA */}
         {vista === "perfil" && (
           <div className="space-y-4 animate-in fade-in pb-10">
+            {/* 1. TARJETA PRINCIPAL */}
             <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
               <button 
                 onClick={() => setConfigOpen(!configOpen)} 
@@ -1484,107 +1485,60 @@ return (
                 </div>
               </div>
 
-              {/* INFO DE TRANSPARENCIA (NIVELES Y EDAD) */}
               <div className="text-center mt-2 space-y-1">
                 <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">
                   {userData?.nombre}{userData?.edad ? `, ${userData.edad}` : ""}
                 </h2>
-                
                 <div className="flex items-center justify-center gap-2">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${obtenerNivel(userData?.viajesCompletados || 0).clase}`}>
                     {obtenerNivel(userData?.viajesCompletados || 0).etiqueta}
                   </span>
                 </div>
-
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">
                   Miembro desde {userData?.fechaRegistro ? new Date(userData.fechaRegistro.seconds * 1000).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : "Abril 2026"}
                 </p>
               </div>
 
-              {/* BIOGRAFÍA */}
               <div className="w-full mt-4 px-4 border-t pt-4">
                  <p className="text-center text-slate-600 text-[11px] italic font-medium leading-relaxed">
                    "{userData?.bio || "Viajando con buena vibra y compartiendo la cola."}"
                  </p>
               </div>
-
               <SenalesConfianza data={userData} />
             </div>
 
-            {/* COMPONENTES DE PROGRESO Y GAMIFICACIÓN (ÚNICOS) */}
-            <KYCProgressBar 
-              userData={userData} 
-              onAbrirConfig={() => setConfigOpen(true)} 
-            />
-            
-            <ProgresoGamificacion 
-              userData={userData} 
-              onAbrirConfig={() => setConfigOpen(true)} 
-            />
+            {/* 2. COMPONENTES ÚNICOS */}
+            <KYCProgressBar userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
+            <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
 
-            {/* BOTÓN SALIR */}
-            <button 
-              onClick={() => signOut(auth)} 
-              className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors"
-            >
-              <LogOut size={20} /> Salir de la plataforma
-            </button>
-          </div>
-        )}
+            {/* 3. PANEL DE CONFIGURACIÓN */}
             {configOpen && (
               <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3 animate-in slide-in-from-top">
                 <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2">Identidad y Perfil</p>
-                
                 <div className="grid grid-cols-4 gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Cédula" 
-                    className="col-span-3 bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" 
-                    value={perfilForm.cedula} 
-                    onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} 
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Edad" 
-                    className="col-span-1 bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none text-center" 
-                    value={perfilForm.edad} 
-                    onChange={(e)=>setPerfilForm({...perfilForm, edad: e.target.value})} 
-                  />
+                  <input type="text" placeholder="Cédula" className="col-span-3 bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
+                  <input type="number" placeholder="Edad" className="col-span-1 bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none text-center" value={perfilForm.edad} onChange={(e)=>setPerfilForm({...perfilForm, edad: e.target.value})} />
                 </div>
-
-                <input 
-                  type="text" 
-                  placeholder="Escribe una breve biografía..." 
-                  className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" 
-                  value={perfilForm.bio} 
-                  onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} 
-                />
-
+                <input type="text" placeholder="Biografía" className="w-full bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.bio} onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} />
                 <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2 pt-2">Vehículo</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <input type="text" placeholder="Marca" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.marca} onChange={(e)=>setPerfilForm({...perfilForm, marca: e.target.value})} />
-                  <input type="text" placeholder="Modelo" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold outline-none" value={perfilForm.modelo} onChange={(e)=>setPerfilForm({...perfilForm, modelo: e.target.value})} />
+                  <input type="text" placeholder="Marca" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.marca} onChange={(e)=>setPerfilForm({...perfilForm, marca: e.target.value})} />
+                  <input type="text" placeholder="Modelo" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-bold" value={perfilForm.modelo} onChange={(e)=>setPerfilForm({...perfilForm, modelo: e.target.value})} />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input type="text" placeholder="Placa" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.placa} onChange={(e)=>setPerfilForm({...perfilForm, placa: e.target.value})} />
-                  <input type="text" placeholder="Color" className="bg-slate-50 p-4 rounded-2xl border text-[11px] font-black uppercase outline-none focus:border-blue-600" value={perfilForm.color} onChange={(e)=>setPerfilForm({...perfilForm, color: e.target.value})} />
-                </div>
-
-                <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-xl active:scale-95 transition-all mt-2">
+                <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs mt-2">
                   Actualizar Credenciales
                 </button>
               </div>
             )}
+
+            {/* 4. BOTÓN SALIR (SOLO UNO) */}
             <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors">
               <LogOut size={20} /> Salir de la plataforma
             </button>
           </div>
         )}
 
-        {/* Aquí puedes añadir otras vistas como {vista === "inicio" && ...} */}
-
       </main>
-
       {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR */}
       <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl">
         <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
