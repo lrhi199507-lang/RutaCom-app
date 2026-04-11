@@ -143,21 +143,68 @@ const PantallaExito = ({ visible, titulo, subtitulo, onClose }) => {
     </div>
   );
 };
-// --- CONSTANTES DE UBICACIÓN ---
 const UBICACIONES = {
-  "Amazonas": ["Puerto Ayacucho"], "Anzoátegui": ["Barcelona", "Puerto La Cruz"],
-  "Apure": ["San Fernando"], "Aragua": ["Maracay", "Turmero", "La Victoria"],
-  "Barinas": ["Barinas"], "Bolívar": ["Ciudad Guayana", "Ciudad Bolívar"],
+  "Amazonas": ["Puerto Ayacucho"], 
+  "Anzoátegui": ["Barcelona", "Puerto La Cruz"],
+  "Apure": ["San Fernando"], 
+  "Aragua": ["Maracay", "Turmero", "La Victoria"],
+  "Barinas": ["Barinas"], 
+  "Bolívar": ["Ciudad Guayana", "Ciudad Bolívar"],
   "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego"],
-  "Cojedes": ["San Carlos", "Tinaquillo"], "Distrito Capital": ["Caracas"],
-  "Falcón": ["Coro", "Punto Fijo"], "Lara": ["Barquisimeto", "Cabudare"],
-  "Mérida": ["Mérida", "El Vigía"], "Miranda": ["Los Teques", "Chacao", "Baruta"],
-  "Monagas": ["Maturín"], "Nueva Esparta": ["Porlamar"], "Portuguesa": ["Guanare"],
-  "Táchira": ["San Cristóbal"], "Trujillo": ["Valera"], "Yaracuy": ["San Felipe"],
+  "Cojedes": ["San Carlos", "Tinaquillo"], 
+  "Distrito Capital": ["Caracas"],
+  "Falcón": ["Coro", "Punto Fijo"], 
+  "Lara": ["Barquisimeto", "Cabudare"],
+  "Mérida": ["Mérida", "El Vigía"], 
+  "Miranda": ["Los Teques", "Chacao", "Baruta"],
+  "Monagas": ["Maturín"], 
+  "Nueva Esparta": ["Porlamar"], 
+  "Portuguesa": ["Guanare"],
+  "Táchira": ["San Cristóbal"], 
+  "Trujillo": ["Valera"], 
+  "Yaracuy": ["San Felipe"],
   "Zulia": ["Maracaibo", "San Francisco"]
 };
-const ESTADOS = Object.keys(UBICACIONES);
+// Referencias a los elementos
+const inputEstado = document.getElementById('input-estado');
+const listaEstados = document.getElementById('lista-estados');
+const inputCiudad = document.getElementById('input-ciudad');
+const listaCiudades = document.getElementById('lista-ciudades');
 
+// 1. Llenar los estados apenas cargue la página
+const estados = Object.keys(UBICACIONES);
+estados.forEach(estado => {
+    let option = document.createElement('option');
+    option.value = estado;
+    listaEstados.appendChild(option);
+});
+
+// 2. Evento cuando el usuario escribe/selecciona un estado
+inputEstado.addEventListener('input', function() {
+    const seleccion = this.value;
+
+    // Si lo que escribió es un estado válido de nuestra lista
+    if (UBICACIONES[seleccion]) {
+        // Limpiar lista de ciudades anterior
+        listaCiudades.innerHTML = "";
+        
+        // Llenar nuevas ciudades
+        UBICACIONES[seleccion].forEach(ciudad => {
+            let option = document.createElement('option');
+            option.value = ciudad;
+            listaCiudades.appendChild(option);
+        });
+
+        // Habilitar el input de ciudades
+        inputCiudad.disabled = false;
+        inputCiudad.placeholder = "Escribe o selecciona ciudad";
+    } else {
+        // Si borra o escribe algo inválido, bloqueamos el segundo input
+        inputCiudad.disabled = true;
+        inputCiudad.value = "";
+        inputCiudad.placeholder = "Primero elige un estado";
+    }
+});
 // --- MÓDULO 1 & 4: REPUTACIÓN Y BADGES ---
 const BadgeEstatus = ({ nivel, mini = false }) => {
   const configs = {
