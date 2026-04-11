@@ -1723,7 +1723,7 @@ return (
 
                   <div className="w-full mt-4 px-4 border-t pt-4">
                      <p className="text-center text-slate-600 text-[11px] italic font-medium leading-relaxed">
-                       "{userData?.bio || "Viajando con buena vibra y compartiendo la cola."}"
+                        "{userData?.bio || "Viajando con buena vibra y compartiendo la cola."}"
                      </p>
                   </div>
                   <SenalesConfianza data={userData} />
@@ -1825,6 +1825,7 @@ return (
         </button>
       </nav>
 
+      {/* COMPONENTES GLOBALES */}
       <ModalInstruccionesFoto 
         isOpen={showFotoInstrucciones} 
         onClose={() => setShowFotoInstrucciones(false)} 
