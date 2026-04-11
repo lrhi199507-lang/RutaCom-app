@@ -1511,24 +1511,26 @@ return (
               <SenalesConfianza data={userData} />
             </div>
 
-            {/* BARRA DE PROGRESO KYC */}
+            {/* COMPONENTES DE PROGRESO Y GAMIFICACIÓN (ÚNICOS) */}
             <KYCProgressBar 
               userData={userData} 
               onAbrirConfig={() => setConfigOpen(true)} 
             />
             
-            {/* TRACKER DE GAMIFICACIÓN */}
-            <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
-
-            {/* MÓDULO 13: BARRA DE PROGRESO */}
-            <KYCProgressBar 
+            <ProgresoGamificacion 
               userData={userData} 
               onAbrirConfig={() => setConfigOpen(true)} 
             />
 
-            {/* MÓDULO 6: TRACKER DE PROGRESO */}
-            <ProgresoGamificacion userData={userData} onAbrirConfig={() => setConfigOpen(true)} />
-
+            {/* BOTÓN SALIR */}
+            <button 
+              onClick={() => signOut(auth)} 
+              className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors"
+            >
+              <LogOut size={20} /> Salir de la plataforma
+            </button>
+          </div>
+        )}
             {configOpen && (
               <div className="bg-white p-6 rounded-[35px] border shadow-2xl space-y-3 animate-in slide-in-from-top">
                 <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest px-2">Identidad y Perfil</p>
