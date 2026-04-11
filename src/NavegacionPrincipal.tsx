@@ -467,19 +467,19 @@ export default function NavegacionPrincipal({ user }) {
     return "Bronce";
   };
 
-// EFECTOS FIREBASE
+// EFECTOS FIREBASE (MÓDULO 15 Y SISTEMA INTEGRADO)
   useEffect(() => {
     if (!user) return;
 
-    // Cargar búsquedas recientes del LocalStorage
+    // 1. Cargar búsquedas recientes del LocalStorage
     const savedSearches = JSON.parse(localStorage.getItem("busquedasRecientesDLC") || "[]");
     setBusquedasRecientes(savedSearches);
 
+    // 2. Suscripción Datos de Usuario (Módulo 15: Perfil, Edad, Bio)
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         setUserData(data);
-        
         setPerfilForm({
           marca: data.vehiculo?.marca || "", 
           modelo: data.vehiculo?.modelo || "",
@@ -490,14 +490,14 @@ export default function NavegacionPrincipal({ user }) {
           bio: data.bio || ""
         });
       }
-    }); // <--- AQUÍ estaba el error, faltaba cerrar el onSnapshot
+    });
 
-    return () => unsubUser();
-  }, [user]); // <--- Línea 572: Ahora sí cierra perfecto el useEffect
+    // 3. Suscripción de Viajes
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
+    // 4. Suscripciones de Solicitudes
     const unsubSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid), where("estado", "==", "pendiente")), (snap) => {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -513,31 +513,33 @@ export default function NavegacionPrincipal({ user }) {
       setViajeActivo(actual || null);
     });
 
+    // 5. Lógica de Mensajería e Historial
     let docsRecibidos = [];
     let docsEnviados = [];
     const actualizarHistorial = (todosLosDocs) => {
-       const mapChats = new Map();
-       todosLosDocs.forEach(d => {
-          const data = d.data();
-          const soyEmisor = data.emisorId === user.uid;
-          const idOtro = soyEmisor ? data.receptorId : data.emisorId;
-          const fechaMs = data.fecha ? data.fecha.toMillis() : Date.now();
-          if (!mapChats.has(data.chatId)) {
-             mapChats.set(data.chatId, { chatId: data.chatId, idViaje: data.idViaje, idOtro, nombreOtro: soyEmisor ? (data.nombreReceptor || "Usuario") : data.nombreEmisor, ultimoMensaje: data.texto, fecha: fechaMs });
-          } else if (fechaMs > mapChats.get(data.chatId).fecha) {
-             mapChats.set(data.chatId, { ...mapChats.get(data.chatId), ultimoMensaje: data.texto, fecha: fechaMs });
-          }
-       });
-       setHistorialChats(Array.from(mapChats.values()).sort((a,b) => b.fecha - a.fecha));
+        const mapChats = new Map();
+        todosLosDocs.forEach(d => {
+           const data = d.data();
+           const soyEmisor = data.emisorId === user.uid;
+           const idOtro = soyEmisor ? data.receptorId : data.emisorId;
+           const fechaMs = data.fecha ? data.fecha.toMillis() : Date.now();
+           if (!mapChats.has(data.chatId)) {
+              mapChats.set(data.chatId, { chatId: data.chatId, idViaje: data.idViaje, idOtro, nombreOtro: soyEmisor ? (data.nombreReceptor || "Usuario") : data.nombreEmisor, ultimoMensaje: data.texto, fecha: fechaMs });
+           } else if (fechaMs > mapChats.get(data.chatId).fecha) {
+              mapChats.set(data.chatId, { ...mapChats.get(data.chatId), ultimoMensaje: data.texto, fecha: fechaMs });
+           }
+        });
+        setHistorialChats(Array.from(mapChats.values()).sort((a,b) => b.fecha - a.fecha));
     };
 
     const unsubR = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid)), snap => {
-       docsRecibidos = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
+        docsRecibidos = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
     });
     const unsubE = onSnapshot(query(collection(db, "MensajesPrivados"), where("emisorId", "==", user.uid)), snap => {
-       docsEnviados = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
+        docsEnviados = snap.docs; actualizarHistorial([...docsRecibidos, ...docsEnviados]);
     });
 
+    // 6. Soporte y Reseñas
     const unsubSoporte = onSnapshot(query(collection(db, "MensajesSoporte"), where("usuarioId", "==", user.uid)), (snap) => {
       const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setChatSoporte(msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0)));
@@ -547,29 +549,29 @@ export default function NavegacionPrincipal({ user }) {
       const q = query(collection(db, "Solicitudes"), where("estado", "==", "completado"), where("idPasajero", "==", user.uid));
       const snap = await getDocs(q);
       snap.forEach(async (docSnap) => {
-         const data = docSnap.data();
-         const diasPasados = data.fechaFinalizacion ? (Date.now() - data.fechaFinalizacion.toMillis()) / (1000 * 60 * 60 * 24) : 0;
-         if (diasPasados > 3 && !data.resenaGenerada) {
-            await addDoc(collection(db, "Opiniones"), {
-               evaluadoId: data.idChofer,
-               evaluadorId: "sistema_auto",
-               estrellas: 5,
-               comentario: "El viaje se completó sin problemas. (Reseña Automática)",
-               fecha: serverTimestamp(),
-               viajeId: docSnap.id
-            });
-            await updateDoc(doc(db, "Solicitudes", docSnap.id), { resenaGenerada: true });
-         }
+          const data = docSnap.data();
+          const diasPasados = data.fechaFinalizacion ? (Date.now() - data.fechaFinalizacion.toMillis()) / (1000 * 60 * 60 * 24) : 0;
+          if (diasPasados > 3 && !data.resenaGenerada) {
+             await addDoc(collection(db, "Opiniones"), {
+                evaluadoId: data.idChofer,
+                evaluadorId: "sistema_auto",
+                estrellas: 5,
+                comentario: "El viaje se completó sin problemas. (Reseña Automática)",
+                fecha: serverTimestamp(),
+                viajeId: docSnap.id
+             });
+             await updateDoc(doc(db, "Solicitudes", docSnap.id), { resenaGenerada: true });
+          }
       });
     };
     revisarResenasAutomaticas();
 
+    // LIMPIEZA TOTAL
     return () => { 
       unsubUser(); unsubViajes(); unsubSoli(); unsubMisSoli(); 
       unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo();
     };
   }, [user]);
-
   // MÓDULO 10: Efecto para Guardar Búsquedas Recientes automáticamente
   useEffect(() => {
     if (fCO && fCD) {
