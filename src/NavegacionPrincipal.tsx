@@ -1795,15 +1795,21 @@ return (
                   </div>
                 </div>
 
-                {/* BOTÓN SALIR */}
-                <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors">
-                  <LogOut size={20} /> Salir de la plataforma
-                </button>
+               </div>
+
+                    <button 
+                      onClick={() => enviarSolicitudDirecta(viajeSeleccionado)}
+                      className="w-full py-6 bg-blue-600 text-white rounded-[30px] font-black uppercase italic text-sm shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                    >
+                      <Send size={20}/> Solicitar Puesto ahora
+                    </button>
+                 </div>
               </div>
-            )}
-          </div>
+           </div>
         )}
+
         </main>
+
       {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR */}
       <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl">
         <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
@@ -1823,7 +1829,7 @@ return (
         </button>
       </nav>
 
-      {/* RENDER MODAL MÓDULO 14 */}
+      {/* RENDER MODAL MÓDULO 14: INSTRUCCIONES FOTO */}
       <ModalInstruccionesFoto 
         isOpen={showFotoInstrucciones} 
         onClose={() => setShowFotoInstrucciones(false)} 
@@ -1832,6 +1838,7 @@ return (
           abrirCamara(); 
         }}
       />
+
       {/* RENDER MODAL MÓDULO 17: ÉXITO */}
       <PantallaExito 
         visible={successData.show}
@@ -1843,4 +1850,4 @@ return (
   );
 };
 
-export default NavegacionPrincipal; // <--- ESTA LÍNEA ES OBLIGATORIA
+export default NavegacionPrincipal;
