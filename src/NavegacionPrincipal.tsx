@@ -1199,21 +1199,27 @@ return (
           </div>
         )}
 
-        {/* MÓDULO 10: TUS VIAJES (MIS VIAJES) */}
+        {/* MÓDULO 12: EMPTY STATE PARA TUS VIAJES */}
         {vista === "mis_viajes" && (
-           <div className="space-y-4 animate-in fade-in">
-             <div className="bg-blue-600 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden">
+           <div className="space-y-4 animate-in fade-in h-full flex flex-col">
+             <div className="bg-blue-600 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden shrink-0">
                 <MapIcon size={60} className="absolute -right-2 -bottom-2 opacity-10" />
                 <p className="font-black italic text-xl uppercase tracking-tighter">Tus Viajes</p>
                 <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Historial y Rutas Activas</p>
              </div>
              {misSolicitudes.length === 0 && solicitudesRecibidas.length === 0 ? (
-                <div className="bg-white p-10 rounded-[30px] border text-center shadow-sm">
-                   <Car size={32} className="text-slate-200 mx-auto mb-3" />
-                   <p className="text-xs text-slate-400 font-bold italic">No tienes viajes activos o recientes.</p>
+                <div className="flex-1 flex flex-col items-center justify-center bg-white p-10 rounded-[40px] border border-dashed border-slate-200 text-center shadow-sm my-4">
+                   <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border-2 border-slate-100">
+                      <MapIcon size={40} className="text-slate-200" />
+                   </div>
+                   <h3 className="font-black uppercase italic text-slate-800 mb-2">¡Aún no hay rutas!</h3>
+                   <p className="text-[11px] text-slate-400 font-bold italic mb-8 max-w-[200px]">Tus próximas colas aparecerán aquí. Empieza a explorar para viajar hoy.</p>
+                   <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase italic text-[10px] shadow-xl active:scale-95 transition-all flex items-center gap-2">
+                      Buscar mi primera cola <ArrowRight size={14}/>
+                   </button>
                 </div>
              ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 overflow-y-auto">
                    {misSolicitudes.map(s => (
                      <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-blue-500">
                        <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
@@ -1237,21 +1243,28 @@ return (
            </div>
         )}
 
-        {/* MÓDULO 10: BANDEJA DE MENSAJES (INBOX) */}
+        {/* MÓDULO 12: EMPTY STATE PARA MENSAJES */}
         {vista === "inbox" && (
-           <div className="space-y-4 animate-in fade-in">
-             <div className="bg-slate-900 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden">
+           <div className="space-y-4 animate-in fade-in h-full flex flex-col">
+             <div className="bg-slate-900 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden shrink-0">
                 <MessageSquare size={60} className="absolute -left-2 -top-2 opacity-10" />
                 <p className="font-black italic text-xl uppercase tracking-tighter">Mensajes</p>
                 <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Tu bandeja de entrada</p>
              </div>
              {historialChats.length === 0 ? (
-                <div className="bg-white p-10 rounded-[30px] border text-center shadow-sm">
-                   <MessageCircle size={32} className="text-slate-200 mx-auto mb-3" />
-                   <p className="text-xs text-slate-400 font-bold italic">No tienes mensajes aún.</p>
+                <div className="flex-1 flex flex-col items-center justify-center bg-white p-10 rounded-[40px] border border-dashed border-slate-200 text-center shadow-sm my-4">
+                   <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 border-2 border-blue-100">
+                      <MessageCircle size={40} className="text-blue-200" />
+                   </div>
+                   <h3 className="font-black uppercase italic text-slate-800 mb-2">Sin chats activos</h3>
+                   <p className="text-[11px] text-slate-400 font-bold italic mb-8 max-w-[200px]">Reserva una cola o publica un viaje para contactar con otros usuarios.</p>
+                   <div className="flex gap-2">
+                      <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] active:scale-95 transition-all">Buscar</button>
+                      <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 transition-all">Publicar</button>
+                   </div>
                 </div>
              ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 overflow-y-auto">
                    {historialChats.map(c => (
                      <div key={c.chatId} onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group">
                         <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors"><User size={20} className="text-blue-500 group-hover:text-white"/></div>
