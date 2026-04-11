@@ -389,6 +389,11 @@ export default function NavegacionPrincipal({ user }) {
   const [configOpen, setConfigOpen] = useState(false);
   // ESTADO DEL MÓDULO 14
   const [showFotoInstrucciones, setShowFotoInstrucciones] = useState(false);
+  // FUNCIÓN PARA EL MÓDULO 14 (Placeholder)
+  const abrirCamara = () => {
+    console.log("Iniciando flujo de foto...");
+    alert("Próximamente: Aquí conectaremos el selector de fotos.");
+  };
 
   // Estados de Chat e Inbox
   const [chatActivo, setChatActivo] = useState(null);
@@ -1414,7 +1419,7 @@ return (
              </div>
           </div>
         )}
-             {/* PERFIL */}
+            {/* PERFIL */}
         {vista === "perfil" && (
           <div className="space-y-4 animate-in fade-in pb-10">
             <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
@@ -1502,13 +1507,12 @@ return (
            <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
         </button>
       </nav>
-      {/* RENDER MODAL MÓDULO 14 */}
+ {/* RENDER MODAL MÓDULO 14 */}
       <ModalInstruccionesFoto 
         isOpen={showFotoInstrucciones} 
         onClose={() => setShowFotoInstrucciones(false)} 
         onConfirm={() => {
           setShowFotoInstrucciones(false);
-          // Asegúrate de que este sea el nombre de tu función
           abrirCamara(); 
         }}
       />
