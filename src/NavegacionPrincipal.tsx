@@ -177,6 +177,7 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
     </div>
   );
 };
+
 // --- COMPONENTES DE APOYO ---
 const VisualizadorPreferencias = ({ prefs }) => {
   if (!prefs) return null;
@@ -200,7 +201,7 @@ const VisualizadorPreferencias = ({ prefs }) => {
 
 const SenalesConfianza = ({ data }) => {
   const items = [
-    { icon: <FileText size={12}/>, label: "Cédula", verificado: data?.kycVerificado },
+    { icon: <FileText size={12}/>, label: "Cédula", verificado: data?.cedula },
     { icon: <Car size={12}/>, label: "Vehículo", verificado: !!data?.vehiculo?.placa },
     { icon: <Camera size={12}/>, label: "Foto Real", verificado: data?.fotoVerificada },
   ];
@@ -216,7 +217,6 @@ const SenalesConfianza = ({ data }) => {
     </div>
   );
 };
-
 // --- MÓDULO 6: GAMIFICACIÓN Y ONBOARDING VISUAL ---
 const ProgresoGamificacion = ({ userData, onAbrirConfig }) => {
   const misiones = [
@@ -273,6 +273,7 @@ const ProgresoGamificacion = ({ userData, onAbrirConfig }) => {
     </div>
   );
 };
+
 export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
@@ -281,7 +282,7 @@ export default function NavegacionPrincipal({ user }) {
   const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
   const [misSolicitudes, setMisSolicitudes] = useState([]); 
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
-  const [pasajerosViaje, setPasajerosViaje] = useState([]); // MÓDULO 8
+  const [pasajerosViaje, setPasajerosViaje] = useState([]); 
   const [configOpen, setConfigOpen] = useState(false);
 
   // Estados de Chat e Inbox
@@ -339,7 +340,6 @@ export default function NavegacionPrincipal({ user }) {
     if (viajesCompletados >= 10 && calificacion >= 4.5) return "Plata";
     return "Bronce";
   };
-
   // EFECTOS FIREBASE
   useEffect(() => {
     if (!user) return;
@@ -446,7 +446,7 @@ export default function NavegacionPrincipal({ user }) {
            setBusquedasRecientes(nuevas);
            localStorage.setItem("busquedasRecientesDLC", JSON.stringify(nuevas));
         }
-      }, 1000); // Debounce de 1 segundo
+      }, 1000); 
       return () => clearTimeout(timer);
     }
   }, [fCD, fCO]);
@@ -532,7 +532,7 @@ export default function NavegacionPrincipal({ user }) {
   };
 
   const publicarOEditarRuta = async () => {
-    if (userData?.kycVerificado !== true) return alert("🚫 Debes estar verificado para publicar rutas.");
+    if (!userData?.cedula) return alert("🚫 Debes verificar tu identidad (KYC) para publicar rutas.");
     if (!form.cO || !form.cD || !form.precio || !form.horaSalida || !form.horaLlegada) return alert("Completa los campos obligatorios, incluyendo horas.");
     try {
       const dataViaje = { 
@@ -542,7 +542,7 @@ export default function NavegacionPrincipal({ user }) {
         viajesTotales: userData.viajesCompletados || 0,
         rating: userData.rating || 5.0,
         cancelaciones: userData.cancelaciones || 0,
-        vehiculoInfo: { marca: userData.vehiculo?.marca || "", modelo: userData.vehiculo?.modelo || "", placa: userData.vehiculo?.placa || "", color: userData.vehiculo?.color || "" } // COLOR INCLUÍDO
+        vehiculoInfo: { marca: userData.vehiculo?.marca || "", modelo: userData.vehiculo?.modelo || "", placa: userData.vehiculo?.placa || "", color: userData.vehiculo?.color || "" }
       };
       if (viajeEditando) {
          await updateDoc(doc(db, "Viajes", viajeEditando), dataViaje);
@@ -630,7 +630,13 @@ export default function NavegacionPrincipal({ user }) {
       await updateDoc(doc(db, "Solicitudes", viajeActivo.id), actualizacion);
 
       if ((rol === "chofer" && viajeActivo.finalizadoPasajero) || (rol === "pasajero" && viajeActivo.finalizadoChofer)) {
-        const montoFinal = viajeActivo.precioViaje * 0.95; 
+        
+        // --- MÓDULO 11: INCENTIVOS PARA EL KYC (Cálculo de Comisión) ---
+        const tieneKYC = userData?.cedula && userData?.vehiculo?.placa;
+        const porcentajeComision = tieneKYC ? 1.00 : 0.95; // 0% comisión si verificó datos, 5% si no.
+        const montoFinal = viajeActivo.precioViaje * porcentajeComision;
+        // ---------------------------------------------------------------
+
         await updateDoc(doc(db, "Solicitudes", viajeActivo.id), { 
           fase: "finalizado", 
           estado: "completado",
@@ -638,7 +644,7 @@ export default function NavegacionPrincipal({ user }) {
           montoNetoChofer: montoFinal,
           fechaFinalizacion: serverTimestamp()
         });
-        alert(`🏁 ¡Cola Completada con éxito! Fondos liberados.`);
+        alert(`🏁 ¡Cola Completada con éxito! Fondos liberados. (${tieneKYC ? 'Ganaste el 100% por ser Chofer de Confianza' : 'Se retuvo 5% de comisión'})`);
         
         setModalResena({
            visible: true,
@@ -870,20 +876,30 @@ return (
         
         {vista === "inicio" && !viajeSeleccionado && (
            <div className="space-y-6">
-              {/* Botón rápido para alternar si el usuario lo desea (aunque la barra inferior ya lo hace) */}
               <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-4 rounded-2xl text-[10px] font-black uppercase border-2 border-blue-600 text-blue-600 bg-white shadow-sm active:scale-95 transition-all">
                 ESTÁS EN MODO {modo === "pasajero" ? "PASAJERO" : "CHÓFER"} (CAMBIAR) ➔
               </button>
 
-              {/* MÓDULO 6: BANNER PROMOCIONAL INTELIGENTE */}
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 rounded-[30px] shadow-lg shadow-blue-200 flex items-center justify-between text-white relative overflow-hidden">
-                 <div className="absolute -right-4 -top-4 opacity-20 transform rotate-12 pointer-events-none"><Trophy size={80}/></div>
-                 <div className="relative z-10 w-[70%]">
-                    <div className="flex items-center gap-1 mb-1"><Zap size={10} className="text-amber-400 fill-amber-400"/><p className="text-[8px] font-black uppercase tracking-widest text-blue-200">Recompensas Activas</p></div>
-                    <p className="text-xs font-black italic leading-tight">¡Completa tu perfil al 100% y tus próximos 2 viajes no tendrán retención de comisión!</p>
+              {/* MÓDULO 11: INCENTIVOS PARA EL KYC (BANNER INTELIGENTE) */}
+              {(!userData?.cedula || !userData?.vehiculo?.placa) ? (
+                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 rounded-[30px] shadow-lg shadow-blue-200 flex items-center justify-between text-white relative overflow-hidden">
+                    <div className="absolute -right-4 -top-4 opacity-20 transform rotate-12 pointer-events-none"><ShieldCheck size={80}/></div>
+                    <div className="relative z-10 w-[70%]">
+                       <div className="flex items-center gap-1 mb-1"><Zap size={10} className="text-amber-400 fill-amber-400"/><p className="text-[8px] font-black uppercase tracking-widest text-blue-200">Recompensa KYC</p></div>
+                       <p className="text-xs font-black italic leading-tight">Verifica tu perfil (Cédula y Vehículo) y obtén tu próximo viaje sin comisión.</p>
+                    </div>
+                    <button onClick={() => { cambiarVista("perfil"); setTimeout(() => setConfigOpen(true), 300); }} className="relative z-10 bg-white text-indigo-600 px-3 py-2 rounded-xl text-[9px] font-black uppercase shadow-md active:scale-95 transition-transform">Verificar</button>
                  </div>
-                 <button onClick={() => cambiarVista("perfil")} className="relative z-10 bg-white text-indigo-600 px-3 py-2 rounded-xl text-[9px] font-black uppercase shadow-md active:scale-95 transition-transform">Ver Retos</button>
-              </div>
+              ) : (
+                 <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-5 rounded-[30px] shadow-lg shadow-green-200 flex items-center justify-between text-white relative overflow-hidden">
+                    <div className="absolute -right-4 -top-4 opacity-20 transform rotate-12 pointer-events-none"><CheckCircle size={80}/></div>
+                    <div className="relative z-10 w-[70%]">
+                       <div className="flex items-center gap-1 mb-1"><Star size={10} className="text-amber-300 fill-amber-300"/><p className="text-[8px] font-black uppercase tracking-widest text-emerald-100">Beneficio Activo</p></div>
+                       <p className="text-xs font-black italic leading-tight">¡Eres Chofer de Confianza! Disfrutas de 0% de retención en tus viajes.</p>
+                    </div>
+                    <div className="relative z-10 bg-white/20 px-3 py-2 rounded-xl text-[9px] font-black uppercase shadow-sm">Activado</div>
+                 </div>
+              )}
 
               {modo === "chofer" && (
                 <div className="space-y-6 animate-in slide-in-from-right">
@@ -998,7 +1014,7 @@ return (
               )}
            </div>
         )}
-{/* --- VISTA MÓDULO 5: FLUJO ACTIVO --- */}
+        {/* --- VISTA MÓDULO 5: FLUJO ACTIVO --- */}
         {vista === "en_viaje" && viajeActivo && (
           <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
              <div className="bg-blue-600 p-3 rounded-2xl flex items-center justify-between shadow-lg mx-1">
