@@ -1507,16 +1507,16 @@ return (
            <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
         </button>
       </nav>
- {/* RENDER MODAL MÓDULO 14 */}
-      <ModalInstruccionesFoto 
-        isOpen={showFotoInstrucciones} 
-        onClose={() => setShowFotoInstrucciones(false)} 
-        onConfirm={() => {
-          setShowFotoInstrucciones(false);
-          abrirCamara(); 
-        }}
-      />
-    </main> 
-  </div>
+{/* RENDER MODAL MÓDULO 14 */}
+        <ModalInstruccionesFoto 
+          isOpen={showFotoInstrucciones} 
+          onClose={() => setShowFotoInstrucciones(false)} 
+          onConfirm={() => {
+            setShowFotoInstrucciones(false);
+            abrirCamara(); 
+          }}
+        />
+      </main> {/* Cierra el main de la línea 985 */}
+    </div>   {/* Cierra el div de la línea 984 */}
   );
 }
