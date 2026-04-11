@@ -471,7 +471,7 @@ export default function NavegacionPrincipal({ user }) {
   useEffect(() => {
     if (!user) return;
 
-    // Cargar búsquedas recientes del LocalStorage (MÓDULO 10)
+    // Cargar búsquedas recientes del LocalStorage
     const savedSearches = JSON.parse(localStorage.getItem("busquedasRecientesDLC") || "[]");
     setBusquedasRecientes(savedSearches);
 
@@ -480,7 +480,6 @@ export default function NavegacionPrincipal({ user }) {
         const data = snap.data();
         setUserData(data);
         
-        // MODIFICADO PARA MÓDULO 15: Cargamos edad y bio al formulario
         setPerfilForm({
           marca: data.vehiculo?.marca || "", 
           modelo: data.vehiculo?.modelo || "",
@@ -490,11 +489,11 @@ export default function NavegacionPrincipal({ user }) {
           edad: data.edad || "",
           bio: data.bio || ""
         });
-      } // <-- Esta cerraba el if(snap.exists)
-    }); // <-- ESTA LLAVE FALTABA para cerrar el onSnapshot
+      }
+    }); // <--- AQUÍ estaba el error, faltaba cerrar el onSnapshot
 
     return () => unsubUser();
-  }, [user]);
+  }, [user]); // <--- Línea 572: Ahora sí cierra perfecto el useEffect
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
