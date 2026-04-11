@@ -1825,7 +1825,6 @@ return (
         </button>
       </nav>
 
-      {/* COMPONENTES GLOBALES */}
       <ModalInstruccionesFoto 
         isOpen={showFotoInstrucciones} 
         onClose={() => setShowFotoInstrucciones(false)} 
