@@ -85,6 +85,7 @@ const KYCProgressBar = ({ userData, onAbrirConfig }) => {
     </div>
   );
 };
+
 // --- MÓDULO 14: UX DE SEGURIDAD EN FOTOS DE PERFIL ---
 const ModalInstruccionesFoto = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
@@ -1078,24 +1079,7 @@ return (
               <button onClick={() => setModo(modo === "pasajero" ? "chofer" : "pasajero")} className="w-full py-4 rounded-2xl text-[10px] font-black uppercase border-2 border-blue-600 text-blue-600 bg-white shadow-sm active:scale-95 transition-all">
                 ESTÁS EN MODO {modo === "pasajero" ? "PASAJERO" : "CHÓFER"} (CAMBIAR) ➔
               </button>
-             {/* MÓDULO 18: WIZARD DE PUBLICACIÓN (MODO CHOFER) */}
-        {vista === "inicio" && modo === "chofer" && (
-          <div className="space-y-6 animate-in fade-in pb-20 mt-4">
-            
-            {/* INDICADOR DE PASOS */}
-            <div className="flex justify-between items-center px-2">
-              <div className="flex gap-2">
-                {[1, 2, 3].map((num) => (
-                  <div 
-                    key={num} 
-                    className={`h-2 w-10 rounded-full transition-all duration-500 ${pasoWizard >= num ? "bg-blue-600" : "bg-slate-200"}`}
-                  />
-                ))}
-              </div>
-              <span className="text-[10px] font-black uppercase italic text-slate-400 font-bold">Paso {pasoWizard} de 3</span>
-            </div>
-
-            {/* PASO 1: DIRECCIONES CON AUTOCOMPLETADO */}
+             {/* PASO 1: DIRECCIONES CON AUTOCOMPLETADO (CORREGIDO) */}
 {pasoWizard === 1 && (
   <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
     <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">¿A dónde<br/>vas hoy?</h2>
@@ -1103,7 +1087,7 @@ return (
     <div className="space-y-4">
       {/* ORIGEN */}
       <div className="relative">
-        <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+        <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
           <MapPin size={22} className="text-blue-600"/>
           <input 
             type="text" 
@@ -1114,15 +1098,15 @@ return (
           />
         </div>
         
-        {/* LISTA DE SUGERENCIAS FILTRADAS */}
-        {viajeForm.origen.length > 1 && (
+        {/* LISTA DE SUGERENCIAS ORIGEN */}
+        {viajeForm.origen.length > 1 && !viajeForm.origen.includes(',') && (
           <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
             {Object.keys(UBICACIONES).flatMap(estado => 
               UBICACIONES[estado]
                 .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.origen.toLowerCase()))
                 .map(ciudad => (
                   <button 
-                    key={`${estado}-${ciudad}`}
+                    key={`ori-${estado}-${ciudad}`}
                     onClick={() => setViajeForm({...viajeForm, origen: `${ciudad}, ${estado}`})}
                     className="w-full text-left p-4 hover:bg-blue-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
                   >
@@ -1134,9 +1118,9 @@ return (
         )}
       </div>
 
-      {/* DESTINO (Igual que arriba) */}
+      {/* DESTINO */}
       <div className="relative">
-        <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+        <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-green-400">
           <Navigation size={22} className="text-green-600"/>
           <input 
             type="text" 
@@ -1147,14 +1131,15 @@ return (
           />
         </div>
 
-        {viajeForm.destino.length > 1 && (
+        {/* LISTA DE SUGERENCIAS DESTINO */}
+        {viajeForm.destino.length > 1 && !viajeForm.destino.includes(',') && (
           <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
             {Object.keys(UBICACIONES).flatMap(estado => 
               UBICACIONES[estado]
                 .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.destino.toLowerCase()))
                 .map(ciudad => (
                   <button 
-                    key={`${estado}-${ciudad}`}
+                    key={`dest-${estado}-${ciudad}`}
                     onClick={() => setViajeForm({...viajeForm, destino: `${ciudad}, ${estado}`})}
                     className="w-full text-left p-4 hover:bg-green-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
                   >
@@ -1857,3 +1842,5 @@ return (
     </div>
   );
 };
+
+export default NavegacionPrincipal; // <--- ESTA LÍNEA ES OBLIGATORIA
