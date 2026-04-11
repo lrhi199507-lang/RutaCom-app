@@ -466,34 +466,34 @@ export default function NavegacionPrincipal({ user }) {
     if (viajesCompletados >= 10 && calificacion >= 4.5) return "Plata";
     return "Bronce";
   };
-  // EFECTOS FIREBASE
-useEffect(() => {
-  if (!user) return;
+// EFECTOS FIREBASE
+  useEffect(() => {
+    if (!user) return;
 
-  // Cargar búsquedas recientes del LocalStorage (MÓDULO 10)
-  const savedSearches = JSON.parse(localStorage.getItem("busquedasRecientesDLC") || "[]");
-  setBusquedasRecientes(savedSearches);
+    // Cargar búsquedas recientes del LocalStorage (MÓDULO 10)
+    const savedSearches = JSON.parse(localStorage.getItem("busquedasRecientesDLC") || "[]");
+    setBusquedasRecientes(savedSearches);
 
-  const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
-    if (snap.exists()) {
-      const data = snap.data();
-      setUserData(data);
-      
-      // MODIFICADO PARA MÓDULO 15: Cargamos edad y bio al formulario
-      setPerfilForm({
-        marca: data.vehiculo?.marca || "", 
-        modelo: data.vehiculo?.modelo || "",
-        placa: data.vehiculo?.placa || "", 
-        color: data.vehiculo?.color || "", 
-        cedula: data.cedula || "",
-        edad: data.edad || "", // <-- AÑADIDO
-        bio: data.bio || ""    // <-- AÑADIDO
-      });
-    }
-  });
+    const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserData(data);
+        
+        // MODIFICADO PARA MÓDULO 15: Cargamos edad y bio al formulario
+        setPerfilForm({
+          marca: data.vehiculo?.marca || "", 
+          modelo: data.vehiculo?.modelo || "",
+          placa: data.vehiculo?.placa || "", 
+          color: data.vehiculo?.color || "", 
+          cedula: data.cedula || "",
+          edad: data.edad || "",
+          bio: data.bio || ""
+        });
+      }
+    });
 
-  return () => unsubUser(); // Es buena práctica retornar el unsub para evitar fugas de memoria
-}, [user]);
+    return () => unsubUser();
+  }, [user]);
 
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
