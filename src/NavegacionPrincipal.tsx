@@ -14,6 +14,28 @@ import {
   FileText, Camera, ShieldAlert, Wind, CigaretteOff, PawPrint, MessageSquare, Briefcase, Zap, Palette,
   PlusCircle, History, DollarSign, ChevronRight, LifeBuoy
 } from "lucide-react";
+const UBICACIONES = {
+  "Amazonas": ["Puerto Ayacucho"], 
+  "Anzoátegui": ["Barcelona", "Puerto La Cruz"],
+  "Apure": ["San Fernando"], 
+  "Aragua": ["Maracay", "Turmero", "La Victoria"],
+  "Barinas": ["Barinas"], 
+  "Bolívar": ["Ciudad Guayana", "Ciudad Bolívar"],
+  "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego"],
+  "Cojedes": ["San Carlos", "Tinaquillo"], 
+  "Distrito Capital": ["Caracas"],
+  "Falcón": ["Coro", "Punto Fijo"], 
+  "Lara": ["Barquisimeto", "Cabudare"],
+  "Mérida": ["Mérida", "El Vigía"], 
+  "Miranda": ["Los Teques", "Chacao", "Baruta"],
+  "Monagas": ["Maturín"], 
+  "Nueva Esparta": ["Porlamar"], 
+  "Portuguesa": ["Guanare"],
+  "Táchira": ["San Cristóbal"], 
+  "Trujillo": ["Valera"], 
+  "Yaracuy": ["San Felipe"],
+  "Zulia": ["Maracaibo", "San Francisco"]
+};
 // --- MÓDULO 13: GAMIFICACIÓN DE LA CONFIANZA (KYC Progress Bar) ---
 const KYCProgressBar = ({ userData, onAbrirConfig }) => {
   const hitos = [
@@ -143,68 +165,6 @@ const PantallaExito = ({ visible, titulo, subtitulo, onClose }) => {
     </div>
   );
 };
-const UBICACIONES = {
-  "Amazonas": ["Puerto Ayacucho"], 
-  "Anzoátegui": ["Barcelona", "Puerto La Cruz"],
-  "Apure": ["San Fernando"], 
-  "Aragua": ["Maracay", "Turmero", "La Victoria"],
-  "Barinas": ["Barinas"], 
-  "Bolívar": ["Ciudad Guayana", "Ciudad Bolívar"],
-  "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego"],
-  "Cojedes": ["San Carlos", "Tinaquillo"], 
-  "Distrito Capital": ["Caracas"],
-  "Falcón": ["Coro", "Punto Fijo"], 
-  "Lara": ["Barquisimeto", "Cabudare"],
-  "Mérida": ["Mérida", "El Vigía"], 
-  "Miranda": ["Los Teques", "Chacao", "Baruta"],
-  "Monagas": ["Maturín"], 
-  "Nueva Esparta": ["Porlamar"], 
-  "Portuguesa": ["Guanare"],
-  "Táchira": ["San Cristóbal"], 
-  "Trujillo": ["Valera"], 
-  "Yaracuy": ["San Felipe"],
-  "Zulia": ["Maracaibo", "San Francisco"]
-};
-// Referencias a los elementos
-const inputEstado = document.getElementById('input-estado');
-const listaEstados = document.getElementById('lista-estados');
-const inputCiudad = document.getElementById('input-ciudad');
-const listaCiudades = document.getElementById('lista-ciudades');
-
-// 1. Llenar los estados apenas cargue la página
-const estados = Object.keys(UBICACIONES);
-estados.forEach(estado => {
-    let option = document.createElement('option');
-    option.value = estado;
-    listaEstados.appendChild(option);
-});
-
-// 2. Evento cuando el usuario escribe/selecciona un estado
-inputEstado.addEventListener('input', function() {
-    const seleccion = this.value;
-
-    // Si lo que escribió es un estado válido de nuestra lista
-    if (UBICACIONES[seleccion]) {
-        // Limpiar lista de ciudades anterior
-        listaCiudades.innerHTML = "";
-        
-        // Llenar nuevas ciudades
-        UBICACIONES[seleccion].forEach(ciudad => {
-            let option = document.createElement('option');
-            option.value = ciudad;
-            listaCiudades.appendChild(option);
-        });
-
-        // Habilitar el input de ciudades
-        inputCiudad.disabled = false;
-        inputCiudad.placeholder = "Escribe o selecciona ciudad";
-    } else {
-        // Si borra o escribe algo inválido, bloqueamos el segundo input
-        inputCiudad.disabled = true;
-        inputCiudad.value = "";
-        inputCiudad.placeholder = "Primero elige un estado";
-    }
-});
 // --- MÓDULO 1 & 4: REPUTACIÓN Y BADGES ---
 const BadgeEstatus = ({ nivel, mini = false }) => {
   const configs = {
@@ -1135,42 +1095,87 @@ return (
               <span className="text-[10px] font-black uppercase italic text-slate-400 font-bold">Paso {pasoWizard} de 3</span>
             </div>
 
-            {/* PASO 1: DIRECCIONES */}
-            {pasoWizard === 1 && (
-              <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
-                <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">¿A dónde<br/>vas hoy?</h2>
-                <div className="space-y-3 relative">
-                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
-                    <MapPin size={22} className="text-blue-600"/>
-                    <input 
-                      type="text" 
-                      placeholder="Punto de salida" 
-                      className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
-                      value={viajeForm.origen}
-                      onChange={(e) => setViajeForm({...viajeForm, origen: e.target.value})}
-                    />
-                  </div>
-                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
-                    <Navigation size={22} className="text-green-600"/>
-                    <input 
-                      type="text" 
-                      placeholder="Punto de llegada" 
-                      className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
-                      value={viajeForm.destino}
-                      onChange={(e) => setViajeForm({...viajeForm, destino: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setPasoWizard(2)}
-                  disabled={!viajeForm.origen || !viajeForm.destino}
-                  className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30 transition-all active:scale-95"
-                >
-                  Continuar a la ruta
-                </button>
-              </div>
-            )}
+            {/* PASO 1: DIRECCIONES CON AUTOCOMPLETADO */}
+{pasoWizard === 1 && (
+  <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
+    <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">¿A dónde<br/>vas hoy?</h2>
+    
+    <div className="space-y-4">
+      {/* ORIGEN */}
+      <div className="relative">
+        <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+          <MapPin size={22} className="text-blue-600"/>
+          <input 
+            type="text" 
+            placeholder="Punto de salida" 
+            className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
+            value={viajeForm.origen}
+            onChange={(e) => setViajeForm({...viajeForm, origen: e.target.value})}
+          />
+        </div>
+        
+        {/* LISTA DE SUGERENCIAS FILTRADAS */}
+        {viajeForm.origen.length > 1 && (
+          <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+            {Object.keys(UBICACIONES).flatMap(estado => 
+              UBICACIONES[estado]
+                .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.origen.toLowerCase()))
+                .map(ciudad => (
+                  <button 
+                    key={`${estado}-${ciudad}`}
+                    onClick={() => setViajeForm({...viajeForm, origen: `${ciudad}, ${estado}`})}
+                    className="w-full text-left p-4 hover:bg-blue-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
+                  >
+                    <MapPin size={14} className="text-blue-400"/> {ciudad}, {estado}
+                  </button>
+                ))
+            ).slice(0, 5)}
+          </div>
+        )}
+      </div>
 
+      {/* DESTINO (Igual que arriba) */}
+      <div className="relative">
+        <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100">
+          <Navigation size={22} className="text-green-600"/>
+          <input 
+            type="text" 
+            placeholder="Punto de llegada" 
+            className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
+            value={viajeForm.destino}
+            onChange={(e) => setViajeForm({...viajeForm, destino: e.target.value})}
+          />
+        </div>
+
+        {viajeForm.destino.length > 1 && (
+          <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+            {Object.keys(UBICACIONES).flatMap(estado => 
+              UBICACIONES[estado]
+                .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.destino.toLowerCase()))
+                .map(ciudad => (
+                  <button 
+                    key={`${estado}-${ciudad}`}
+                    onClick={() => setViajeForm({...viajeForm, destino: `${ciudad}, ${estado}`})}
+                    className="w-full text-left p-4 hover:bg-green-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
+                  >
+                    <Navigation size={14} className="text-green-400"/> {ciudad}, {estado}
+                  </button>
+                ))
+            ).slice(0, 5)}
+          </div>
+        )}
+      </div>
+    </div>
+
+    <button 
+      onClick={() => setPasoWizard(2)}
+      disabled={!viajeForm.origen.includes(',') || !viajeForm.destino.includes(',')}
+      className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30 transition-all active:scale-95"
+    >
+      Continuar a la ruta
+    </button>
+  </div>
+)}
             {/* PASO 2: RUTAS Y PARADAS */}
             {pasoWizard === 2 && (
               <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
