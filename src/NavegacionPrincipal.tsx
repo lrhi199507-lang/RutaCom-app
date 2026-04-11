@@ -1484,39 +1484,42 @@ return (
                   <button onClick={guardarDatosPerfil} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-xl active:scale-95 transition-all mt-2">Actualizar Credenciales</button>
                 </div>
               )}
-              <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors"><LogOut size={20} /> Salir de la plataforma</button>
-           </div>
-        )}
+              <button onClick={() => signOut(auth)} className="w-full p-5 text-red-500 font-black uppercase text-[10px] flex items-center justify-center gap-3 italic tracking-widest bg-white rounded-[30px] border shadow-sm mt-4 active:bg-red-50 transition-colors">
+                <LogOut size={20} /> Salir de la plataforma
+              </button>
+            </div>
+          )
+        }
       </main>
 
-      {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR (5 PILARES) */}
+      {/* MÓDULO 10: BARRA DE NAVEGACIÓN INFERIOR */}
       <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl">
         <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-           <Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span>
+          <Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span>
         </button>
         <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "chofer" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-           <PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span>
+          <PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span>
         </button>
         <button onClick={() => cambiarVista("mis_viajes")} className={`flex flex-col items-center gap-1 transition-all ${vista === "mis_viajes" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-           <MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Tus Viajes</span>
+          <MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Tus Viajes</span>
         </button>
         <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inbox" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-           <MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span>
+          <MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span>
         </button>
         <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-           <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
+          <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
         </button>
       </nav>
-{/* RENDER MODAL MÓDULO 14 */}
-        <ModalInstruccionesFoto 
-          isOpen={showFotoInstrucciones} 
-          onClose={() => setShowFotoInstrucciones(false)} 
-          onConfirm={() => {
-            setShowFotoInstrucciones(false);
-            abrirCamara(); 
-          }}
-        />
-      </main> {/* Cierra el main de la línea 985 */}
-    </div>   {/* Cierra el div de la línea 984 */}
+
+      {/* RENDER MODAL MÓDULO 14 */}
+      <ModalInstruccionesFoto 
+        isOpen={showFotoInstrucciones} 
+        onClose={() => setShowFotoInstrucciones(false)} 
+        onConfirm={() => {
+          setShowFotoInstrucciones(false);
+          abrirCamara(); 
+        }}
+      />
+    </div>
   );
 }
