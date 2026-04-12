@@ -294,7 +294,6 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
       <span className="text-[8px] font-black uppercase tracking-wider">Máximo 2 Atrás</span>
     </div>
   )}
-</div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="flex items-center text-slate-700">
                 <Star size={10} className="fill-amber-500 text-amber-500" />
