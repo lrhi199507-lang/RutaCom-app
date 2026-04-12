@@ -1202,26 +1202,36 @@ const eliminarViaje = async (idViaje) => {
                           <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 text-red-600">
                             <div className="flex items-center gap-3"><LogOut size={18}/><span className="text-xs font-black uppercase italic">Cerrar Sesión</span></div>
                           </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </main>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </main>
 
-    <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
-      <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 ${vista === "inicio" && modo === "pasajero" ? "text-blue-600" : "text-slate-300"}`}><Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span></button>
-      <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 ${vista === "inicio" && modo === "chofer" ? "text-blue-600" : "text-slate-300"}`}><PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span></button>
-      <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 ${vista === "inbox" ? "text-blue-600" : "text-slate-300"}`}><MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span></button>
-      <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 ${vista === "perfil" ? "text-blue-600" : "text-slate-300"}`}><User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
-    </nav>
+      <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
+        <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 ${vista === "inicio" && modo === "pasajero" ? "text-blue-600" : "text-slate-300"}`}><Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span></button>
+        <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 ${vista === "inicio" && modo === "chofer" ? "text-blue-600" : "text-slate-300"}`}><PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span></button>
+        <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 ${vista === "inbox" ? "text-blue-600" : "text-slate-300"}`}><MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span></button>
+        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 ${vista === "perfil" ? "text-blue-600" : "text-slate-300"}`}><User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
+      </nav>
 
-    <ModalBusquedaAvanzada isOpen={showSearchModal.visible} onClose={() => setShowSearchModal({ ...showSearchModal, visible: false })} onSelect={(estado, ciudad) => { if (showSearchModal.type === 'origen') { setFEO(estado); setFCO(ciudad); } else { setFED(estado); setFCD(ciudad); } }} ubicaciones={UBICACIONES} />
-  </div>
+      <ModalBusquedaAvanzada 
+        isOpen={showSearchModal.visible} 
+        onClose={() => setShowSearchModal({ ...showSearchModal, visible: false })} 
+        onSelect={(estado, ciudad) => { 
+          if (showSearchModal.type === 'origen') { setFEO(estado); setFCO(ciudad); } 
+          else { setFED(estado); setFCD(ciudad); } 
+        }} 
+        ubicaciones={UBICACIONES} 
+      />
+    </div>
   );
 };
+
+export default NavegacionPrincipal;
