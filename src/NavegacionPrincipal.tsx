@@ -450,7 +450,6 @@ export default function NavegacionPrincipal({ user }) {
   const [opinionesPerfil, setOpinionesPerfil] = useState([]); 
   const [modalOpinionesVisible, setModalOpinionesVisible] = useState(false);
 
-  const [viajeEditando, setViajeEditando] = useState(null); 
 
   // Filtros Búsqueda (Pasajero)
   const [fEO, setFEO] = useState("");
