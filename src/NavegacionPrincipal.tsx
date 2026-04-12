@@ -1052,101 +1052,114 @@ const eliminarViaje = async (idViaje) => {
                     </div>
                   ) : (
                     <>
-                      {/* PASO 1: DIRECCIONES CON AUTOCOMPLETADO */}
-                      {pasoWizard === 1 && (
-                        <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
-                          <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">¿Hacia dónde<br/>vas a manejar?</h2>
-                          
-                          <div className="space-y-4">
-                            {/* ORIGEN */}
-                            <div className="relative">
-                              <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
-                                <MapPin size={22} className="text-blue-600"/>
-                                <input 
-                                  type="text" 
-                                  placeholder="Punto de salida (Ej. Valencia)" 
-                                  className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
-                                  value={viajeForm.origen}
-                                  onChange={(e) => setViajeForm({...viajeForm, origen: e.target.value})}
-                                />
-                              </div>
-                              
-                              {/* LISTA DE SUGERENCIAS ORIGEN */}
-                              {viajeForm.origen.length > 1 && !viajeForm.origen.includes(',') && (
-                                <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
-                                  {Object.keys(UBICACIONES).flatMap(estado => 
-                                    UBICACIONES[estado]
-                                      .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.origen.toLowerCase()))
-                                      .map(ciudad => (
-                                        <button 
-                                          key={`ori-${estado}-${ciudad}`}
-                                          onClick={() => setViajeForm({...viajeForm, origen: `${ciudad}, ${estado}`})}
-                                          className="w-full text-left p-4 hover:bg-blue-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
-                                        >
-                                          <MapPin size={14} className="text-blue-400"/> {ciudad}, {estado}
-                                        </button>
-                                      ))
-                                  ).slice(0, 5)}
-                                </div>
-                              )}
-                            </div>
+                     {/* PASO 1: DIRECCIONES CON AUTOCOMPLETADO */}
+          {pasoWizard === 1 && (
+            <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
+              <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">¿Hacia dónde<br/>vas a manejar?</h2>
+              
+              <div className="space-y-4">
+                {/* ORIGEN */}
+                <div className="relative">
+                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
+                    <MapPin size={22} className="text-blue-600"/>
+                    <input 
+                      type="text" 
+                      placeholder="Punto de salida (Ej. Valencia)" 
+                      className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
+                      value={viajeForm.origen}
+                      onChange={(e) => setViajeForm({...viajeForm, origen: e.target.value})}
+                    />
+                  </div>
+                  
+                  {viajeForm.origen.length > 1 && !viajeForm.origen.includes(',') && (
+                    <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                      {Object.keys(UBICACIONES).flatMap(estado => 
+                        UBICACIONES[estado]
+                          .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.origen.toLowerCase()))
+                          .map(ciudad => (
+                            <button 
+                              key={`ori-${estado}-${ciudad}`}
+                              onClick={() => setViajeForm({...viajeForm, origen: `${ciudad}, ${estado}`})}
+                              className="w-full text-left p-4 hover:bg-blue-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
+                            >
+                              <MapPin size={14} className="text-blue-400"/> {ciudad}, {estado}
+                            </button>
+                          ))
+                      ).slice(0, 5)}
+                    </div>
+                  )}
+                </div>
 
-                            {/* DESTINO */}
-                            <div className="relative">
-                              <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-green-400">
-                                <Navigation size={22} className="text-green-600"/>
-                                <input 
-                                  type="text" 
-                                  placeholder="Punto de llegada (Ej. Caracas)" 
-                                  className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
-                                  value={viajeForm.destino}
-                                  onChange={(e) => setViajeForm({...viajeForm, destino: e.target.value})}
-                                />
-                              </div>
+                {/* DESTINO */}
+                <div className="relative">
+                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-green-400">
+                    <Navigation size={22} className="text-green-600"/>
+                    <input 
+                      type="text" 
+                      placeholder="Punto de llegada (Ej. Caracas)" 
+                      className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
+                      value={viajeForm.destino}
+                      onChange={(e) => setViajeForm({...viajeForm, destino: e.target.value})}
+                    />
+                  </div>
 
-                              {/* LISTA DE SUGERENCIAS DESTINO */}
-                              {viajeForm.destino.length > 1 && !viajeForm.destino.includes(',') && (
-                                <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
-                                  {Object.keys(UBICACIONES).flatMap(estado => 
-                                    UBICACIONES[estado]
-                                      .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.destino.toLowerCase()))
-                                      .map(ciudad => (
-                                        <button 
-                                          key={`dest-${estado}-${ciudad}`}
-                                        <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] active:scale-95 transition-all">Buscar</button>
-          <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 transition-all">Publicar</button>
-        </div>
-      </div>
-    ) : (
-      <div className="space-y-3 overflow-y-auto">
-        {historialChats.map(c => {
-          const soyChofer = misViajesPublicados.some(v => v.id === c.idViaje);
-          return (
-            <div 
-              key={c.chatId} 
-              onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} 
-              className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group relative overflow-hidden"
-            >
-              <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[7px] font-black uppercase italic ${soyChofer ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                Chat como {soyChofer ? 'Chofer' : 'Pasajero'}
+                  {viajeForm.destino.length > 1 && !viajeForm.destino.includes(',') && (
+                    <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                      {Object.keys(UBICACIONES).flatMap(estado => 
+                        UBICACIONES[estado]
+                          .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.destino.toLowerCase()))
+                          .map(ciudad => (
+                            <button 
+                              key={`dest-${estado}-${ciudad}`}
+                              onClick={() => setViajeForm({...viajeForm, destino: `${ciudad}, ${estado}`})}
+                              className="w-full text-left p-4 hover:bg-blue-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
+                            >
+                              <Navigation size={14} className="text-green-400"/> {ciudad}, {estado}
+                            </button>
+                          ))
+                      ).slice(0, 5)}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors shrink-0">
-                <User size={20} className="text-blue-500 group-hover:text-white"/>
+
+              <div className="flex gap-3">
+                <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] active:scale-95 transition-all">Buscar</button>
+                <button onClick={() => setPasoWizard(2)} disabled={!viajeForm.origen || !viajeForm.destino} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 transition-all disabled:opacity-50">Siguiente Paso</button>
               </div>
-              <div className="flex-1 overflow-hidden pt-2">
-                <p className="text-xs font-black italic uppercase text-slate-800">{c.nombreOtro}</p>
-                <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">{c.ultimoMensaje}</p>
-                <p className="text-[8px] font-black text-blue-600 mt-1 opacity-60 uppercase italic">
-                  Viaje: {c.idViaje.slice(-5)}
-                </p>
-              </div>
-              <ChevronLeft size={16} className="text-slate-300 transform rotate-180 shrink-0"/>
             </div>
-          );
-        })}
-      </div>
-    )}
+          )}
 
+          {/* LISTADO DE CHATS (Si no estás en el wizard) */}
+          {vista === "inbox" && (
+            <div className="space-y-3 overflow-y-auto">
+              {historialChats.map(c => {
+                const soyChofer = misViajesPublicados.some(v => v.id === c.idViaje);
+                return (
+                  <div 
+                    key={c.chatId} 
+                    onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} 
+                    className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group relative overflow-hidden"
+                  >
+                    <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[7px] font-black uppercase italic ${soyChofer ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                      Chat como {soyChofer ? 'Chofer' : 'Pasajero'}
+                    </div>
+                    <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors shrink-0">
+                      <User size={20} className="text-blue-500 group-hover:text-white"/>
+                    </div>
+                    <div className="flex-1 overflow-hidden pt-2">
+                      <p className="text-xs font-black italic uppercase text-slate-800">{c.nombreOtro}</p>
+                      <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">{c.ultimoMensaje}</p>
+                      <p className="text-[8px] font-black text-blue-600 mt-1 opacity-60 uppercase italic">
+                        Viaje: {c.idViaje.slice(-5)}
+                      </p>
+                    </div>
+                    <ChevronLeft size={16} className="text-slate-300 transform rotate-180 shrink-0"/>
+                  </div>
+                );
+              })}
+            </div>
+          )}
     {/* SECCIONES: WALLET, SOPORTE, PERFIL */}
     {vista === "wallet" && (
       <div className="space-y-6 animate-in fade-in">
