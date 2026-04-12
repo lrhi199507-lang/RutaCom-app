@@ -1186,7 +1186,7 @@ const eliminarViaje = async (idViaje) => {
                             </div>
                           )}
 
-                          {vista === "perfil" && (
+                         {vista === "perfil" && (
                             <div className="space-y-4 animate-in fade-in pb-10">
                               <div className="flex bg-slate-100 p-1.5 rounded-[25px] border shadow-inner">
                                 <button onClick={() => setPestañaActiva("perfil")} className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "perfil" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}>Mi Perfil</button>
@@ -1204,15 +1204,17 @@ const eliminarViaje = async (idViaje) => {
                                   <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 text-red-600">
                                     <div className="flex items-center gap-3"><LogOut size={18}/><span className="text-xs font-black uppercase italic">Cerrar Sesión</span></div>
                                   </button>
-                               </div>
+                                </div>
+                              )}
+                            </div>
                           )}
-                        </div>
+                        </div> // CIERRE del div className="space-y-3 overflow-y-auto" (Línea 1135)
                       )}
                     </>
                   )}
-                </div> {/* Cierre del div de modo === "chofer" */}
-              )} 
-            </main> {/* Cierre correcto de la etiqueta main */}
+                </div> // CIERRE del div className="space-y-6 animate-in slide-in-from-right" (Línea 1043)
+              )}
+            </main>
 
         <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
           <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 ${vista === "inicio" && modo === "pasajero" ? "text-blue-600" : "text-slate-300"}`}><Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span></button>
@@ -1225,36 +1227,3 @@ const eliminarViaje = async (idViaje) => {
       </div>
   );
 };
-
-const ModalBusquedaAvanzada = ({ isOpen, onClose, onSelect, ubicaciones }) => {
-  const [busqueda, setBusqueda] = useState("");
-  if (!isOpen) return null;
-  const resultados = Object.keys(ubicaciones).reduce((acc, estado) => {
-    const ciudades = ubicaciones[estado].filter(c => c.toLowerCase().includes(busqueda.toLowerCase()));
-    if (estado.toLowerCase().includes(busqueda.toLowerCase()) || ciudades.length > 0) acc[estado] = ciudades;
-    return acc;
-  }, {});
-
-  return (
-    <div className="fixed inset-0 z-[200] bg-white flex flex-col">
-      <header className="p-6 pt-12 border-b flex items-center gap-4">
-        <button onClick={onClose}><ChevronLeft size={24}/></button>
-        <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar ciudad..." className="flex-1 bg-slate-100 p-4 rounded-2xl outline-none" autoFocus />
-      </header>
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {Object.keys(resultados).map(estado => (
-          <div key={estado} className="space-y-2">
-            <p className="text-[10px] font-black uppercase text-blue-600 px-2">Edo. {estado}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {resultados[estado].map(ciudad => (
-                <button key={ciudad} onClick={() => { onSelect(estado, ciudad); onClose(); }} className="p-4 bg-slate-50 rounded-2xl border text-xs font-bold text-left">{ciudad}</button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default NavegacionPrincipal;
