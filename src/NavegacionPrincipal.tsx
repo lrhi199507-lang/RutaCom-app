@@ -3,7 +3,7 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import {
   doc, onSnapshot, collection, query, addDoc, 
-  serverTimestamp, orderBy, updateDoc, where, getDocs
+  serverTimestamp, orderBy, updateDoc, where, getDocs, deleteDoc
 } from "firebase/firestore";
 import {
   Wallet, User, LogOut, Car, Send, ShieldCheck, 
@@ -404,16 +404,23 @@ const ProgresoGamificacion = ({ userData, onAbrirConfig }) => {
 export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero"); // "pasajero" o "chofer"
+  const [showSearchModal, setShowSearchModal] = useState({ visible: false, type: 'origen' }); // type: 'origen' o 'destino'
+const [searchTerm, setSearchTerm] = useState("");
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
   const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
   const [misSolicitudes, setMisSolicitudes] = useState([]);
+  const [viajes, setViajes] = useState([]); // Todos los viajes (para búsqueda)
+const [misViajesPublicados, setMisViajesPublicados] = useState([]); // NUEVO: Tus viajes creados
+const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
+const [misSolicitudes, setMisSolicitudes] = useState([]);
+  const [viajeEditando, setViajeEditando] = useState(null); // Almacenará el ID del viaje a editar
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [pasajerosViaje, setPasajerosViaje] = useState([]); 
   const [configOpen, setConfigOpen] = useState(false);
   const [pestañaActiva, setPestañaActiva] = useState("perfil");
   const [successData, setSuccessData] = useState({ show: false, titulo: "", subtitulo: "" });
-
+  
   // MÓDULO 18: WIZARD DE PUBLICACIÓN (Chofer)
   const [pasoWizard, setPasoWizard] = useState(1);
   const [viajeForm, setViajeForm] = useState({
@@ -548,11 +555,15 @@ export default function NavegacionPrincipal({ user }) {
       const msjs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setChatSoporte(msjs.sort((a, b) => (a.fecha?.toMillis() || 0) - (b.fecha?.toMillis() || 0)));
     });
-
+// 5.5 Suscripción a Mis Viajes Publicados (Como Chofer)
+const qMisViajes = query(collection(db, "Viajes"), where("idCreador", "==", user.uid), orderBy("fecha", "desc"));
+const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
+  setMisViajesPublicados(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+});
     return () => { 
       unsubUser(); unsubViajes();
       unsubSoli(); unsubMisSoli(); 
-      unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo();
+      unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo(); unsubMisViajes()
     };
   }, [user]);
 
@@ -624,46 +635,93 @@ export default function NavegacionPrincipal({ user }) {
       setNuevoMensaje("");
     } catch (e) { console.error(e); }
   };
-
+const prepararEdicion = (viaje) => {
+  setViajeEditando(viaje.id); // Guardamos el ID
+  setViajeForm({
+    origen: `${viaje.cO}, ${viaje.eO}`,
+    destino: `${viaje.cD}, ${viaje.eD}`,
+    precio: viaje.precio.toString(),
+    asientos: viaje.puestos,
+    horaSalida: viaje.horaSalida,
+    horaLlegada: viaje.horaLlegada,
+    preferencias: viaje.preferencias || { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true, maxDosAtras: false }
+  });
+  setStep(1); // Iniciamos desde el paso 1 del wizard
+  setVista("publicar"); // Cambiamos a la vista de publicación
+};
   const publicarRutaWizard = async () => {
-    if (!userData?.cedula) return alert("🚫 Debes verificar tu identidad (KYC) para publicar rutas.");
-    if (!viajeForm.origen || !viajeForm.destino || !viajeForm.precio || !viajeForm.horaSalida || !viajeForm.horaLlegada) {
-      return alert("Completa todos los campos obligatorios.");
+  if (!userData?.cedula) return alert("🚫 Debes verificar tu identidad (KYC) para publicar rutas.");
+  if (!viajeForm.origen || !viajeForm.destino || !viajeForm.precio || !viajeForm.horaSalida || !viajeForm.horaLlegada) {
+    return alert("Completa todos los campos obligatorios.");
+  }
+
+  try {
+    const oParts = viajeForm.origen.split(",");
+    const dParts = viajeForm.destino.split(",");
+
+    const dataViaje = {
+      idCreador: user.uid, // <--- ESTO ES VITAL para que aparezca en "Tus Viajes"
+      conductor: userData.nombre,
+      cO: oParts[0]?.trim() || viajeForm.origen,
+      eO: oParts[1]?.trim() || "",
+      cD: dParts[0]?.trim() || viajeForm.destino,
+      eD: dParts[1]?.trim() || "",
+      precio: Number(viajeForm.precio),
+      puestos: Number(viajeForm.asientos),
+      horaSalida: viajeForm.horaSalida,
+      horaLlegada: viajeForm.horaLlegada,
+      preferencias: viajeForm.preferencias,
+      viajesTotales: userData.viajesCompletados || 0,
+      rating: userData.rating || 5.0,
+      fechaActualizacion: serverTimestamp(), // Registramos cuándo se movió
+      vehiculoInfo: { 
+        marca: userData.vehiculo?.marca || "", 
+        modelo: userData.vehiculo?.modelo || "", 
+        placa: userData.vehiculo?.placa || "", 
+        color: userData.vehiculo?.color || "" 
+      }
+    };
+
+    if (viajeEditando) {
+      // SI HAY UN ID, ACTUALIZAMOS
+      await updateDoc(doc(db, "Viajes", viajeEditando), dataViaje);
+      alert("✅ Viaje actualizado correctamente.");
+    } else {
+      // SI NO HAY ID, ES NUEVO
+      await addDoc(collection(db, "Viajes"), { ...dataViaje, fecha: serverTimestamp() });
+      alert("✅ Viaje publicado con éxito.");
     }
-    
+
+    // LIMPIEZA TOTAL
+    setViajeEditando(null);
+    setViajeForm({
+      origen: "", destino: "", paradas: [], rutaSeleccionada: null, precio: "", asientos: 3,
+      horaSalida: "", horaLlegada: "",
+      preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true, maxDosAtras: false }
+    });
+    setStep(1);
+    setVista("inicio");
+
+  } catch (e) {
+    console.error("Error:", e);
+    alert("Error al procesar la solicitud.");
+  }
+};
+  // Función para eliminar un viaje (MÓDULO 12)
+const eliminarViaje = async (idViaje) => {
+  // Siempre es mejor pedir confirmación antes de borrar algo de la DB
+  const confirmar = window.confirm("¿Estás seguro de que quieres eliminar esta ruta? No podrás deshacer esta acción.");
+  
+  if (confirmar) {
     try {
-      // Extraemos ciudad y estado (asume formato "Ciudad, Estado")
-      const oParts = viajeForm.origen.split(",");
-      const dParts = viajeForm.destino.split(",");
-
-      const dataViaje = { 
-        cO: oParts[0]?.trim() || viajeForm.origen, 
-        eO: oParts[1]?.trim() || "",
-        cD: dParts[0]?.trim() || viajeForm.destino,
-        eD: dParts[1]?.trim() || "",
-        precio: Number(viajeForm.precio), 
-        puestos: Number(viajeForm.asientos),
-        horaSalida: viajeForm.horaSalida,
-        horaLlegada: viajeForm.horaLlegada,
-        preferencias: viajeForm.preferencias,
-        viajesTotales: userData.viajesCompletados || 0,
-        rating: userData.rating || 5.0,
-        cancelaciones: userData.cancelaciones || 0,
-        vehiculoInfo: { marca: userData.vehiculo?.marca || "", modelo: userData.vehiculo?.modelo || "", placa: userData.vehiculo?.placa || "", color: userData.vehiculo?.color || "" }
-      };
-
-      await addDoc(collection(db, "Viajes"), { ...dataViaje, conductor: userData.nombre, idCreador: user.uid, fecha: serverTimestamp() });
-      
-      setSuccessData({
-        show: true,
-        titulo: "¡Viaje Publicado!",
-        subtitulo: `Tu ruta hacia ${dataViaje.cD} está activa. Busca pasajeros en tu lista.`
-      });
-      setPasoWizard(1);
-      setViajeForm({ origen: "", destino: "", paradas: [], rutaSeleccionada: null, precio: "", asientos: 3, horaSalida: "", horaLlegada: "", preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true }});
-    } catch (e) { alert("Error al guardar."); }
-  };
-
+      await deleteDoc(doc(db, "Viajes", idViaje));
+      // No necesitas hacer nada más, onSnapshot actualizará la lista automáticamente
+    } catch (e) {
+      console.error("Error al eliminar:", e);
+      alert("No se pudo eliminar el viaje.");
+    }
+  }
+};
   const enviarSolicitudDirecta = async (viaje) => {
     if (user.uid === viaje.idCreador) return alert("No puedes pedirte una cola a ti mismo.");
     const yaExiste = misSolicitudes.some(s => s.idViaje === viaje.id && s.estado === "pendiente");
@@ -1173,79 +1231,83 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
               )}
 
-              {/* MODO PASAJERO: BUSCADOR Y RESULTADOS */}
-              {modo === "pasajero" && (
-                <div className="space-y-6 animate-in slide-in-from-left">
-                  {/* BUSCADOR */}
-                  <div className="bg-white p-6 rounded-[35px] shadow-sm border space-y-4 relative overflow-hidden">
-                    <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none"><Search size={120}/></div>
-                    <p className="text-[11px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={16}/> ¿A dónde necesitas cola?</p>
-                    
-                    <div className="space-y-2 relative z-10">
-                      <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border focus-within:border-blue-400 transition-colors">
-                        <MapPin size={18} className="text-slate-400"/>
-                        <select className="bg-transparent w-full text-xs font-bold outline-none text-slate-700" value={fEO} onChange={(e)=>{setFEO(e.target.value); setFCO("");}}>
-                          <option value="">Cualquier Origen</option>
-                          {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                        </select>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border focus-within:border-green-400 transition-colors">
-                        <Navigation size={18} className="text-slate-400"/>
-                        <select className="bg-transparent w-full text-xs font-bold outline-none text-slate-700" value={fED} onChange={(e)=>{setFED(e.target.value); setFCD("");}}>
-                          <option value="">Cualquier Destino</option>
-                          {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                        </select>
-                      </div>
-                    </div>
+             {/* MÓDULO 3: BUSCADOR AVANZADO ESTILO BLABLACAR */}
+{modo === "pasajero" && (
+  <div className="space-y-4 animate-in slide-in-from-left">
+    {/* TÍTULO Y BOTONES DE BÚSQUEDA */}
+    <div className="bg-white p-7 rounded-[35px] shadow-sm border space-y-5 relative overflow-hidden">
+      <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none"><Search size={120}/></div>
+      
+      <p className="text-[11px] font-black text-blue-600 uppercase italic flex items-center gap-2 relative z-10"><Search size={16}/> ¿A dónde necesitas cola?</p>
+      
+      <div className="space-y-3 relative z-10">
+        {/* BOTÓN GRANDE ORIGEN */}
+        <button 
+          onClick={() => { setSearchTerm(""); setShowSearchModal({ visible: true, type: 'origen' }); }}
+          className="w-full flex items-center gap-4 bg-slate-50 p-5 rounded-[22px] border border-slate-100 hover:border-blue-200 transition-colors text-left"
+        >
+          <MapPin size={22} className={`${fCO ? 'text-blue-600' : 'text-slate-400'}`}/>
+          <div>
+             <p className="text-[9px] font-black uppercase text-slate-400 leading-none mb-1">Punto de Salida</p>
+             <p className={`text-sm font-black italic uppercase leading-none ${fCO ? 'text-slate-800' : 'text-slate-400'}`}>
+                {fCO ? `${fCO}, ${fEO}` : "Selecciona Origen"}
+             </p>
+          </div>
+        </button>
 
-                    {/* BÚSQUEDAS RECIENTES */}
-                    {busquedasRecientes.length > 0 && (
-                       <div className="pt-2">
-                         <p className="text-[9px] font-black uppercase text-slate-400 mb-2 flex items-center gap-1"><History size={12}/> Recientes</p>
-                         <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
-                            {busquedasRecientes.map((b, i) => (
-                              <button key={i} onClick={() => aplicarBusquedaReciente(b)} className="shrink-0 bg-white border border-slate-200 rounded-xl px-4 py-2 flex flex-col items-start hover:border-blue-300 transition-colors active:scale-95 shadow-sm">
-                                   <span className="text-[10px] font-black italic text-slate-700 leading-none mb-1">{b.fEO || "Cualquiera"}</span>
-                                   <span className="text-[9px] font-bold text-blue-500 leading-none">Hacia {b.fED || "Cualquiera"}</span>
-                              </button>
-                            ))}
-                         </div>
-                       </div>
-                    )}
-                  </div>
+        {/* BOTÓN GRANDE DESTINO */}
+        <button 
+          onClick={() => { setSearchTerm(""); setShowSearchModal({ visible: true, type: 'destino' }); }}
+          className="w-full flex items-center gap-4 bg-slate-50 p-5 rounded-[22px] border border-slate-100 hover:border-green-200 transition-colors text-left"
+        >
+          <Navigation size={22} className={`${fCD ? 'text-green-600' : 'text-slate-400'}`}/>
+          <div>
+             <p className="text-[9px] font-black uppercase text-slate-400 leading-none mb-1">Punto de Llegada</p>
+             <p className={`text-sm font-black italic uppercase leading-none ${fCD ? 'text-slate-800' : 'text-slate-400'}`}>
+                {fCD ? `${fCD}, ${fED}` : "Selecciona Destino"}
+             </p>
+          </div>
+        </button>
+      </div>
 
-                  {/* LISTA DE VIAJES */}
-                  <div className="space-y-4">
-                     <h3 className="font-black italic uppercase text-lg text-slate-800 pl-2">Viajes Disponibles</h3>
-                     {viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).length === 0 ? (
-                        <div className="bg-slate-100/50 border border-dashed border-slate-300 rounded-[30px] p-8 text-center text-slate-500 font-bold text-xs italic">
-                           No hay viajes publicados para esta ruta actualmente.
-                        </div>
-                     ) : (
-                       viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).map(v => (
-                          <CardViajeOptimizada 
-                            key={v.id}
-                            viaje={v}
-                            estatusChofer={calcularEstatus(v.viajesTotales || 0, v.rating || 0)}
-                            onClickDetalle={() => setViajeSeleccionado(v)}
-                            onClickPedir={() => enviarSolicitudDirecta(v)}
-                            onClickPerfil={() => setPerfilPublico({
-                              nombre: v.conductor, id: v.idCreador, 
-                              estatus: calcularEstatus(v.viajesTotales, v.rating), 
-                              rating: v.rating, viajesTotales: v.viajesTotales, 
-                              kycVerificado: true, vehiculo: v.vehiculoInfo, 
-                              fotoVerificada: true, cancelaciones: v.cancelaciones, 
-                              preferencias: v.preferencias
-                            })}
-                          />
-                       ))
-                     )}
-                  </div>
-                </div>
-              )}
+      {/* BÚSQUEDAS RECIENTES (CORREGIDO Y INTEGRADO) */}
+      {busquedasRecientes.length > 0 && (
+         <div className="pt-2">
+           <p className="text-[9px] font-black uppercase text-slate-400 mb-2 flex items-center gap-1"><History size={12}/> Recientes</p>
+           <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
+              {busquedasRecientes.map((b, i) => (
+                <button key={i} onClick={() => aplicarBusquedaReciente(b)} className="shrink-0 bg-white border border-slate-200 rounded-xl px-4 py-2 flex flex-col items-start hover:border-blue-300 transition-colors active:scale-95 shadow-sm">
+                     <span className="text-[10px] font-black italic text-slate-700 leading-none mb-1">{b.fCO || "Cualquiera"}</span>
+                     <span className="text-[9px] font-bold text-blue-500 leading-none">Hacia {b.fCD || "Cualquiera"}</span>
+                </button>
+              ))}
            </div>
-        )}
+         </div>
+      )}
+    </div>
+
+    {/* LISTA DE VIAJES (FILTRADO ACTUALIZADO) */}
+    <div className="space-y-4">
+       <h3 className="font-black italic uppercase text-lg text-slate-800 pl-2">Viajes Disponibles</h3>
+       {viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).length === 0 ? (
+          <div className="bg-slate-100/50 border border-dashed border-slate-300 rounded-[30px] p-8 text-center text-slate-500 font-bold text-xs italic">
+             No hay viajes publicados para esta ruta actualmente.
+          </div>
+       ) : (
+         viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).map(v => (
+            <CardViajeOptimizada 
+              key={v.id}
+              viaje={v}
+              estatusChofer={calcularEstatus(v.viajesTotales || 0, v.rating || 0)}
+              onClickDetalle={() => setViajeSeleccionado(v)}
+              onClickPedir={() => enviarSolicitudDirecta(v)}
+              onClickPerfil={() => setPerfilPublico({ /* ... datos ... */ })}
+            />
+         ))
+       )}
+    </div>
+  </div>
+)}
 
         {/* --- VISTA MÓDULO 5: FLUJO ACTIVO --- */}
         {vista === "en_viaje" && viajeActivo && (
@@ -1432,50 +1494,109 @@ export default function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* MÓDULO 12: EMPTY STATE PARA TUS VIAJES */}
-        {vista === "mis_viajes" && (
-           <div className="space-y-4 animate-in fade-in h-full flex flex-col">
-             <div className="bg-blue-600 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden shrink-0">
-                <MapIcon size={60} className="absolute -right-2 -bottom-2 opacity-10" />
-                <p className="font-black italic text-xl uppercase tracking-tighter">Tus Viajes</p>
-                <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Historial y Rutas Activas</p>
-             </div>
-             {misSolicitudes.length === 0 && solicitudesRecibidas.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center bg-white p-10 rounded-[40px] border border-dashed border-slate-200 text-center shadow-sm my-4">
-                   <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border-2 border-slate-100">
-                      <MapIcon size={40} className="text-slate-200" />
-                   </div>
-                   <h3 className="font-black uppercase italic text-slate-800 mb-2">¡Aún no hay rutas!</h3>
-                   <p className="text-[11px] text-slate-400 font-bold italic mb-8 max-w-[200px]">Tus próximas colas aparecerán aquí. Empieza a explorar para viajar hoy.</p>
-                   <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase italic text-[10px] shadow-xl active:scale-95 transition-all flex items-center gap-2">
-                      Buscar mi primera cola <ArrowRight size={14}/>
-                   </button>
-                </div>
-             ) : (
-                <div className="space-y-3 overflow-y-auto">
-                   {misSolicitudes.map(s => (
-                     <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-blue-500">
-                       <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
-                       <div className="flex justify-between items-center mt-2">
-                          <p className="text-[9px] font-black text-slate-500 flex items-center gap-1"><User size={10}/> {s.nombreChofer}</p>
-                          <p className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${s.estado === 'completado' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
-                             {s.estado}
-                          </p>
-                       </div>
-                     </div>
-                   ))}
-                   {solicitudesRecibidas.map(s => (
-                     <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-amber-500">
-                       <p className="text-[9px] font-black uppercase text-amber-500 mb-1">Solicitud Recibida</p>
-                       <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
-                       <p className="text-[9px] font-black text-slate-500 mt-1 flex items-center gap-1"><User size={10}/> {s.nombrePasajero}</p>
-                     </div>
-                   ))}
-                </div>
-             )}
-           </div>
-        )}
+        {/* MÓDULO 12: GESTIÓN COMPLETA DE TUS VIAJES */}
+{vista === "mis_viajes" && (
+  <div className="space-y-6 animate-in fade-in h-full flex flex-col">
+    <div className="bg-blue-600 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden shrink-0">
+      <MapIcon size={60} className="absolute -right-2 -bottom-2 opacity-10" />
+      <p className="font-black italic text-xl uppercase tracking-tighter">Gestión de Viajes</p>
+      <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Tus Rutas y Solicitudes</p>
+    </div>
 
+    {/* SECCIÓN: MIS VIAJES PUBLICADOS (Como Chofer) */}
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 px-2">
+        <Car size={16} className="text-slate-400" />
+        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Tus Rutas Publicadas</h3>
+      </div>
+      
+      {misViajesPublicados.length === 0 ? (
+        <div className="bg-white border-2 border-dashed border-slate-100 rounded-[30px] p-8 text-center text-slate-400 font-bold text-xs italic">
+          No has publicado ninguna ruta todavía.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {misViajesPublicados.map(v => (
+            <div key={v.id} className="bg-white p-5 rounded-3xl border shadow-sm relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => prepararEdicionViaje(v)} className="p-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200"><Edit2 size={14}/></button>
+                  <button onClick={() => eliminarViaje(v.id)} className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"><Trash2 size={14}/></button>
+               </div>
+
+               <p className="text-xs font-black italic uppercase text-slate-800 leading-tight pr-16">{v.cO} → {v.cD}</p>
+               <div className="flex items-center gap-4 mt-2 border-t pt-2 border-slate-50">
+                  <div className="text-center">
+                     <p className="text-xs font-black text-slate-900">${v.precio}</p>
+                     <p className="text-[8px] font-bold text-slate-400 uppercase">Precio</p>
+                  </div>
+                  <div className="text-center">
+                     <p className="text-xs font-black text-blue-600">{v.puestos}</p>
+                     <p className="text-[8px] font-bold text-slate-400 uppercase">Puestos</p>
+                  </div>
+                  <div className="text-center">
+                     <p className="text-xs font-black text-slate-900">{v.horaSalida}</p>
+                     <p className="text-[8px] font-bold text-slate-400 uppercase">Salida</p>
+                  </div>
+               </div>
+               {/* Puedes añadir un badge si tiene solicitudes pendientes */}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <div className="h-px w-full bg-slate-100 my-2"></div>
+
+    {/* SECCIÓN: SOLICITUDES (Como Pasajero o Chofer) */}
+    <div className="flex-1 overflow-y-auto space-y-4 pb-10">
+      <div className="flex items-center gap-2 px-2">
+        <Users size={16} className="text-slate-400" />
+        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Tus Solicitudes</h3>
+      </div>
+      
+      {misSolicitudes.length === 0 && solicitudesRecibidas.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center bg-white p-10 rounded-[40px] border border-dashed border-slate-200 text-center shadow-sm">
+           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 border-2 border-blue-100">
+              <Users size={32} className="text-blue-200" />
+           </div>
+           <h3 className="font-black uppercase italic text-slate-800 mb-2">Sin actividad</h3>
+           <p className="text-[10px] text-slate-400 font-bold italic max-w-[200px]">Las colas que pidas o te pidan aparecerán en esta sección.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+           {/* Solicitudes que Tú enviaste (Como Pasajero) */}
+           {misSolicitudes.map(s => (
+             <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-blue-500">
+               <div className="flex justify-between items-start mb-1">
+                  <p className="text-[9px] font-black uppercase text-blue-500 tracking-wider">Cola que pediste</p>
+                  {s.estado === "pendiente" && <button onClick={() => setModalCancelacion({visible: true, idSolicitud: s.id})} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
+               </div>
+               <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
+               <div className="flex justify-between items-end mt-2">
+                  <p className="text-[9px] font-black text-slate-500 flex items-center gap-1"><User size={10}/> Chofer: {s.nombreChofer}</p>
+                  <p className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${s.estado === 'completado' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                     {s.estado}
+                  </p>
+               </div>
+             </div>
+           ))}
+           {/* Solicitudes que Recibiste (Como Chofer) */}
+           {solicitudesRecibidas.map(s => (
+             <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-amber-500 group">
+               <p className="text-[9px] font-black uppercase text-amber-500 mb-1 tracking-wider">Pasajero pidiendo cola</p>
+               <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
+               <p className="text-[9px] font-black text-slate-500 mt-1 flex items-center gap-1"><User size={10}/> {s.nombrePasajero}</p>
+               <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => confirmarViajeChofer(s.id)} className="flex-1 py-2.5 bg-green-600 text-white rounded-xl font-black uppercase italic text-[9px]">Aceptar</button>
+                  <button onClick={() => updateDoc(doc(db, "Solicitudes", s.id), {estado: "rechazado"})} className="flex-1 py-2.5 bg-slate-100 text-slate-500 rounded-xl font-black uppercase italic text-[9px]">Rechazar</button>
+               </div>
+             </div>
+           ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
         {/* MÓDULO 12: EMPTY STATE PARA MENSAJES */}
         {vista === "inbox" && (
            <div className="space-y-4 animate-in fade-in h-full flex flex-col">
@@ -1498,21 +1619,37 @@ export default function NavegacionPrincipal({ user }) {
                 </div>
              ) : (
                 <div className="space-y-3 overflow-y-auto">
-                   {historialChats.map(c => (
-                     <div key={c.chatId} onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group">
-                        <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors"><User size={20} className="text-blue-500 group-hover:text-white"/></div>
-                        <div className="flex-1 overflow-hidden">
-                           <p className="text-xs font-black italic uppercase text-slate-800">{c.nombreOtro}</p>
-                           <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">{c.ultimoMensaje}</p>
-                        </div>
-                        <ChevronLeft size={16} className="text-slate-300 transform rotate-180"/>
-                     </div>
-                   ))}
-                </div>
-             )}
-           </div>
-        )}
+                  {historialChats.map(c => {
+  // Verificamos si tú eres el dueño del viaje de este chat
+  const soyChofer = misViajesPublicados.some(v => v.id === c.idViaje);
+  
+  return (
+    <div 
+      key={c.chatId} 
+      onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} 
+      className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group relative overflow-hidden"
+    >
+      {/* Etiqueta de Rol para evitar enredos */}
+      <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[7px] font-black uppercase italic ${soyChofer ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+        Chat como {soyChofer ? 'Chofer' : 'Pasajero'}
+      </div>
 
+      <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors shrink-0">
+        <User size={20} className="text-blue-500 group-hover:text-white"/>
+      </div>
+      
+      <div className="flex-1 overflow-hidden pt-2">
+        <p className="text-xs font-black italic uppercase text-slate-800">{c.nombreOtro}</p>
+        <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">{c.ultimoMensaje}</p>
+        <p className="text-[8px] font-black text-blue-600 mt-1 opacity-60 uppercase italic">
+          Viaje: {c.idViaje.slice(-5)} {/* Muestra los últimos 5 dígitos del ID como referencia */}
+        </p>
+      </div>
+      
+      <ChevronLeft size={16} className="text-slate-300 transform rotate-180 shrink-0"/>
+    </div>
+  );
+})}
         {/* WALLET */}
         {vista === "wallet" && (
            <div className="space-y-6 animate-in fade-in">
@@ -1699,6 +1836,98 @@ export default function NavegacionPrincipal({ user }) {
         subtitulo={successData.subtitulo}
         onClose={() => setSuccessData({ ...successData, show: false })}
       />
+      // --- MÓDULO 3: MODAL DE BÚSQUEDA AVANZADA CON FILTRADO ---
+const ModalBusquedaAvanzada = ({ isOpen, onClose, type, onSelect, ubicaciones }) => {
+  const [busqueda, setBusqueda] = useState(""); // Estado para el texto del input
+  
+  if (!isOpen) return null;
+
+  const isOrigen = type === 'origen';
+
+  // LÓGICA DE FILTRADO:
+  // Filtramos las ubicaciones basándonos en si el nombre del Estado o alguna de sus Ciudades coincide con la búsqueda
+  const resultadosFiltrados = Object.keys(ubicaciones).reduce((acc, estado) => {
+    const coincideEstado = estado.toLowerCase().includes(busqueda.toLowerCase());
+    const ciudadesCoincidentes = ubicaciones[estado].filter(ciudad => 
+      ciudad.toLowerCase().includes(busqueda.toLowerCase())
+    );
+
+    // Si el nombre del estado coincide, incluimos todas sus ciudades. 
+    // Si no, solo incluimos las ciudades que coincidan.
+    if (coincideEstado || ciudadesCoincidentes.length > 0) {
+      acc[estado] = coincideEstado ? ubicaciones[estado] : ciudadesCoincidentes;
+    }
+    return acc;
+  }, {});
+
+  const ESTADOS_FILTRADOS = Object.keys(resultadosFiltrados).sort();
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+      {/* HEADER DEL MODAL */}
+      <header className="p-6 pt-12 border-b flex items-center gap-4 shrink-0">
+        <button onClick={() => { setBusqueda(""); onClose(); }} className="text-slate-400">
+          <ChevronLeft size={24}/>
+        </button>
+        <div className="flex-1 relative">
+           <input 
+             type="text" 
+             value={busqueda}
+             onChange={(e) => setBusqueda(e.target.value)}
+             placeholder={`Buscar ${isOrigen ? 'salida' : 'llegada'}...`}
+             className="w-full bg-slate-100 p-4 pl-12 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-blue-400 transition-all"
+             autoFocus
+           />
+           <Search size={18} className="absolute left-4 top-4 text-slate-400"/>
+           {busqueda && (
+             <button 
+               onClick={() => setBusqueda("")}
+               className="absolute right-4 top-4 text-slate-400 bg-slate-200 rounded-full p-0.5"
+             >
+               <X size={14}/>
+             </button>
+           )}
+        </div>
+      </header>
+
+      {/* CONTENIDO: LISTA FILTRADA */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
+         {ESTADOS_FILTRADOS.length === 0 ? (
+           <div className="text-center py-20">
+             <Search size={40} className="mx-auto text-slate-200 mb-4"/>
+             <p className="text-slate-400 font-bold italic text-xs uppercase">No se encontraron resultados para "{busqueda}"</p>
+           </div>
+         ) : (
+           <div className="space-y-3">
+              {ESTADOS_FILTRADOS.map(estado => (
+                 <div key={estado} className="bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden">
+                    <div className="p-5 flex justify-between items-center bg-white border-b border-slate-100">
+                       <p className="text-xs font-black uppercase italic text-slate-900 tracking-tight flex items-center gap-2">
+                          <Palette size={12} className="text-blue-300"/> Edo. {estado}
+                       </p>
+                    </div>
+                    
+                    <div className="p-3 grid grid-cols-2 gap-2">
+                       {resultadosFiltrados[estado].map(ciudad => (
+                          <button 
+                            key={ciudad}
+                            onClick={() => {
+                               onSelect(estado, ciudad);
+                               setBusqueda(""); // Limpiar búsqueda para la próxima vez
+                               onClose();
+                            }}
+                            className="p-3 rounded-xl border flex items-center gap-2.5 transition-all text-left group bg-white hover:border-blue-200 hover:bg-blue-50 active:scale-95"
+                          >
+                             {isOrigen ? <MapPin size={16} className="text-slate-300 group-hover:text-blue-500"/> : <Navigation size={16} className="text-slate-300 group-hover:text-green-500"/>}
+                             <span className="text-[10px] font-bold text-slate-700 group-hover:text-slate-900 pr-1">{ciudad}</span>
+                          </button>
+                       ))}
+                    </div>
+                 </div>
+              ))}
+           </div>
+         )}
+      </div>
     </div>
   );
-}
+};
