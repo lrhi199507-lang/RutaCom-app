@@ -403,23 +403,22 @@ const ProgresoGamificacion = ({ userData, onAbrirConfig }) => {
 
 export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
-  const [modo, setModo] = useState("pasajero"); // "pasajero" o "chofer"
-  const [showSearchModal, setShowSearchModal] = useState({ visible: false, type: 'origen' }); // type: 'origen' o 'destino'
-const [searchTerm, setSearchTerm] = useState("");
+  const [modo, setModo] = useState("pasajero");
+  const [showSearchModal, setShowSearchModal] = useState({ visible: false, type: 'origen' });
+  const [searchTerm, setSearchTerm] = useState("");
   const [userData, setUserData] = useState(null);
-  const [viajes, setViajes] = useState([]);
   const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
   const [misSolicitudes, setMisSolicitudes] = useState([]);
-  const [viajes, setViajes] = useState([]); // Todos los viajes (para búsqueda)
-const [misViajesPublicados, setMisViajesPublicados] = useState([]); // NUEVO: Tus viajes creados
-const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
-const [misSolicitudes, setMisSolicitudes] = useState([]);
-  const [viajeEditando, setViajeEditando] = useState(null); // Almacenará el ID del viaje a editar
+  const [viajes, setViajes] = useState([]); 
+  const [misViajesPublicados, setMisViajesPublicados] = useState([]); 
+  const [viajeEditando, setViajeEditando] = useState(null); 
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [pasajerosViaje, setPasajerosViaje] = useState([]); 
   const [configOpen, setConfigOpen] = useState(false);
   const [pestañaActiva, setPestañaActiva] = useState("perfil");
   const [successData, setSuccessData] = useState({ show: false, titulo: "", subtitulo: "" });
+  
+  // Aquí sigue el resto de tu código...
   
   // MÓDULO 18: WIZARD DE PUBLICACIÓN (Chofer)
   const [pasoWizard, setPasoWizard] = useState(1);
