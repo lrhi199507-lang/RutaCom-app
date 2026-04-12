@@ -1204,16 +1204,16 @@ const eliminarViaje = async (idViaje) => {
                                   <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 text-red-600">
                                     <div className="flex items-center gap-3"><LogOut size={18}/><span className="text-xs font-black uppercase italic">Cerrar Sesión</span></div>
                                   </button>
-                                </div>
+                               </div>
                               )}
                             </div>
                           )}
-                        </div> // CIERRE del div className="space-y-3 overflow-y-auto" (Línea 1135)
+                        </div>
                       )}
                     </>
                   )}
-                </div> // CIERRE del div className="space-y-6 animate-in slide-in-from-right" (Línea 1043)
-              )}
+                </div> {/* CIERRA EL DIV DE LA LÍNEA 1035 */}
+              )}   {/* CIERRA LA LÓGICA DE LA LÍNEA 1034 */}
             </main>
 
         <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
