@@ -1113,821 +1113,217 @@ const eliminarViaje = async (idViaje) => {
                                       .map(ciudad => (
                                         <button 
                                           key={`dest-${estado}-${ciudad}`}
-                                          onClick={() => setViajeForm({...viajeForm, destino: `${ciudad}, ${estado}`})}
-                                          className="w-full text-left p-4 hover:bg-green-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
-                                        >
-                                          <Navigation size={14} className="text-green-400"/> {ciudad}, {estado}
-                                        </button>
-                                      ))
-                                  ).slice(0, 5)}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <button 
-                            onClick={() => setPasoWizard(2)}
-                            disabled={!viajeForm.origen.includes(',') || !viajeForm.destino.includes(',')}
-                            className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30 transition-all active:scale-95"
-                          >
-                            Continuar a los detalles
-                          </button>
-                        </div>
-                      )}
-
-                      {/* PASO 2: HORARIOS Y PREFERENCIAS */}
-                      {pasoWizard === 2 && (
-                        <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
-                          <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Horarios y<br/>Opciones</h2>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase text-slate-400 px-2 italic font-bold">Hora de Salida</label>
-                              <div className="relative">
-                                <Clock size={16} className="absolute left-4 top-4 text-blue-600"/>
-                                <input type="time" className="w-full bg-slate-50 p-4 pl-12 rounded-[20px] border border-slate-100 text-xs font-bold outline-none focus:border-blue-400" value={viajeForm.horaSalida} onChange={(e) => setViajeForm({...viajeForm, horaSalida: e.target.value})} />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase text-slate-400 px-2 italic font-bold">Llegada Aprox.</label>
-                              <div className="relative">
-                                <Clock size={16} className="absolute left-4 top-4 text-green-600"/>
-                                <input type="time" className="w-full bg-slate-50 p-4 pl-12 rounded-[20px] border border-slate-100 text-xs font-bold outline-none focus:border-green-400" value={viajeForm.horaLlegada} onChange={(e) => setViajeForm({...viajeForm, horaLlegada: e.target.value})} />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="bg-slate-50 p-4 rounded-2xl space-y-3">
-                             <p className="text-[10px] font-black uppercase text-slate-400 italic">Preferencias del Viaje:</p>
-                             <div className="flex flex-wrap gap-2">
-                          {[
-                            { id: 'maxDosAtras', icon: <Crown size={14}/>, label: "VIP: Máx 2 Atrás" }, // <-- NUEVO
-                             { id: 'ac', icon: <Wind size={14}/>, label: "A/C" },
-                              { id: 'noFumar', icon: <CigaretteOff size={14}/>, label: "No Fumar" },
-                               { id: 'mascotas', icon: <PawPrint size={14}/>, label: "Mascotas" },
-                               { id: 'conversar', icon: <MessageSquare size={14}/>, label: "Hablo Mucho" },
-                                { id: 'equipaje', icon: <Briefcase size={14}/>, label: "Maletero" },
-                                ].map(pref => (
-                                <button 
-                                key={pref.id}
-                             onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref.id]: !viajeForm.preferencias[pref.id]}})}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 transition-all ${viajeForm.preferencias[pref.id] ? (pref.id === 'maxDosAtras' ? 'bg-purple-600 border-purple-600 text-white shadow-md' : 'bg-blue-600 border-blue-600 text-white shadow-md') : 'bg-white border-slate-100 text-slate-400'}`}
-                        >
-                        {pref.icon} <span className="text-[9px] font-black uppercase italic">{pref.label}</span>
-                             </button>
-                              ))}
-                           </div>
-                          </div>
-
-                          <div className="flex gap-3 pt-2">
-                            <button onClick={() => setPasoWizard(1)} className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-[25px] font-black uppercase italic text-xs active:scale-95 transition-transform">Atrás</button>
-                            <button 
-                              onClick={() => setPasoWizard(3)} 
-                              disabled={!viajeForm.horaSalida || !viajeForm.horaLlegada}
-                              className="flex-1 py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30 active:scale-95 transition-transform"
-                            >
-                              Siguiente
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* PASO 3: PRECIO Y ASIENTOS */}
-                      {pasoWizard === 3 && (
-                        <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
-                          <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Últimos<br/>detalles</h2>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase text-slate-400 px-2 italic font-bold">Precio por persona</label>
-                              <div className="flex items-center gap-3 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
-                                <DollarSign size={20} className="text-green-600"/>
-                                <input type="number" placeholder="Ej: 10" className="bg-transparent w-full text-xl font-black outline-none text-slate-800" value={viajeForm.precio} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase text-slate-400 px-2 italic font-bold">Asientos Libres</label>
-                              <div className="flex items-center gap-3 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
-                                <Users size={20} className="text-blue-600"/>
-                                <input type="number" placeholder="Ej: 3" className="bg-transparent w-full text-xl font-black outline-none text-slate-800" value={viajeForm.asientos} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3 pt-4">
-                            <button onClick={() => setPasoWizard(2)} className="flex-1 py-6 bg-slate-100 text-slate-500 rounded-[30px] font-black uppercase italic text-xs active:scale-95 transition-transform">Atrás</button>
-                            <button 
-                              onClick={publicarRutaWizard}
-                              disabled={!viajeForm.precio || !viajeForm.asientos}
-                              className="flex-[2] py-6 bg-blue-600 text-white rounded-[30px] font-black uppercase italic text-sm shadow-2xl disabled:opacity-30 active:scale-95 transition-transform flex items-center justify-center gap-2"
-                            >
-                              Publicar <Send size={18}/>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-
-             {/* MÓDULO 3: BUSCADOR AVANZADO ESTILO BLABLACAR */}
-{modo === "pasajero" && (
-  <div className="space-y-4 animate-in slide-in-from-left">
-    {/* TÍTULO Y BOTONES DE BÚSQUEDA */}
-    <div className="bg-white p-7 rounded-[35px] shadow-sm border space-y-5 relative overflow-hidden">
-      <div className="absolute -right-4 -top-4 opacity-[0.03] pointer-events-none"><Search size={120}/></div>
-      
-      <p className="text-[11px] font-black text-blue-600 uppercase italic flex items-center gap-2 relative z-10"><Search size={16}/> ¿A dónde necesitas cola?</p>
-      
-      <div className="space-y-3 relative z-10">
-        {/* BOTÓN GRANDE ORIGEN */}
-        <button 
-          onClick={() => { setSearchTerm(""); setShowSearchModal({ visible: true, type: 'origen' }); }}
-          className="w-full flex items-center gap-4 bg-slate-50 p-5 rounded-[22px] border border-slate-100 hover:border-blue-200 transition-colors text-left"
-        >
-          <MapPin size={22} className={`${fCO ? 'text-blue-600' : 'text-slate-400'}`}/>
-          <div>
-             <p className="text-[9px] font-black uppercase text-slate-400 leading-none mb-1">Punto de Salida</p>
-             <p className={`text-sm font-black italic uppercase leading-none ${fCO ? 'text-slate-800' : 'text-slate-400'}`}>
-                {fCO ? `${fCO}, ${fEO}` : "Selecciona Origen"}
-             </p>
-          </div>
-        </button>
-
-        {/* BOTÓN GRANDE DESTINO */}
-        <button 
-          onClick={() => { setSearchTerm(""); setShowSearchModal({ visible: true, type: 'destino' }); }}
-          className="w-full flex items-center gap-4 bg-slate-50 p-5 rounded-[22px] border border-slate-100 hover:border-green-200 transition-colors text-left"
-        >
-          <Navigation size={22} className={`${fCD ? 'text-green-600' : 'text-slate-400'}`}/>
-          <div>
-             <p className="text-[9px] font-black uppercase text-slate-400 leading-none mb-1">Punto de Llegada</p>
-             <p className={`text-sm font-black italic uppercase leading-none ${fCD ? 'text-slate-800' : 'text-slate-400'}`}>
-                {fCD ? `${fCD}, ${fED}` : "Selecciona Destino"}
-             </p>
-          </div>
-        </button>
-      </div>
-
-      {/* BÚSQUEDAS RECIENTES (CORREGIDO Y INTEGRADO) */}
-      {busquedasRecientes.length > 0 && (
-         <div className="pt-2">
-           <p className="text-[9px] font-black uppercase text-slate-400 mb-2 flex items-center gap-1"><History size={12}/> Recientes</p>
-           <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
-              {busquedasRecientes.map((b, i) => (
-                <button key={i} onClick={() => aplicarBusquedaReciente(b)} className="shrink-0 bg-white border border-slate-200 rounded-xl px-4 py-2 flex flex-col items-start hover:border-blue-300 transition-colors active:scale-95 shadow-sm">
-                     <span className="text-[10px] font-black italic text-slate-700 leading-none mb-1">{b.fCO || "Cualquiera"}</span>
-                     <span className="text-[9px] font-bold text-blue-500 leading-none">Hacia {b.fCD || "Cualquiera"}</span>
-                </button>
-              ))}
-           </div>
-         </div>
-      )}
-    </div>
-
-    {/* LISTA DE VIAJES (FILTRADO ACTUALIZADO) */}
-    <div className="space-y-4">
-       <h3 className="font-black italic uppercase text-lg text-slate-800 pl-2">Viajes Disponibles</h3>
-       {viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).length === 0 ? (
-          <div className="bg-slate-100/50 border border-dashed border-slate-300 rounded-[30px] p-8 text-center text-slate-500 font-bold text-xs italic">
-             No hay viajes publicados para esta ruta actualmente.
-          </div>
-       ) : (
-         viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).map(v => (
-            <CardViajeOptimizada 
-              key={v.id}
-              viaje={v}
-              estatusChofer={calcularEstatus(v.viajesTotales || 0, v.rating || 0)}
-              onClickDetalle={() => setViajeSeleccionado(v)}
-              onClickPedir={() => enviarSolicitudDirecta(v)}
-              onClickPerfil={() => setPerfilPublico({ /* ... datos ... */ })}
-            />
-         ))
-       )}
-    </div>
-  </div>
-)}
-
-        {/* --- VISTA MÓDULO 5: FLUJO ACTIVO --- */}
-        {vista === "en_viaje" && viajeActivo && (
-          <div className="h-full flex flex-col space-y-4 animate-in slide-in-from-bottom duration-500">
-             <div className="bg-blue-600 p-3 rounded-2xl flex items-center justify-between shadow-lg mx-1">
-                <div className="flex items-center gap-2">
-                   <ShieldCheck size={16} className="text-white"/>
-                   <span className="text-[9px] font-black text-white uppercase italic">Protocolo de Retención Activo</span>
-                </div>
-                <button className="bg-red-500 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase animate-pulse border-2 border-red-400">S.O.S</button>
-             </div>
-
-             <div className="bg-white p-4 rounded-[30px] shadow-sm border flex justify-between items-center">
-                <button onClick={() => setVista("inicio")} className="text-slate-400"><ChevronLeft/></button>
-                <div className="text-center">
-                   <p className="text-[8px] font-black uppercase text-blue-600 leading-none">Trayecto Actual</p>
-                   <p className="text-[11px] font-black italic">{viajeActivo.ruta}</p>
-                </div>
-                <button onClick={() => setModalCancelacion({visible: true, idSolicitud: viajeActivo.id})} className="text-red-500"><AlertTriangle size={20}/></button>
-             </div>
-
-             {/* INDICADOR DE FASES MÓDULO 5 */}
-             <PasosProgreso fase={viajeActivo.fase} />
-
-             <div className="flex-1 bg-slate-200 rounded-[40px] border-4 border-white shadow-2xl relative overflow-hidden">
-                {viajeActivo.latChofer && (
-                   <iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://www.openstreetmap.org/export/embed.html?bbox=${viajeActivo.lngChofer-0.005},${viajeActivo.latChofer-0.005},${viajeActivo.lngChofer+0.005},${viajeActivo.latChofer+0.005}&layer=mapnik&marker=${viajeActivo.latChofer},${viajeActivo.lngChofer}`} className="w-full h-full opacity-90 pointer-events-none"></iframe>
-                )}
-                <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-4 rounded-3xl shadow-2xl border border-white flex items-center gap-4">
-                   <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg"><Car size={24}/></div>
-                   <div>
-                      <p className="text-[8px] font-black text-slate-400 uppercase leading-none">Vehículo Validado</p>
-                      <p className="text-[11px] font-black italic uppercase text-slate-800">{viajeActivo.vehiculoInfo?.marca} {viajeActivo.vehiculoInfo?.modelo}</p>
-                      <div className="flex gap-2 items-center mt-1">
-                         <p className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded inline-block border border-blue-100">{viajeActivo.vehiculoInfo?.placa}</p>
-                         {viajeActivo.vehiculoInfo?.color && <p className="text-[9px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded flex items-center gap-1 border"><Palette size={10}/> {viajeActivo.vehiculoInfo.color}</p>}
-                      </div>
-                   </div>
-                </div>
-                {viajeActivo.idPasajero === user.uid && viajeActivo.pinVerificacion && viajeActivo.fase === "pasajero_confirmado_encuentro" && (
-                   <div className="absolute top-6 left-6 right-6 bg-blue-600 p-4 rounded-2xl text-white text-center shadow-xl z-20 animate-bounce">
-                      <p className="text-[10px] font-black uppercase">PIN de Encuentro (Módulo 5):</p>
-                      <p className="text-3xl font-black tracking-[10px]">{viajeActivo.pinVerificacion}</p>
-                   </div>
-                )}
-             </div>
-
-             <div className="bg-white p-6 rounded-[35px] border shadow-lg space-y-3 z-10">
-                {user.uid === viajeActivo.idChofer ? (
-                  <div className="space-y-3">
-                    {viajeActivo.fase === "chofer_en_camino" && <button onClick={() => updateDoc(doc(db,"Solicitudes",viajeActivo.id), {fase: "en_punto_de_encuentro"})} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg">He llegado al punto</button>}
-                    {viajeActivo.fase === "pasajero_confirmado_encuentro" && (
-                      <div className="space-y-3">
-                         <p className="text-[10px] font-black text-blue-600 uppercase italic text-center">Valida el PIN del Pasajero</p>
-                         <input type="number" placeholder="0000" className="w-full p-4 bg-slate-100 rounded-2xl text-center text-2xl font-black outline-none border-2 border-transparent focus:border-blue-600" value={pinIngresado} onChange={(e)=>setPinIngresado(e.target.value)} />
-                         <button onClick={choferVerificaPIN} className="w-full py-4 bg-green-500 text-white rounded-2xl font-black uppercase italic">Validar PIN y Retener Pago</button>
-                      </div>
-                    )}
-                    {viajeActivo.fase === "viajando" && (
-                      <button onClick={() => finalizarViaje("chofer")} disabled={viajeActivo.finalizadoChofer} className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoChofer ? 'bg-slate-400' : 'bg-slate-900 text-white'}`}>{viajeActivo.finalizadoChofer ? "Esperando Confirmación Pasajero..." : "Marcar Llegada"} <Flag size={18}/></button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {viajeActivo.fase === "en_punto_de_encuentro" && <button onClick={() => setMostrarChecklist(true)} className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95"><ShieldCheck size={18}/> Iniciar Protocolo de Seguridad</button>}
-                    {viajeActivo.fase === "viajando" && (
-                       <button onClick={() => finalizarViaje("pasajero")} disabled={viajeActivo.finalizadoPasajero} className={`w-full py-5 rounded-[25px] font-black uppercase italic text-xs shadow-lg flex items-center justify-center gap-2 ${viajeActivo.finalizadoPasajero ? 'bg-slate-400' : 'bg-blue-600 text-white'}`}>{viajeActivo.finalizadoPasajero ? "Pago en proceso de liberación..." : "Confirmar Llegada al Destino"} <CheckCircle size={18}/></button>
-                    )}
-                  </div>
-                )}
-             </div>
-          </div>
-        )}
-
-        {/* DETALLE VIAJE (INCLUYE MÓDULO 8) */}
-        {viajeSeleccionado && vista === "inicio" && (
-           <div className="space-y-6 animate-in slide-in-from-right">
-              <button onClick={() => setViajeSeleccionado(null)} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px] italic"><ChevronLeft size={16}/> Volver</button>
-              <div className="bg-white rounded-[40px] border shadow-2xl p-8 space-y-6">
-                 <div className="flex justify-between items-center border-b pb-4">
-                    <p className="text-4xl font-black italic text-blue-600 leading-none">${viajeSeleccionado.precio}</p>
-                    <BadgeEstatus nivel={calcularEstatus(viajeSeleccionado.viajesTotales, viajeSeleccionado.rating)} />
-                 </div>
-                 
-                 <div className="space-y-6">
-                    <div className="flex items-center gap-3"><MapPin size={18} className="text-blue-600"/><p className="font-black uppercase text-sm italic">{viajeSeleccionado.cO} → {viajeSeleccionado.cD}</p></div>
-
-                    <div className="bg-slate-50 p-4 rounded-3xl border flex items-center gap-4">
-                       <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner"><Car size={24}/></div>
-                       <div>
-                          <p className="text-[10px] font-black uppercase text-slate-400 leading-none">Vehículo del viaje</p>
-                          <p className="text-sm font-black italic uppercase text-slate-800">{viajeSeleccionado.vehiculoInfo?.marca} {viajeSeleccionado.vehiculoInfo?.modelo}</p>
-                          <div className="flex gap-2 mt-1">
-                             <span className="bg-white border text-slate-600 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">{viajeSeleccionado.vehiculoInfo?.placa}</span>
-                             {viajeSeleccionado.vehiculoInfo?.color && (
-                               <span className="bg-white border text-slate-600 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1"><Palette size={10}/> {viajeSeleccionado.vehiculoInfo?.color}</span>
-                             )}
-                          </div>
-                       </div>
-                    </div>
-
-                    <div onClick={() => setPerfilPublico({ nombre: viajeSeleccionado.conductor, id: viajeSeleccionado.idCreador, rating: viajeSeleccionado.rating, viajesTotales: viajeSeleccionado.viajesTotales, estatus: calcularEstatus(viajeSeleccionado.viajesTotales, viajeSeleccionado.rating), kycVerificado: true, vehiculo: viajeSeleccionado.vehiculoInfo, fotoVerificada: true, cancelaciones: viajeSeleccionado.cancelaciones, preferencias: viajeSeleccionado.preferencias })} className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-3 rounded-2xl border">
-                       <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center group-hover:bg-blue-50 border shadow-sm transition-colors"><User size={20} className="text-slate-400 group-hover:text-blue-600"/></div>
-                       <div>
-                          <p className="font-black uppercase text-xs italic underline text-slate-800">{viajeSeleccionado.conductor}</p>
-                          <div className="flex items-center gap-1 text-green-600 mt-0.5"><CheckCircle size={10} className="fill-green-600 text-white"/><span className="text-[8px] font-black uppercase italic">Conductor Identificado</span></div>
-                       </div>
-                    </div>
-
-                    <div className="bg-slate-50 p-5 rounded-[30px] border">
-                       <p className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest flex items-center gap-2"><Users size={14}/> Pasajeros Confirmados ({pasajerosViaje.length}/{viajeSeleccionado.puestos + pasajerosViaje.length})</p>
-                       {pasajerosViaje.length === 0 ? (
-                          <p className="text-xs font-bold text-slate-400 italic text-center py-4">Sé el primero en reservar un puesto.</p>
-                       ) : (
-                          <div className="space-y-3 mb-3">
-                             {pasajerosViaje.map(p => (
-                                <div key={p.id} className="flex items-center gap-3 bg-white p-3 rounded-2xl border shadow-sm">
-                                   <div className="w-10 h-10 bg-gradient-to-br from-blue-50 to-slate-100 rounded-xl flex items-center justify-center border border-white shadow-sm"><User size={20} className="text-blue-500"/></div>
-                                   <div className="flex-1">
-                                      <p className="font-black uppercase text-xs italic text-slate-800">{p.nombrePasajero}</p>
-                                      <p className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1 mt-0.5"><MapPin size={10}/> {p.ruta}</p>
-                                   </div>
-                                   <div className="bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100 flex items-center gap-1">
-                                      <CheckCircle size={10} className="fill-green-600 text-white"/> <span className="text-[8px] font-black uppercase">Viaja</span>
-                                   </div>
-                                </div>
-                             ))}
-                          </div>
-                       )}
-                       <div className="space-y-2">
-                         {Array.from({ length: viajeSeleccionado.puestos }).map((_, i) => (
-                            <div key={`empty-${i}`} className="flex items-center gap-3 bg-transparent p-3 rounded-2xl border border-dashed border-slate-300 opacity-60">
-                               <div className="w-10 h-10 bg-slate-200 rounded-xl flex items-center justify-center"><User size={20} className="text-slate-400"/></div>
-                               <div className="flex-1">
-                                  <p className="font-black uppercase text-xs italic text-slate-500">Asiento Disponible</p>
-                               </div>
-                            </div>
-                         ))}
-                       </div>
-                    </div>
-
-                    <div className="bg-slate-50 p-5 rounded-[30px] border">
-                       <p className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Preferencias</p>
-                       <div className="grid grid-cols-2 gap-3">
-                          {[
-                            { id: 'ac', icon: <Wind size={14}/>, label: "A/C", active: viajeSeleccionado.preferencias?.ac },
-                            { id: 'noFumar', icon: <CigaretteOff size={14}/>, label: "No Fumar", active: viajeSeleccionado.preferencias?.noFumar },
-                            { id: 'mascotas', icon: <PawPrint size={14}/>, label: "Mascotas", active: viajeSeleccionado.preferencias?.mascotas },
-                            { id: 'conversar', icon: <MessageSquare size={14}/>, label: "Conversación", active: viajeSeleccionado.preferencias?.conversar },
-                            { id: 'equipaje', icon: <Briefcase size={14}/>, label: "Espacio Equipaje", active: viajeSeleccionado.preferencias?.equipaje },
-                          ].map(item => (
-                            <div key={item.id} className={`flex items-center gap-2 p-2 rounded-xl border ${item.active ? 'bg-white border-blue-100 text-blue-600' : 'bg-slate-100/50 border-transparent text-slate-300'}`}>
-                               {item.icon} <span className="text-[9px] font-black uppercase italic">{item.label}</span>
-                            </div>
-                          ))}
-                       </div>
-                    </div>
-
-                 </div>
-                 <div className="flex gap-2 pt-4">
-                    <button onClick={() => abrirChat(viajeSeleccionado.id, viajeSeleccionado.idCreador, viajeSeleccionado.conductor)} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-xs flex items-center justify-center gap-2 shadow-lg"><MessageCircle size={18}/> Chat</button>
-                    <button onClick={() => enviarSolicitudDirecta(viajeSeleccionado)} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg">Pedir Cola</button>
-                 </div>
-              </div>
-           </div>
-        )}
-
-        {/* CHAT PRIVADO */}
-        {vista === "chat_privado" && chatActivo && (
-          <div className="flex flex-col h-full space-y-4 animate-in slide-in-from-right">
-            <button onClick={() => setVista("inicio")} className="flex items-center gap-2 text-slate-400 font-black uppercase text-[10px]"><ChevronLeft size={16}/> Volver</button>
-            <div className="flex-1 bg-white rounded-[40px] border shadow-xl flex flex-col overflow-hidden">
-               <div className="bg-slate-900 p-4 text-white text-center font-black italic text-[10px] uppercase flex items-center justify-center gap-2"><ShieldCheck size={12} className="text-blue-400"/> Chat Seguro: {chatActivo.nombre}</div>
-               <div className="flex-1 p-5 overflow-y-auto space-y-3 bg-slate-50 flex flex-col">
-                  {mensajesChat.map((m) => (
-                    <div key={m.id} className={`p-4 rounded-3xl max-w-[80%] text-[11px] font-bold shadow-sm transition-all ${m.emisorId === user.uid ? 'bg-blue-600 text-white self-end rounded-tr-none' : 'bg-white border text-slate-700 self-start rounded-tl-none'}`}>{m.texto}</div>
-                  ))}
-               </div>
-               <div className="p-4 bg-white border-t flex gap-2">
-                  <input type="text" value={nuevoMensaje} onChange={(e)=>setNuevoMensaje(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && enviarMensajePrivado()} className="flex-1 bg-slate-100 p-3 rounded-2xl text-[11px] font-bold outline-none" placeholder="Escribe..." />
-                  <button onClick={enviarMensajePrivado} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg"><Send size={18}/></button>
-               </div>
-            </div>
-          </div>
-        )}
-
-        {/* MÓDULO 12: GESTIÓN COMPLETA DE TUS VIAJES */}
-{vista === "mis_viajes" && (
-  <div className="space-y-6 animate-in fade-in h-full flex flex-col">
-    <div className="bg-blue-600 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden shrink-0">
-      <MapIcon size={60} className="absolute -right-2 -bottom-2 opacity-10" />
-      <p className="font-black italic text-xl uppercase tracking-tighter">Gestión de Viajes</p>
-      <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Tus Rutas y Solicitudes</p>
-    </div>
-
-    {/* SECCIÓN: MIS VIAJES PUBLICADOS (Como Chofer) */}
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 px-2">
-        <Car size={16} className="text-slate-400" />
-        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Tus Rutas Publicadas</h3>
-      </div>
-      
-      {misViajesPublicados.length === 0 ? (
-        <div className="bg-white border-2 border-dashed border-slate-100 rounded-[30px] p-8 text-center text-slate-400 font-bold text-xs italic">
-          No has publicado ninguna ruta todavía.
+                                         <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] active:scale-95 transition-all">Buscar</button>
+          <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 transition-all">Publicar</button>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {misViajesPublicados.map(v => (
-            <div key={v.id} className="bg-white p-5 rounded-3xl border shadow-sm relative overflow-hidden group">
-               <div className="absolute top-0 right-0 p-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => prepararEdicionViaje(v)} className="p-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200"><Edit2 size={14}/></button>
-                  <button onClick={() => eliminarViaje(v.id)} className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"><Trash2 size={14}/></button>
-               </div>
+      </div>
+    ) : (
+      <div className="space-y-3 overflow-y-auto">
+        {historialChats.map(c => {
+          const soyChofer = misViajesPublicados.some(v => v.id === c.idViaje);
+          return (
+            <div 
+              key={c.chatId} 
+              onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} 
+              className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group relative overflow-hidden"
+            >
+              <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[7px] font-black uppercase italic ${soyChofer ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                Chat como {soyChofer ? 'Chofer' : 'Pasajero'}
+              </div>
 
-               <p className="text-xs font-black italic uppercase text-slate-800 leading-tight pr-16">{v.cO} → {v.cD}</p>
-               <div className="flex items-center gap-4 mt-2 border-t pt-2 border-slate-50">
-                  <div className="text-center">
-                     <p className="text-xs font-black text-slate-900">${v.precio}</p>
-                     <p className="text-[8px] font-bold text-slate-400 uppercase">Precio</p>
-                  </div>
-                  <div className="text-center">
-                     <p className="text-xs font-black text-blue-600">{v.puestos}</p>
-                     <p className="text-[8px] font-bold text-slate-400 uppercase">Puestos</p>
-                  </div>
-                  <div className="text-center">
-                     <p className="text-xs font-black text-slate-900">{v.horaSalida}</p>
-                     <p className="text-[8px] font-bold text-slate-400 uppercase">Salida</p>
-                  </div>
-               </div>
-               {/* Puedes añadir un badge si tiene solicitudes pendientes */}
+              <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors shrink-0">
+                <User size={20} className="text-blue-500 group-hover:text-white"/>
+              </div>
+              
+              <div className="flex-1 overflow-hidden pt-2">
+                <p className="text-xs font-black italic uppercase text-slate-800">{c.nombreOtro}</p>
+                <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">{c.ultimoMensaje}</p>
+                <p className="text-[8px] font-black text-blue-600 mt-1 opacity-60 uppercase italic">
+                  Viaje: {c.idViaje.slice(-5)}
+                </p>
+              </div>
+              <ChevronLeft size={16} className="text-slate-300 transform rotate-180 shrink-0"/>
             </div>
+          );
+        })}
+      </div>
+    )}
+
+    {/* VISTA: WALLET */}
+    {vista === "wallet" && (
+      <div className="space-y-6 animate-in fade-in">
+        <h2 className="text-3xl font-black italic text-slate-800 uppercase tracking-tighter">Mi Wallet</h2>
+        <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-10 rounded-[40px] shadow-2xl text-white relative overflow-hidden">
+          <p className="text-[10px] font-black uppercase opacity-80 mb-2 tracking-widest">Saldo Disponible</p>
+          <p className="text-6xl font-black italic leading-none">${userData.saldo?.toFixed(2) || "0.00"}</p>
+          <div className="absolute top-10 right-10 opacity-20"><Wallet size={80}/></div>
+          <div className="mt-8 flex items-center gap-2 bg-white/10 p-3 rounded-2xl backdrop-blur-sm">
+            <Lock size={14}/><p className="text-[9px] font-black uppercase italic tracking-tighter leading-none">Fondos protegidos por el sistema de retención inteligente.</p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* VISTA: SOPORTE */}
+    {vista === "soporte" && (
+      <div className="flex flex-col h-full bg-white rounded-[40px] border shadow-lg overflow-hidden animate-in fade-in">
+        <div className="bg-blue-600 p-4 text-white text-center font-black italic text-[10px] uppercase">Soporte Técnico</div>
+        <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-50 flex flex-col">
+          <div className="p-4 bg-white border rounded-3xl self-start text-[11px] font-bold text-slate-700 shadow-sm">👋 ¡Hola {userData.nombre}! Reporta cualquier incidente aquí.</div>
+          {chatSoporte.map((m, i) => (
+            <div key={i} className={`p-4 rounded-3xl max-w-[85%] text-[11px] font-bold shadow-sm ${m.usuarioId === user.uid ? 'bg-blue-600 text-white self-end rounded-tr-none' : 'bg-white border text-slate-700 self-start rounded-tl-none'}`}>{m.texto}</div>
           ))}
         </div>
-      )}
-    </div>
-
-    <div className="h-px w-full bg-slate-100 my-2"></div>
-
-    {/* SECCIÓN: SOLICITUDES (Como Pasajero o Chofer) */}
-    <div className="flex-1 overflow-y-auto space-y-4 pb-10">
-      <div className="flex items-center gap-2 px-2">
-        <Users size={16} className="text-slate-400" />
-        <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Tus Solicitudes</h3>
+        <div className="p-4 bg-white border-t flex gap-2">
+          <input type="text" value={mensajeSoporte} onChange={(e)=>setMensajeSoporte(e.target.value)} className="flex-1 bg-slate-100 p-4 rounded-2xl text-[11px] font-bold outline-none" placeholder="Reportar incidente..." />
+          <button onClick={async () => { if(!mensajeSoporte.trim()) return; await addDoc(collection(db, "MensajesSoporte"), { usuarioId: user.uid, texto: mensajeSoporte.trim(), fecha: serverTimestamp() }); setMensajeSoporte(""); }} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg"><Send size={18}/></button>
+        </div>
       </div>
-      
-      {misSolicitudes.length === 0 && solicitudesRecibidas.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center bg-white p-10 rounded-[40px] border border-dashed border-slate-200 text-center shadow-sm">
-           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 border-2 border-blue-100">
-              <Users size={32} className="text-blue-200" />
-           </div>
-           <h3 className="font-black uppercase italic text-slate-800 mb-2">Sin actividad</h3>
-           <p className="text-[10px] text-slate-400 font-bold italic max-w-[200px]">Las colas que pidas o te pidan aparecerán en esta sección.</p>
+    )}
+
+    {/* VISTA: PERFIL */}
+    {vista === "perfil" && (
+      <div className="space-y-4 animate-in fade-in pb-10">
+        <div className="flex bg-slate-100 p-1.5 rounded-[25px] border shadow-inner">
+          <button onClick={() => setPestañaActiva("perfil")} className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "perfil" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}>Mi Perfil</button>
+          <button onClick={() => setPestañaActiva("cuenta")} className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "cuenta" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}>Cuenta</button>
         </div>
-      ) : (
-        <div className="space-y-3">
-           {/* Solicitudes que Tú enviaste (Como Pasajero) */}
-           {misSolicitudes.map(s => (
-             <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-blue-500">
-               <div className="flex justify-between items-start mb-1">
-                  <p className="text-[9px] font-black uppercase text-blue-500 tracking-wider">Cola que pediste</p>
-                  {s.estado === "pendiente" && <button onClick={() => setModalCancelacion({visible: true, idSolicitud: s.id})} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
-               </div>
-               <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
-               <div className="flex justify-between items-end mt-2">
-                  <p className="text-[9px] font-black text-slate-500 flex items-center gap-1"><User size={10}/> Chofer: {s.nombreChofer}</p>
-                  <p className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${s.estado === 'completado' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
-                     {s.estado}
-                  </p>
-               </div>
-             </div>
-           ))}
-           {/* Solicitudes que Recibiste (Como Chofer) */}
-           {solicitudesRecibidas.map(s => (
-             <div key={s.id} className="bg-white p-5 rounded-3xl border shadow-sm border-l-4 border-l-amber-500 group">
-               <p className="text-[9px] font-black uppercase text-amber-500 mb-1 tracking-wider">Pasajero pidiendo cola</p>
-               <p className="text-xs font-black italic uppercase text-slate-800">{s.ruta}</p>
-               <p className="text-[9px] font-black text-slate-500 mt-1 flex items-center gap-1"><User size={10}/> {s.nombrePasajero}</p>
-               <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => confirmarViajeChofer(s.id)} className="flex-1 py-2.5 bg-green-600 text-white rounded-xl font-black uppercase italic text-[9px]">Aceptar</button>
-                  <button onClick={() => updateDoc(doc(db, "Solicitudes", s.id), {estado: "rechazado"})} className="flex-1 py-2.5 bg-slate-100 text-slate-500 rounded-xl font-black uppercase italic text-[9px]">Rechazar</button>
-               </div>
-             </div>
-           ))}
-        </div>
-      )}
-    </div>
-  </div>
-)}
-        {/* MÓDULO 12: EMPTY STATE PARA MENSAJES */}
-        {vista === "inbox" && (
-           <div className="space-y-4 animate-in fade-in h-full flex flex-col">
-             <div className="bg-slate-900 p-6 text-white text-center rounded-[30px] shadow-lg relative overflow-hidden shrink-0">
-                <MessageSquare size={60} className="absolute -left-2 -top-2 opacity-10" />
-                <p className="font-black italic text-xl uppercase tracking-tighter">Mensajes</p>
-                <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Tu bandeja de entrada</p>
-             </div>
-             {historialChats.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center bg-white p-10 rounded-[40px] border border-dashed border-slate-200 text-center shadow-sm my-4">
-                   <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 border-2 border-blue-100">
-                      <MessageCircle size={40} className="text-blue-200" />
-                   </div>
-                   <h3 className="font-black uppercase italic text-slate-800 mb-2">Sin chats activos</h3>
-                   <p className="text-[11px] text-slate-400 font-bold italic mb-8 max-w-[200px]">Reserva una cola o publica un viaje para contactar con otros usuarios.</p>
-                   <div className="flex gap-2">
-                      <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] active:scale-95 transition-all">Buscar</button>
-                      <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 transition-all">Publicar</button>
-                   </div>
+
+        {pestañaActiva === "perfil" && (
+          <div className="space-y-4 animate-in slide-in-from-left">
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
+              <div className="relative mb-4">
+                <div onClick={() => setShowFotoInstrucciones(true)} className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden cursor-pointer">
+                  {userData?.fotoPerfil ? <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover"/> : <User size={56} className="text-slate-400" />}
                 </div>
-             ) : (
-                <div className="space-y-3 overflow-y-auto">
-                  {historialChats.map(c => {
-  // Verificamos si tú eres el dueño del viaje de este chat
-  const soyChofer = misViajesPublicados.some(v => v.id === c.idViaje);
-  
-  return (
-    <div 
-      key={c.chatId} 
-      onClick={() => abrirChat(c.idViaje, c.idOtro, c.nombreOtro)} 
-      className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all group relative overflow-hidden"
-    >
-      {/* Etiqueta de Rol para evitar enredos */}
-      <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[7px] font-black uppercase italic ${soyChofer ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-        Chat como {soyChofer ? 'Chofer' : 'Pasajero'}
-      </div>
-
-      <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors shrink-0">
-        <User size={20} className="text-blue-500 group-hover:text-white"/>
-      </div>
-      
-      <div className="flex-1 overflow-hidden pt-2">
-        <p className="text-xs font-black italic uppercase text-slate-800">{c.nombreOtro}</p>
-        <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">{c.ultimoMensaje}</p>
-        <p className="text-[8px] font-black text-blue-600 mt-1 opacity-60 uppercase italic">
-          Viaje: {c.idViaje.slice(-5)} {/* Muestra los últimos 5 dígitos del ID como referencia */}
-        </p>
-      </div>
-      
-      <ChevronLeft size={16} className="text-slate-300 transform rotate-180 shrink-0"/>
-    </div>
-  );
-})}
-        {/* WALLET */}
-        {vista === "wallet" && (
-           <div className="space-y-6 animate-in fade-in">
-              <h2 className="text-3xl font-black italic text-slate-800 uppercase tracking-tighter">Mi Wallet</h2>
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-10 rounded-[40px] shadow-2xl text-white relative overflow-hidden">
-                 <p className="text-[10px] font-black uppercase opacity-80 mb-2 tracking-widest">Saldo Disponible</p>
-                 <p className="text-6xl font-black italic leading-none">${userData.saldo?.toFixed(2) || "0.00"}</p>
-                 <div className="absolute top-10 right-10 opacity-20"><Wallet size={80}/></div>
-                 <div className="mt-8 flex items-center gap-2 bg-white/10 p-3 rounded-2xl backdrop-blur-sm"><Lock size={14}/><p className="text-[9px] font-black uppercase italic tracking-tighter leading-none">Fondos protegidos por el sistema de retención inteligente.</p></div>
+                <div className="absolute -bottom-2 -right-2"><BadgeEstatus nivel={calcularEstatus(userData?.viajesCompletados || 0, userData?.rating || 0)} /></div>
               </div>
-           </div>
-        )}
 
-        {/* SOPORTE */}
-        {vista === "soporte" && (
-          <div className="flex flex-col h-full bg-white rounded-[40px] border shadow-lg overflow-hidden animate-in fade-in">
-             <div className="bg-blue-600 p-4 text-white text-center font-black italic text-[10px] uppercase">Soporte Técnico</div>
-             <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-50 flex flex-col">
-                <div className="p-4 bg-white border rounded-3xl self-start text-[11px] font-bold text-slate-700 shadow-sm">👋 ¡Hola {userData.nombre}! Reporta cualquier incidente aquí.</div>
-                {chatSoporte.map((m, i) => (
-                  <div key={i} className={`p-4 rounded-3xl max-w-[85%] text-[11px] font-bold shadow-sm ${m.usuarioId === user.uid ? 'bg-blue-600 text-white self-end rounded-tr-none' : 'bg-white border text-slate-700 self-start rounded-tl-none'}`}>{m.texto}</div>
-                ))}
-             </div>
-             <div className="p-4 bg-white border-t flex gap-2">
-               <input type="text" value={mensajeSoporte} onChange={(e)=>setMensajeSoporte(e.target.value)} className="flex-1 bg-slate-100 p-4 rounded-2xl text-[11px] font-bold outline-none" placeholder="Reportar incidente..." />
-               <button onClick={async () => { if(!mensajeSoporte.trim()) return; await addDoc(collection(db, "MensajesSoporte"), { usuarioId: user.uid, texto: mensajeSoporte.trim(), fecha: serverTimestamp() }); setMensajeSoporte(""); }} className="bg-blue-600 w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg"><Send size={18}/></button>
-             </div>
-          </div>
-        )}
+              <div className="text-center mt-2 space-y-1">
+                <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">{userData?.nombre}{userData?.edad ? `, ${userData.edad}` : ""}</h2>
+                <div className="flex items-center justify-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${obtenerNivel(userData?.viajesCompletados || 0).clase}`}>{obtenerNivel(userData?.viajesCompletados || 0).etiqueta}</span>
+                </div>
+              </div>
 
-        {/* VISTA: PERFIL - MÓDULO 16 (TABS & CUENTA) */}
-        {vista === "perfil" && (
-          <div className="space-y-4 animate-in fade-in pb-10">
-            {/* SELECTOR DE PESTAÑAS (TABS) */}
-            <div className="flex bg-slate-100 p-1.5 rounded-[25px] border shadow-inner">
-              <button 
-                onClick={() => setPestañaActiva("perfil")}
-                className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "perfil" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
-              >
-                Mi Perfil
-              </button>
-              <button 
-                onClick={() => setPestañaActiva("cuenta")}
-                className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase italic transition-all ${pestañaActiva === "cuenta" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
-              >
-                Cuenta
-              </button>
+              <div className="w-full mt-4 px-4 border-t pt-4">
+                <p className="text-center text-slate-600 text-[11px] italic font-medium leading-relaxed">"{userData?.bio || "Viajando con buena vibra."}"</p>
+              </div>
+              <SenalesConfianza data={userData} />
             </div>
 
-            {/* CONTENIDO PESTAÑA: MI PERFIL (LO PÚBLICO) */}
-            {pestañaActiva === "perfil" && (
-              <div className="space-y-4 animate-in slide-in-from-left">
-                <div className="bg-white p-8 rounded-[40px] shadow-sm border flex flex-col items-center relative overflow-hidden">
-                  <div className="relative mb-4">
-                    <div onClick={() => setShowFotoInstrucciones(true)} className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl relative overflow-hidden cursor-pointer">
-                      {userData?.fotoPerfil ? (
-                        <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover"/>
-                      ) : (
-                        <User size={56} className="text-slate-400" />
-                      )}
-                    </div>
-                    <div className="absolute -bottom-2 -right-2">
-                      <BadgeEstatus nivel={calcularEstatus(userData?.viajesCompletados || 0, userData?.rating || 0)} />
-                    </div>
-                  </div>
-
-                  <div className="text-center mt-2 space-y-1">
-                    <h2 className="font-black italic text-2xl text-slate-800 uppercase tracking-tighter">
-                      {userData?.nombre}{userData?.edad ? `, ${userData.edad}` : ""}
-                    </h2>
-                    <div className="flex items-center justify-center gap-2">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${obtenerNivel(userData?.viajesCompletados || 0).clase}`}>
-                        {obtenerNivel(userData?.viajesCompletados || 0).etiqueta}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="w-full mt-4 px-4 border-t pt-4">
-                     <p className="text-center text-slate-600 text-[11px] italic font-medium leading-relaxed">
-                        "{userData?.bio || "Viajando con buena vibra y compartiendo la cola."}"
-                     </p>
-                  </div>
-                  <SenalesConfianza data={userData} />
-                </div>
-
-                <KYCProgressBar userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
-                <ProgresoGamificacion userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
-              </div>
-            )}
-
-            {/* CONTENIDO PESTAÑA: CUENTA (LO PRIVADO) */}
-            {pestañaActiva === "cuenta" && (
-              <div className="space-y-3 animate-in slide-in-from-right">
-                <div className="bg-white p-6 rounded-[35px] border shadow-sm">
-                  <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest mb-4 px-2">Gestión Financiera</p>
-                  <div className="space-y-2">
-                    <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><CreditCard size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Métodos de Pago</span>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-400"/>
-                    </button>
-                    <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 text-green-600 rounded-xl"><DollarSign size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Preferencias de Cobro</span>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-400"/>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-[35px] border shadow-sm mt-6">
-                  <p className="text-[10px] font-black uppercase text-slate-400 italic tracking-widest mb-4 px-2">Configuración de Cuenta</p>
-                  <div className="space-y-2">
-                    <button onClick={() => setConfigOpen(!configOpen)} className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 text-orange-600 rounded-xl"><Settings size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Editar Información Personal</span>
-                      </div>
-                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${configOpen ? 'rotate-90' : ''}`}/>
-                    </button>
-                    
-                    {configOpen && (
-                      <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-100 space-y-3 animate-in slide-in-from-top">
-                        <div className="grid grid-cols-4 gap-2">
-                          <input type="text" placeholder="Cédula" className="col-span-3 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
-                          <input type="number" placeholder="Edad" className="col-span-1 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none text-center" value={perfilForm.edad} onChange={(e)=>setPerfilForm({...perfilForm, edad: e.target.value})} />
-                        </div>
-                        <input type="text" placeholder="Biografía" className="w-full bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.bio} onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} />
-                        <button onClick={guardarDatosPerfil} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px]">Guardar Cambios</button>
-                      </div>
-                    )}
-
-                    <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 text-purple-600 rounded-xl"><LifeBuoy size={18}/></div>
-                        <span className="text-xs font-bold text-slate-700">Centro de Ayuda</span>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-400"/>
-                    </button>
-
-                    <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 active:scale-95 transition-all mt-4">
-                      <div className="flex items-center gap-3 text-red-600">
-                        <LogOut size={18}/>
-                        <span className="text-xs font-black uppercase italic">Cerrar Sesión</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <KYCProgressBar userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
+            <ProgresoGamificacion userData={userData} onAbrirConfig={() => setPestañaActiva("cuenta")} />
           </div>
         )}
-      </main>
 
-      <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
-        <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span>
-        </button>
-        <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "chofer" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span>
-        </button>
-        <button onClick={() => cambiarVista("mis_viajes")} className={`flex flex-col items-center gap-1 transition-all ${vista === "mis_viajes" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Tus Viajes</span>
-        </button>
-        <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inbox" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span>
-        </button>
-        <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}>
-          <User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span>
-        </button>
-      </nav>
+        {pestañaActiva === "cuenta" && (
+          <div className="space-y-3 animate-in slide-in-from-right">
+            <div className="bg-white p-6 rounded-[35px] border shadow-sm">
+              <p className="text-[10px] font-black uppercase text-blue-600 italic tracking-widest mb-4 px-2">Gestión Financiera</p>
+              <div className="space-y-2">
+                <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
+                  <div className="flex items-center gap-3"><div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><CreditCard size={18}/></div><span className="text-xs font-bold text-slate-700">Métodos de Pago</span></div>
+                  <ChevronRight size={16} className="text-slate-400"/>
+                </button>
+                <button className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
+                  <div className="flex items-center gap-3"><div className="p-2 bg-green-100 text-green-600 rounded-xl"><DollarSign size={18}/></div><span className="text-xs font-bold text-slate-700">Horarios y Preferencias</span></div>
+                  <ChevronRight size={16} className="text-slate-400"/>
+                </button>
+              </div>
+            </div>
 
-      <ModalInstruccionesFoto 
-        isOpen={showFotoInstrucciones} 
-        onClose={() => setShowFotoInstrucciones(false)} 
-        onConfirm={() => { setShowFotoInstrucciones(false); abrirCamara(); }}
-      />
-      <PantallaExito 
-        visible={successData.show}
-        titulo={successData.titulo}
-        subtitulo={successData.subtitulo}
-        onClose={() => setSuccessData({ ...successData, show: false })}
-      />
-      // --- MÓDULO 3: MODAL DE BÚSQUEDA AVANZADA CON FILTRADO ---
-const ModalBusquedaAvanzada = ({ isOpen, onClose, type, onSelect, ubicaciones }) => {
-  const [busqueda, setBusqueda] = useState(""); // Estado para el texto del input
+            <div className="bg-white p-6 rounded-[35px] border shadow-sm mt-6">
+              <p className="text-[10px] font-black uppercase text-slate-400 italic tracking-widest mb-4 px-2">Configuración de Cuenta</p>
+              <div className="space-y-2">
+                <button onClick={() => setConfigOpen(!configOpen)} className="w-full p-4 bg-slate-50 rounded-2xl flex items-center justify-between border active:scale-95 transition-all">
+                  <div className="flex items-center gap-3"><div className="p-2 bg-orange-100 text-orange-600 rounded-xl"><Settings size={18}/></div><span className="text-xs font-bold text-slate-700">Editar Información Personal</span></div>
+                  <ChevronRight size={16} className={`text-slate-400 transition-transform ${configOpen ? 'rotate-90' : ''}`}/>
+                </button>
+                {configOpen && (
+                  <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-100 space-y-3 animate-in slide-in-from-top">
+                    <div className="grid grid-cols-4 gap-2">
+                      <input type="text" placeholder="Cédula" className="col-span-3 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.cedula} onChange={(e)=>setPerfilForm({...perfilForm, cedula: e.target.value})} />
+                      <input type="number" placeholder="Edad" className="col-span-1 bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none text-center" value={perfilForm.edad} onChange={(e)=>setPerfilForm({...perfilForm, edad: e.target.value})} />
+                    </div>
+                    <input type="text" placeholder="Biografía" className="w-full bg-slate-50 p-4 rounded-xl border text-[11px] font-bold outline-none" value={perfilForm.bio} onChange={(e)=>setPerfilForm({...perfilForm, bio: e.target.value})} />
+                    <button onClick={guardarDatosPerfil} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase italic text-[10px]">Guardar Cambios</button>
+                  </div>
+                )}
+                <button onClick={handleLogout} className="w-full p-4 bg-red-50 rounded-2xl flex items-center justify-between border border-red-100 active:scale-95 transition-all mt-4">
+                  <div className="flex items-center gap-3 text-red-600"><LogOut size={18}/><span className="text-xs font-black uppercase italic">Cerrar Sesión</span></div>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </main>
+
+  <nav className="p-3 bg-white border-t flex justify-between items-center pb-8 fixed bottom-0 w-full max-w-md shadow-2xl z-50 px-6 rounded-t-3xl left-1/2 -translate-x-1/2">
+    <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "pasajero" ? "text-blue-600 scale-110" : "text-slate-300"}`}><Search size={24} /><span className="text-[8px] font-black uppercase italic">Buscar</span></button>
+    <button onClick={() => { setVista("inicio"); setModo("chofer"); }} className={`flex flex-col items-center gap-1 transition-all ${vista === "inicio" && modo === "chofer" ? "text-blue-600 scale-110" : "text-slate-300"}`}><PlusCircle size={24} /><span className="text-[8px] font-black uppercase italic">Publicar</span></button>
+    <button onClick={() => cambiarVista("mis_viajes")} className={`flex flex-col items-center gap-1 transition-all ${vista === "mis_viajes" ? "text-blue-600 scale-110" : "text-slate-300"}`}><MapIcon size={24} /><span className="text-[8px] font-black uppercase italic">Tus Viajes</span></button>
+    <button onClick={() => cambiarVista("inbox")} className={`flex flex-col items-center gap-1 transition-all ${vista === "inbox" ? "text-blue-600 scale-110" : "text-slate-300"}`}><MessageSquare size={24} /><span className="text-[8px] font-black uppercase italic">Mensajes</span></button>
+    <button onClick={() => cambiarVista("perfil")} className={`flex flex-col items-center gap-1 transition-all ${vista === "perfil" ? "text-blue-600 scale-110" : "text-slate-300"}`}><User size={24} /><span className="text-[8px] font-black uppercase italic">Perfil</span></button>
+  </nav>
+
+  <ModalInstruccionesFoto isOpen={showFotoInstrucciones} onClose={() => setShowFotoInstrucciones(false)} onConfirm={() => { setShowFotoInstrucciones(false); abrirCamara(); }} />
   
+  <ModalBusquedaAvanzada 
+    isOpen={showSearchModal.visible}
+    onClose={() => setShowSearchModal({ ...showSearchModal, visible: false })}
+    type={showSearchModal.type}
+    ubicaciones={UBICACIONES}
+    onSelect={(estado, ciudad) => {
+       if (showSearchModal.type === 'origen') { setFEO(estado); setFCO(ciudad); }
+       else { setFED(estado); setFCD(ciudad); }
+    }}
+  />
+
+  <PantallaExito visible={successData.show} titulo={successData.titulo} subtitulo={successData.subtitulo} onClose={() => setSuccessData({ ...successData, show: false })} />
+</main>
+</div>
+);
+};
+
+// --- MÓDULO 3: MODAL DE BÚSQUEDA ---
+const ModalBusquedaAvanzada = ({ isOpen, onClose, type, onSelect, ubicaciones }) => {
+  const [busqueda, setBusqueda] = useState("");
   if (!isOpen) return null;
-
   const isOrigen = type === 'origen';
-
-  // LÓGICA DE FILTRADO:
-  // Filtramos las ubicaciones basándonos en si el nombre del Estado o alguna de sus Ciudades coincide con la búsqueda
   const resultadosFiltrados = Object.keys(ubicaciones).reduce((acc, estado) => {
     const coincideEstado = estado.toLowerCase().includes(busqueda.toLowerCase());
-    const ciudadesCoincidentes = ubicaciones[estado].filter(ciudad => 
-      ciudad.toLowerCase().includes(busqueda.toLowerCase())
-    );
-
-    // Si el nombre del estado coincide, incluimos todas sus ciudades. 
-    // Si no, solo incluimos las ciudades que coincidan.
-    if (coincideEstado || ciudadesCoincidentes.length > 0) {
-      acc[estado] = coincideEstado ? ubicaciones[estado] : ciudadesCoincidentes;
-    }
+    const ciudadesCoincidentes = ubicaciones[estado].filter(c => c.toLowerCase().includes(busqueda.toLowerCase()));
+    if (coincideEstado || ciudadesCoincidentes.length > 0) acc[estado] = coincideEstado ? ubicaciones[estado] : ciudadesCoincidentes;
     return acc;
   }, {});
 
-  const ESTADOS_FILTRADOS = Object.keys(resultadosFiltrados).sort();
-
   return (
-    <div className="fixed inset-0 z-[200] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
-      {/* HEADER DEL MODAL */}
+    <div className="fixed inset-0 z-[200] bg-white flex flex-col animate-in slide-in-from-bottom">
       <header className="p-6 pt-12 border-b flex items-center gap-4 shrink-0">
-        <button onClick={() => { setBusqueda(""); onClose(); }} className="text-slate-400">
-          <ChevronLeft size={24}/>
-        </button>
+        <button onClick={onClose}><ChevronLeft size={24}/></button>
         <div className="flex-1 relative">
-           <input 
-             type="text" 
-             value={busqueda}
-             onChange={(e) => setBusqueda(e.target.value)}
-             placeholder={`Buscar ${isOrigen ? 'salida' : 'llegada'}...`}
-             className="w-full bg-slate-100 p-4 pl-12 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-blue-400 transition-all"
-             autoFocus
-           />
-           <Search size={18} className="absolute left-4 top-4 text-slate-400"/>
-           {busqueda && (
-             <button 
-               onClick={() => setBusqueda("")}
-               className="absolute right-4 top-4 text-slate-400 bg-slate-200 rounded-full p-0.5"
-             >
-               <X size={14}/>
-             </button>
-           )}
+          <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${isOrigen ? 'salida' : 'llegada'}...`} className="w-full bg-slate-100 p-4 rounded-2xl text-sm font-bold outline-none" autoFocus />
         </div>
       </header>
-
-      {/* CONTENIDO: LISTA FILTRADA */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
-         {ESTADOS_FILTRADOS.length === 0 ? (
-           <div className="text-center py-20">
-             <Search size={40} className="mx-auto text-slate-200 mb-4"/>
-             <p className="text-slate-400 font-bold italic text-xs uppercase">No se encontraron resultados para "{busqueda}"</p>
-           </div>
-         ) : (
-           <div className="space-y-3">
-              {ESTADOS_FILTRADOS.map(estado => (
-                 <div key={estado} className="bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden">
-                    <div className="p-5 flex justify-between items-center bg-white border-b border-slate-100">
-                       <p className="text-xs font-black uppercase italic text-slate-900 tracking-tight flex items-center gap-2">
-                          <Palette size={12} className="text-blue-300"/> Edo. {estado}
-                       </p>
-                    </div>
-                    
-                    <div className="p-3 grid grid-cols-2 gap-2">
-                       {resultadosFiltrados[estado].map(ciudad => (
-                          <button 
-                            key={ciudad}
-                            onClick={() => {
-                               onSelect(estado, ciudad);
-                               setBusqueda(""); // Limpiar búsqueda para la próxima vez
-                               onClose();
-                            }}
-                            className="p-3 rounded-xl border flex items-center gap-2.5 transition-all text-left group bg-white hover:border-blue-200 hover:bg-blue-50 active:scale-95"
-                          >
-                             {isOrigen ? <MapPin size={16} className="text-slate-300 group-hover:text-blue-500"/> : <Navigation size={16} className="text-slate-300 group-hover:text-green-500"/>}
-                             <span className="text-[10px] font-bold text-slate-700 group-hover:text-slate-900 pr-1">{ciudad}</span>
-                          </button>
-                       ))}
-                    </div>
-                 </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {Object.keys(resultadosFiltrados).map(estado => (
+          <div key={estado} className="bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden">
+            <div className="p-5 bg-white border-b"><p className="text-xs font-black uppercase italic text-slate-900 tracking-tight">Edo. {estado}</p></div>
+            <div className="p-3 grid grid-cols-2 gap-2">
+              {resultadosFiltrados[estado].map(ciudad => (
+                <button key={ciudad} onClick={() => { onSelect(estado, ciudad); setBusqueda(""); onClose(); }} className="p-3 rounded-xl border flex items-center gap-2 bg-white hover:bg-blue-50 transition-all text-left">
+                  <span className="text-[10px] font-bold text-slate-700">{ciudad}</span>
+                </button>
               ))}
-           </div>
-         )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
+
+export default NavegacionPrincipal;
