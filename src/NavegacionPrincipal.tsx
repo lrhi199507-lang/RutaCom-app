@@ -12,7 +12,7 @@ import {
   ChevronLeft, MapPin, Edit2, AlertTriangle, Star, X,
   Map as MapIcon, Flag, Clock, ArrowRight, Lock, Trophy,
   FileText, Camera, ShieldAlert, Wind, CigaretteOff, PawPrint, MessageSquare, Briefcase, Zap, Palette,
-  PlusCircle, History, DollarSign, ChevronRight, LifeBuoy
+  PlusCircle, History, DollarSign, ChevronRight, LifeBuoy, Crown
 } from "lucide-react";
 
 // --- CONSTANTES DE UBICACIÓN ---
@@ -276,17 +276,25 @@ const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir, onClickPerfi
 
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="font-black italic uppercase text-sm text-slate-800 cursor-pointer" onClick={(e) => { e.stopPropagation(); onClickPerfil(); }}>
-                {viaje.conductor}
-              </h4>
-              {(estatusChofer === "Oro" || estatusChofer === "Diamante" || estatusChofer === "Leyenda") && (
-                <div className="flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                  <Star size={8} className="fill-amber-600"/>
-                  <span className="text-[7px] font-black uppercase">Super Driver</span>
-                </div>
-              )}
-            </div>
-            
+    <h4 className="font-black italic uppercase text-sm text-slate-800 cursor-pointer" onClick={(e) => { e.stopPropagation(); onClickPerfil(); }}>
+      {viaje.conductor}
+    </h4>
+    {(estatusChofer === "Oro" || estatusChofer === "Diamante" || estatusChofer === "Leyenda") && (
+      <div className="flex items-center gap-1 bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded-full">
+        <Star size={8} className="fill-amber-600"/>
+        <span className="text-[7px] font-black uppercase">Super Driver</span>
+      </div>
+    )}
+  </div>
+
+  {/* PASO 4: ETIQUETA VIP PARA EL PASAJERO */}
+  {viaje.preferencias?.maxDosAtras && (
+    <div className="mt-1.5 inline-flex items-center gap-1 bg-gradient-to-r from-purple-100 to-fuchsia-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-lg shadow-sm">
+      <Crown size={10} className="text-purple-600" />
+      <span className="text-[8px] font-black uppercase tracking-wider">Máximo 2 Atrás</span>
+    </div>
+  )}
+</div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="flex items-center text-slate-700">
                 <Star size={10} className="fill-amber-500 text-amber-500" />
@@ -410,8 +418,8 @@ export default function NavegacionPrincipal({ user }) {
   // MÓDULO 18: WIZARD DE PUBLICACIÓN (Chofer)
   const [pasoWizard, setPasoWizard] = useState(1);
   const [viajeForm, setViajeForm] = useState({
-    origen: "", destino: "", paradas: [], rutaSeleccionada: null, precio: "", asientos: 3, horaSalida: "", horaLlegada: "", preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true }
-  });
+  origen: "", destino: "", paradas: [], rutaSeleccionada: null, precio: "", asientos: 3, horaSalida: "", horaLlegada: "", preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true, maxDosAtras: false }
+});
 
   const [showFotoInstrucciones, setShowFotoInstrucciones] = useState(false);
 
@@ -1095,22 +1103,23 @@ export default function NavegacionPrincipal({ user }) {
                           <div className="bg-slate-50 p-4 rounded-2xl space-y-3">
                              <p className="text-[10px] font-black uppercase text-slate-400 italic">Preferencias del Viaje:</p>
                              <div className="flex flex-wrap gap-2">
-                                {[
-                                  { id: 'ac', icon: <Wind size={14}/>, label: "A/C" },
-                                  { id: 'noFumar', icon: <CigaretteOff size={14}/>, label: "No Fumar" },
-                                  { id: 'mascotas', icon: <PawPrint size={14}/>, label: "Mascotas" },
-                                  { id: 'conversar', icon: <MessageSquare size={14}/>, label: "Hablo Mucho" },
-                                  { id: 'equipaje', icon: <Briefcase size={14}/>, label: "Maletero" },
+                          {[
+                            { id: 'maxDosAtras', icon: <Crown size={14}/>, label: "VIP: Máx 2 Atrás" }, // <-- NUEVO
+                             { id: 'ac', icon: <Wind size={14}/>, label: "A/C" },
+                              { id: 'noFumar', icon: <CigaretteOff size={14}/>, label: "No Fumar" },
+                               { id: 'mascotas', icon: <PawPrint size={14}/>, label: "Mascotas" },
+                               { id: 'conversar', icon: <MessageSquare size={14}/>, label: "Hablo Mucho" },
+                                { id: 'equipaje', icon: <Briefcase size={14}/>, label: "Maletero" },
                                 ].map(pref => (
-                                  <button 
-                                    key={pref.id}
-                                    onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref.id]: !viajeForm.preferencias[pref.id]}})}
-                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 transition-all ${viajeForm.preferencias[pref.id] ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-slate-100 text-slate-400'}`}
-                                  >
-                                     {pref.icon} <span className="text-[9px] font-black uppercase italic">{pref.label}</span>
-                                  </button>
-                                ))}
-                             </div>
+                                <button 
+                                key={pref.id}
+                             onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref.id]: !viajeForm.preferencias[pref.id]}})}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 transition-all ${viajeForm.preferencias[pref.id] ? (pref.id === 'maxDosAtras' ? 'bg-purple-600 border-purple-600 text-white shadow-md' : 'bg-blue-600 border-blue-600 text-white shadow-md') : 'bg-white border-slate-100 text-slate-400'}`}
+                        >
+                        {pref.icon} <span className="text-[9px] font-black uppercase italic">{pref.label}</span>
+                             </button>
+                              ))}
+                           </div>
                           </div>
 
                           <div className="flex gap-3 pt-2">
