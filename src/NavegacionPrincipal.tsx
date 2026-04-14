@@ -625,5 +625,3 @@ const eliminarViaje = async (idViaje) => {
     </div>
   );
 };
-
-export default NavegacionPrincipal;
