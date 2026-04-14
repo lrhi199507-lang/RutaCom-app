@@ -39,37 +39,42 @@ import {
 } from "lucide-react";
 
 export default function NavegacionPrincipal({ user }) {
+  // --- 1. ESTADOS ---
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
+  const [resultadosBusqueda, setResultadosBusqueda] = useState([]); // Los que ve el pasajero
+  const [userData, setUserData] = useState(null);
+  const [viajes, setViajes] = useState([]); // General
+  const [misViajesPublicados, setMisViajesPublicados] = useState([]); // Los del chofer
+  
+  // Estados de Interfaz
   const [showSearchModal, setShowSearchModal] = useState({ visible: false, type: 'origen' });
   const [searchTerm, setSearchTerm] = useState("");
-  const [userData, setUserData] = useState(null);
-  const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
-  const [misSolicitudes, setMisSolicitudes] = useState([]);
-  const [viajes, setViajes] = useState([]); 
-  const [misViajesPublicados, setMisViajesPublicados] = useState([]); 
-  const [viajeEditando, setViajeEditando] = useState(null); 
-  const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
-  const [pasajerosViaje, setPasajerosViaje] = useState([]); 
   const [configOpen, setConfigOpen] = useState(false);
   const [pestañaActiva, setPestañaActiva] = useState("perfil");
   const [successData, setSuccessData] = useState({ show: false, titulo: "", subtitulo: "" });
-  
-  // Aquí sigue el resto de tu código...
+  const [showFotoInstrucciones, setShowFotoInstrucciones] = useState(false);
+
+  // Estados de Viajes/Solicitudes
+  const [solicitudesRecibidas, setSolicitudesRecibidas] = useState([]); 
+  const [misSolicitudes, setMisSolicitudes] = useState([]);
+  const [viajeEditando, setViajeEditando] = useState(null); 
+  const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
+  const [pasajerosViaje, setPasajerosViaje] = useState([]);
   
   // MÓDULO 18: WIZARD DE PUBLICACIÓN (Chofer)
-  const [pasoWizard, setPasoWizard] = useState(1);
-  const [viajeForm, setViajeForm] = useState({
+const [pasoWizard, setPasoWizard] = useState(1);
+const [viajeForm, setViajeForm] = useState({
   origen: "", destino: "", paradas: [], rutaSeleccionada: null, precio: "", asientos: 3, horaSalida: "", horaLlegada: "", preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true, maxDosAtras: false }
 });
 
-// ... otros estados arriba ...
+const publicarRuta = async () => {
+  console.log("Botón de publicar presionado");
+  // Aquí puedes añadir la lógica de Firestore más adelante
+}; // <--- ASEGÚRATE DE QUE ESTA LLAVE ESTÉ AQUÍ
 
-
-// ... resto de tus funciones ...
-
-  const [chatActivo, setChatActivo] = useState(null);
-  const [mensajesChat, setMensajesChat] = useState([]);
+const [chatActivo, setChatActivo] = useState(null);
+const [mensajesChat, setMensajesChat] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [historialChats, setHistorialChats] = useState([]);
 
@@ -130,9 +135,12 @@ export default function NavegacionPrincipal({ user }) {
     });
 
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
-      setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
+  const listaViajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  // Aquí es donde ocurre la magia:
+  setViajes(listaViajes); 
+  setResultadosBusqueda(listaViajes); 
+});
     const unsubSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idChofer", "==", user.uid), where("estado", "==", "pendiente")), (snap) => {
       setSolicitudesRecibidas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -141,12 +149,21 @@ export default function NavegacionPrincipal({ user }) {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    const unsubViajeActivo = onSnapshot(query(collection(db, "Solicitudes")), (snap) => {
-      const actual = snap.docs
-        .map(d => ({id: d.id, ...d.data()}))
-        .find(s => (s.idPasajero === user.uid || s.idChofer === user.uid) && s.estado !== "completado" && s.estado !== "rechazado");
-      setViajeActivo(actual || null);
-    });
+    const unsubViajeActivo = onSnapshot(
+  query(
+    collection(db, "Solicitudes"), 
+    // Usamos 'where' para que Firebase solo nos mande lo que nos interesa
+    where("participantes", "array-contains", user.uid) 
+  ), 
+  (snap) => {
+    const actual = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      // Aquí solo filtramos por el estado, porque los IDs ya vienen filtrados desde la base de datos
+      .find(s => s.estado !== "completado" && s.estado !== "rechazado");
+    
+    setViajeActivo(actual || null);
+  }
+);
 
     let docsRecibidos = [];
     let docsEnviados = [];
@@ -185,7 +202,7 @@ const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
     return () => { 
       unsubUser(); unsubViajes();
       unsubSoli(); unsubMisSoli(); 
-      unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo(); unsubMisViajes()
+      unsubR(); unsubE(); unsubSoporte(); unsubViajeActivo(); unsubMisViajes() 
     };
   }, [user]);
 
@@ -248,9 +265,6 @@ const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
   try {
     console.log("Archivo listo para procesar:", archivo);
     
-    // 1. Aquí podrías mostrar un "Cargando..." si quieres
-    // 2. Aquí va la lógica de Firebase que haremos luego
-    // 3. Por ahora, podemos crear una URL temporal para ver si funciona:
     const urlTemporal = URL.createObjectURL(archivo);
     
     setUserData(prev => ({ ...prev, fotoPerfil: urlTemporal }));
@@ -261,6 +275,7 @@ const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
     alert("Hubo un problema con la imagen.");
   }
 };
+
 // ACCIONES DE BASE DE DATOS
   const enviarMensajePrivado = async () => {
     if (!nuevoMensaje.trim() || !chatActivo) return;
@@ -575,31 +590,123 @@ const eliminarViaje = async (idViaje) => {
         {vista === "inicio" && !viajeSeleccionado && (
           <div className="space-y-6">
             <SelectorModo modo={modo} setModo={setModo} />
+{/* BUSCADOR */}
+              {modo === "pasajero" && (
+                <div className="bg-white p-5 rounded-[30px] shadow-sm border space-y-3 animate-in slide-in-from-left">
+                  <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={14}/> ¿A dónde vamos hoy?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fEO} onChange={(e)=>{setFEO(e.target.value); setFCO("");}}><option value="">DESDE: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fEO} value={fCO} onChange={(e)=>setFCO(e.target.value)}><option value="">DESDE: CIUDAD</option>{fEO && UBICACIONES[fEO].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fED} onChange={(e)=>{setFED(e.target.value); setFCD("");}}><option value="">HASTA: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
+                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fED} value={fCD} onChange={(e)=>setFCD(e.target.value)}><option value="">HASTA: CIUDAD</option>{fED && UBICACIONES[fED].map(c => <option key={c} value={c}>{c}</option>)}</select>
+                  </div>
 
-            {/* MODO CHOFER: WIZARD DE PUBLICACIÓN */}
-            {modo === "chofer" && (
-              <div className="space-y-6 animate-in slide-in-from-right">
-                {(!userData?.cedula || !userData?.vehiculo?.placa) ? (
-                  <BannerVerificacion 
-                    cambiarVista={cambiarVista} 
-                    setConfigOpen={setConfigOpen} 
-                  />
-                ) : (
-                  <WizardPublicar 
-                    pasoWizard={pasoWizard}
-                    setPasoWizard={setPasoWizard}
-                    viajeForm={viajeForm}
-                    setViajeForm={setViajeForm}
-                    UBICACIONES={UBICACIONES}
-                    setVista={setVista}
-                    setModo={setModo}
-                    publicarRuta={publicarRuta}
-                  />
-                )}
+                  {/* MÓDULO 10: BÚSQUEDAS RECIENTES */}
+                  {busquedasRecientes.length > 0 && (
+                     <div className="pt-3 border-t border-slate-100 mt-2">
+                       <p className="text-[9px] font-black uppercase text-slate-400 mb-2 flex items-center gap-1"><History size={12}/> Búsquedas Recientes</p>
+                       <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
+                          {busquedasRecientes.map((b, i) => (
+                            <button key={i} onClick={() => aplicarBusquedaReciente(b)} className="shrink-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 hover:bg-blue-50 hover:border-blue-200 transition-colors active:scale-95">
+                              <History size={12} className="text-slate-400"/>
+                              <div className="text-left">
+                                 <p className="text-[9px] font-black italic text-slate-700 leading-none mb-0.5">{b.fCO} <span className="text-blue-500">→</span></p>
+                                 <p className="text-[9px] font-black italic text-slate-700 leading-none">{b.fCD}</p>
+                              </div>
+                            </button>
+                          ))}
+                       </div>
+                     </div>
+                  )}
+                </div>
+              )}
+              {/* LISTA DE VIAJES (FILTRADO ACTUALIZADO) */}
+    <div className="space-y-4">
+       <h3 className="font-black italic uppercase text-lg text-slate-800 pl-2">Viajes Disponibles</h3>
+       {viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).length === 0 ? (
+          <div className="bg-slate-100/50 border border-dashed border-slate-300 rounded-[30px] p-8 text-center text-slate-500 font-bold text-xs italic">
+             No hay viajes publicados para esta ruta actualmente.
+          </div>
+       ) : (
+         viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).map(v => (
+            <CardViajeOptimizada 
+              key={v.id}
+              viaje={v}
+              estatusChofer={calcularEstatus(v.viajesTotales || 0, v.rating || 0)}
+              onClickDetalle={() => setViajeSeleccionado(v)}
+              onClickPedir={() => enviarSolicitudDirecta(v)}
+              onClickPerfil={() => setPerfilPublico({ /* ... datos ... */ })}
+            />
+         ))
+       )}
+    </div>
+  </div>
+)}
+            {/* MODO CHOFER: Wizard de Publicación */}
+{modo === "chofer" && (
+  <div className="mt-6">
+    {/* Aquí empieza el paso 1 que me pasaste */}
+    {pasoWizard === 1 && (
+      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">
+          ¿Hacia dónde<br/>vas a manejar?
+        </h2>
+        
+        <div className="space-y-4">
+          {/* ORIGEN con Autocompletado */}
+          <div className="relative">
+            <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
+              <MapPin size={22} className="text-blue-600"/>
+              <input 
+                type="text" 
+                placeholder="Punto de salida (Ej. Valencia)" 
+                className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
+                value={viajeForm.origen}
+                onChange={(e) => setViajeForm({...viajeForm, origen: e.target.value})}
+              />
+            </div>
+            
+            {/* Sugerencias de Origen */}
+            {viajeForm.origen.length > 1 && !viajeForm.origen.includes(',') && (
+              <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
+                {Object.keys(UBICACIONES).flatMap(estado => 
+                  UBICACIONES[estado]
+                    .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.origen.toLowerCase()))
+                    .map(ciudad => (
+                      <button 
+                        key={`ori-${estado}-${ciudad}`}
+                        onClick={() => setViajeForm({...viajeForm, origen: `${ciudad}, ${estado}`})}
+                        className="w-full text-left p-4 hover:bg-blue-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
+                      >
+                        <MapPin size={14} className="text-blue-400"/> {ciudad}, {estado}
+                      </button>
+                    ))
+                ).slice(0, 5)}
               </div>
             )}
           </div>
-        )}
+
+          {/* DESTINO con Autocompletado */}
+          <div className="relative">
+            {/* ... (Repite la misma lógica para el input de destino que tienes en tu código) ... */}
+          </div>
+        </div>
+
+        <button 
+          onClick={() => setPasoWizard(2)}
+          disabled={!viajeForm.origen.includes(',') || !viajeForm.destino.includes(',')}
+          className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30 transition-all active:scale-95"
+        >
+          Continuar a los detalles
+        </button>
+      </div>
+    )}
+
+    {/* AQUÍ IRÁN LOS PASOS 2, 3, etc. MÁS ADELANTE */}
+  </div>
+)}
 
         {/* VISTAS RESTANTES */}
         <div className="space-y-3">

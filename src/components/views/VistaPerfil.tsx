@@ -65,4 +65,4 @@ const VistaPerfil = ({ userData, pestañaActiva, setPestañaActiva, handleLogout
   );
 };
 
-export default VistaPerfil;
+export { VistaPerfil };
