@@ -1,5 +1,4 @@
-// --- CONSTANTES DE UBICACIÓN ---
-const UBICACIONES = {
+export const UBICACIONES = {
   "Amazonas": ["Puerto Ayacucho"], 
   "Anzoátegui": ["Barcelona", "Puerto La Cruz"],
   "Apure": ["San Fernando"], 
@@ -21,3 +20,5 @@ const UBICACIONES = {
   "Yaracuy": ["San Felipe"],
   "Zulia": ["Maracaibo", "San Francisco"]
 };
+
+export const ESTADOS = Object.keys(UBICACIONES).sort();
