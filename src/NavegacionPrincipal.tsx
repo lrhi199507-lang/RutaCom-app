@@ -735,6 +735,7 @@ const manejarEdicion = (viaje) => {
     viajeEditando={viajeEditando}
   />
 )}
+            
           </div>
       )}
 
