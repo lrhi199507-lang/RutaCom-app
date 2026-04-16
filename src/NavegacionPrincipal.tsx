@@ -16,7 +16,7 @@ import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
-import { FormularioPublicar } from './components/views/FormularioPublicar';
+import { FormularioPublicar as WizardPublicar } from './components/views/FormularioPublicar';
 
 // Helpers y Modales
 import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
@@ -722,14 +722,20 @@ const manejarEdicion = (viaje) => {
           )}
 
           {/* MODO CHOFER */}
-          {modo === "chofer" && (
-            <WizardPublicar 
-              pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
-              viajeForm={viajeForm} setViajeForm={setViajeForm}
-              UBICACIONES={UBICACIONES} setVista={setVista} setModo={setModo}
-              publicarRuta={publicarRutaWizard} viajeEditando={viajeEditando}
-            />
-          )}
+{modo === "chofer" && (
+  <FormularioPublicar // <--- Asegúrate que este nombre coincida con tu import
+    pasoWizard={pasoWizard} 
+    setPasoWizard={setPasoWizard}
+    viajeForm={viajeForm} 
+    setViajeForm={setViajeForm}
+    UBICACIONES={UBICACIONES} 
+    setVista={setVista} 
+    setModo={setModo}
+    publicarRuta={publicarRutaWizard} 
+    viajeEditando={viajeEditando}
+  />
+)}
+            
         </div>
       )}
 
