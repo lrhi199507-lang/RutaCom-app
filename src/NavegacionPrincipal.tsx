@@ -6,7 +6,7 @@ import { Navbar } from "./components/layout/Navbar";
 import { KYCProgressBar } from './components/ui/KYCProgressBar';
 import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
 import { CardViaje } from './components/ui/CardViaje';
-import { CardViajeOptimizada as TarjetaViaje } from './components/ui/cardViajeOptimizada';
+import { CardViajeOptimizada as TarjetaViaje } from './components/ui/CardViajeOptimizada';
 import { SenalesConfianza } from './components/ui/SenalesConfianza';
 import { PantallaExito } from './components/ui/PantallaExito';
 import { BadgeEstatus } from './components/ui/BadgeEstatus';
