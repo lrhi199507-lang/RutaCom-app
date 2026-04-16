@@ -2,30 +2,30 @@ import React, { useState, useEffect, useMemo } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { UBICACIONES } from './constants/ubicaciones';
+
+// Layout y UI
 import { Navbar } from "./components/layout/Navbar";
+import { Header } from './components/ui/Header';
+import { SelectorModo } from './components/ui/SelectorModo';
+import { CardViajeOptimizada } from './components/ui/CardViajeOptimizada'; // IMPORTACIÓN ÚNICA
 import { KYCProgressBar } from './components/ui/KYCProgressBar';
-import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
-import { CardViaje } from './components/ui/CardViaje';
-import { CardViajeOptimizada as TarjetaViaje } from './components/ui/CardViajeOptimizada';
-import { SenalesConfianza } from './components/ui/SenalesConfianza';
 import { PantallaExito } from './components/ui/PantallaExito';
-import { BadgeEstatus } from './components/ui/BadgeEstatus';
-import { PasosProgreso } from './components/ui/PasosProgreso';
-import { CardViajeOptimizada } from './components/ui/CardViajeOptimizada';
-import { ProgresoGamificacion } from './components/ui/ProgresoGamificacion';
-import { calcularDuracion, obtenerNivel, calcularEstatus } from './utils/helpers';
+
+// Vistas
+import { VistaInicio } from './components/views/VistaInicio';
+import { VistaMisViajes } from './components/views/VistaMisViajes';
+import { VistaInbox } from './components/views/VistaInbox';
+import { VistaPerfil } from './components/views/VistaPerfil';
+import { FormularioPublicar } from './components/views/FormularioPublicar';
+
+// Helpers y Modales
+import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
 import { ModalResena } from './components/ui/ModalResena';
 import { ModalOpiniones } from './components/ui/ModalOpiniones';
 import { ModalChecklist } from './components/ui/ModalChecklist';
 import { ModalPerfilPublico } from './components/ui/ModalPerfilPublico';
-import { Header } from './components/ui/Header';
-import { SelectorModo } from './components/ui/SelectorModo';
-import { BannerVerificacion } from './components/ui/BannerVerificacion';
-import { WizardPublicar } from './components/ui/WizardPublicar';
-// Importación de Vistas (Pantallas completas)
-import { VistaInbox } from './components/views/VistaInbox';
-import { VistaPerfil } from './components/views/VistaPerfil';
-import { VistaMisViajes } from "./components/views/VistaMisViajes";
+import { calcularDuracion, obtenerNivel, calcularEstatus } from './utils/helpers';
+
 import {
   doc, onSnapshot, collection, query, addDoc, 
   serverTimestamp, orderBy, updateDoc, where, getDocs, deleteDoc, increment
