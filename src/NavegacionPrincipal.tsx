@@ -723,7 +723,7 @@ const manejarEdicion = (viaje) => {
 
           {/* MODO CHOFER */}
 {modo === "chofer" && (
-  <WizardPubliar 
+  <WizardPublicar 
     pasoWizard={pasoWizard} 
     setPasoWizard={setPasoWizard}
     viajeForm={viajeForm} 
