@@ -2,14 +2,17 @@ import React from 'react';
 import { MapPin, Navigation, Users, DollarSign, Clock, ShieldCheck, Check } from 'lucide-react';
 
 export const WizardPublicar = ({ 
-  pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta 
+  pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
+  viajeEditando // <--- TIENE QUE ESTAR AQUÍ
 }) => {
   
   // PASO 1: UBICACIONES
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
-        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">¿Hacia dónde<br/>vas a manejar?</h2>
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">
+        {viajeEditando ? <>Edita tu<br/>Ruta Actual</> : <>¿Hacia dónde<br/>vas a manejar?</>}
+      </h2>
         <div className="space-y-4">
           <div className="relative">
             <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
@@ -88,8 +91,16 @@ export const WizardPublicar = ({
           </button>
         ))}
       </div>
-      <button onClick={publicarRuta} className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2">
-        <ShieldCheck size={18}/> ¡Publicar Ruta Ahora!
+      {/* BOTÓN FINAL DINÁMICO */}
+      <button 
+        onClick={publicarRuta} 
+        className={`w-full py-5 ${viajeEditando ? 'bg-blue-600' : 'bg-green-500'} text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2`}
+      >
+        {viajeEditando ? (
+          <><Check size={18}/> Guardar Cambios</>
+        ) : (
+          <><ShieldCheck size={18}/> ¡Publicar Ruta Ahora!</>
+        )}
       </button>
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Revisar detalles</button>
     </div>

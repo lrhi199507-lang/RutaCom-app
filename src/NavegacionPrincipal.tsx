@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { UBICACIONES, ESTADOS } from "./constants/ubicaciones";
+import { UBICACIONES } from './constants/ubicaciones';
 import { Navbar } from "./components/layout/Navbar";
 import { KYCProgressBar } from './components/ui/KYCProgressBar';
 import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
 import { CardViaje } from './components/ui/CardViaje';
+import { CardViajeOptimizada as TarjetaViaje } from './components/ui/cardViajeOptimizada';
 import { SenalesConfianza } from './components/ui/SenalesConfianza';
 import { PantallaExito } from './components/ui/PantallaExito';
 import { BadgeEstatus } from './components/ui/BadgeEstatus';
@@ -24,29 +25,65 @@ import { WizardPublicar } from './components/ui/WizardPublicar';
 // Importación de Vistas (Pantallas completas)
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
+import { VistaMisViajes } from "./components/views/VistaMisViajes";
 import {
   doc, onSnapshot, collection, query, addDoc, 
   serverTimestamp, orderBy, updateDoc, where, getDocs, deleteDoc, increment
 } from "firebase/firestore";
 import {
-  User, LogOut, Car, Send, ShieldCheck, 
+  User, LogOut, Car, Send, ShieldCheck, Check,
   CheckCircle, Navigation, Search, 
   Settings, MessageCircle, CreditCard, Users, 
   ChevronLeft, MapPin, Edit2, AlertTriangle, Star, X,
   Map as MapIcon, Flag, Clock, ArrowRight, Lock, Trophy,
   FileText, Camera, ShieldAlert, Wind, CigaretteOff, PawPrint, MessageSquare, Briefcase, Zap, Palette,
-  PlusCircle, History, DollarSign, ChevronRight, LifeBuoy, Crown , Wallet as WalletIcon
+  PlusCircle, History, DollarSign, ChevronRight, LifeBuoy, Dog, Smoking, Crown, Wallet as WalletIcon
 } from "lucide-react";
 
+// --- CONSTANTES ---
+const ESTATUS_VIAJE = {
+  PENDIENTE: 'pendiente',
+  EN_PROGRESO: 'en_progreso',
+  COMPLETADO: 'completado',
+  CANCELADO: 'cancelado'
+};
+
+const ESTADOS= [
+  "Amazonas", "Anzoátegui", "Apure", "Aragua", "Barinas", "Bolívar", 
+  "Carabobo", "Cojedes", "Delta Amacuro", "Falcón", "Guárico", "Lara", 
+  "Mérida", "Miranda", "Monagas", "Nueva Esparta", "Portuguesa", "Sucre", 
+  "Táchira", "Trujillo", "Vargas", "Yaracuy", "Zulia", "Distrito Capital"
+];
+
 export default function NavegacionPrincipal({ user }) {
-  // --- 1. ESTADOS ---
+// --- COMPONENTE PRINCIPAL
+  const [viajes, setViajes] = useState([]); 
+  const [fEO, setFEO] = useState("");
+  const [fCO, setFCO] = useState("");
+  const [fED, setFED] = useState(""); 
+  const [fCD, setFCD] = useState("");
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
-  const [resultadosBusqueda, setResultadosBusqueda] = useState([]); // Los que ve el pasajero
+  const [busqueda, setBusqueda] = useState({ origen: "", destino: "" });
+  const [resultadosBusqueda, setResultadosBusqueda] = useState([]); 
   const [userData, setUserData] = useState(null);
-  const [viajes, setViajes] = useState([]); // General
-  const [misViajesPublicados, setMisViajesPublicados] = useState([]); // Los del chofer
+  const [misViajesPublicados, setMisViajesPublicados] = useState([]);
   
+
+  // --- 2. LÓGICA DE FILTRADO ---
+  const viajesFiltrados = useMemo(() => {
+    return viajes.filter(v => {
+      const matchOrigen = fEO === "" || v.eO === fEO;
+      const matchCiudadOrigen = fCO === "" || v.cO === fCO;
+      const matchDestino = fED === "" || v.eD === fED;
+      const matchCiudadDestino = fCD === "" || v.cD === fCD;
+
+      return matchOrigen && matchCiudadOrigen && matchDestino && matchCiudadDestino;
+    });
+  }, [viajes, fEO, fCO, fED, fCD]);
+
+  // --- 3. ESTADOS DE INTERFAZ Y EFECTOS ---
+  // Continúa aquí con tus useEffect y funciones...
   // Estados de Interfaz
   const [showSearchModal, setShowSearchModal] = useState({ visible: false, type: 'origen' });
   const [searchTerm, setSearchTerm] = useState("");
@@ -87,10 +124,6 @@ const [mensajesChat, setMensajesChat] = useState([]);
 
 
   // Filtros Búsqueda (Pasajero)
-  const [fEO, setFEO] = useState("");
-  const [fCO, setFCO] = useState("");
-  const [fED, setFED] = useState(""); 
-  const [fCD, setFCD] = useState("");
   const [busquedasRecientes, setBusquedasRecientes] = useState([]);
 
   const [perfilForm, setPerfilForm] = useState({ marca: "", modelo: "", placa: "", color: "", cedula: "", edad: "", bio: "" });
@@ -297,7 +330,7 @@ setViajeForm({
     precio: viaje.precio?.toString() || "0",
     asientos: viaje.puestos || 3,
     horaSalida: viaje.horaSalida,
-    horaLlegada: viaje.horaLlegada,
+    horaLlegada: viajeForm.horaLlegada || "N/A",
     preferencias: viaje.preferencias || { 
       ac: true, 
       noFumar: true, 
@@ -313,9 +346,9 @@ setViajeForm({
 // ACCIONES DE BASE DE DATOS
   const publicarRutaWizard = async () => {
   if (!userData?.cedula) return alert("🚫 Debes verificar tu identidad (KYC) para publicar rutas.");
-  if (!viajeForm.origen || !viajeForm.destino || !viajeForm.precio || !viajeForm.horaSalida || !viajeForm.horaLlegada) {
-    return alert("Completa todos los campos obligatorios.");
-  }
+  if (!viajeForm.origen || !viajeForm.destino || !viajeForm.precio || !viajeForm.horaSalida) {
+   return alert("Completa los campos obligatorios.");
+}
 
   try {
     const oParts = viajeForm.origen.split(",");
@@ -529,17 +562,48 @@ const eliminarViaje = async (idViaje) => {
 
   if (!userData) return <div className="h-screen bg-slate-950 flex items-center justify-center text-blue-500 font-black italic animate-pulse">CARGANDO DAME LA COLA...</div>;
 
+  // Función para ELIMINAR (Chofer) o CANCELAR (Pasajero)
+const actualizarEstadoViaje = async (viajeId, nuevoEstado) => {
+  try {
+    const viajeRef = doc(db, "viajes", viajeId);
+    await updateDoc(viajeRef, { 
+      estado: nuevoEstado // 'cancelado', 'finalizado', 'eliminado'
+    });
+    // Aquí podrías disparar una notificación local de éxito
+  } catch (error) {
+    console.error("Error al actualizar:", error);
+  }
+};
+
+const manejarEdicion = (viaje) => {
+  // 1. Cargamos los datos en el formulario para que el usuario los vea
+  setViajeForm({
+    fCO: viaje.fCO,
+    fCD: viaje.fCD,
+    eO: viaje.eO,
+    eD: viaje.eD,
+    precio: viaje.precio,
+    vehiculo: viaje.vehiculo,
+    cupos: viaje.cupos,
+    // ... añade aquí cualquier otro campo que tenga tu formulario
+  });
+
+  // 2. Avisamos a la app qué ID estamos editando
+  setViajeEditando(viaje.id); 
+
+  // 3. Redirigimos al Wizard
+  setModo("chofer");
+  setVista("inicio");
+  setPasoWizard(1); 
+};
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-slate-50 flex flex-col relative overflow-hidden font-sans border-x shadow-2xl">
       
       {/* MODALES */}
       <ModalResena 
-        modalResena={modalResena}
-        setModalResena={setModalResena}
-        calificacion={calificacion}
-        setCalificacion={setCalificacion}
-        textoResena={textoResena}
-        setTextoResena={setTextoResena}
+        modalResena={modalResena} setModalResena={setModalResena}
+        calificacion={calificacion} setCalificacion={setCalificacion}
+        textoResena={textoResena} setTextoResena={setTextoResena}
         enviarResena={enviarResena}
       />
 
@@ -585,150 +649,118 @@ const eliminarViaje = async (idViaje) => {
       />
 
       {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 overflow-y-auto p-5 pb-32">
-        
+      <main className="flex-1 overflow-y-auto p-5 pb-40">
+
+        {/* 1. VISTA DE INICIO (PASAJERO O CHOFER) */}
         {vista === "inicio" && !viajeSeleccionado && (
-          <div className="space-y-6">
-            <SelectorModo modo={modo} setModo={setModo} />
-{/* BUSCADOR */}
-              {modo === "pasajero" && (
-                <div className="bg-white p-5 rounded-[30px] shadow-sm border space-y-3 animate-in slide-in-from-left">
-                  <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2"><Search size={14}/> ¿A dónde vamos hoy?</p>
-                  <div className="grid grid-cols-2 gap-2">
-                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fEO} onChange={(e)=>{setFEO(e.target.value); setFCO("");}}><option value="">DESDE: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
-                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fEO} value={fCO} onChange={(e)=>setFCO(e.target.value)}><option value="">DESDE: CIUDAD</option>{fEO && UBICACIONES[fEO].map(c => <option key={c} value={c}>{c}</option>)}</select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" value={fED} onChange={(e)=>{setFED(e.target.value); setFCD("");}}><option value="">HASTA: ESTADO</option>{ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}</select>
-                     <select className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black" disabled={!fED} value={fCD} onChange={(e)=>setFCD(e.target.value)}><option value="">HASTA: CIUDAD</option>{fED && UBICACIONES[fED].map(c => <option key={c} value={c}>{c}</option>)}</select>
-                  </div>
+          <div className="flex flex-col gap-6">
+          
+          {/* MODO PASAJERO */}
+          {modo === "pasajero" && (
+            <>
+              <div className="w-full bg-white p-5 rounded-[30px] shadow-sm border space-y-3 animate-in slide-in-from-left">
+                <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
+                  <Search size={14}/> ¿A dónde vamos hoy?
+                </p>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <select 
+                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
+                    value={fEO} 
+                    onChange={(e) => { setFEO(e.target.value); setFCO(""); }}
+                  >
+                    <option value="">DESDE: ESTADO</option>
+                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                  </select>
 
-                  {/* MÓDULO 10: BÚSQUEDAS RECIENTES */}
-                  {busquedasRecientes.length > 0 && (
-                     <div className="pt-3 border-t border-slate-100 mt-2">
-                       <p className="text-[9px] font-black uppercase text-slate-400 mb-2 flex items-center gap-1"><History size={12}/> Búsquedas Recientes</p>
-                       <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
-                          {busquedasRecientes.map((b, i) => (
-                            <button key={i} onClick={() => aplicarBusquedaReciente(b)} className="shrink-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 hover:bg-blue-50 hover:border-blue-200 transition-colors active:scale-95">
-                              <History size={12} className="text-slate-400"/>
-                              <div className="text-left">
-                                 <p className="text-[9px] font-black italic text-slate-700 leading-none mb-0.5">{b.fCO} <span className="text-blue-500">→</span></p>
-                                 <p className="text-[9px] font-black italic text-slate-700 leading-none">{b.fCD}</p>
-                              </div>
-                            </button>
-                          ))}
-                       </div>
-                     </div>
-                  )}
+                  <select 
+                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
+                    disabled={!fEO} 
+                    value={fCO} 
+                    onChange={(e) => setFCO(e.target.value)}
+                  >
+                    <option value="">DESDE: CIUDAD</option>
+                    {fEO && UBICACIONES[fEO]?.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
-              )}
-              {/* LISTA DE VIAJES (FILTRADO ACTUALIZADO) */}
-    <div className="space-y-4">
-       <h3 className="font-black italic uppercase text-lg text-slate-800 pl-2">Viajes Disponibles</h3>
-       {viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).length === 0 ? (
-          <div className="bg-slate-100/50 border border-dashed border-slate-300 rounded-[30px] p-8 text-center text-slate-500 font-bold text-xs italic">
-             No hay viajes publicados para esta ruta actualmente.
-          </div>
-       ) : (
-         viajes.filter(v => (fEO === "" || v.eO === fEO) && (fED === "" || v.eD === fED)).map(v => (
-            <CardViajeOptimizada 
-              key={v.id}
-              viaje={v}
-              estatusChofer={calcularEstatus(v.viajesTotales || 0, v.rating || 0)}
-              onClickDetalle={() => setViajeSeleccionado(v)}
-              onClickPedir={() => enviarSolicitudDirecta(v)}
-              onClickPerfil={() => setPerfilPublico({ /* ... datos ... */ })}
-            />
-         ))
-       )}
-    </div>
-  </div>
-)}
-            {/* MODO CHOFER: Wizard de Publicación */}
-{modo === "chofer" && (
-  <div className="mt-6">
-    {/* Aquí empieza el paso 1 que me pasaste */}
-    {pasoWizard === 1 && (
-      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
-        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">
-          ¿Hacia dónde<br/>vas a manejar?
-        </h2>
-        
-        <div className="space-y-4">
-          {/* ORIGEN con Autocompletado */}
-          <div className="relative">
-            <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
-              <MapPin size={22} className="text-blue-600"/>
-              <input 
-                type="text" 
-                placeholder="Punto de salida (Ej. Valencia)" 
-                className="bg-transparent w-full text-sm font-bold outline-none text-slate-700"
-                value={viajeForm.origen}
-                onChange={(e) => setViajeForm({...viajeForm, origen: e.target.value})}
-              />
-            </div>
-            
-            {/* Sugerencias de Origen */}
-            {viajeForm.origen.length > 1 && !viajeForm.origen.includes(',') && (
-              <div className="absolute z-[100] w-full bg-white border rounded-2xl mt-1 shadow-2xl max-h-48 overflow-y-auto">
-                {Object.keys(UBICACIONES).flatMap(estado => 
-                  UBICACIONES[estado]
-                    .filter(ciudad => ciudad.toLowerCase().includes(viajeForm.origen.toLowerCase()))
-                    .map(ciudad => (
-                      <button 
-                        key={`ori-${estado}-${ciudad}`}
-                        onClick={() => setViajeForm({...viajeForm, origen: `${ciudad}, ${estado}`})}
-                        className="w-full text-left p-4 hover:bg-blue-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3"
-                      >
-                        <MapPin size={14} className="text-blue-400"/> {ciudad}, {estado}
-                      </button>
-                    ))
-                ).slice(0, 5)}
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <select 
+                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
+                    value={fED} 
+                    onChange={(e) => { setFED(e.target.value); setFCD(""); }}
+                  >
+                    <option value="">HASTA: ESTADO</option>
+                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                  </select>
+
+                  <select 
+                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
+                    disabled={!fED} 
+                    value={fCD} 
+                    onChange={(e) => setFCD(e.target.value)}
+                  >
+                    <option value="">HASTA: CIUDAD</option>
+                    {fED && UBICACIONES[fED]?.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* DESTINO con Autocompletado */}
-          <div className="relative">
-            {/* ... (Repite la misma lógica para el input de destino que tienes en tu código) ... */}
-          </div>
-        </div>
-
-        <button 
-          onClick={() => setPasoWizard(2)}
-          disabled={!viajeForm.origen.includes(',') || !viajeForm.destino.includes(',')}
-          className="w-full py-5 bg-blue-600 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl disabled:opacity-30 transition-all active:scale-95"
-        >
-          Continuar a los detalles
-        </button>
-      </div>
-    )}
-
-    {/* AQUÍ IRÁN LOS PASOS 2, 3, etc. MÁS ADELANTE */}
-  </div>
-)}
-
-        {/* VISTAS RESTANTES */}
-        <div className="space-y-3">
-          {vista === "inbox" && (
-            <VistaInbox 
-              historialChats={historialChats} 
-              misViajesPublicados={misViajesPublicados} 
-              abrirChat={abrirChat} 
-            />
+              <div className="w-full space-y-4">
+                <h3 className="font-black italic uppercase text-lg text-slate-800 pl-2">Viajes Disponibles</h3>
+                {viajesFiltrados.length === 0 ? (
+                  <div className="bg-slate-100/50 border border-dashed border-slate-300 rounded-[30px] p-8 text-center text-slate-500 font-bold text-xs italic">
+                    No hay rutas publicadas.
+                  </div>
+                ) : (
+                  viajesFiltrados.map(v => (
+                    <CardViajeOptimizada key={v.id} viaje={v} onClickDetalle={() => setViajeSeleccionado(v)} />
+                  ))
+                )}
+              </div>
+            </>
           )}
 
-          {vista === "perfil" && (
-            <VistaPerfil 
-              userData={userData} 
-              pestañaActiva={pestañaActiva} 
-              setPestañaActiva={setPestañaActiva} 
-              handleLogout={handleLogout} 
-              abrirModalFoto={() => setShowFotoInstrucciones(true)}
+          {/* MODO CHOFER */}
+          {modo === "chofer" && (
+            <WizardPublicar 
+              pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
+              viajeForm={viajeForm} setViajeForm={setViajeForm}
+              UBICACIONES={UBICACIONES} setVista={setVista} setModo={setModo}
+              publicarRuta={publicarRutaWizard} viajeEditando={viajeEditando}
             />
           )}
         </div>
-      </main>
-    </div>
+      )}
+
+      {/* 2. OTRAS VISTAS */}
+      {vista === "mis_viajes" && (
+        <div className="animate-in fade-in slide-in-from-bottom-4">
+          <h2 className="text-2xl font-black italic uppercase text-slate-800 mb-6 pl-2 tracking-tighter">Mis Rutas</h2>
+          <VistaMisViajes 
+            misPublicaciones={viajes.filter(v => v.idCreador === user.uid)}
+            viajesDondeVoy={misSolicitudes?.filter(s => s.estado === "confirmado") || []}
+            onEditar={prepararEdicion} onEliminar={eliminarViaje}
+          />
+        </div>
+      )}
+
+      {vista === "inbox" && (
+        <VistaInbox historialChats={historialChats} misViajesPublicados={misViajesPublicados} abrirChat={abrirChat} />
+      )}
+
+      {vista === "perfil" && (
+        <VistaPerfil userData={userData} handleLogout={handleLogout} />
+      )}
+
+    </main>
+
+    <Navbar 
+      vista={vista} modo={modo} setVista={setVista} setModo={setModo} 
+      cambiarVista={setVista} setPasoWizard={setPasoWizard} 
+    />
+  </div> // Este cierra el div principal que tiene el max-w-md
   );
-};
+}; // ESTA ES LA LLAVE QUE FALTA (Cierra la función NavegacionPrincipal)
+
+export default NavegacionPrincipal;
