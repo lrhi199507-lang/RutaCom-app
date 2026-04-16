@@ -16,7 +16,7 @@ import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
-import { FormularioPublicar as WizardPublicar } from './components/views/FormularioPublicar';
+import { WizardPubliar } from './components/views/WizardPublicar';
 
 // Helpers y Modales
 import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
@@ -723,7 +723,7 @@ const manejarEdicion = (viaje) => {
 
           {/* MODO CHOFER */}
 {modo === "chofer" && (
-  <FormularioPublicar // <--- Asegúrate que este nombre coincida con tu import
+  <WizardPubliar 
     pasoWizard={pasoWizard} 
     setPasoWizard={setPasoWizard}
     viajeForm={viajeForm} 
@@ -735,8 +735,7 @@ const manejarEdicion = (viaje) => {
     viajeEditando={viajeEditando}
   />
 )}
-            
-        </div>
+          </div>
       )}
 
       {/* 2. OTRAS VISTAS */}
