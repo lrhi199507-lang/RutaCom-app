@@ -16,7 +16,7 @@ import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
-import { WizardPubliar } from './components/views/WizardPublicar';
+import { WizardPubliar } from './components/ui/WizardPublicar';
 
 // Helpers y Modales
 import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
