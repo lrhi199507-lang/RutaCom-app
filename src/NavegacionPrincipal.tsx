@@ -55,7 +55,7 @@ const ESTADOS= [
   "Táchira", "Trujillo", "Vargas", "Yaracuy", "Zulia", "Distrito Capital"
 ];
 
-export default function NavegacionPrincipal({ user }) {
+export function NavegacionPrincipal({ user }) {
 // --- COMPONENTE PRINCIPAL
   const [viajes, setViajes] = useState([]); 
   const [fEO, setFEO] = useState("");
