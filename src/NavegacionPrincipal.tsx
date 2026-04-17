@@ -720,25 +720,34 @@ const manejarEdicion = (viaje) => {
               </div>
             </>
           )}
-
-          {/* MODO CHOFER */}
-{modo === "chofer" && (
-  <WizardPublicar 
-    pasoWizard={pasoWizard} 
-    setPasoWizard={setPasoWizard}
-    viajeForm={viajeForm} 
-    setViajeForm={setViajeForm}
-    UBICACIONES={UBICACIONES} 
-    setVista={setVista} 
-    setModo={setModo}
-    publicarRuta={publicarRutaWizard} 
-    viajeEditando={viajeEditando}
-  />
-)}
+                      {/* MODO CHOFER */}
+          {modo === "chofer" && (
+            <div className="animate-in fade-in">
+              {!viajeForm ? (
+                /* CHALECO ANTIBALAS: Si los datos no han cargado, muestra esto en vez de pantalla blanca */
+                <div className="p-10 text-center bg-white rounded-[30px] border-2 border-dashed border-red-200">
+                  <p className="text-red-500 font-black text-xs uppercase italic">Iniciando modo chofer...</p>
+                  <button onClick={() => setModo("pasajero")} className="mt-4 px-4 py-2 bg-slate-100 rounded-xl text-[10px] font-bold">
+                    Volver atrás
+                  </button>
+                </div>
+              ) : (
+                /* Si todo está bien, muestra tu Wizard */
+                <WizardPublicar 
+                  pasoWizard={pasoWizard || 1} 
+                  setPasoWizard={setPasoWizard}
+                  viajeForm={viajeForm} 
+                  setViajeForm={setViajeForm}
+                  UBICACIONES={UBICACIONES} 
+                  setVista={setVista} 
+                  setModo={setModo}
+                  publicarRuta={publicarRutaWizard} 
+                  viajeEditando={viajeEditando}
+                />
+              )}
+            </div>
+          )}
             
-          </div>
-      )}
-
       {/* 2. OTRAS VISTAS */}
       {vista === "mis_viajes" && (
         <div className="animate-in fade-in slide-in-from-bottom-4">
