@@ -1,5 +1,6 @@
 import React from 'react';
-import { CardViajeOptimizada } from "./CardViajeOptimizada";
+import { CardViajeOptimizada } from "../ui/CardViajeOptimizada";
+
 
 export const VistaInicio = ({ viajes, setViajeSeleccionado, setVista }) => {
   return (
