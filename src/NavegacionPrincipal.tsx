@@ -651,103 +651,35 @@ const manejarEdicion = (viaje) => {
       {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto p-5 pb-40">
 
-        {/* 1. VISTA DE INICIO (PASAJERO O CHOFER) */}
-        {vista === "inicio" && !viajeSeleccionado && (
-          <div className="flex flex-col gap-6">
+              {/* 1. VISTA INICIO (PASAJERO) */}
+      {vista === "inicio" && !viajeSeleccionado && (
+        <div className="flex flex-col gap-6">
+          <Header userData={userData} />
           
-          {/* MODO PASAJERO */}
-          {modo === "pasajero" && (
-            <>
-              <div className="w-full bg-white p-5 rounded-[30px] shadow-sm border space-y-3 animate-in slide-in-from-left">
-                <p className="text-[10px] font-black text-blue-600 uppercase italic flex items-center gap-2">
-                  <Search size={14}/> ¿A dónde vamos hoy?
-                </p>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <select 
-                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
-                    value={fEO} 
-                    onChange={(e) => { setFEO(e.target.value); setFCO(""); }}
-                  >
-                    <option value="">DESDE: ESTADO</option>
-                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
+          <SelectorModo modo={modo} setModo={setModo} />
 
-                  <select 
-                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
-                    disabled={!fEO} 
-                    value={fCO} 
-                    onChange={(e) => setFCO(e.target.value)}
-                  >
-                    <option value="">DESDE: CIUDAD</option>
-                    {fEO && UBICACIONES[fEO]?.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <select 
-                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
-                    value={fED} 
-                    onChange={(e) => { setFED(e.target.value); setFCD(""); }}
-                  >
-                    <option value="">HASTA: ESTADO</option>
-                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-
-                  <select 
-                    className="bg-slate-50 p-3 rounded-xl border text-[9px] font-black w-full" 
-                    disabled={!fED} 
-                    value={fCD} 
-                    onChange={(e) => setFCD(e.target.value)}
-                  >
-                    <option value="">HASTA: CIUDAD</option>
-                    {fED && UBICACIONES[fED]?.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="w-full space-y-4">
-                <h3 className="font-black italic uppercase text-lg text-slate-800 pl-2">Viajes Disponibles</h3>
-                {viajesFiltrados.length === 0 ? (
-                  <div className="bg-slate-100/50 border border-dashed border-slate-300 rounded-[30px] p-8 text-center text-slate-500 font-bold text-xs italic">
-                    No hay rutas publicadas.
-                  </div>
-                ) : (
-                  viajesFiltrados.map(v => (
-                    <CardViajeOptimizada key={v.id} viaje={v} onClickDetalle={() => setViajeSeleccionado(v)} />
-                  ))
-                )}
-              </div>
-            </>
+          {modo === "pasajero" ? (
+            <VistaInicio 
+              viajes={viajesFiltrados} 
+              setViajeSeleccionado={setViajeSeleccionado} 
+              setVista={setVista}
+            />
+          ) : (
+            <WizardPublicar 
+              pasoWizard={pasoWizard} 
+              setPasoWizard={setPasoWizard}
+              viajeForm={viajeForm} 
+              setViajeForm={setViajeForm}
+              UBICACIONES={UBICACIONES} 
+              setVista={setVista} 
+              setModo={setModo}
+              publicarRuta={publicarRutaWizard} 
+              viajeEditando={viajeEditando}
+            />
           )}
-                      {/* MODO CHOFER */}
-          {modo === "chofer" && (
-            <div className="animate-in fade-in">
-              {!viajeForm ? (
-                /* CHALECO ANTIBALAS: Si los datos no han cargado, muestra esto en vez de pantalla blanca */
-                <div className="p-10 text-center bg-white rounded-[30px] border-2 border-dashed border-red-200">
-                  <p className="text-red-500 font-black text-xs uppercase italic">Iniciando modo chofer...</p>
-                  <button onClick={() => setModo("pasajero")} className="mt-4 px-4 py-2 bg-slate-100 rounded-xl text-[10px] font-bold">
-                    Volver atrás
-                  </button>
-                </div>
-              ) : (
-                /* Si todo está bien, muestra tu Wizard */
-                <WizardPublicar 
-                  pasoWizard={pasoWizard || 1} 
-                  setPasoWizard={setPasoWizard}
-                  viajeForm={viajeForm} 
-                  setViajeForm={setViajeForm}
-                  UBICACIONES={UBICACIONES} 
-                  setVista={setVista} 
-                  setModo={setModo}
-                  publicarRuta={publicarRutaWizard} 
-                  viajeEditando={viajeEditando}
-                />
-              )}
-            </div>
-          )}
-            
+        </div>
+      )} {/* <--- AQUÍ SE CIERRA EL PARENTESIS QUE FALTABA */}
+
       {/* 2. OTRAS VISTAS */}
       {vista === "mis_viajes" && (
         <div className="animate-in fade-in slide-in-from-bottom-4">
@@ -771,11 +703,14 @@ const manejarEdicion = (viaje) => {
     </main>
 
     <Navbar 
-      vista={vista} modo={modo} setVista={setVista} setModo={setModo} 
-      cambiarVista={setVista} setPasoWizard={setPasoWizard} 
+      vista={vista} 
+      modo={modo} 
+      setVista={setVista} 
+      setModo={setModo} 
     />
-  </div> // Este cierra el div principal que tiene el max-w-md
-  );
-}; // ESTA ES LA LLAVE QUE FALTA (Cierra la función NavegacionPrincipal)
+       </div> // <--- CIERRA EL DIV PRINCIPAL (Contenedor de toda la app)
+ );
+}; // <--- CIERRA LA FUNCIÓN DEL COMPONENTE
 
-export default NavegacionPrincipal;
+export default NavegacionPrincipal; // <--- EXPORTACIÓN FINAL
+      
