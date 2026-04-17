@@ -76,24 +76,39 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 3: PREFERENCIAS Y PUBLICAR
+   // PASO 3: PREFERENCIAS Y PUBLICAR
   return (
     <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
       <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Preferencias</h2>
+      
       <div className="grid grid-cols-2 gap-3">
-        {Object.keys(viajeForm.preferencias).map((pref) => (
+        {/* AGREGAMOS EL ?. PARA QUE NO EXPLOTE SI PREFERENCIAS ES NULL */}
+        {viajeForm?.preferencias && Object.keys(viajeForm.preferencias).map((pref) => (
           <button 
             key={pref}
-            onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref]: !viajeForm.preferencias[pref]}})}
+            onClick={() => setViajeForm({
+              ...viajeForm, 
+              preferencias: {
+                ...viajeForm.preferencias, 
+                [pref]: !viajeForm.preferencias[pref]
+              }
+            })}
             className={`p-3 rounded-2xl border-2 text-[9px] font-black uppercase italic flex items-center justify-between ${viajeForm.preferencias[pref] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-100 text-slate-400'}`}
           >
-            {pref} {viajeForm.preferencias[pref] && <Check size={12}/>}
+            {/* TRADUCCIÓN SIMPLE PARA QUE NO SE VEA EL NOMBRE TÉCNICO */}
+            {pref === 'ac' ? 'Aire Acond.' : 
+             pref === 'noFumar' ? 'No Fumar' : 
+             pref === 'mascotas' ? 'Mascotas' : 
+             pref === 'maxDosAtras' ? 'Máx. 2 Atrás' : pref} 
+            
+            {viajeForm.preferencias[pref] && <Check size={12}/>}
           </button>
         ))}
       </div>
-      {/* BOTÓN FINAL DINÁMICO */}
+
       <button 
         onClick={publicarRuta} 
+        disabled={!viajeForm.origen || !viajeForm.destino}
         className={`w-full py-5 ${viajeEditando ? 'bg-blue-600' : 'bg-green-500'} text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2`}
       >
         {viajeEditando ? (
