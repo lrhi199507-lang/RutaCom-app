@@ -177,35 +177,40 @@ const abrirPerfilPublico = async (idConductor) => {
       </div> 
 
       <main className="flex-1 overflow-y-auto px-4 pb-24">
-        {vista === "inicio" && (
-          <div className="pt-4">
-            {viajeSeleccionado ? (
-              <Vistadetalleviaje 
-                viaje={viajeSeleccionado} 
-                onRegresar={() => setViajeSeleccionado(null)} 
-              />
-            ) : (
-              <>
-                {modo === "pasajero" ? (
-                  <VistaInicio 
-                    viajes={viajesFiltrados || []} 
-                    setViajeSeleccionado={setViajeSeleccionado} 
-                    setVista={setVista} 
-                  />
-                ) : (
-                  <WizardPublicar 
-                    pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
-                    viajeForm={viajeForm} setViajeForm={setViajeForm}
-                    UBICACIONES={UBICACIONES} setVista={setVista} 
-                    setModo={setModo} publicarRuta={publicarRutaWizard} 
-                    viajeEditando={viajeEditando}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        )}
+  {vista === "inicio" && (
+    <div className="pt-4">
+      {/* CORRECCIÓN: Quitamos el renderizado de detalle de aquí adentro 
+          para que use la lógica de abajo que sí tiene el botón de perfil */}
+      {modo === "pasajero" ? (
+        <VistaInicio 
+          viajes={viajesFiltrados || []} 
+          setViajeSeleccionado={(v) => {
+            setViajeSeleccionado(v);
+            setVista("detalle_viaje"); // <--- IMPORTANTE: Cambiamos la vista aquí
+          }} 
+          setVista={setVista} 
+        />
+      ) : (
+        <WizardPublicar 
+          pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
+          viajeForm={viajeForm} setViajeForm={setViajeForm}
+          UBICACIONES={UBICACIONES} setVista={setVista} 
+          setModo={setModo} publicarRuta={publicarRutaWizard} 
+          viajeEditando={viajeEditando}
+        />
+      )}
+    </div>
+  )}
 
+  {/* ESTA ES LA VISTA QUE REALMENTE FUNCIONA CON EL PERFIL */}
+  {vista === "detalle_viaje" && viajeSeleccionado && (
+    <VistaDetalleViaje 
+      viaje={viajeSeleccionado} 
+      onRegresar={() => setVista("inicio")} 
+      onVerPerfil={(id) => abrirPerfilPublico(id)} 
+    />
+  )}
+        
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
@@ -231,13 +236,6 @@ const abrirPerfilPublico = async (idConductor) => {
     userData={perfilSeleccionado} 
     isOwnProfile={false} // Marcamos false porque es el perfil de otro
     onRegresar={() => setVista("detalle_viaje")} // Para volver atrás
-  />
-)}
-        {vista === "detalle_viaje" && (
-  <VistaDetalleViaje 
-    viaje={viajeSeleccionado} 
-    onRegresar={() => setVista("inicio")} 
-    onVerPerfil={(id) => abrirPerfilPublico(id)} // <--- ESTA CONEXIÓN ES VITAL
   />
 )}
         
