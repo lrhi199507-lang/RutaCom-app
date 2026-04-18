@@ -14,6 +14,7 @@ import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
 import { VistaChatPrivado } from './components/views/VistaChatPrivado';
 import { WizardPublicar } from './components/ui/WizardPublicar';
+import { VistaDetalleViaje } from './components/views/VistaDetalleViaje'; 
 
 // Helpers y Modales
 import { ModalPerfilPublico } from './components/ui/ModalPerfilPublico';
