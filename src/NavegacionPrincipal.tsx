@@ -16,7 +16,8 @@ import { VistaMisViajes } from './components/ui/VistaMisViajes';
 import { VistaInbox } from './components/ui/VistaInbox';
 import { VistaPerfil } from './components/ui/VistaPerfil';
 import { WizardPublicar } from './components/ui/WizardPublicar';
-import { VistaChatPrivado } from './components/ui/VistaChatPrivado'; // Componente vital para evitar pantalla blanca
+import { VistaChatPrivado } from './components/views/VistaChatPrivado';
+
 
 // Helpers y Modales
 import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
