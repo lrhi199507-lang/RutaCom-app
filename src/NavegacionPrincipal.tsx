@@ -142,43 +142,44 @@ export function NavegacionPrincipal({ user }) {
       <div className="p-4 border-b bg-white z-40 shadow-sm">
         <Header userData={userData} />
       </div> 
-
       {/* CUERPO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
         
-           {vista === "inicio" && (
-  <div className="pt-4">
-    {/* Agregamos una validación extra para ver si el componente existe */}
-    {viajeSeleccionado && VistaDetalleViaje ? (
-      <VistaDetalleViaje 
-        viaje={viajeSeleccionado} 
-        onRegresar={() => setViajeSeleccionado(null)} 
-      />
+        {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
+        {vista === "inicio" && (
+          <div className="pt-4">
+            {viajeSeleccionado ? (
+              <VistaDetalleViaje 
+                viaje={viajeSeleccionado} 
+                onRegresar={() => setViajeSeleccionado(null)} 
+              />
             ) : (
-          /* FIX: Envolvemos todo en un Fragment <> </> para que no explote */
-          <>
-            <div className="p-4 text-center text-xs font-black uppercase text-slate-400 animate-pulse">
-              Cargando Wizard...
-            </div> 
-            <WizardPublicar 
-              pasoWizard={pasoWizard} 
-              setPasoWizard={setPasoWizard}
-              viajeForm={viajeForm} 
-              setViajeForm={setViajeForm}
-              UBICACIONES={UBICACIONES} 
-              setVista={setVista} 
-              setModo={setModo} 
-              publicarRuta={publicarRutaWizard} 
-              viajeEditando={viajeEditando}
-            />
-          </>
+              <>
+                {modo === "pasajero" ? (
+                  <VistaInicio 
+                    viajes={viajesFiltrados} 
+                    setViajeSeleccionado={setViajeSeleccionado} 
+                    setVista={setVista} 
+                  />
+                ) : (
+                  <WizardPublicar 
+                    pasoWizard={pasoWizard} 
+                    setPasoWizard={setPasoWizard}
+                    viajeForm={viajeForm} 
+                    setViajeForm={setViajeForm}
+                    UBICACIONES={UBICACIONES} 
+                    setVista={setVista} 
+                    setModo={setModo} 
+                    publicarRuta={publicarRutaWizard} 
+                    viajeEditando={viajeEditando}
+                  />
+                )}
+              </>
+            )}
+          </div>
         )}
-      </div>
-    )}
-  </div>
-)}
-      
 
+        {/* 2. VISTAS SECUNDARIAS */}
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
@@ -201,7 +202,7 @@ export function NavegacionPrincipal({ user }) {
 
       </main>
 
-      {/* NAVBAR INFERIOR (Aquí es donde controlas el cambio de vistas) */}
+      {/* NAVBAR INFERIOR */}
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} />
 
       <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
@@ -210,4 +211,3 @@ export function NavegacionPrincipal({ user }) {
 }
 
 export default NavegacionPrincipal;
-                                    
