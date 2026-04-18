@@ -140,21 +140,20 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista }) => 
         </h2>
         
         {viajesFiltrados.length > 0 ? (
-          viajesFiltrados.map((viaje) => (
-            <CardViajeOptimizada
-              key={viaje.id}
-              viaje={viaje}
-              onClickDetalle={() => {
-                setViajeSeleccionado(viaje);
-                setVista("detalle");
-              }}
-              onClickPedir={() => {
-                setViajeSeleccionado(viaje);
-                setVista("detalle");
-              }}
-            />
-          ))
-        ) : (
+  viajesFiltrados.map((viaje) => (
+    <CardViajeOptimizada
+      key={viaje.id}
+      viaje={viaje}
+      onClickDetalle={() => {
+        setViajeSeleccionado(viaje); // Esto activará el detalle en NavegacionPrincipal
+      }}
+      onClickPedir={() => {
+        setViajeSeleccionado(viaje);
+      }}
+    />
+  ))
+) : (
+      
           <div className="text-center py-12 bg-slate-50 rounded-[30px] border border-dashed border-slate-200">
             <p className="text-slate-400 font-bold italic uppercase text-[10px]">No se encontraron resultados</p>
           </div>
