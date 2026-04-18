@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   ArrowLeft, Car, ShieldCheck, User, Wind, 
-  Smoke, Dog, MessageCircle, MessageSquare, Info 
+  CigaretteOff, Dog, MessageCircle, MessageSquare, Info 
 } from 'lucide-react';
 
 export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
