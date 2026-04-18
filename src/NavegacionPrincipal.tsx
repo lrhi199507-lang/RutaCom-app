@@ -237,6 +237,14 @@ export function NavegacionPrincipal({ user }) {
     onRegresar={() => setVista("detalle_viaje")} // Para volver atrás
   />
 )}
+        {vista === "detalle_viaje" && (
+  <VistaDetalleViaje 
+    viaje={viajeSeleccionado} 
+    onRegresar={() => setVista("inicio")} 
+    onVerPerfil={(id) => abrirPerfilPublico(id)} // <--- ESTA CONEXIÓN ES VITAL
+  />
+)}
+        
         
       </main>
 
