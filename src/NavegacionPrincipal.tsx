@@ -115,13 +115,20 @@ export function NavegacionPrincipal({ user }) {
   }, [user]);
 
   // --- FUNCIONES DE ACCIÓN ---
+  
   const abrirChat = (idViaje, idOtro, nombreOtro) => {
-    if (!idOtro || !user?.uid) return;
-    const chatId = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
-    setChatActivo({ id: chatId, nombre: nombreOtro, idOtro, idViaje });
-    setVista("chat_privado");
-  };
-
+  if (!idOtro || !user?.uid) return;
+  const chatId = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
+  setChatActivo({ 
+    id: chatId, 
+    nombre: nombreOtro, 
+    idOtro, 
+    idViaje, 
+    idPropio: user.uid 
+  });
+  setVista("chat_privado");
+};
+  
   const publicarRutaWizard = async () => {
     try {
       const oParts = viajeForm.origen.split(",");
