@@ -140,35 +140,31 @@ export function NavegacionPrincipal({ user }) {
     setVista("inicio");
     setModo("chofer");
   };
+const abrirPerfilPublico = async (idConductor) => {
+  if (!idConductor) {
+    alert("Error: El viaje no tiene un ID de conductor asignado.");
+    return;
+  }
 
-  const abrirPerfilPublico = async (idConductor) => {
-  if (!idConductor) return;
-  
+  alert("Buscando en Firebase al conductor: " + idConductor);
+
   try {
-    // 1. Buscamos el documento del conductor en la colección 'usuarios'
     const docRef = doc(db, "usuarios", idConductor);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      const data = docSnap.data();
-      // 2. Seteamos los datos mapeando los campos de tu Firebase
-      setPerfilSeleccionado({
-        ...data,
-        biografia: data.bio || "Sin biografía", // Usamos 'bio' que es como lo tienes en Firebase
-        rating: data.rating || 5,
-        verificaciones: {
-          cedula: data.kycVerificado || false,
-          vehiculo: data.vehiculo ? true : false,
-          fotoReal: data.kycVerificado || false,
-        }
-      });
-      // 3. Cambiamos la vista para mostrar este perfil
+      alert("¡Usuario encontrado! Abriendo perfil...");
+      setPerfilSeleccionado(docSnap.data());
       setVista("perfil_publico");
+    } else {
+      alert("Error: No existe un usuario con ese ID en la colección 'usuarios'.");
     }
   } catch (error) {
-    console.error("Error al obtener perfil:", error);
+    alert("Error de Firebase: " + error.message);
   }
 };
+  
+  
   
   const handleLogout = () => signOut(auth);
 
@@ -184,7 +180,7 @@ export function NavegacionPrincipal({ user }) {
         {vista === "inicio" && (
           <div className="pt-4">
             {viajeSeleccionado ? (
-              <VistaDetalleViaje 
+              <Vistadetalleviaje 
                 viaje={viajeSeleccionado} 
                 onRegresar={() => setViajeSeleccionado(null)} 
               />
