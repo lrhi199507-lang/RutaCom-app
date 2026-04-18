@@ -227,13 +227,19 @@ const abrirPerfilPublico = async (idConductor) => {
         {vista === "chat_privado" && chatActivo && (
           <VistaChatPrivado chat={chatActivo} onBack={() => setVista("inbox")} />
         )}
-{vista === "perfil" && (
+{/* SUSTITUYE TU BLOQUE DE PERFIL POR ESTE */}
+{vista === "perfil" && userData ? (
   <VistaPerfil 
     userData={userData} 
     handleLogout={handleLogout} 
-    pestañaActiva={pestañaPerfil} 
-    setPestañaActiva={setPestañaPerfil} 
+    // Usamos un valor por defecto si pestañaPerfil es undefined
+    pestañaActiva={pestañaPerfil || "publico"} 
+    setPestañaActiva={setPestañaPerfil || (() => {})} 
   />
+) : vista === "perfil" && (
+  <div className="p-10 text-center font-black text-red-500 uppercase italic">
+    Error: Datos de usuario no encontrados
+  </div>
 )}
         
 
