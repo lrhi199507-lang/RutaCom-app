@@ -4,7 +4,7 @@ import {
   CigaretteOff, Dog, MessageCircle, MessageSquare, Info 
 } from 'lucide-react';
 
-export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
+export const VistaDetalleViaje = ({ viaje, onRegresar, onVerPerfil }) => {
   if (!viaje) return null;
 
   return (
