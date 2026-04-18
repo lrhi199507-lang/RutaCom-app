@@ -45,33 +45,36 @@ export function NavegacionPrincipal({ user }) {
 
   const viajesFiltrados = useMemo(() => viajes, [viajes]);
 
+  // --- EFECTO 1: DATOS Y CHATS ---
   useEffect(() => {
     if (!user) return;
 
-    // 1. Listeners de Firebase
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) setUserData(snap.data());
     });
+
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+
     const qMisViajes = query(collection(db, "Viajes"), where("idCreador", "==", user.uid));
     const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
       setMisViajesPublicados(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+
     const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 2. Historial de Chats
     const actualizarHistorial = (docs) => {
       const mapChats = new Map();
       docs.forEach(d => {
         const data = d.data();
         const idOtro = data.emisorId === user.uid ? data.receptorId : data.emisorId;
-        if (!mapChats.has(data.chatId) || (data.fecha?.toMillis() > mapChats.get(data.chatId).fecha)) {
-          mapChats.set(data.chatId, { 
-            chatId: data.chatId, idViaje: data.idViaje, idOtro, 
+        const chatId = data.chatId;
+        if (!mapChats.has(chatId) || (data.fecha?.toMillis() > mapChats.get(chatId).fecha)) {
+          mapChats.set(chatId, { 
+            chatId, idViaje: data.idViaje, idOtro, 
             nombreOtro: data.emisorId === user.uid ? data.nombreReceptor : data.nombreEmisor,
             ultimoMensaje: data.texto, fecha: data.fecha?.toMillis() || Date.now() 
           });
@@ -86,36 +89,14 @@ export function NavegacionPrincipal({ user }) {
     return () => { 
       unsubUser(); unsubViajes(); unsubMisViajes(); unsubMisSoli(); unsubR(); unsubE(); 
     };
-  }, [user]); // <-- Aquí termina el efecto de Firebase
+  }, [user]);
 
-  // --- EFECTO SEPARADO PARA LIMPIAR SELECCIÓN (Fuera del anterior) ---
+  // --- EFECTO 2: LIMPIEZA DE NAVEGACIÓN ---
   useEffect(() => {
     if (vista !== "inicio") {
       setViajeSeleccionado(null);
     }
-  }, [vista]); 
-    
-
-    const actualizarHistorial = (docs) => {
-      const mapChats = new Map();
-      docs.forEach(d => {
-        const data = d.data();
-        const idOtro = data.emisorId === user.uid ? data.receptorId : data.emisorId;
-        if (!mapChats.has(data.chatId) || (data.fecha?.toMillis() > mapChats.get(data.chatId).fecha)) {
-          mapChats.set(data.chatId, { 
-            chatId: data.chatId, idViaje: data.idViaje, idOtro, 
-            nombreOtro: data.emisorId === user.uid ? data.nombreReceptor : data.nombreEmisor,
-            ultimoMensaje: data.texto, fecha: data.fecha?.toMillis() || Date.now() 
-          });
-        }
-      });
-      setHistorialChats(Array.from(mapChats.values()).sort((a, b) => b.fecha - a.fecha));
-    };
-    const unsubR = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
-    const unsubE = onSnapshot(query(collection(db, "MensajesPrivados"), where("emisorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
-
-    return () => { unsubUser(); unsubViajes(); unsubMisViajes(); unsubMisSoli(); unsubR(); unsubE(); };
-  }, [user]);
+  }, [vista]);
 
   const abrirChat = (idViaje, idOtro, nombreOtro) => {
     if (!idOtro || !user?.uid) return;
@@ -162,18 +143,13 @@ export function NavegacionPrincipal({ user }) {
 
   if (!userData) return <div className="h-screen bg-white flex items-center justify-center text-blue-600 font-black animate-pulse text-xs uppercase italic">Cargando Dame la Cola...</div>;
 
-    return (
+  return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
-      
-      {/* HEADER FIJO */}
       <div className="p-4 border-b bg-white z-40 shadow-sm">
         <Header userData={userData} modo={modo} />
       </div> 
 
-      {/* CUERPO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
-        
-        {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
         {vista === "inicio" && (
           <div className="pt-4">
             {viajeSeleccionado ? (
@@ -185,20 +161,16 @@ export function NavegacionPrincipal({ user }) {
               <>
                 {modo === "pasajero" ? (
                   <VistaInicio 
-                    viajes={viajes || []} 
+                    viajes={viajesFiltrados || []} 
                     setViajeSeleccionado={setViajeSeleccionado} 
                     setVista={setVista} 
                   />
                 ) : (
                   <WizardPublicar 
-                    pasoWizard={pasoWizard} 
-                    setPasoWizard={setPasoWizard}
-                    viajeForm={viajeForm} 
-                    setViajeForm={setViajeForm}
-                    UBICACIONES={UBICACIONES} 
-                    setVista={setVista} 
-                    setModo={setModo} 
-                    publicarRuta={publicarRutaWizard} 
+                    pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
+                    viajeForm={viajeForm} setViajeForm={setViajeForm}
+                    UBICACIONES={UBICACIONES} setVista={setVista} 
+                    setModo={setModo} publicarRuta={publicarRutaWizard} 
                     viajeEditando={viajeEditando}
                   />
                 )}
@@ -207,7 +179,6 @@ export function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* 2. RESTO DE VISTAS */}
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
@@ -227,12 +198,9 @@ export function NavegacionPrincipal({ user }) {
         {vista === "perfil" && (
           <VistaPerfil userData={userData} handleLogout={handleLogout} />
         )}
-
       </main>
 
-      {/* NAVBAR INFERIOR */}
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} />
-
       <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
     </div>
   );
