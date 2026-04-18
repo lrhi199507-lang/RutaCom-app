@@ -100,7 +100,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Preferencias</p>
           <div className="grid grid-cols-2 gap-3">
             <PrefItem icon={<Wind size={16}/>} label="A/C" active={viaje.preferencias?.ac} />
-            <PrefItem icon={<Smoke size={16}/>} label="No Fumar" active={viaje.preferencias?.noFumar} />
+            <PrefItem icon={<CigaretteOff size={16}/>} label="No Fumar" active={viaje.preferencias?.noFumar} />
             <PrefItem icon={<Dog size={16}/>} label="Mascotas" active={viaje.preferencias?.mascotas} />
             <PrefItem icon={<MessageSquare size={16}/>} label="Conversación" active={viaje.preferencias?.conversar} />
             <PrefItem icon={<Car size={16}/>} label="Equipaje" active={viaje.preferencias?.equipaje} />
