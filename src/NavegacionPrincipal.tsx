@@ -37,6 +37,7 @@ export function NavegacionPrincipal({ user }) {
   const [misViajesPublicados, setMisViajesPublicados] = useState([]);
   const [pasoWizard, setPasoWizard] = useState(1);
   const [viajeEditando, setViajeEditando] = useState(null);
+  const [pestañaPerfil, setPestañaPerfil] = useState("publico");
   const [viajeForm, setViajeForm] = useState({
     origen: "", destino: "", paradas: [], precio: "", asientos: 3, 
     horaSalida: "", horaLlegada: "", 
@@ -227,8 +228,14 @@ const abrirPerfilPublico = async (idConductor) => {
         )}
 
         {vista === "perfil" && (
-          <VistaPerfil userData={userData} handleLogout={handleLogout} />
-        )}
+  <VistaPerfil 
+    userData={userData} 
+    handleLogout={handleLogout} 
+    pestañaActiva={pestañaPerfil}           // <-- Pasamos el estado
+    setPestañaActiva={setPestañaPerfil}     // <-- Pasamos la función
+  />
+)}
+        
 
         {vista === "perfil_publico" && (
   <VistaPerfilCompleto 
