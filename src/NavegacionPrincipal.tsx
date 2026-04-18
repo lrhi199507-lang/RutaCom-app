@@ -149,13 +149,12 @@ export function NavegacionPrincipal({ user }) {
            {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
         {vista === "inicio" && (
           <div className="pt-4">
-            {viajeSeleccionado ? (
-              /* Si hay un viaje seleccionado, mostramos el detalle */
-              <VistaDetalleViaje 
-                viaje={viajeSeleccionado} 
-                onRegresar={() => setViajeSeleccionado(null)} 
-              />
-            ) : (
+            {viajeSeleccionado && typeof viajeSeleccionado === 'object' && viajeSeleccionado.id ? (
+  <VistaDetalleViaje 
+    viaje={viajeSeleccionado} 
+    onRegresar={() => setViajeSeleccionado(null)} 
+  />
+) : (
               /* Si no hay selección, mostramos buscador o wizard */
               <>
                 {modo === "pasajero" ? (
