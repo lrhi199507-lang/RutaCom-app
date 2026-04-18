@@ -7,29 +7,21 @@ import { UBICACIONES } from './constants/ubicaciones';
 import { Navbar } from "./components/layout/Navbar";
 import { Header } from './components/ui/Header';
 import { SelectorModo } from './components/ui/SelectorModo';
-import { KYCProgressBar } from './components/ui/KYCProgressBar';
-import { PantallaExito } from './components/ui/PantallaExito';
 
-// Vistas
-import { VistaInicio } from './components/views/VistaInicio'; // Ajustado a carpeta 'ui'
+// Vistas - ASEGÚRATE QUE ESTÉN EN ESTA CARPETA
+import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
-import { WizardPublicar } from './components/ui/WizardPublicar';
 import { VistaChatPrivado } from './components/views/VistaChatPrivado';
-
+import { WizardPublicar } from './components/ui/WizardPublicar';
 
 // Helpers y Modales
-import { ModalInstruccionesFoto } from './components/ui/ModalInstruccionesFoto';
-import { ModalResena } from './components/ui/ModalResena';
-import { ModalOpiniones } from './components/ui/ModalOpiniones';
-import { ModalChecklist } from './components/ui/ModalChecklist';
 import { ModalPerfilPublico } from './components/ui/ModalPerfilPublico';
-import { calcularDuracion, obtenerNivel, calcularEstatus } from './utils/helpers';
 
 import {
   doc, onSnapshot, collection, query, addDoc, 
-  serverTimestamp, orderBy, updateDoc, where, deleteDoc, increment
+  serverTimestamp, orderBy, updateDoc, where, deleteDoc
 } from "firebase/firestore";
 
 export function NavegacionPrincipal({ user }) {
@@ -56,42 +48,35 @@ export function NavegacionPrincipal({ user }) {
 
   // Otros Estados
   const [misSolicitudes, setMisSolicitudes] = useState([]);
-  const [viajeActivo, setViajeActivo] = useState(null);
   const [perfilPublico, setPerfilPublico] = useState(null);
-  const [modalResena, setModalResena] = useState({ visible: false, idSolicitud: null, evaluadoId: null, nombreEvaluado: "" });
 
   // --- LÓGICA DE FILTRADO ---
   const viajesFiltrados = useMemo(() => {
-    return viajes; // Por ahora devolvemos todos, puedes añadir filtros luego
+    return viajes; 
   }, [viajes]);
 
   // --- EFECTOS (Sincronización Firebase) ---
   useEffect(() => {
     if (!user) return;
 
-    // 1. Datos del Usuario
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) setUserData(snap.data());
     });
 
-    // 2. Todos los Viajes Disponibles
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 3. Mis Viajes Publicados (Como Chofer)
     const qMisViajes = query(collection(db, "Viajes"), where("idCreador", "==", user.uid));
     const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
       setMisViajesPublicados(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 4. Mis Solicitudes (Como Pasajero)
     const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 5. Historial de Chats
-    const qChats = query(collection(db, "MensajesPrivados"), where("participantes", "array-contains", user.uid));
+    // Sincronización de Chats
     const actualizarHistorial = (docs) => {
       const mapChats = new Map();
       docs.forEach(d => {
@@ -115,19 +100,18 @@ export function NavegacionPrincipal({ user }) {
   }, [user]);
 
   // --- FUNCIONES DE ACCIÓN ---
-  
   const abrirChat = (idViaje, idOtro, nombreOtro) => {
-  if (!idOtro || !user?.uid) return;
-  const chatId = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
-  setChatActivo({ 
-    id: chatId, 
-    nombre: nombreOtro, 
-    idOtro, 
-    idViaje, 
-    idPropio: user.uid 
-  });
-  setVista("chat_privado");
-};
+    if (!idOtro || !user?.uid) return;
+    const chatId = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
+    setChatActivo({ 
+      id: chatId, 
+      nombre: nombreOtro, 
+      idOtro, 
+      idViaje, 
+      idPropio: user.uid 
+    });
+    setVista("chat_privado");
+  };
   
   const publicarRutaWizard = async () => {
     try {
@@ -176,19 +160,27 @@ export function NavegacionPrincipal({ user }) {
 
   const handleLogout = () => signOut(auth);
 
-  if (!userData) return <div className="h-screen bg-slate-900 flex items-center justify-center text-blue-500 font-black animate-pulse text-xs uppercase italic">Cargando Dame la Cola...</div>;
+  if (!userData) return <div className="h-screen bg-white flex items-center justify-center text-blue-600 font-black animate-pulse text-xs uppercase italic">Cargando Dame la Cola...</div>;
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
-        {/* 1. HEADER SIEMPRE FIJO ARRIBA DE TODO (Solución al problema de la portada) */}
-    <div className="p-4 border-b bg-white z-40"> {/* Añadimos borde inferior y z-index para que flote */}
-      <Header userData={userData} />
-    </div> 
+      
+      {/* 1. HEADER FIJO (Siempre visible arriba) */}
+      <div className="p-4 border-b bg-white z-40 shadow-sm">
+        <Header userData={userData} />
+      </div> 
 
-      {/* 2. CONTENIDO SCROLLABLE */}
-      <main className="flex-1 overflow-y-auto px-4 pb-32">
+      {/* 2. CONTENIDO PRINCIPAL SCROLLABLE */}
+      <main className="flex-1 overflow-y-auto px-4 pb-24">
         
-        {/* VISTA INICIO */}
+        {/* Selector de Modo (Solo visible en Inicio y si no hay viaje seleccionado) */}
+        {vista === "inicio" && !viajeSeleccionado && (
+          <div className="py-4">
+            <SelectorModo modo={modo} setModo={setModo} />
+          </div>
+        )}
+
+        {/* --- ROUTING DE VISTAS --- */}
         {vista === "inicio" && !viajeSeleccionado && (
           <>
             {modo === "pasajero" ? (
@@ -205,7 +197,6 @@ export function NavegacionPrincipal({ user }) {
           </>
         )}
 
-        {/* VISTA MIS VIAJES */}
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
@@ -214,24 +205,21 @@ export function NavegacionPrincipal({ user }) {
           />
         )}
 
-        {/* VISTA MENSAJES */}
         {vista === "inbox" && (
           <VistaInbox historialChats={historialChats} misViajesPublicados={misViajesPublicados} abrirChat={abrirChat} />
         )}
 
-        {/* VISTA CHAT PRIVADO (Evita pantalla blanca) */}
         {vista === "chat_privado" && chatActivo && (
           <VistaChatPrivado chat={chatActivo} onBack={() => setVista("inbox")} />
         )}
 
-        {/* VISTA PERFIL */}
         {vista === "perfil" && (
           <VistaPerfil userData={userData} handleLogout={handleLogout} />
         )}
 
       </main>
 
-      {/* 3. NAVBAR INFERIOR */}
+      {/* 3. NAVBAR INFERIOR (Fija abajo) */}
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} />
 
       {/* 4. MODALES GLOBALES */}
