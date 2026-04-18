@@ -22,7 +22,7 @@ import { ModalPerfilPublico } from './components/ui/ModalPerfilPublico';
 
 import {
   doc, onSnapshot, collection, query, addDoc, 
-  serverTimestamp, orderBy, updateDoc, where, deleteDoc
+  serverTimestamp, orderBy, updateDoc, where, deleteDoc, getDoc
 } from "firebase/firestore";
 
 export function NavegacionPrincipal({ user }) {
@@ -94,11 +94,7 @@ export function NavegacionPrincipal({ user }) {
   }, [user]);
 
   // --- EFECTO 2: LIMPIEZA DE NAVEGACIÓN ---
-  useEffect(() => {
-    if (vista !== "inicio") {
-      setViajeSeleccionado(null);
-    }
-  }, [vista]);
+
 
   const abrirChat = (idViaje, idOtro, nombreOtro) => {
     if (!idOtro || !user?.uid) return;
