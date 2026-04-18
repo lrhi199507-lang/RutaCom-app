@@ -107,7 +107,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
           </div>
         </div>
 
-        {/* BOTONES DE ACCIÓN */}
+                {/* BOTONES DE ACCIÓN */}
         <div className="flex gap-3 pt-2">
           <button className="flex-1 bg-slate-950 text-white p-5 rounded-[24px] font-black italic uppercase flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all">
             <MessageCircle size={20} className="text-blue-400" /> Chat
@@ -121,14 +121,24 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
   );
 };
 
-// Componente pequeño para las preferencias
-const PrefItem = ({ icon, label, active }) => (
-  <div className={`flex items-center gap-2 p-3 rounded-2xl border transition-all ${
-    active 
-      ? "bg-blue-50/50 border-blue-100 text-blue-600" 
-      : "bg-slate-50 border-slate-100 text-slate-300"
-  }`}>
-    {React.cloneElement(icon, { size: 16, className: active ? "text-blue-500" : "text-slate-300" })}
-    <span className="text-[10px] font-black uppercase italic">{label}</span>
-  </div>
-);
+// Componente blindado contra nulos
+const PrefItem = ({ icon, label, active }) => {
+  // Si no hay icono, no intentamos clonarlo para evitar pantalla en blanco
+  if (!icon) return null;
+
+  return (
+    <div className={`flex items-center gap-2 p-3 rounded-2xl border transition-all ${
+      active 
+        ? "bg-blue-50/50 border-blue-100 text-blue-600" 
+        : "bg-slate-50 border-slate-100 text-slate-300"
+    }`}>
+      {/* Usamos una forma más segura de renderizar el icono */}
+      <span className={active ? "text-blue-500" : "text-slate-300"}>
+        {icon}
+      </span>
+      <span className="text-[10px] font-black uppercase italic">{label}</span>
+    </div>
+  );
+};
+
+// IMPORTANTE: Asegúrate de que no haya nada más después de esto.
