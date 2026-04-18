@@ -47,6 +47,8 @@ export function NavegacionPrincipal({ user }) {
 
   useEffect(() => {
     if (!user) return;
+
+    // 1. Listeners de Firebase
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) setUserData(snap.data());
     });
@@ -60,9 +62,34 @@ export function NavegacionPrincipal({ user }) {
     const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    useEffect(() => {
-    // Si el usuario cambia de pestaña (Mensajes, Perfil, etc.), 
-    // reseteamos el viaje seleccionado para que no haya conflictos
+
+    // 2. Historial de Chats
+    const actualizarHistorial = (docs) => {
+      const mapChats = new Map();
+      docs.forEach(d => {
+        const data = d.data();
+        const idOtro = data.emisorId === user.uid ? data.receptorId : data.emisorId;
+        if (!mapChats.has(data.chatId) || (data.fecha?.toMillis() > mapChats.get(data.chatId).fecha)) {
+          mapChats.set(data.chatId, { 
+            chatId: data.chatId, idViaje: data.idViaje, idOtro, 
+            nombreOtro: data.emisorId === user.uid ? data.nombreReceptor : data.nombreEmisor,
+            ultimoMensaje: data.texto, fecha: data.fecha?.toMillis() || Date.now() 
+          });
+        }
+      });
+      setHistorialChats(Array.from(mapChats.values()).sort((a, b) => b.fecha - a.fecha));
+    };
+
+    const unsubR = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
+    const unsubE = onSnapshot(query(collection(db, "MensajesPrivados"), where("emisorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
+
+    return () => { 
+      unsubUser(); unsubViajes(); unsubMisViajes(); unsubMisSoli(); unsubR(); unsubE(); 
+    };
+  }, [user]); // <-- Aquí termina el efecto de Firebase
+
+  // --- EFECTO SEPARADO PARA LIMPIAR SELECCIÓN (Fuera del anterior) ---
+  useEffect(() => {
     if (vista !== "inicio") {
       setViajeSeleccionado(null);
     }
