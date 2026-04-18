@@ -64,21 +64,44 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
           </div>
         </div>
 
-        {/* CONDUCTOR */}
-        <div className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-3">
-          <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-            <User size={24} className="text-slate-300" />
-          </div>
-          <div>
-            <h4 className="font-black italic text-slate-800 uppercase text-sm underline decoration-blue-500/20 underline-offset-4">
-              {viaje.conductor || "LUIS HERNÁNDEZ"}
-            </h4>
-            <p className="text-[9px] font-bold text-green-500 flex items-center gap-1 mt-0.5">
-              <ShieldCheck size={12} fill="currentColor" className="text-white" /> 
-              CONDUCTOR IDENTIFICADO
-            </p>
-          </div>
-        </div>
+        {/* CONDUCTOR - CLICKABLE PARA VER PERFIL PÚBLICO */}
+<div 
+  onClick={() => onVerPerfil && onVerPerfil(viaje.idConductor || viaje.idCreador)}
+  className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer hover:border-blue-100"
+>
+  {/* CONTENEDOR DE FOTO */}
+  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center border-2 border-white shadow-md overflow-hidden">
+    {viaje.fotoConductor ? (
+      <img 
+        src={viaje.fotoConductor} 
+        alt="Perfil" 
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <User size={24} className="text-slate-300" />
+    )}
+  </div>
+
+  <div>
+    <div className="flex items-center gap-2">
+      <h4 className="font-black italic text-slate-800 uppercase text-sm underline decoration-blue-500/20 underline-offset-4">
+        {viaje.conductor || "LUIS HERNÁNDEZ"}
+      </h4>
+      {/* Estrellitas rápidas si las tienes en el objeto viaje */}
+      {viaje.rating && (
+        <span className="text-[10px] font-black text-amber-500 flex items-center">
+          ★ {viaje.rating}
+        </span>
+      )}
+    </div>
+    
+    <p className="text-[9px] font-bold text-green-500 flex items-center gap-1 mt-0.5">
+      <ShieldCheck size={12} fill="currentColor" className="text-white" /> 
+      CONDUCTOR IDENTIFICADO
+    </p>
+  </div>
+</div>
+        
 
         {/* PASAJEROS CONFIRMADOS */}
         <div className="bg-white p-5 rounded-[30px] border border-slate-100 space-y-4">
