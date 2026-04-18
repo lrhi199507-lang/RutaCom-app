@@ -226,13 +226,12 @@ const abrirPerfilPublico = async (idConductor) => {
         {vista === "chat_privado" && chatActivo && (
           <VistaChatPrivado chat={chatActivo} onBack={() => setVista("inbox")} />
         )}
-
-        {vista === "perfil" && (
+{vista === "perfil" && (
   <VistaPerfil 
     userData={userData} 
     handleLogout={handleLogout} 
-    pestañaActiva={pestañaPerfil}           // <-- Pasamos el estado
-    setPestañaActiva={setPestañaPerfil}     // <-- Pasamos la función
+    pestañaActiva={pestañaPerfil} 
+    setPestañaActiva={setPestañaPerfil} 
   />
 )}
         
