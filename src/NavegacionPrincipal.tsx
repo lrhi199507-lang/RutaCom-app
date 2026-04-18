@@ -30,6 +30,7 @@ export function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
+  const [perfilSeleccionado, setPerfilSeleccionado] = useState(null);
   const [chatActivo, setChatActivo] = useState(null);
   const [historialChats, setHistorialChats] = useState([]);
   const [misViajesPublicados, setMisViajesPublicados] = useState([]);
@@ -227,6 +228,15 @@ export function NavegacionPrincipal({ user }) {
         {vista === "perfil" && (
           <VistaPerfil userData={userData} handleLogout={handleLogout} />
         )}
+
+        {vista === "perfil_publico" && (
+  <VistaPerfilCompleto 
+    userData={perfilSeleccionado} 
+    isOwnProfile={false} // Marcamos false porque es el perfil de otro
+    onRegresar={() => setVista("detalle_viaje")} // Para volver atrás
+  />
+)}
+        
       </main>
 
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} />
