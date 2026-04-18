@@ -11,10 +11,10 @@ import { KYCProgressBar } from './components/ui/KYCProgressBar';
 import { PantallaExito } from './components/ui/PantallaExito';
 
 // Vistas
-import { VistaInicio } from './components/view/VistaInicio'; // Ajustado a carpeta 'ui'
-import { VistaMisViajes } from './components/view/VistaMisViajes';
-import { VistaInbox } from './components/view/VistaInbox';
-import { VistaPerfil } from './components/view/VistaPerfil';
+import { VistaInicio } from './components/views/VistaInicio'; // Ajustado a carpeta 'ui'
+import { VistaMisViajes } from './components/views/VistaMisViajes';
+import { VistaInbox } from './components/views/VistaInbox';
+import { VistaPerfil } from './components/views/VistaPerfil';
 import { WizardPublicar } from './components/ui/WizardPublicar';
 import { VistaChatPrivado } from './components/views/VistaChatPrivado';
 
