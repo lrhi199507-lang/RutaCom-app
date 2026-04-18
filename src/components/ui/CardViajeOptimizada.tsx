@@ -41,30 +41,32 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
       </div>
 
-      {/* DETALLES DE LA RUTA (Línea, Origen y Destino) */}
-      <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 relative">
+      {/* DETALLES DE LA RUTA (Sin texto "Origen/Destino") */}
+      <div className="flex items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
         
-        {/* LA LÍNEA UNIFICADORA */}
-        <div className="absolute left-[29.5px] top-[26px] bottom-[26px] w-[1px] border-l-2 border-dashed border-slate-200"></div>
-
         {/* ORIGEN */}
-        <div className="w-8 h-8 rounded-full border border-blue-100 flex items-center justify-center bg-white shrink-0 z-10">
-          <div className="w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[8px] font-black uppercase text-slate-400 leading-none">ORIGEN</p>
-          <p className="text-xs font-bold text-slate-700 truncate">{viaje.cO || viaje.origen || "Valencia"}, {viaje.eO || "Carabobo"}</p>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full border border-blue-200 flex items-center justify-center bg-white shrink-0">
+            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-black text-slate-800 truncate">{viaje.cO || "Valencia"}</p>
+            <p className="text-[9px] font-bold text-slate-400 truncate uppercase">{viaje.eO || "Carabobo"}</p>
+          </div>
         </div>
         
-        <ChevronRight size={16} className="text-slate-300 mx-1 shrink-0"/>
+        {/* FLECHA SEPARADORA */}
+        <ChevronRight size={18} className="text-slate-300 shrink-0"/>
 
         {/* DESTINO */}
-        <div className="flex-1 min-w-0 text-right">
-          <p className="text-[8px] font-black uppercase text-slate-400 leading-none">DESTINO</p>
-          <p className="text-xs font-bold text-slate-700 truncate">{viaje.cD || viaje.destino || "Caracas"}, {viaje.eD || "Dtto. Capital"}</p>
-        </div>
-        <div className="w-8 h-8 rounded-full border border-green-100 flex items-center justify-center bg-white shrink-0 z-10">
-          <div className="w-2.5 h-2.5 bg-green-600 rounded-full"></div>
+        <div className="flex-1 min-w-0 flex items-center justify-end gap-2 text-right">
+          <div className="min-w-0">
+            <p className="text-sm font-black text-slate-800 truncate">{viaje.cD || "Caracas"}</p>
+            <p className="text-[9px] font-bold text-slate-400 truncate uppercase">{viaje.eD || "Dtto. Capital"}</p>
+          </div>
+          <div className="w-7 h-7 rounded-full border border-green-200 flex items-center justify-center bg-white shrink-0">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          </div>
         </div>
       </div>
 
