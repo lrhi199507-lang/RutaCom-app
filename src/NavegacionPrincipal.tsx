@@ -139,6 +139,35 @@ export function NavegacionPrincipal({ user }) {
     setModo("chofer");
   };
 
+  const abrirPerfilPublico = async (idConductor) => {
+  if (!idConductor) return;
+  
+  try {
+    // 1. Buscamos el documento del conductor en la colección 'usuarios'
+    const docRef = doc(db, "usuarios", idConductor);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      // 2. Seteamos los datos mapeando los campos de tu Firebase
+      setPerfilSeleccionado({
+        ...data,
+        biografia: data.bio || "Sin biografía", // Usamos 'bio' que es como lo tienes en Firebase
+        rating: data.rating || 5,
+        verificaciones: {
+          cedula: data.kycVerificado || false,
+          vehiculo: data.vehiculo ? true : false,
+          fotoReal: data.kycVerificado || false,
+        }
+      });
+      // 3. Cambiamos la vista para mostrar este perfil
+      setVista("perfil_publico");
+    }
+  } catch (error) {
+    console.error("Error al obtener perfil:", error);
+  }
+};
+  
   const handleLogout = () => signOut(auth);
 
   if (!userData) return <div className="h-screen bg-white flex items-center justify-center text-blue-600 font-black animate-pulse text-xs uppercase italic">Cargando Dame la Cola...</div>;
