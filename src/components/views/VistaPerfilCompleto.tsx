@@ -19,31 +19,35 @@ export const VistaPerfilCompleto = ({ userData, isOwnProfile = false, onRegresar
            </button>
         </div>
       )}
+{/* TARJETA PRINCIPAL DEL PERFIL */}
+<div className="px-4">
+  <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm relative overflow-hidden">
+    
+    <div className="flex flex-col items-center text-center pb-6">
+      <div className="relative mb-4">
+        <div className="w-28 h-28 bg-slate-100 rounded-full border-4 border-white overflow-hidden shadow-xl flex items-center justify-center">
+           <User size={60} className="text-slate-300 m-auto mt-3" />
+        </div>
+        <div className="absolute -bottom-1.5 -right-1.5 bg-blue-600 p-2 rounded-full shadow-lg text-white">
+           <Award size={18} fill="currentColor" />
+        </div>
+      </div>
+      
+      {/* CAMBIO AQUÍ: Concatenamos "PROPIETARIO" con el nombre real de Firebase */}
+      <h1 className="text-2xl font-black text-slate-950 uppercase italic tracking-tight leading-tight">
+         PROPIETARIO {userData.nombre?.split(' ')[0] || 'USUARIO'}
+      </h1>
+      
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
+         {userData.edad || '30'} AÑOS
+      </p>
+    </div>
 
-      {/* TARJETA PRINCIPAL DEL PERFIL (BLANCA Y REDONDEADA) */}
-      <div className="px-4">
-        <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm relative overflow-hidden">
-          
-          {/* FOTO, NOMBRE Y SUPER DRIVER BADGE */}
-          <div className="flex flex-col items-center text-center pb-6">
-            <div className="relative mb-4">
-              <div className="w-28 h-28 bg-slate-100 rounded-full border-4 border-white overflow-hidden shadow-xl flex items-center justify-center">
-                 <User size={60} className="text-slate-300 m-auto mt-3" />
-              </div>
-              {/* Badge de Super Driver: Pequeño y azul en la esquina de la foto */}
-              <div className="absolute -bottom-1.5 -right-1.5 bg-blue-600 p-2 rounded-full shadow-lg text-white">
-                 <Award size={18} fill="currentColor" />
-              </div>
-            </div>
-            
-            <h1 className="text-2xl font-black text-slate-950 uppercase italic tracking-tight leading-tight">
-               {userData.nombre?.split(' ')[0] || 'Usuario'}
-            </h1>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-               {userData.edad || '30'} AÑOS
-            </p>
-          </div>
-
+    {/* ... resto del código (Opiniones, Puntos de confianza) */}
+  </div>
+</div>
+      
+    
           <hr className="border-slate-100 mb-6" />
 
           {/* VALORACIÓN Y OPINIONES */}
