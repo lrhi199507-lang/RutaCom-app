@@ -176,22 +176,23 @@ const abrirPerfilPublico = async (idConductor) => {
         <Header userData={userData} modo={modo} />
       </div> 
 
-      <main className="flex-1 overflow-y-auto px-4 pb-24">
+      <main className="flex-1 overflow-y-auto pb-24">
+  
   {vista === "inicio" && (
-    <div className="pt-4">
-      {/* CORRECCIÓN: Quitamos el renderizado de detalle de aquí adentro 
-          para que use la lógica de abajo que sí tiene el botón de perfil */}
+    <div className="pt-0"> {/* Quitamos pt-4 para que el header pegue arriba */}
       {modo === "pasajero" ? (
         <VistaInicio 
+          userData={userData} // <--- ESTO FALTABA Y CAUSA EL BLANCO
           viajes={viajesFiltrados || []} 
           setViajeSeleccionado={(v) => {
             setViajeSeleccionado(v);
-            setVista("detalle_viaje"); // <--- IMPORTANTE: Cambiamos la vista aquí
+            setVista("detalle_viaje");
           }} 
           setVista={setVista} 
         />
       ) : (
         <WizardPublicar 
+          userData={userData} // <--- También aquí por si acaso
           pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
           viajeForm={viajeForm} setViajeForm={setViajeForm}
           UBICACIONES={UBICACIONES} setVista={setVista} 
