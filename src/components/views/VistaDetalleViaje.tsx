@@ -46,38 +46,39 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, onVerPerfil }) => {
           </div>
         </div>
 
-        {/* 3. CONDUCTOR - DISEÑO INTEGRADO (Sin etiquetas de 'Propietario') */}
-        <div 
-          onClick={() => onVerPerfil && onVerPerfil(viaje.idConductor || viaje.idCreador)}
-          className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center justify-between active:bg-slate-50 transition-all cursor-pointer"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
-              {viaje.fotoConductor ? (
-                <img src={viaje.fotoConductor} alt="Perfil" className="w-full h-full object-cover" />
-              ) : (
-                <User size={28} className="text-slate-300 mt-2" />
-              )}
-            </div>
-            <div>
-              <h4 className="font-black italic text-slate-800 uppercase text-base leading-tight">
-                {viaje.conductor || "LUIS HERNÁNDEZ"}
-              </h4>
-              <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-[9px] font-bold text-green-500 flex items-center gap-1">
-                  <ShieldCheck size={12} fill="currentColor" className="text-white" /> 
-                  VERIFICADO
-                </p>
-                <span className="text-[9px] font-black text-amber-500 flex items-center gap-0.5">
-                  <Star size={10} fill="currentColor" /> {viaje.rating || "5.0"}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-            <MessageSquare size={18} />
-          </div>
-        </div>
+        {/* 3. CONDUCTOR - DISEÑO INTEGRADO */}
+<div 
+  onClick={() => onVerPerfil && onVerPerfil(viaje.idConductor || viaje.idCreador)}
+  className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center justify-between active:bg-slate-50 transition-all cursor-pointer"
+>
+  <div className="flex items-center gap-4">
+    <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
+      {viaje.fotoConductor ? (
+        <img src={viaje.fotoConductor} alt="Perfil" className="w-full h-full object-cover" />
+      ) : (
+        <User size={28} className="text-slate-300 mt-2" />
+      )}
+    </div>
+    <div>
+      <h4 className="font-black italic text-slate-800 uppercase text-base leading-tight">
+        {viaje.conductor || "CONDUCTOR"} {/* Quitamos Luis Hernández fijo */}
+      </h4>
+      <div className="flex items-center gap-2 mt-0.5">
+        <p className="text-[9px] font-bold text-green-500 flex items-center gap-1">
+          <ShieldCheck size={12} fill="currentColor" className="text-white" /> 
+          VERIFICADO
+        </p>
+        <span className="text-[9px] font-black text-amber-500 flex items-center gap-0.5">
+          <Star size={10} fill="currentColor" /> {viaje.rating || "5.0"}
+        </span>
+      </div>
+    </div>
+  </div>
+  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+    <MessageSquare size={18} />
+  </div>
+</div>
+        
 
         {/* 4. VEHÍCULO */}
         <div className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-4">
