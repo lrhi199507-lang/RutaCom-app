@@ -12,6 +12,7 @@ import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
+import { VistaPerfilCompleto } from './components/views/VistaPerfilCompleto';
 import { VistaChatPrivado } from './components/views/VistaChatPrivado';
 import { WizardPublicar } from './components/ui/WizardPublicar';
 import { VistaDetalleViaje } from './components/views/VistaDetalleViaje'; 
