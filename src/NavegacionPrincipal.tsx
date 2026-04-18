@@ -135,17 +135,18 @@ export function NavegacionPrincipal({ user }) {
 
   if (!userData) return <div className="h-screen bg-white flex items-center justify-center text-blue-600 font-black animate-pulse text-xs uppercase italic">Cargando Dame la Cola...</div>;
 
-  return (
+    return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
       
-      {/* HEADER FIJO (La Portada siempre arriba) */}
+      {/* HEADER FIJO */}
       <div className="p-4 border-b bg-white z-40 shadow-sm">
-        <Header userData={userData} />
+        <Header userData={userData} modo={modo} />
       </div> 
-            {/* CUERPO PRINCIPAL - MODO RESCATE */}
+
+      {/* CUERPO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
         
-        {/* VISTA DE INICIO Y DETALLES */}
+        {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
         {vista === "inicio" && (
           <div className="pt-4">
             {viajeSeleccionado ? (
@@ -163,10 +164,14 @@ export function NavegacionPrincipal({ user }) {
                   />
                 ) : (
                   <WizardPublicar 
-                    pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
-                    viajeForm={viajeForm} setViajeForm={setViajeForm}
-                    UBICACIONES={UBICACIONES} setVista={setVista} 
-                    setModo={setModo} publicarRuta={publicarRutaWizard} 
+                    pasoWizard={pasoWizard} 
+                    setPasoWizard={setPasoWizard}
+                    viajeForm={viajeForm} 
+                    setViajeForm={setViajeForm}
+                    UBICACIONES={UBICACIONES} 
+                    setVista={setVista} 
+                    setModo={setModo} 
+                    publicarRuta={publicarRutaWizard} 
                     viajeEditando={viajeEditando}
                   />
                 )}
@@ -175,7 +180,7 @@ export function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* OTRAS VISTAS */}
+        {/* 2. RESTO DE VISTAS */}
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
@@ -196,8 +201,6 @@ export function NavegacionPrincipal({ user }) {
           <VistaPerfil userData={userData} handleLogout={handleLogout} />
         )}
 
-      </main>
-      
       </main>
 
       {/* NAVBAR INFERIOR */}
