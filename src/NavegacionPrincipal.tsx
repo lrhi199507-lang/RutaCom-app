@@ -180,14 +180,10 @@ export function NavegacionPrincipal({ user }) {
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
-      
-      {/* 1. HEADER FIJO SOLO EN INICIO */}
-      {vista === "inicio" && !viajeSeleccionado && (
-        <div className="p-4 space-y-4 bg-white">
-          <Header userData={userData} />
-          <SelectorModo modo={modo} setModo={setModo} />
-        </div>
-      )}
+        {/* 1. HEADER SIEMPRE FIJO ARRIBA DE TODO (Solución al problema de la portada) */}
+    <div className="p-4 border-b bg-white z-40"> {/* Añadimos borde inferior y z-index para que flote */}
+      <Header userData={userData} />
+    </div> 
 
       {/* 2. CONTENIDO SCROLLABLE */}
       <main className="flex-1 overflow-y-auto px-4 pb-32">
