@@ -142,10 +142,10 @@ export function NavegacionPrincipal({ user }) {
       <div className="p-4 border-b bg-white z-40 shadow-sm">
         <Header userData={userData} />
       </div> 
-      {/* CUERPO PRINCIPAL */}
+            {/* CUERPO PRINCIPAL - MODO RESCATE */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
         
-        {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
+        {/* VISTA DE INICIO Y DETALLES */}
         {vista === "inicio" && (
           <div className="pt-4">
             {viajeSeleccionado ? (
@@ -157,20 +157,16 @@ export function NavegacionPrincipal({ user }) {
               <>
                 {modo === "pasajero" ? (
                   <VistaInicio 
-                    viajes={viajesFiltrados} 
+                    viajes={viajes || []} 
                     setViajeSeleccionado={setViajeSeleccionado} 
                     setVista={setVista} 
                   />
                 ) : (
                   <WizardPublicar 
-                    pasoWizard={pasoWizard} 
-                    setPasoWizard={setPasoWizard}
-                    viajeForm={viajeForm} 
-                    setViajeForm={setViajeForm}
-                    UBICACIONES={UBICACIONES} 
-                    setVista={setVista} 
-                    setModo={setModo} 
-                    publicarRuta={publicarRutaWizard} 
+                    pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
+                    viajeForm={viajeForm} setViajeForm={setViajeForm}
+                    UBICACIONES={UBICACIONES} setVista={setVista} 
+                    setModo={setModo} publicarRuta={publicarRutaWizard} 
                     viajeEditando={viajeEditando}
                   />
                 )}
@@ -179,7 +175,7 @@ export function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {/* 2. VISTAS SECUNDARIAS */}
+        {/* OTRAS VISTAS */}
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
@@ -200,6 +196,8 @@ export function NavegacionPrincipal({ user }) {
           <VistaPerfil userData={userData} handleLogout={handleLogout} />
         )}
 
+      </main>
+      
       </main>
 
       {/* NAVBAR INFERIOR */}
