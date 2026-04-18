@@ -289,11 +289,22 @@ const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
     return () => unsubOps();
   }, [perfilPublico]);
 
-  const abrirChat = (idViaje, idOtroUsuario, nombreOtro) => {
-    const chatId = [user.uid, idOtroUsuario].sort().join("_") + "_" + idViaje;
-    setChatActivo({ id: chatId, nombre: nombreOtro, idOtro: idOtroUsuario, idViaje: idViaje });
-    setVista("chat_privado");
-  };
+  const abrirChat = (idViaje, idOtro, nombreOtro) => {
+  if (!idOtro || !user?.uid) return; // Seguridad para que no explote
+
+  const chatId = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
+  
+  setChatActivo({ 
+    id: chatId, 
+    nombre: nombreOtro, 
+    idOtro: idOtro, 
+    idViaje: idViaje 
+  });
+  
+  // ¡OJO AQUÍ! Asegúrate de que este nombre sea el mismo que usas en el render de abajo
+  setVista("chat_privado"); 
+};
+  
   const manejarSubidaFoto = async (archivo) => {
   try {
     console.log("Archivo listo para procesar:", archivo);
