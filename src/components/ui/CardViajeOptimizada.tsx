@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Navigation, Clock, Users, Star, Car, Wind, Smoking, ChevronRight } from 'lucide-react';
+import { MapPin, Navigation, Clock, Users, Star, Car, Wind, Smoking, ChevronRight, User, ShieldCheck } from 'lucide-react';
 
 export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => {
   if (!viaje) return null;
@@ -9,7 +9,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   return (
     <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all">
       
-      {/* HEADER DE LA TARJETA (Nombre, Rating, Precio) */}
+      {/* HEADER DE LA TARJETA */}
       <div className="flex justify-between items-start gap-3">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 border border-slate-200">
@@ -41,10 +41,10 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
       </div>
 
-      {/* DETALLES DE LA RUTA (El punto azul y rojo con la LÍNEA UNIFICADORA) */}
+      {/* DETALLES DE LA RUTA (Línea, Origen y Destino) */}
       <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 relative">
         
-        {/* LA LÍNEA UNIFICADORA (Vertical punteada) */}
+        {/* LA LÍNEA UNIFICADORA */}
         <div className="absolute left-[29.5px] top-[26px] bottom-[26px] w-[1px] border-l-2 border-dashed border-slate-200"></div>
 
         {/* ORIGEN */}
@@ -56,7 +56,6 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           <p className="text-xs font-bold text-slate-700 truncate">{viaje.cO || viaje.origen || "Valencia"}, {viaje.eO || "Carabobo"}</p>
         </div>
         
-        {/* FLECHA INTERMEDIA (Opcional, para más claridad) */}
         <ChevronRight size={16} className="text-slate-300 mx-1 shrink-0"/>
 
         {/* DESTINO */}
@@ -69,7 +68,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
       </div>
 
-      {/* INFO ADICIONAL (Salida, Puestos, Vehículo, Preferencias) */}
+      {/* INFO ADICIONAL */}
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="flex items-center gap-2 text-slate-500">
           <Clock size={14} />
@@ -109,7 +108,6 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   );
 };
 
-// HELPER LOCAL (Para el nivel)
 const obtenerNivel = (viajes) => {
   if (!viajes) return "Novato";
   if (viajes < 10) return "Novato";
