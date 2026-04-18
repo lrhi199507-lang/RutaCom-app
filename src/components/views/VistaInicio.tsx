@@ -44,15 +44,17 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista, userD
           </div>
         </div>
 
-        {/* Botón Wallet (Mapa eliminado como solicitaste) */}
-        <div className="flex items-center gap-2">
-          <button className="h-11 bg-slate-950 rounded-full flex items-center gap-2 px-4 shadow-sm active:scale-95 transition-all">
-            <Wallet size={16} className="text-blue-500" />
-            <p className="text-xs font-black text-white tracking-tighter">
-              ${userData?.saldo?.toFixed(2) || "80.00"}
-            </p>
-          </button>
-        </div>
+        {/* Botón Wallet */}
+<div className="flex items-center gap-2">
+  <button className="h-11 bg-slate-950 rounded-full flex items-center gap-2 px-4 shadow-sm active:scale-95 transition-all">
+    <Wallet size={16} className="text-blue-500" />
+    <p className="text-xs font-black text-white tracking-tighter">
+      {/* AQUÍ ESTÁ LA MAGIA QUE EVITA EL COLAPSO */}
+      ${Number(userData?.saldo || 80).toFixed(2)}
+    </p>
+  </button>
+</div>
+        
       </div>
 
       <div className="p-4 space-y-6">
