@@ -60,6 +60,14 @@ export function NavegacionPrincipal({ user }) {
     const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+    useEffect(() => {
+    // Si el usuario cambia de pestaña (Mensajes, Perfil, etc.), 
+    // reseteamos el viaje seleccionado para que no haya conflictos
+    if (vista !== "inicio") {
+      setViajeSeleccionado(null);
+    }
+  }, [vista]); 
+    
 
     const actualizarHistorial = (docs) => {
       const mapChats = new Map();
@@ -138,19 +146,34 @@ export function NavegacionPrincipal({ user }) {
       {/* CUERPO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
         
-        {/* RENDERIZADO DE VISTAS (SIN EL SELECTOR DE MODO ARRIBA) */}
-        {vista === "inicio" && !viajeSeleccionado && (
+           {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
+        {vista === "inicio" && (
           <div className="pt-4">
-            {modo === "pasajero" ? (
-              <VistaInicio viajes={viajesFiltrados} setViajeSeleccionado={setViajeSeleccionado} setVista={setVista} />
-            ) : (
-              <WizardPublicar 
-                pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
-                viajeForm={viajeForm} setViajeForm={setViajeForm}
-                UBICACIONES={UBICACIONES} setVista={setVista} 
-                setModo={setModo} publicarRuta={publicarRutaWizard} 
-                viajeEditando={viajeEditando}
+            {viajeSeleccionado ? (
+              /* Si hay un viaje seleccionado, mostramos el detalle */
+              <VistaDetalleViaje 
+                viaje={viajeSeleccionado} 
+                onRegresar={() => setViajeSeleccionado(null)} 
               />
+            ) : (
+              /* Si no hay selección, mostramos buscador o wizard */
+              <>
+                {modo === "pasajero" ? (
+                  <VistaInicio 
+                    viajes={viajesFiltrados} 
+                    setViajeSeleccionado={setViajeSeleccionado} 
+                    setVista={setVista} 
+                  />
+                ) : (
+                  <WizardPublicar 
+                    pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
+                    viajeForm={viajeForm} setViajeForm={setViajeForm}
+                    UBICACIONES={UBICACIONES} setVista={setVista} 
+                    setModo={setModo} publicarRuta={publicarRutaWizard} 
+                    viajeEditando={viajeEditando}
+                  />
+                )}
+              </>
             )}
           </div>
         )}
