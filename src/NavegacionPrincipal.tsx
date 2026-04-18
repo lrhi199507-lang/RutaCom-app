@@ -138,24 +138,27 @@ export function NavegacionPrincipal({ user }) {
   };
 const abrirPerfilPublico = async (idConductor) => {
   if (!idConductor) {
-    alert("Error: El viaje no tiene un ID de conductor asignado.");
+    // Este lo dejamos solo por seguridad técnica, no debería salir nunca
+    console.error("Error: El viaje no tiene un ID de conductor asignado.");
     return;
   }
 
-  alert("Buscando en Firebase al conductor: " + idConductor);
+  // ELIMINADO: alert("Buscando en Firebase al conductor...");
 
   try {
     const docRef = doc(db, "usuarios", idConductor);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      alert("¡Usuario encontrado! Abriendo perfil...");
+      // ELIMINADO: alert("¡Usuario encontrado! Abriendo perfil...");
       setPerfilSeleccionado(docSnap.data());
       setVista("perfil_publico");
     } else {
-      alert("Error: No existe un usuario con ese ID en la colección 'usuarios'.");
+      // Cambiamos alert por console.error para que no moleste al usuario
+      console.error("Error: No existe un usuario con ese ID en la colección 'usuarios'.");
     }
   } catch (error) {
+    // Solo mostramos el error de permisos si realmente falla algo grave
     alert("Error de Firebase: " + error.message);
   }
 };
