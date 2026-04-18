@@ -146,24 +146,24 @@ export function NavegacionPrincipal({ user }) {
       {/* CUERPO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
         
-           {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
-        {vista === "inicio" && (
-          <div className="pt-4">
-            {viajeSeleccionado && typeof viajeSeleccionado === 'object' && viajeSeleccionado.id ? (
-  <VistaDetalleViaje 
-    viaje={viajeSeleccionado} 
-    onRegresar={() => setViajeSeleccionado(null)} 
-  />
-) : (
-              /* Si no hay selección, mostramos buscador o wizard */
-              <>
-                {modo === "pasajero" ? (
-                  <VistaInicio 
-                    viajes={viajesFiltrados} 
-                    setViajeSeleccionado={setViajeSeleccionado} 
-                    setVista={setVista} 
-                  />
-                ) : (
+           {vista === "inicio" && (
+  <div className="pt-4">
+    {/* Agregamos una validación extra para ver si el componente existe */}
+    {viajeSeleccionado && VistaDetalleViaje ? (
+      <VistaDetalleViaje 
+        viaje={viajeSeleccionado} 
+        onRegresar={() => setViajeSeleccionado(null)} 
+      />
+    ) : (
+      <>
+        {modo === "pasajero" ? (
+          <VistaInicio 
+            viajes={viajesFiltrados} 
+            setViajeSeleccionado={setViajeSeleccionado} 
+            setVista={setVista} 
+          />
+        ) : (
+          <div className="p-4">Cargando Wizard...</div> 
                   <WizardPublicar 
                     pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
                     viajeForm={viajeForm} setViajeForm={setViajeForm}
