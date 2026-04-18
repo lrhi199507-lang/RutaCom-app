@@ -24,11 +24,12 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
         <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 relative overflow-hidden">
           <div className="absolute top-6 right-8">
             <span className="bg-slate-50 text-slate-400 px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1">
-              <Info size={10} /> Novato
+              <div className="w-1 h-1 bg-slate-400 rounded-full"></div> Novato
             </span>
           </div>
           
-          <h1 className="text-6xl font-black text-blue-600 mb-6 tracking-tighter">
+          {/* PRECIO AJUSTADO: Bajamos de text-6xl a text-4xl para que no sea tan invasivo */}
+          <h1 className="text-4xl font-black text-blue-600 mb-6 tracking-tighter">
             ${viaje.precio || "10"}
           </h1>
           
@@ -107,12 +108,12 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
           </div>
         </div>
 
-                {/* BOTONES DE ACCIÓN */}
+        {/* BOTONES DE ACCIÓN AJUSTADOS: Reducimos padding de p-5 a p-4 y texto a text-xs/sm */}
         <div className="flex gap-3 pt-2">
-          <button className="flex-1 bg-slate-950 text-white p-5 rounded-[24px] font-black italic uppercase flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all">
-            <MessageCircle size={20} className="text-blue-400" /> Chat
+          <button className="flex-1 bg-slate-950 text-white p-4 rounded-[20px] font-black italic uppercase text-xs flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all">
+            <MessageCircle size={18} className="text-blue-400" /> Chat
           </button>
-          <button className="flex-[1.5] bg-blue-600 text-white p-5 rounded-[24px] font-black italic uppercase shadow-xl shadow-blue-500/30 active:scale-95 transition-all">
+          <button className="flex-[1.5] bg-blue-600 text-white p-4 rounded-[20px] font-black italic uppercase text-xs shadow-xl shadow-blue-500/30 active:scale-95 transition-all">
             Pedir Cola
           </button>
         </div>
@@ -123,7 +124,6 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
 
 // Componente blindado contra nulos
 const PrefItem = ({ icon, label, active }) => {
-  // Si no hay icono, no intentamos clonarlo para evitar pantalla en blanco
   if (!icon) return null;
 
   return (
@@ -132,7 +132,6 @@ const PrefItem = ({ icon, label, active }) => {
         ? "bg-blue-50/50 border-blue-100 text-blue-600" 
         : "bg-slate-50 border-slate-100 text-slate-300"
     }`}>
-      {/* Usamos una forma más segura de renderizar el icono */}
       <span className={active ? "text-blue-500" : "text-slate-300"}>
         {icon}
       </span>
@@ -140,5 +139,3 @@ const PrefItem = ({ icon, label, active }) => {
     </div>
   );
 };
-
-// IMPORTANTE: Asegúrate de que no haya nada más después de esto.
