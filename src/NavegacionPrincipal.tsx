@@ -6,9 +6,8 @@ import { UBICACIONES } from './constants/ubicaciones';
 // Layout y UI
 import { Navbar } from "./components/layout/Navbar";
 import { Header } from './components/ui/Header';
-import { SelectorModo } from './components/ui/SelectorModo';
 
-// Vistas - ASEGÚRATE QUE ESTÉN EN ESTA CARPETA
+// Vistas
 import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
@@ -25,19 +24,14 @@ import {
 } from "firebase/firestore";
 
 export function NavegacionPrincipal({ user }) {
-  // --- ESTADOS PRINCIPALES ---
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
-  
-  // Estados de Chat
   const [chatActivo, setChatActivo] = useState(null);
   const [historialChats, setHistorialChats] = useState([]);
   const [misViajesPublicados, setMisViajesPublicados] = useState([]);
-
-  // Estados del Wizard
   const [pasoWizard, setPasoWizard] = useState(1);
   const [viajeEditando, setViajeEditando] = useState(null);
   const [viajeForm, setViajeForm] = useState({
@@ -45,38 +39,27 @@ export function NavegacionPrincipal({ user }) {
     horaSalida: "", horaLlegada: "", 
     preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true, maxDosAtras: false }
   });
-
-  // Otros Estados
   const [misSolicitudes, setMisSolicitudes] = useState([]);
   const [perfilPublico, setPerfilPublico] = useState(null);
 
-  // --- LÓGICA DE FILTRADO ---
-  const viajesFiltrados = useMemo(() => {
-    return viajes; 
-  }, [viajes]);
+  const viajesFiltrados = useMemo(() => viajes, [viajes]);
 
-  // --- EFECTOS (Sincronización Firebase) ---
   useEffect(() => {
     if (!user) return;
-
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
       if (snap.exists()) setUserData(snap.data());
     });
-
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
     const qMisViajes = query(collection(db, "Viajes"), where("idCreador", "==", user.uid));
     const unsubMisViajes = onSnapshot(qMisViajes, (snap) => {
       setMisViajesPublicados(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
     const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
       setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // Sincronización de Chats
     const actualizarHistorial = (docs) => {
       const mapChats = new Map();
       docs.forEach(d => {
@@ -92,24 +75,16 @@ export function NavegacionPrincipal({ user }) {
       });
       setHistorialChats(Array.from(mapChats.values()).sort((a, b) => b.fecha - a.fecha));
     };
-
     const unsubR = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
     const unsubE = onSnapshot(query(collection(db, "MensajesPrivados"), where("emisorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
 
     return () => { unsubUser(); unsubViajes(); unsubMisViajes(); unsubMisSoli(); unsubR(); unsubE(); };
   }, [user]);
 
-  // --- FUNCIONES DE ACCIÓN ---
   const abrirChat = (idViaje, idOtro, nombreOtro) => {
     if (!idOtro || !user?.uid) return;
     const chatId = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
-    setChatActivo({ 
-      id: chatId, 
-      nombre: nombreOtro, 
-      idOtro, 
-      idViaje, 
-      idPropio: user.uid 
-    });
+    setChatActivo({ id: chatId, nombre: nombreOtro, idOtro, idViaje, idPropio: user.uid });
     setVista("chat_privado");
   };
   
@@ -128,12 +103,8 @@ export function NavegacionPrincipal({ user }) {
         preferencias: viajeForm.preferencias,
         fecha: serverTimestamp()
       };
-
-      if (viajeEditando) {
-        await updateDoc(doc(db, "Viajes", viajeEditando), dataViaje);
-      } else {
-        await addDoc(collection(db, "Viajes"), dataViaje);
-      }
+      if (viajeEditando) { await updateDoc(doc(db, "Viajes", viajeEditando), dataViaje); } 
+      else { await addDoc(collection(db, "Viajes"), dataViaje); }
       setVista("inicio");
       setViajeEditando(null);
     } catch (e) { alert("Error al publicar"); }
@@ -142,20 +113,13 @@ export function NavegacionPrincipal({ user }) {
   const prepararEdicion = (viaje) => {
     setViajeEditando(viaje.id);
     setViajeForm({
-      origen: `${viaje.cO}, ${viaje.eO}`,
-      destino: `${viaje.cD}, ${viaje.eD}`,
-      precio: viaje.precio.toString(),
-      asientos: viaje.puestos,
-      horaSalida: viaje.horaSalida,
-      preferencias: viaje.preferencias
+      origen: `${viaje.cO}, ${viaje.eO}`, destino: `${viaje.cD}, ${viaje.eD}`,
+      precio: viaje.precio.toString(), asientos: viaje.puestos,
+      horaSalida: viaje.horaSalida, preferencias: viaje.preferencias
     });
     setPasoWizard(1);
     setVista("inicio");
     setModo("chofer");
-  };
-
-  const eliminarViaje = async (id) => {
-    if (window.confirm("¿Eliminar ruta?")) await deleteDoc(doc(db, "Viajes", id));
   };
 
   const handleLogout = () => signOut(auth);
@@ -165,24 +129,17 @@ export function NavegacionPrincipal({ user }) {
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
       
-      {/* 1. HEADER FIJO (Siempre visible arriba) */}
+      {/* HEADER FIJO (La Portada siempre arriba) */}
       <div className="p-4 border-b bg-white z-40 shadow-sm">
         <Header userData={userData} />
       </div> 
 
-      {/* 2. CONTENIDO PRINCIPAL SCROLLABLE */}
+      {/* CUERPO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
         
-        {/* Selector de Modo (Solo visible en Inicio y si no hay viaje seleccionado) */}
+        {/* RENDERIZADO DE VISTAS (SIN EL SELECTOR DE MODO ARRIBA) */}
         {vista === "inicio" && !viajeSeleccionado && (
-          <div className="py-4">
-            <SelectorModo modo={modo} setModo={setModo} />
-          </div>
-        )}
-
-        {/* --- ROUTING DE VISTAS --- */}
-        {vista === "inicio" && !viajeSeleccionado && (
-          <>
+          <div className="pt-4">
             {modo === "pasajero" ? (
               <VistaInicio viajes={viajesFiltrados} setViajeSeleccionado={setViajeSeleccionado} setVista={setVista} />
             ) : (
@@ -194,14 +151,14 @@ export function NavegacionPrincipal({ user }) {
                 viajeEditando={viajeEditando}
               />
             )}
-          </>
+          </div>
         )}
 
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
             viajesDondeVoy={misSolicitudes.filter(s => s.estado === "confirmado")}
-            onEditar={prepararEdicion} onEliminar={eliminarViaje}
+            onEditar={prepararEdicion} onEliminar={(id) => deleteDoc(doc(db, "Viajes", id))}
           />
         )}
 
@@ -219,15 +176,13 @@ export function NavegacionPrincipal({ user }) {
 
       </main>
 
-      {/* 3. NAVBAR INFERIOR (Fija abajo) */}
+      {/* NAVBAR INFERIOR (Aquí es donde controlas el cambio de vistas) */}
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} />
 
-      {/* 4. MODALES GLOBALES */}
-      <ModalPerfilPublico 
-        perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} 
-      />
+      <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
     </div>
   );
 }
 
 export default NavegacionPrincipal;
+                                    
