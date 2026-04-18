@@ -154,28 +154,30 @@ export function NavegacionPrincipal({ user }) {
         viaje={viajeSeleccionado} 
         onRegresar={() => setViajeSeleccionado(null)} 
       />
-    ) : (
-      <>
-        {modo === "pasajero" ? (
-          <VistaInicio 
-            viajes={viajesFiltrados} 
-            setViajeSeleccionado={setViajeSeleccionado} 
-            setVista={setVista} 
-          />
-        ) : (
-          <div className="p-4">Cargando Wizard...</div> 
-                  <WizardPublicar 
-                    pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
-                    viajeForm={viajeForm} setViajeForm={setViajeForm}
-                    UBICACIONES={UBICACIONES} setVista={setVista} 
-                    setModo={setModo} publicarRuta={publicarRutaWizard} 
-                    viajeEditando={viajeEditando}
-                  />
-                )}
-              </>
-            )}
-          </div>
+            ) : (
+          /* FIX: Envolvemos todo en un Fragment <> </> para que no explote */
+          <>
+            <div className="p-4 text-center text-xs font-black uppercase text-slate-400 animate-pulse">
+              Cargando Wizard...
+            </div> 
+            <WizardPublicar 
+              pasoWizard={pasoWizard} 
+              setPasoWizard={setPasoWizard}
+              viajeForm={viajeForm} 
+              setViajeForm={setViajeForm}
+              UBICACIONES={UBICACIONES} 
+              setVista={setVista} 
+              setModo={setModo} 
+              publicarRuta={publicarRutaWizard} 
+              viajeEditando={viajeEditando}
+            />
+          </>
         )}
+      </div>
+    )}
+  </div>
+)}
+      
 
         {vista === "mis_viajes" && (
           <VistaMisViajes 
