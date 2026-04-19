@@ -1,80 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { auth, db } from "./firebaseConfig";
+import React from "react";
+import { auth } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 
-// Layout y UI
-import { Navbar } from "./components/layout/Navbar";
-
-// Vistas - Verifica que la carpeta sea 'views' o 'vistas'
-import { VistaInicio } from './components/views/VistaInicio';
-import { VistaMisViajes } from './components/views/VistaMisViajes';
-import { VistaInbox } from './components/views/VistaInbox';
-import { VistaPerfil } from './components/views/VistaPerfil';
-import { VistaDetalleViaje } from './components/views/VistaDetalleViaje';
+// NO IMPORTAMOS NADA MÁS. NI VISTAS, NI COMPONENTES.
 
 export default function NavegacionPrincipal({ user }) {
-  const [userData, setUserData] = useState(null);
-  const [viajes, setViajes] = useState([]);
-  const [vista, setVista] = useState("inicio");
-  const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
-  const [pestañaPerfil, setPestañaPerfil] = useState("publico");
-
-  // Escuchar datos del usuario
-  useEffect(() => {
-    if (!user?.uid) return;
-    const unsub = onSnapshot(doc(db, "Usuarios", user.uid), (docSnap) => {
-      setUserData(docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null);
-    });
-    return () => unsub();
-  }, [user]);
-
-  // Escuchar viajes activos
-  useEffect(() => {
-    const q = query(collection(db, "Viajes"), orderBy("fechaCreacion", "desc"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setViajes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    return () => unsub();
-  }, []);
-
-  const handleLogout = () => signOut(auth);
-
-  // Sistema de navegación
-  const renderVista = () => {
-    switch(vista) {
-      case "inicio":
-        return (
-          <VistaInicio 
-            viajes={viajes} 
-            setViajeSeleccionado={(v) => { setViajeSeleccionado(v); setVista("detalle_viaje"); }} 
-            userData={userData} 
-          />
-        );
-      case "detalle_viaje":
-        return <VistaDetalleViaje viaje={viajeSeleccionado} onRegresar={() => setVista("inicio")} />;
-      case "inbox":
-        return <VistaInbox historialChats={[]} misViajesPublicados={[]} abrirChat={() => {}} />;
-      case "perfil":
-        return (
-          <VistaPerfil 
-            userData={userData} 
-            handleLogout={handleLogout} 
-            pestañaActiva={pestañaPerfil} 
-            setPestañaActiva={setPestañaPerfil} 
-          />
-        );
-      default:
-        return <VistaInicio viajes={viajes} setViajeSeleccionado={setViajeSeleccionado} userData={userData} />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="pb-20">
-        {renderVista()}
-      </main>
-      <Navbar vista={vista} setVista={setVista} />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-10">
+      <h1 className="text-2xl font-black text-green-600 mb-4 text-center">
+        ¡EL LOGIN FUNCIONA!
+      </h1>
+      <p className="text-slate-600 mb-8 text-center font-bold">
+        Si ves esto, tu App.tsx y NavegacionPrincipal están perfectos. El error está escondido adentro de VistaInicio o en la Navbar.
+      </p>
+      <button 
+        onClick={() => signOut(auth)} 
+        className="bg-red-600 text-white font-black tracking-widest uppercase py-4 px-8 rounded-2xl shadow-lg"
+      >
+        Cerrar Sesión
+      </button>
     </div>
   );
 }
