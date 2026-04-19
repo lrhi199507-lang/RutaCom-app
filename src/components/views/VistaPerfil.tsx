@@ -193,11 +193,12 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Perfil Personal</p>
     <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
       
-      {/* Foto de Perfil (Habilita la cámara) */}
-      <button 
-        onClick={() => alert("Abrir Selector de Imagen")}
-        className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-all border-b border-slate-50"
-      >
+      {/* Foto de Perfil */}
+<button 
+    onClick={cambiarFotoPerfil} // <-- Ahora llama a la función de Firebase Storage
+    className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-all border-b border-slate-50"
+>
+  
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
             {userData.fotoPerfil ? (
