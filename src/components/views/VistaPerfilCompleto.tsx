@@ -1,7 +1,8 @@
 import React from 'react';
+// IMPORTANTE: Aquí están todos los iconos que usas abajo
 import { User, Award, Star, ChevronRight, ShieldCheck, Car, Calendar } from 'lucide-react';
 
-// Sub-componente interno para evitar errores de importación
+// Definimos ConfianzaItem aquí mismo para que React sepa qué es
 const ConfianzaItem = ({ icon: Icon, text, verified }) => (
   <div className="flex items-center justify-between">
     <div className="flex items-center gap-3">
@@ -26,7 +27,7 @@ export const VistaPerfilCompleto = ({ userData, isOwnProfile = false, onRegresar
             <div className="relative mb-4">
               <div className="w-28 h-28 bg-slate-50 rounded-full border-4 border-white overflow-hidden shadow-xl flex items-center justify-center">
                  {userData.fotoPerfil ? (
-                    <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+                    <img src={userData.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" />
                  ) : (
                     <User size={60} className="text-slate-300 m-auto mt-3" />
                  )}
@@ -52,12 +53,13 @@ export const VistaPerfilCompleto = ({ userData, isOwnProfile = false, onRegresar
 
           <hr className="border-slate-50 mb-6" />
 
+          {/* Valoración - Blindado con Number() para evitar fallos si es string */}
           <button className="w-full flex items-center justify-between py-2 group active:scale-95 transition-all">
              <div className="flex items-center gap-3">
                 <Star size={24} className="text-blue-600" fill="currentColor" />
                 <div className="text-left">
                    <p className="text-xl font-black text-slate-900 leading-none">
-                      {Number(userData.rating || 5.0).toFixed(1)} de 5
+                      {Number(userData.rating || 5).toFixed(1)} de 5
                    </p>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                       Reputación en Dame la cola
