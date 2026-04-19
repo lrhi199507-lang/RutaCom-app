@@ -1,25 +1,17 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { UBICACIONES } from './constants/ubicaciones';
+import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 
 // Layout y UI
 import { Navbar } from "./components/layout/Navbar";
 
-// Vistas
+// Vistas - Verifica que la carpeta sea 'views' o 'vistas'
 import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
-import { VistaPerfilCompleto } from './components/views/VistaPerfilCompleto';
-import { VistaChatPrivado } from './components/views/VistaChatPrivado';
-import { WizardPublicar } from './components/ui/WizardPublicar';
-import { VistaDetalleViaje } from './components/views/VistaDetalleViaje'; 
-
-import {
-  doc, onSnapshot, collection, query, addDoc, 
-  serverTimestamp, orderBy, updateDoc, where, deleteDoc, getDoc
-} from "firebase/firestore";
+import { VistaDetalleViaje } from './components/views/VistaDetalleViaje';
 
 export default function NavegacionPrincipal({ user }) {
   const [userData, setUserData] = useState(null);
@@ -30,9 +22,9 @@ export default function NavegacionPrincipal({ user }) {
 
   // Escuchar datos del usuario
   useEffect(() => {
-    if (!user) return;
-    const unsub = onSnapshot(doc(db, "Usuarios", user.uid), (doc) => {
-      setUserData(doc.exists() ? { id: doc.id, ...doc.data() } : null);
+    if (!user?.uid) return;
+    const unsub = onSnapshot(doc(db, "Usuarios", user.uid), (docSnap) => {
+      setUserData(docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null);
     });
     return () => unsub();
   }, [user]);
@@ -41,47 +33,48 @@ export default function NavegacionPrincipal({ user }) {
   useEffect(() => {
     const q = query(collection(db, "Viajes"), orderBy("fechaCreacion", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
-      setViajes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setViajes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
   }, []);
 
   const handleLogout = () => signOut(auth);
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="pb-20">
-        {vista === "inicio" && (
+  // Sistema de navegación
+  const renderVista = () => {
+    switch(vista) {
+      case "inicio":
+        return (
           <VistaInicio 
             viajes={viajes} 
             setViajeSeleccionado={(v) => { setViajeSeleccionado(v); setVista("detalle_viaje"); }} 
             userData={userData} 
           />
-        )}
-
-        {vista === "detalle_viaje" && (
-          <VistaDetalleViaje 
-            viaje={viajeSeleccionado} 
-            onRegresar={() => setVista("inicio")} 
-          />
-        )}
-
-        {vista === "inbox" && (
-          <VistaInbox historialChats={[]} misViajesPublicados={[]} abrirChat={() => {}} />
-        )}
-
-        {vista === "perfil" && userData && (
+        );
+      case "detalle_viaje":
+        return <VistaDetalleViaje viaje={viajeSeleccionado} onRegresar={() => setVista("inicio")} />;
+      case "inbox":
+        return <VistaInbox historialChats={[]} misViajesPublicados={[]} abrirChat={() => {}} />;
+      case "perfil":
+        return (
           <VistaPerfil 
             userData={userData} 
             handleLogout={handleLogout} 
             pestañaActiva={pestañaPerfil} 
             setPestañaActiva={setPestañaPerfil} 
           />
-        )}
-      </main>
+        );
+      default:
+        return <VistaInicio viajes={viajes} setViajeSeleccionado={setViajeSeleccionado} userData={userData} />;
+    }
+  };
 
-      {/* Navbar fijo abajo */}
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <main className="pb-20">
+        {renderVista()}
+      </main>
       <Navbar vista={vista} setVista={setVista} />
     </div>
   );
-} // <--- ESTA ES LA LLAVE QUE FALTABA
+}
