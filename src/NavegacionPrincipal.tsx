@@ -3,11 +3,9 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { UBICACIONES } from './constants/ubicaciones';
 
-// Layout y UI
+// Importación de componentes (Asegúrate de que las carpetas sean estas)
 import { Navbar } from "./components/layout/Navbar";
 import { Header } from './components/ui/Header';
-
-// Vistas
 import { VistaInicio } from './components/views/VistaInicio';
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
@@ -16,69 +14,58 @@ import { VistaChatPrivado } from './components/views/VistaChatPrivado';
 import { WizardPublicar } from './components/ui/WizardPublicar';
 import { VistaDetalleViaje } from './components/views/VistaDetalleViaje';
 import { Wallet } from './components/views/Wallet';
-
-// Helpers y Modales
 import { ModalPerfilPublico } from './components/ui/ModalPerfilPublico';
 
-import {
-  doc, onSnapshot, collection, query, orderBy, where, deleteDoc
-} from "firebase/firestore";
+import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 
-// OJO: "export default" es obligatorio para que App.tsx lo lea correctamente
+// ESTO ES LO MÁS IMPORTANTE: export default
 export default function NavegacionPrincipal({ user }) {
-  console.log("NavegacionPrincipal cargada para el usuario:", user?.uid);
-
-  // 1. ESTADOS DE DATOS
+  
+  // 1. Estados de Datos
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
-  const [historialChats, setHistorialChats] = useState([]);
-  const [misViajesPublicados, setMisViajesPublicados] = useState([]);
   
-  // 2. ESTADOS DE NAVEGACIÓN (Asegúrate de que todos existan)
+  // 2. Estados de Navegación (Aquí corregimos lo que faltaba)
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [chatActivo, setChatActivo] = useState(null);
-  const [pestañaPerfil, setPestañaPerfil] = useState("publico");
-  const [perfilPublico, setPerfilPublico] = useState(null); // Esta faltaba y causaba el error
+  const [pestañaPerfil, setPestañaPerfil] = useState("publico"); // Necesaria para VistaPerfil
+  const [perfilPublico, setPerfilPublico] = useState(null);      // EL CULPABLE: Ahora ya existe
   const [pasoWizard, setPasoWizard] = useState(1);
 
-  // 3. ESTADO DEL FORMULARIO
+  // 3. Estado del Formulario
   const [viajeForm, setViajeForm] = useState({
     origen: "", destino: "", paradas: [], precio: "", asientos: 3, 
     horaSalida: "", horaLlegada: "", 
     preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true, maxDosAtras: false }
   });
 
-  // 4. ESCUCHA DE FIREBASE
+  // 4. Conexión con Firebase
   useEffect(() => {
     if (!user?.uid) return;
 
+    // Escuchar datos del usuario
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
-      if (snap.exists()) {
-        setUserData({ id: snap.id, ...snap.data() });
-      } else {
-        setUserData({ id: user.uid, nombre: "Usuario", saldo: 0 });
-      }
+      setUserData(snap.exists() ? { id: snap.id, ...snap.data() } : { id: user.uid, nombre: "Usuario", saldo: 0 });
     });
 
+    // Escuchar viajes
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error("Error en viajes:", err));
+    });
 
     return () => { unsubUser(); unsubViajes(); };
   }, [user]);
 
-  // 5. FUNCIONES
+  // 5. Funciones básicas
   const handleLogout = () => signOut(auth);
   const abrirChat = (vId, oId, nombre) => {
     setChatActivo({ id: vId, idViaje: vId, idOtro: oId, nombreOtro: nombre, idPropio: user.uid });
     setVista("chat_privado");
   };
 
-  const viajesFiltrados = useMemo(() => Array.isArray(viajes) ? viajes : [], [viajes]);
-
-  // Si no hay datos, mostramos el icono saltando que ya te funciona
+  // Pantalla de carga (El icono "D")
   if (!userData) {
     return (
       <div className="h-screen bg-white flex flex-col items-center justify-center">
@@ -90,7 +77,7 @@ export default function NavegacionPrincipal({ user }) {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl font-sans">
+    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
       <Header userData={userData} modo={modo} />
 
       <main className="flex-1 overflow-y-auto pb-24 bg-slate-50">
@@ -100,7 +87,7 @@ export default function NavegacionPrincipal({ user }) {
               <VistaDetalleViaje viaje={viajeSeleccionado} onRegresar={() => setViajeSeleccionado(null)} />
             ) : (
               modo === "pasajero" ? (
-                <VistaInicio viajes={viajesFiltrados} setViajeSeleccionado={setViajeSeleccionado} setVista={setVista} userData={userData} />
+                <VistaInicio viajes={viajes} setViajeSeleccionado={setViajeSeleccionado} setVista={setVista} userData={userData} />
               ) : (
                 <WizardPublicar pasoWizard={pasoWizard} setPasoWizard={setPasoWizard} viajeForm={viajeForm} setViajeForm={setViajeForm} UBICACIONES={UBICACIONES} setVista={setVista} setModo={setModo} />
               )
@@ -108,40 +95,18 @@ export default function NavegacionPrincipal({ user }) {
           </div>
         )}
 
-        {vista === "mis_viajes" && (
-          <VistaMisViajes misPublicaciones={misViajesPublicados} viajesDondeVoy={[]} />
-        )}
-
-        {vista === "inbox" && (
-          <VistaInbox historialChats={historialChats} misViajesPublicados={misViajesPublicados} abrirChat={abrirChat} />
-        )}
-
-        {vista === "chat_privado" && chatActivo && (
-          <VistaChatPrivado chat={chatActivo} onBack={() => setVista("inbox")} />
-        )}
-
-        {vista === "perfil" && (
-          <VistaPerfil userData={userData} handleLogout={handleLogout} pestañaActiva={pestañaPerfil} setPestañaActiva={setPestañaPerfil} />
-        )}
-
-        {vista === "wallet" && (
-          <Wallet userData={userData} />
-        )}
+        {vista === "mis_viajes" && <VistaMisViajes misPublicaciones={[]} viajesDondeVoy={[]} />}
+        {vista === "inbox" && <VistaInbox historialChats={[]} misViajesPublicados={[]} abrirChat={abrirChat} />}
+        {vista === "chat_privado" && chatActivo && <VistaChatPrivado chat={chatActivo} onBack={() => setVista("inbox")} />}
+        {vista === "perfil" && <VistaPerfil userData={userData} handleLogout={handleLogout} pestañaActiva={pestañaPerfil} setPestañaActiva={setPestañaPerfil} />}
+        {vista === "wallet" && <Wallet userData={userData} />}
       </main>
 
-      {/* Navbar con todas las funciones necesarias */}
-      <Navbar 
-        vista={vista} 
-        modo={modo} 
-        setVista={setVista} 
-        setModo={setModo} 
-        setPasoWizard={setPasoWizard} 
-      />
+      {/* El Navbar centralizado */}
+      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={setPasoWizard} />
       
-      {/* Modal perfil público solo si se ha seleccionado uno */}
-      {perfilPublico && (
-        <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
-      )}
+      {/* El modal que antes rompía todo ahora es seguro */}
+      {perfilPublico && <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />}
     </div>
   );
-      }
+}
