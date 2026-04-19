@@ -86,5 +86,6 @@ export default function NavegacionPrincipal({ user }) {
       
       {perfilPublico && <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />}
     </div>
-  );
+    );
+}
 }
