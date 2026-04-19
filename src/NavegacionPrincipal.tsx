@@ -168,13 +168,18 @@ export function NavegacionPrincipal({ user }) {
             setVista={setVista} 
           />
         ) : (
-          <WizardPublicar ... />
-        )}
-      </>
-    )}
-  </div>
+          <WizardPublicar 
+      userData={userData}
+      pasoWizard={pasoWizard} 
+      setPasoWizard={setPasoWizard}
+      viajeForm={viajeForm} 
+      setViajeForm={setViajeForm}
+      UBICACIONES={UBICACIONES} 
+      setVista={setVista} 
+      setModo={setModo} 
+    />
+  )
 )}
-        
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
