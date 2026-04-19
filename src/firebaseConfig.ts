@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore"; // <-- Importamos Firestore
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage"; // <-- AGREGAR ESTA LÍNEA
 
 const firebaseConfig = {
   apiKey: "AIzaSyCXBs3-Z4-SC2UUAtZhjMgMZ74sD9rqq9Y",
@@ -12,14 +13,10 @@ const firebaseConfig = {
   measurementId: "G-2TYQF2QBYD"
 };
 
-// 1. Inicializamos la App
 const app = initializeApp(firebaseConfig);
-
-// 2. Inicializamos Auth (para usuarios)
 const auth = getAuth(app);
-
-// 3. Inicializamos Firestore (para saldo y datos)
 const db = getFirestore(app);
+const storage = getStorage(app); // <-- INICIALIZAR STORAGE
 
-// EXPORTAMOS AMBOS
-export { auth, db }; 
+// EXPORTAMOS TODO
+export { auth, db, storage }; // <-- AGREGAR storage AQUÍ
