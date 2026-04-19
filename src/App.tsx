@@ -5,8 +5,7 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from 'firebase/auth';
-import NavegacionPrincipal from './NavegacionPrincipal';
-
+export default function NavegacionPrincipal({ user }) {
 export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
