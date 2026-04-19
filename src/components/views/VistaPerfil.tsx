@@ -29,51 +29,86 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   };
 
   const guardarCambios = async () => {
-    if (!tipoEdicion || !userData.uid) return;
-    setCargando(true);
-    try {
-      const userRef = doc(db, "usuarios", userData.uid);
-      if (tipoEdicion.id === 'vehiculo') {
-        await updateDoc(userRef, { "vehiculo.placa": nuevoValor.toUpperCase() });
-        if(userData.vehiculo) userData.vehiculo.placa = nuevoValor.toUpperCase();
+  if (!tipoEdicion || !userData.uid) return;
+  setCargando(true);
+  try {
+    const userRef = doc(db, "usuarios", userData.uid);
+    
+    let valorAGuardar = nuevoValor;
+
+    if (tipoEdicion.id === 'vehiculo') {
+      valorAGuardar = nuevoValor.toUpperCase();
+      await updateDoc(userRef, { "vehiculo.placa": valorAGuardar });
+      // Actualizamos el objeto local
+      if (userData.vehiculo) {
+        userData.vehiculo.placa = valorAGuardar;
       } else {
-        await updateDoc(userRef, { [tipoEdicion.id]: nuevoValor });
-        userData[tipoEdicion.id] = nuevoValor; 
+        userData.vehiculo = { placa: valorAGuardar };
       }
-      setModalVisible(false);
-    } catch (error) {
-      alert("Error al guardar");
-    } finally {
-      setCargando(false);
+    } else {
+      await updateDoc(userRef, { [tipoEdicion.id]: valorAGuardar });
+      // *** IMPORTANTE: Actualizamos el objeto local ***
+      userData[tipoEdicion.id] = valorAGuardar; 
     }
-  };
+
+    setModalVisible(false);
+    alert("Datos actualizados correctamente."); 
+    // Esto obligará a la app a refrescar la vista si estás usando el estado correctamente
+  } catch (error) {
+    console.error(error);
+    alert("Error al conectar con la base de datos.");
+  } finally {
+    setCargando(false);
+  }
+};
 
   const cambiarFotoPerfil = async () => {
-    try {
-      const image = await CapacitorCamera.getPhoto({
-        quality: 90,
-        allowEditing: true,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Prompt 
-      });
+  // AVISO ANTES DE LA CÁMARA
+  const confirmacion = window.confirm(
+    "Para una mejor verificación:\n\n" +
+    "• Busca un lugar con buena claridad.\n" +
+    "• Quítate gorra y lentes.\n" +
+    "• Asegúrate de que tu rostro se vea bien.\n\n" +
+    "¿Listo para tomar la foto?"
+  );
 
-      if (image.webPath) {
-        setCargando(true);
-        const response = await fetch(image.webPath);
-        const blob = await response.blob();
-        const storageRef = ref(storage, `perfiles/${userData.uid}`);
-        await uploadBytes(storageRef, blob);
-        const url = await getDownloadURL(storageRef);
-        await updateDoc(doc(db, "usuarios", userData.uid), { fotoPerfil: url });
-        userData.fotoPerfil = url;
-        alert("¡Foto actualizada!");
-      }
-    } catch (error) {
-      console.log("Acción cancelada");
-    } finally {
-      setCargando(false);
+  if (!confirmacion) return;
+
+  try {
+    const image = await CapacitorCamera.getPhoto({
+      quality: 90,
+      allowEditing: true,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Prompt,
+      // Traducción de las opciones del menú
+      promptLabelHeader: "Elegir foto de perfil",
+      promptLabelPhoto: "Desde mi galería",
+      promptLabelPicture: "Tomar una foto"
+    });
+
+    if (image.webPath) {
+      setCargando(true);
+      const response = await fetch(image.webPath);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `perfiles/${userData.uid}`);
+      
+      await uploadBytes(storageRef, blob);
+      const url = await getDownloadURL(storageRef);
+      
+      const userRef = doc(db, "usuarios", userData.uid);
+      await updateDoc(userRef, { fotoPerfil: url });
+      
+      // *** ESTO ES LO QUE HACE QUE SE VEA AL INSTANTE ***
+      userData.fotoPerfil = url; 
+      alert("¡Foto actualizada con éxito!");
     }
-  };
+  } catch (error) {
+    console.log("Acción cancelada");
+  } finally {
+    setCargando(false);
+  }
+};
+  
 
   // 4. LÓGICA DE NIVELES
   const totalViajes = userData.viajesRealizados || 0;
