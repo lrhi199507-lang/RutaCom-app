@@ -1,33 +1,59 @@
-import React, { useState } from "react";
-import { auth } from "./firebaseConfig";
+import React, { useState, useEffect } from "react";
+import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 
-// Intentamos cargar solo lo básico primero
 import { Navbar } from "./components/layout/Navbar";
 import { Header } from './components/ui/Header';
+import { VistaInicio } from './components/views/VistaInicio';
 
 export default function NavegacionPrincipal({ user }) {
+  const [userData, setUserData] = useState({ nombre: "Usuario", saldo: 0 });
+  const [viajes, setViajes] = useState([]);
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
 
-  // Datos ficticios para que el Header no explote si no hay Firebase aún
-  const userData = { nombre: "Usuario", saldo: 0 };
+  // Escuchamos los viajes reales de Firebase
+  useEffect(() => {
+    try {
+      const q = query(collection(db, "Viajes"), orderBy("fecha", "desc"));
+      const unsub = onSnapshot(q, (snap) => {
+        const lista = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setViajes(lista);
+      });
+      return () => unsub();
+    } catch (err) {
+      console.log("Error en Firestore:", err);
+    }
+  }, []);
 
   return (
-    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* Si el error está aquí, la pantalla volverá a blanco */}
+    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
       <Header userData={userData} modo={modo} />
       
-      <main className="flex-1 flex items-center justify-center bg-slate-50">
-        <div className="text-center p-6">
-          <h2 className="font-black text-blue-600">ESTRUCTURA CARGADA</h2>
-          <p className="text-xs text-slate-500">Si ves el Header arriba y el Navbar abajo, vamos por buen camino.</p>
-          <button onClick={() => signOut(auth)} className="mt-4 text-red-500 font-bold text-xs uppercase underline">Cerrar Sesión</button>
-        </div>
+      <main className="flex-1 overflow-y-auto pb-24 bg-slate-50">
+        {vista === "inicio" ? (
+          <VistaInicio 
+            viajes={viajes} 
+            setViajeSeleccionado={() => {}} 
+            setVista={setVista} 
+            userData={userData} 
+          />
+        ) : (
+          <div className="p-10 text-center">
+            <p className="text-slate-400">Pronto cargaremos la vista: {vista}</p>
+            <button onClick={() => setVista("inicio")} className="text-blue-500 underline mt-2">Volver</button>
+          </div>
+        )}
       </main>
 
-      {/* Si el error está aquí, la pantalla volverá a blanco */}
-      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={() => {}} />
+      <Navbar 
+        vista={vista} 
+        modo={modo} 
+        setVista={setVista} 
+        setModo={setModo} 
+        setPasoWizard={() => {}} 
+      />
     </div>
   );
 }
