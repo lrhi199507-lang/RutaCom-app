@@ -4,7 +4,7 @@ import { signOut } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 
 import { Navbar } from "./components/layout/Navbar";
-import { Header } from './components/ui/Header';
+
 import { VistaInicio } from './components/views/VistaInicio';
 
 export default function NavegacionPrincipal({ user }) {
@@ -29,7 +29,7 @@ export default function NavegacionPrincipal({ user }) {
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
-      <Header userData={userData} modo={modo} />
+    
       
       <main className="flex-1 overflow-y-auto pb-24 bg-slate-50">
         {vista === "inicio" ? (
