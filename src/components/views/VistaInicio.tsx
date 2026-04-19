@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
-import { Search, MapPin, Navigation, Calendar, Clock, X, Wallet } from 'lucide-react';
+import { Search, MapPin, Navigation, Calendar, Clock, Wallet } from 'lucide-react';
 import { UBICACIONES } from '../../constants/ubicaciones';
+// Importamos el nuevo componente desde su archivo
+import { AutocompleteInput } from '../ui/AutocompleteInput';
 
-// ... (Componente AutocompleteInput se mantiene igual) ...
-
-export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista, userData }) => {
+export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData }) => {
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
   const [fecha, setFecha] = useState("");
@@ -14,8 +14,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista, userD
   const viajesFiltrados = useMemo(() => {
     if (!Array.isArray(viajes)) return [];
     return viajes.filter(v => {
-      const nomOrigen = `${v.cO || ""}, ${v.eO || ""}`.toLowerCase();
-      const nomDestino = `${v.cD || ""}, ${v.eD || ""}`.toLowerCase();
+      const nomOrigen = `${v.cO || ""} ${v.eO || ""}`.toLowerCase();
+      const nomDestino = `${v.cD || ""} ${v.eD || ""}`.toLowerCase();
       const coincideOrigen = origen ? nomOrigen.includes(origen.toLowerCase()) : true;
       const coincideDestino = destino ? nomDestino.includes(destino.toLowerCase()) : true;
       return coincideOrigen && coincideDestino;
@@ -25,36 +25,31 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista, userD
   return (
     <div className="min-h-screen bg-slate-50 pb-24 animate-in fade-in duration-500">
       
-      {/* HEADER FIJO BLANCO - DISEÑO FINAL */}
+      {/* HEADER FIJO BLANCO */}
       <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-50 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          {/* Logo 'D' (Fondo Azul, 'D' Negra) */}
           <div className="w-14 h-14 rounded-[22px] bg-blue-600 flex items-center justify-center shadow-md">
             <span className="font-black text-slate-950 text-2xl italic">D</span>
           </div>
 
-          {/* Información del Usuario */}
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
               MODO PASAJERO
             </p>
             <h1 className="text-base font-black text-slate-900 tracking-tighter mt-0.5">
-              {userData?.nombre || 'Luis Hernández'}
+              {userData?.nombre || 'Usuario'}
             </h1>
           </div>
         </div>
 
-        {/* Botón Wallet */}
-<div className="flex items-center gap-2">
-  <button className="h-11 bg-slate-950 rounded-full flex items-center gap-2 px-4 shadow-sm active:scale-95 transition-all">
-    <Wallet size={16} className="text-blue-500" />
-    <p className="text-xs font-black text-white tracking-tighter">
-      {/* AQUÍ ESTÁ LA MAGIA QUE EVITA EL COLAPSO */}
-      ${Number(userData?.saldo || 80).toFixed(2)}
-    </p>
-  </button>
-</div>
-        
+        <div className="flex items-center gap-2">
+          <button className="h-11 bg-slate-950 rounded-full flex items-center gap-2 px-4 shadow-sm active:scale-95 transition-all">
+            <Wallet size={16} className="text-blue-500" />
+            <p className="text-xs font-black text-white tracking-tighter">
+              ${Number(userData?.saldo || 0).toFixed(2)}
+            </p>
+          </button>
+        </div>
       </div>
 
       <div className="p-4 space-y-6">
@@ -67,38 +62,46 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista, userD
           
           <div className="space-y-3">
             <AutocompleteInput 
+              label="Origen"
               placeholder="¿De dónde sales?" 
               icon={MapPin} 
-              iconColor="text-blue-600" 
               value={origen} 
               onChange={setOrigen} 
+              suggestions={UBICACIONES}
             />
             <AutocompleteInput 
+              label="Destino"
               placeholder="¿A dónde vas?" 
               icon={Navigation} 
-              iconColor="text-green-600" 
               value={destino} 
               onChange={setDestino} 
+              suggestions={UBICACIONES}
             />
             
             <div className="flex gap-3">
-              <div className="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                <Calendar size={18} className="text-slate-400 mr-2 shrink-0" />
-                <input 
-                  type="date" 
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  className="bg-transparent border-none outline-none w-full text-xs font-bold text-slate-700"
-                />
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1 ml-1 tracking-wider">Fecha</p>
+                <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3">
+                  <Calendar size={18} className="text-slate-400 mr-2 shrink-0" />
+                  <input 
+                    type="date" 
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="bg-transparent border-none outline-none w-full text-xs font-bold text-slate-700"
+                  />
+                </div>
               </div>
-              <div className="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                <Clock size={18} className="text-slate-400 mr-2 shrink-0" />
-                <input 
-                  type="time" 
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                  className="bg-transparent border-none outline-none w-full text-xs font-bold text-slate-700"
-                />
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1 ml-1 tracking-wider">Hora</p>
+                <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3">
+                  <Clock size={18} className="text-slate-400 mr-2 shrink-0" />
+                  <input 
+                    type="time" 
+                    value={hora}
+                    onChange={(e) => setHora(e.target.value)}
+                    className="bg-transparent border-none outline-none w-full text-xs font-bold text-slate-700"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -119,12 +122,11 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista, userD
                 key={viaje.id}
                 viaje={viaje}
                 onClickDetalle={() => setViajeSeleccionado(viaje)}
-                onClickPedir={() => setViajeSeleccionado(viaje)}
               />
             ))
           ) : (
             <div className="text-center py-12 bg-white rounded-[30px] border border-dashed border-slate-200">
-              <p className="text-slate-400 font-bold italic uppercase text-[10px]">No se encontraron resultados</p>
+              <p className="text-slate-400 font-bold italic uppercase text-[10px]">No hay colas disponibles</p>
             </div>
           )}
         </div>
