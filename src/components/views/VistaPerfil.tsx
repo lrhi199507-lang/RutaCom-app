@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { db, storage } from '../../firebase/config'; // Verifica que la ruta a tu config sea correcta
+import { doc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker'; // Para la cámara y galería
 import { 
   LogOut, ShieldCheck, CheckCircle2, UserCog, ChevronRight,
   Camera, Phone, Mail, FileText, Car, User, Trophy, Flame,
   UserCheck, Calendar, ShieldAlert
 } from 'lucide-react';
+
 
 export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañaActiva }) => {
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400">CARGANDO PERFIL...</div>;
@@ -11,6 +16,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   const [modalVisible, setModalVisible] = React.useState(false);
   const [tipoEdicion, setTipoEdicion] = React.useState<{id: string, label: string, valor: string} | null>(null);
   const [nuevoValor, setNuevoValor] = React.useState("");
+  const [cargando, setCargando] = useState(false);
  
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400">CARGANDO PERFIL...</div>;
   
@@ -21,13 +27,64 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
     setModalVisible(true);
   };
 
-  // Función para guardar en Firebase (Simulada por ahora, luego conectamos con updateDoc)
-  const guardarCambios = () => {
-    console.log(`Guardando ${tipoEdicion?.id}: ${nuevoValor}`);
-    setModalVisible(false);
-    alert("¡Datos actualizados correctamente!");
+   // --- FUNCIÓN DE GUARDADO REAL EN FIREBASE ---
+  const guardarCambios = async () => {
+    if (!tipoEdicion || !userData.uid) return;
+    setCargando(true);
+
+    try {
+      const userRef = doc(db, "usuarios", userData.uid);
+      
+      // Manejo especial para la placa que está dentro de un objeto 'vehiculo'
+      if (tipoEdicion.id === 'vehiculo') {
+        await updateDoc(userRef, {
+          "vehiculo.placa": nuevoValor.toUpperCase()
+        });
+      } else {
+        // Para nombre, telefono, fechaNacimiento, etc.
+        await updateDoc(userRef, {
+          [tipoEdicion.id]: nuevoValor
+        });
+      }
+
+      setModalVisible(false);
+      // Si usas un listener de Firebase en tu App.tsx, el nombre cambiará solo en pantalla.
+    } catch (error) {
+      console.error("Error actualizando:", error);
+      alert("Error al guardar los cambios");
+    } finally {
+      setCargando(false);
+    }
   };
-  const view = pestañaActiva || 'publico';
+
+  // --- FUNCIÓN PARA LA FOTO DE PERFIL ---
+  const cambiarFotoPerfil = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      setCargando(true);
+      try {
+        const response = await fetch(result.assets[0].uri);
+        const blob = await response.blob();
+        const storageRef = ref(storage, `perfiles/${userData.uid}`);
+        
+        await uploadBytes(storageRef, blob);
+        const url = await getDownloadURL(storageRef);
+        
+        const userRef = doc(db, "usuarios", userData.uid);
+        await updateDoc(userRef, { fotoPerfil: url });
+      } catch (error) {
+        alert("Error al subir la foto");
+      } finally {
+        setCargando(false);
+      }
+    }
+  };
 
   // --- LÓGICA DE NIVELES Y CONFIANZA ---
   const totalViajes = userData.viajesRealizados || 0;
@@ -255,11 +312,15 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
           Cancelar
         </button>
         <button 
-          onClick={guardarCambios}
-          className="flex-1 p-5 rounded-2xl text-[10px] font-black uppercase text-white bg-blue-600 shadow-lg shadow-blue-200 active:scale-95 transition-transform"
-        >
-          Guardar
-        </button>
+  onClick={guardarCambios}
+  disabled={cargando}
+  className={`flex-1 p-5 rounded-2xl text-[10px] font-black uppercase text-white shadow-lg ${
+    cargando ? 'bg-slate-400' : 'bg-blue-600 shadow-blue-200'
+  }`}
+>
+  {cargando ? "Guardando..." : "Guardar Cambios"}
+</button>
+        
       </div>
     </div>
   </div>
