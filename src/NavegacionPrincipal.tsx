@@ -1,24 +1,61 @@
-import React from "react";
-import { auth } from "./firebaseConfig";
+import React, { useState, useEffect } from "react";
+import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
+import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 
-// NO IMPORTAMOS NADA MÁS. NI VISTAS, NI COMPONENTES.
+// Componentes
+import { Navbar } from "./components/layout/Navbar";
+import { VistaInicio } from './components/views/VistaInicio';
 
 export default function NavegacionPrincipal({ user }) {
+  const [userData, setUserData] = useState(null);
+  const [viajes, setViajes] = useState([]); // Inicia como lista vacía para evitar errores de .filter
+  const [vista, setVista] = useState("inicio");
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // 1. Datos del usuario
+    const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
+      if (snap.exists()) setUserData({ id: snap.id, ...snap.data() });
+    });
+
+    // 2. Viajes (con seguro para que siempre sea una lista)
+    const qViajes = query(collection(db, "Viajes"), orderBy("fecha", "desc"));
+    const unsubViajes = onSnapshot(qViajes, (snap) => {
+      const listaViajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setViajes(listaViajes || []); 
+    });
+
+    return () => { unsubUser(); unsubViajes(); };
+  }, [user]);
+
+  const handleLogout = () => signOut(auth);
+
+  if (!userData) {
+    return (
+      <div className="h-screen bg-white flex flex-col items-center justify-center">
+        <div className="text-blue-600 font-black animate-pulse uppercase italic text-sm">
+          Cargando Dame la Cola...
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-10">
-      <h1 className="text-2xl font-black text-green-600 mb-4 text-center">
-        ¡EL LOGIN FUNCIONA!
-      </h1>
-      <p className="text-slate-600 mb-8 text-center font-bold">
-        Si ves esto, tu App.tsx y NavegacionPrincipal están perfectos. El error está escondido adentro de VistaInicio o en la Navbar.
-      </p>
-      <button 
-        onClick={() => signOut(auth)} 
-        className="bg-red-600 text-white font-black tracking-widest uppercase py-4 px-8 rounded-2xl shadow-lg"
-      >
-        Cerrar Sesión
-      </button>
+    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden shadow-2xl">
+      <main className="flex-1 overflow-y-auto">
+        {vista === "inicio" && (
+          <VistaInicio 
+            userData={userData}
+            viajes={Array.isArray(viajes) ? viajes : []} 
+            setViajeSeleccionado={() => {}} 
+            setVista={setVista} 
+          />
+        )}
+      </main>
+
+      <Navbar vista={vista} setVista={setVista} />
     </div>
   );
 }
