@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import * as ImagePicker from 'expo-image-picker'; // Para la cámara y galería
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { 
   LogOut, ShieldCheck, CheckCircle2, UserCog, ChevronRight,
   Camera, Phone, Mail, FileText, Car, User, Trophy, Flame,
@@ -29,61 +29,61 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
 
    // --- FUNCIÓN DE GUARDADO REAL EN FIREBASE ---
   const guardarCambios = async () => {
-    if (!tipoEdicion || !userData.uid) return;
-    setCargando(true);
+  if (!tipoEdicion || !userData.uid) return;
+  setCargando(true);
 
-    try {
-      const userRef = doc(db, "usuarios", userData.uid);
-      
-      // Manejo especial para la placa que está dentro de un objeto 'vehiculo'
-      if (tipoEdicion.id === 'vehiculo') {
-        await updateDoc(userRef, {
-          "vehiculo.placa": nuevoValor.toUpperCase()
-        });
-      } else {
-        // Para nombre, telefono, fechaNacimiento, etc.
-        await updateDoc(userRef, {
-          [tipoEdicion.id]: nuevoValor
-        });
-      }
-
-      setModalVisible(false);
-      // Si usas un listener de Firebase en tu App.tsx, el nombre cambiará solo en pantalla.
-    } catch (error) {
-      console.error("Error actualizando:", error);
-      alert("Error al guardar los cambios");
-    } finally {
-      setCargando(false);
+  try {
+    const userRef = doc(db, "usuarios", userData.uid);
+    
+    if (tipoEdicion.id === 'vehiculo') {
+      await updateDoc(userRef, { "vehiculo.placa": nuevoValor.toUpperCase() });
+      if(userData.vehiculo) userData.vehiculo.placa = nuevoValor.toUpperCase();
+    } else {
+      await updateDoc(userRef, { [tipoEdicion.id]: nuevoValor });
+      // Esto fuerza a que el nombre cambie en la pantalla actual
+      userData[tipoEdicion.id] = nuevoValor; 
     }
-  };
 
+    setModalVisible(false);
+  } catch (error) {
+    alert("Error al guardar");
+  } finally {
+    setCargando(false);
+  }
+};
+  
   // --- FUNCIÓN PARA LA FOTO DE PERFIL ---
   const cambiarFotoPerfil = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
+  try {
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: true,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Prompt // Esto pregunta si quieres Cámara o Galería
     });
 
-    if (!result.canceled && result.assets[0].uri) {
+    if (image.webPath) {
       setCargando(true);
-      try {
-        const response = await fetch(result.assets[0].uri);
-        const blob = await response.blob();
-        const storageRef = ref(storage, `perfiles/${userData.uid}`);
-        
-        await uploadBytes(storageRef, blob);
-        const url = await getDownloadURL(storageRef);
-        
-        const userRef = doc(db, "usuarios", userData.uid);
-        await updateDoc(userRef, { fotoPerfil: url });
-      } catch (error) {
-        alert("Error al subir la foto");
-      } finally {
-        setCargando(false);
-      }
+      const response = await fetch(image.webPath);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `perfiles/${userData.uid}`);
+      
+      await uploadBytes(storageRef, blob);
+      const url = await getDownloadURL(storageRef);
+      
+      const userRef = doc(db, "usuarios", userData.uid);
+      await updateDoc(userRef, { fotoPerfil: url });
+      
+      // Actualización visual inmediata
+      userData.fotoPerfil = url;
+      alert("¡Foto actualizada!");
     }
+  } catch (error) {
+    console.log("Usuario canceló la selección");
+  } finally {
+    setCargando(false);
+  }
+};
   };
 
   // --- LÓGICA DE NIVELES Y CONFIANZA ---
