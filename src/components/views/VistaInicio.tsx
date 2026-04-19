@@ -1,3 +1,6 @@
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+
 import React, { useState, useMemo } from 'react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { Search, MapPin, Navigation, Calendar, Clock, Wallet } from 'lucide-react';
