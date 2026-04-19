@@ -19,6 +19,7 @@ export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSel, setViajeSel] = useState(null);
+  const [pestañaPerfil, setPestañaPerfil] = useState("publico");
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -61,8 +62,14 @@ export default function NavegacionPrincipal({ user }) {
   
   {vista === "inbox" && <VistaInbox userData={userData} />}
   
-  {vista === "perfil" && <VistaPerfil userData={userData} onLogout={() => signOut(auth)} />}
-
+{vista === "perfil" && (
+  <VistaPerfil 
+    userData={userData} 
+    handleLogout={() => signOut(auth)} 
+    pestañaActiva={pestañaPerfil}
+    setPestañaActiva={setPestañaPerfil}
+  />
+)}
   {vista === "publicar" && (
     <WizardPublicar 
       userData={userData} 
