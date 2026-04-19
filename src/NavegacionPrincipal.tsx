@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
-
+import { VistaMisViajes } from './components/views/VistaMisViajes';
+import { VistaInbox } from './components/views/VistaInbox';
+import { VistaPerfil } from './components/views/VistaPerfil';
+import { WizardPublicar } from './components/ui/WizardPublicar'; 
+import { VistaDetalleViaje } from './components/views/VistaDetalleViaje';
 // IMPORTACIONES
 import { Navbar } from "./components/layout/Navbar";
 import { VistaInicio } from './components/views/VistaInicio';
@@ -39,25 +43,36 @@ export default function NavegacionPrincipal({ user }) {
       <Header userData={userData} modo={modo} />
 
       <main className="flex-1 overflow-y-auto bg-slate-50">
-        {vista === "inicio" && (
-          <VistaInicio 
-            viajes={viajes} 
-            setViajeSeleccionado={setViajeSel} 
-            setVista={setVista} 
-            userData={userData}
-            modo={modo} 
-          />
-        )}
-        
-        {/* Vistas temporales */}
-        {vista !== "inicio" && (
-          <div className="flex flex-col items-center justify-center h-full p-10 text-center">
-            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Vista {vista} en desarrollo</p>
-            <button onClick={() => setVista("inicio")} className="mt-4 text-blue-600 font-black underline text-xs italic uppercase">VOLVER AL INICIO</button>
-          </div>
-        )}
-      </main>
+  {vista === "inicio" && (
+    viajeSel ? (
+      <VistaDetalleViaje viaje={viajeSel} onRegresar={() => setViajeSel(null)} />
+    ) : (
+      <VistaInicio 
+        viajes={viajes} 
+        setViajeSeleccionado={setViajeSel} 
+        setVista={setVista} 
+        userData={userData}
+        modo={modo} 
+      />
+    )
+  )}
 
+  {vista === "mis_viajes" && <VistaMisViajes userData={userData} />}
+  
+  {vista === "inbox" && <VistaInbox userData={userData} />}
+  
+  {vista === "perfil" && <VistaPerfil userData={userData} onLogout={() => signOut(auth)} />}
+
+  {vista === "publicar" && (
+    <WizardPublicar 
+      userData={userData} 
+      onFinalizar={() => {
+        setVista("inicio");
+        setModo("conductor");
+      }} 
+    />
+  )}
+</main>
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={() => {}} />
     </div>
   );
