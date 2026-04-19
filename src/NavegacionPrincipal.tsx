@@ -85,132 +85,73 @@ export function NavegacionPrincipal({ user }) {
       });
       setHistorialChats(Array.from(mapChats.values()).sort((a, b) => b.fecha - a.fecha));
     };
+import React, { useState, useEffect, useMemo } from "react";
+import { auth, db } from "./firebaseConfig";
+import { signOut } from "firebase/auth";
+import { UBICACIONES } from './constants/ubicaciones';
 
-    const unsubR = onSnapshot(query(collection(db, "MensajesPrivados"), where("receptorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
-    const unsubE = onSnapshot(query(collection(db, "MensajesPrivados"), where("emisorId", "==", user.uid)), snap => actualizarHistorial(snap.docs));
+// Layout y UI
+import { Navbar } from "./components/layout/Navbar";
 
-    return () => { 
-      unsubUser(); unsubViajes(); unsubMisViajes(); unsubMisSoli(); unsubR(); unsubE(); 
-    };
+// Vistas - ASEGÚRATE QUE ESTA RUTA SEA LA CORRECTA (views o vistas)
+import { VistaInicio } from './components/views/VistaInicio';
+import { VistaMisViajes } from './components/views/VistaMisViajes';
+import { VistaInbox } from './components/views/VistaInbox';
+import { VistaPerfil } from './components/views/VistaPerfil';
+import { VistaPerfilCompleto } from './components/views/VistaPerfilCompleto';
+import { VistaChatPrivado } from './components/views/VistaChatPrivado';
+import { WizardPublicar } from './components/ui/WizardPublicar';
+import { VistaDetalleViaje } from './components/views/VistaDetalleViaje'; 
+
+import {
+  doc, onSnapshot, collection, query, addDoc, 
+  serverTimestamp, orderBy, updateDoc, where, deleteDoc, getDoc
+} from "firebase/firestore";
+
+export default function NavegacionPrincipal({ user }) {
+  const [userData, setUserData] = useState(null);
+  const [viajes, setViajes] = useState([]);
+  const [vista, setVista] = useState("inicio");
+  const [modo, setModo] = useState("pasajero");
+  const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
+  const [chatActivo, setChatActivo] = useState(null);
+  const [pestañaPerfil, setPestañaPerfil] = useState("publico");
+
+  // Escuchar datos del usuario
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(doc(db, "Usuarios", user.uid), (doc) => {
+      setUserData(doc.exists() ? { id: doc.id, ...doc.data() } : null);
+    });
   }, [user]);
 
-  // --- EFECTO 2: LIMPIEZA DE NAVEGACIÓN ---
-
-
-  const abrirChat = (idViaje, idOtro, nombreOtro) => {
-    if (!idOtro || !user?.uid) return;
-    const chatId = [user.uid, idOtro].sort().join("_") + "_" + idViaje;
-    setChatActivo({ id: chatId, nombre: nombreOtro, idOtro, idViaje, idPropio: user.uid });
-    setVista("chat_privado");
-  };
-  
-  const publicarRutaWizard = async () => {
-    try {
-      const oParts = viajeForm.origen.split(",");
-      const dParts = viajeForm.destino.split(",");
-      const dataViaje = {
-        idCreador: user.uid,
-        conductor: userData.nombre,
-        cO: oParts[0]?.trim(), eO: oParts[1]?.trim() || "",
-        cD: dParts[0]?.trim(), eD: dParts[1]?.trim() || "",
-        precio: Number(viajeForm.precio),
-        puestos: Number(viajeForm.asientos),
-        horaSalida: viajeForm.horaSalida,
-        preferencias: viajeForm.preferencias,
-        fecha: serverTimestamp()
-      };
-      if (viajeEditando) { await updateDoc(doc(db, "Viajes", viajeEditando), dataViaje); } 
-      else { await addDoc(collection(db, "Viajes"), dataViaje); }
-      setVista("inicio");
-      setViajeEditando(null);
-    } catch (e) { alert("Error al publicar"); }
-  };
-
-  const prepararEdicion = (viaje) => {
-    setViajeEditando(viaje.id);
-    setViajeForm({
-      origen: `${viaje.cO}, ${viaje.eO}`, destino: `${viaje.cD}, ${viaje.eD}`,
-      precio: viaje.precio.toString(), asientos: viaje.puestos,
-      horaSalida: viaje.horaSalida, preferencias: viaje.preferencias
+  // Escuchar viajes activos
+  useEffect(() => {
+    const q = query(collection(db, "Viajes"), orderBy("fechaCreacion", "desc"));
+    return onSnapshot(q, (snapshot) => {
+      setViajes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    setPasoWizard(1);
-    setVista("inicio");
-    setModo("chofer");
-  };
-const abrirPerfilPublico = async (idConductor) => {
-  if (!idConductor) {
-    // Este lo dejamos solo por seguridad técnica, no debería salir nunca
-    console.error("Error: El viaje no tiene un ID de conductor asignado.");
-    return;
-  }
+  }, []);
 
-  // ELIMINADO: alert("Buscando en Firebase al conductor...");
-
-  try {
-    const docRef = doc(db, "usuarios", idConductor);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      // ELIMINADO: alert("¡Usuario encontrado! Abriendo perfil...");
-      setPerfilSeleccionado(docSnap.data());
-      setVista("perfil_publico");
-    } else {
-      // Cambiamos alert por console.error para que no moleste al usuario
-      console.error("Error: No existe un usuario con ese ID en la colección 'usuarios'.");
-    }
-  } catch (error) {
-    // Solo mostramos el error de permisos si realmente falla algo grave
-    alert("Error de Firebase: " + error.message);
-  }
-};
-  
-  
-  
   const handleLogout = () => signOut(auth);
 
-  if (!userData) return <div className="h-screen bg-white flex items-center justify-center text-blue-600 font-black animate-pulse text-xs uppercase italic">Cargando Dame la Cola...</div>;
-
   return (
-    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
-      <div className="p-4 border-b bg-white z-40 shadow-sm">
-        <Header userData={userData} modo={modo} />
-      </div> 
+    <div className="min-h-screen bg-slate-50">
+      <main className="pb-20">
+        {vista === "inicio" && (
+          <VistaInicio 
+            viajes={viajes} 
+            setViajeSeleccionado={(v) => { setViajeSeleccionado(v); setVista("detalle_viaje"); }} 
+            userData={userData} 
+          />
+        )}
 
-      <main className="flex-1 overflow-y-auto pb-24">
-  
-  {vista === "inicio" && (
-    <div className="pt-0"> {/* Quitamos pt-4 para que el header pegue arriba */}
-      {modo === "pasajero" ? (
-        <VistaInicio 
-          userData={userData} // <--- ESTO FALTABA Y CAUSA EL BLANCO
-          viajes={viajesFiltrados || []} 
-          setViajeSeleccionado={(v) => {
-            setViajeSeleccionado(v);
-            setVista("detalle_viaje");
-          }} 
-          setVista={setVista} 
-        />
-      ) : (
-        <WizardPublicar 
-          userData={userData} // <--- También aquí por si acaso
-          pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
-          viajeForm={viajeForm} setViajeForm={setViajeForm}
-          UBICACIONES={UBICACIONES} setVista={setVista} 
-          setModo={setModo} publicarRuta={publicarRutaWizard} 
-          viajeEditando={viajeEditando}
-        />
-      )}
-    </div>
-  )}
-
-  {/* ESTA ES LA VISTA QUE REALMENTE FUNCIONA CON EL PERFIL */}
-  {vista === "detalle_viaje" && viajeSeleccionado && (
-    <VistaDetalleViaje 
-      viaje={viajeSeleccionado} 
-      onRegresar={() => setVista("inicio")} 
-      onVerPerfil={(id) => abrirPerfilPublico(id)} 
-    />
-  )}
+        {vista === "detalle_viaje" && (
+          <VistaDetalleViaje 
+            viaje={viajeSeleccionado} 
+            onRegresar={() => setVista("inicio")} 
+          />
+        )}
         
         {vista === "mis_viajes" && (
           <VistaMisViajes 
