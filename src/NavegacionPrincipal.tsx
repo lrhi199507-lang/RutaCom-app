@@ -1,77 +1,135 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
+import { UBICACIONES } from './constants/ubicaciones';
 
-// Componentes - Verifica que la carpeta sea 'views'
+// Layout y UI
 import { Navbar } from "./components/layout/Navbar";
+import { Header } from './components/ui/Header';
+
+// Vistas - Carpeta 'views' confirmada
 import { VistaInicio } from './components/views/VistaInicio';
+import { VistaMisViajes } from './components/views/VistaMisViajes';
+import { VistaInbox } from './components/views/VistaInbox';
+import { VistaPerfil } from './components/views/VistaPerfil';
+import { VistaPerfilCompleto } from './components/views/VistaPerfilCompleto';
+import { VistaChatPrivado } from './components/views/VistaChatPrivado';
+import { WizardPublicar } from './components/ui/WizardPublicar';
+import { VistaDetalleViaje } from './components/views/VistaDetalleViaje';
+
+// Helpers y Modales
+import { ModalPerfilPublico } from './components/ui/ModalPerfilPublico';
+
+import {
+  doc, onSnapshot, collection, query, addDoc, 
+  serverTimestamp, orderBy, updateDoc, where, deleteDoc, getDoc
+} from "firebase/firestore";
 
 export default function NavegacionPrincipal({ user }) {
   const [userData, setUserData] = useState(null);
-  const [viajes, setViajes] = useState([]); 
+  const [viajes, setViajes] = useState([]);
   const [vista, setVista] = useState("inicio");
+  const [modo, setModo] = useState("pasajero");
+  const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
+  const [perfilSeleccionado, setPerfilSeleccionado] = useState(null);
+  const [chatActivo, setChatActivo] = useState(null);
+  const [historialChats, setHistorialChats] = useState([]);
+  const [misViajesPublicados, setMisViajesPublicados] = useState([]);
+  const [pasoWizard, setPasoWizard] = useState(1);
+  const [viajeEditando, setViajeEditando] = useState(null);
+  const [pestañaPerfil, setPestañaPerfil] = useState("publico");
+  const [misSolicitudes, setMisSolicitudes] = useState([]);
 
+  const [viajeForm, setViajeForm] = useState({
+    origen: "", destino: "", paradas: [], precio: "", asientos: 3, 
+    horaSalida: "", horaLlegada: "", 
+    preferencias: { ac: true, noFumar: true, mascotas: false, conversar: true, equipaje: true, maxDosAtras: false }
+  });
+
+  // --- ESCUCHA DE DATOS (FIREBASE) ---
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user) return;
 
-    // 1. Datos del usuario (con nombre de colección corregido según tu código)
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
-      if (snap.exists()) {
-        setUserData({ id: snap.id, ...snap.data() });
-      } else {
-        // Si no existe el doc, ponemos un nombre genérico para que no falle
-        setUserData({ id: user.uid, nombre: "Usuario" });
-      }
+      if (snap.exists()) setUserData({ id: snap.id, ...snap.data() });
     });
 
-    // 2. Viajes (Asegurando que SIEMPRE sea una lista)
-    const qViajes = query(collection(db, "Viajes"), orderBy("fecha", "desc"));
-    const unsubViajes = onSnapshot(qViajes, (snap) => {
-      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setViajes(Array.isArray(lista) ? lista : []); 
-    }, (error) => {
-      console.error("Error en Firebase:", error);
-      setViajes([]); // Si hay error de permisos, lista vacía
+    const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
+      setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsubUser(); unsubViajes(); };
+    const unsubMisViajes = onSnapshot(query(collection(db, "Viajes"), where("idCreador", "==", user.uid)), (snap) => {
+      setMisViajesPublicados(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    const unsubMisSoli = onSnapshot(query(collection(db, "Solicitudes"), where("idPasajero", "==", user.uid)), (snap) => {
+      setMisSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => { 
+      unsubUser(); unsubViajes(); unsubMisViajes(); unsubMisSoli(); 
+    };
   }, [user]);
 
   const handleLogout = () => signOut(auth);
 
-  // Si aún no hay datos del usuario, nos quedamos en la pantalla de carga
-  if (!userData) {
-    return (
-      <div className="h-screen bg-white flex items-center justify-center">
-        <p className="text-blue-600 font-black animate-pulse italic">CARGANDO PERFIL...</p>
-      </div>
-    );
-  }
+  if (!userData) return <div className="h-screen bg-white flex items-center justify-center text-blue-600 font-black animate-pulse text-xs uppercase italic">Cargando Dame la Cola...</div>;
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
-      <main className="flex-1 overflow-y-auto">
+      <div className="p-4 border-b bg-white z-40 shadow-sm">
+        <Header userData={userData} modo={modo} />
+      </div> 
+
+      <main className="flex-1 overflow-y-auto pb-24">
         {vista === "inicio" && (
-          <VistaInicio 
-            userData={userData}
-            viajes={viajes || []} 
-            setViajeSeleccionado={() => {}} 
-            setVista={setVista} 
+          modo === "pasajero" ? (
+            <VistaInicio 
+              userData={userData}
+              viajes={Array.isArray(viajes) ? viajes : []} 
+              setViajeSeleccionado={(v) => { setViajeSeleccionado(v); setVista("detalle_viaje"); }} 
+              setVista={setVista} 
+            />
+          ) : (
+            <WizardPublicar 
+              userData={userData}
+              pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
+              viajeForm={viajeForm} setViajeForm={setViajeForm}
+              UBICACIONES={UBICACIONES} setVista={setVista} 
+              setModo={setModo} 
+            />
+          )
+        )}
+
+        {vista === "detalle_viaje" && viajeSeleccionado && (
+          <VistaDetalleViaje 
+            viaje={viajeSeleccionado} 
+            onRegresar={() => setVista("inicio")} 
           />
         )}
-        
-        {/* Vista temporal por si la principal falla */}
-        {vista !== "inicio" && (
-          <div className="p-10 text-center">
-            <button onClick={() => setVista("inicio")} className="text-blue-600 font-bold underline">
-              Volver al inicio
-            </button>
-          </div>
+
+        {vista === "mis_viajes" && (
+          <VistaMisViajes 
+            misPublicaciones={misViajesPublicados}
+            viajesDondeVoy={misSolicitudes.filter(s => s.estado === "confirmado")}
+          />
+        )}
+
+        {vista === "inbox" && (
+          <VistaInbox historialChats={historialChats} misViajesPublicados={misViajesPublicados} abrirChat={() => {}} />
+        )}
+
+        {vista === "perfil" && (
+          <VistaPerfil 
+            userData={userData} 
+            handleLogout={handleLogout} 
+            pestañaActiva={pestañaPerfil} 
+            setPestañaActiva={setPestañaPerfil} 
+          />
         )}
       </main>
 
-      <Navbar vista={vista} setVista={setVista} />
+      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={setPasoWizard} />
     </div>
   );
 }
