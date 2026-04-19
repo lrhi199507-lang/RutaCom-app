@@ -3,7 +3,7 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 
-// Rutas corregidas (minúsculas)
+// Importaciones con rutas en minúsculas
 import { Navbar } from "./components/layout/Navbar";
 import { Header } from './components/ui/Header';
 import { VistaInicio } from './components/views/VistaInicio';
@@ -37,11 +37,12 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); };
   }, [user]);
 
-  if (!userData) return <div className="h-screen flex items-center justify-center font-bold text-blue-600">CARGANDO...</div>;
+  if (!userData) return <div className="h-screen flex items-center justify-center font-bold text-blue-600 italic">DAME LA COLA...</div>;
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
       <Header userData={userData} modo={modo} />
+      
       <main className="flex-1 overflow-y-auto pb-24 bg-slate-50">
         {vista === "inicio" && (
           viajeSel ? (
@@ -58,8 +59,8 @@ export default function NavegacionPrincipal({ user }) {
         {vista === "inbox" && <VistaInbox historialChats={[]} misViajesPublicados={[]} abrirChat={() => {}} />}
         {vista === "perfil" && <VistaPerfil userData={userData} handleLogout={() => signOut(auth)} />}
       </main>
+
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={setPasoW} />
     </div>
   );
-} 
-} 
+}
