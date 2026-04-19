@@ -1,59 +1,58 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 
+// IMPORTACIONES MÍNIMAS (Solo lo que funciona)
 import { Navbar } from "./components/layout/Navbar";
-
 import { VistaInicio } from './components/views/VistaInicio';
 
 export default function NavegacionPrincipal({ user }) {
-  const [userData, setUserData] = useState({ nombre: "Usuario", saldo: 0 });
+  const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
+  const [viajeSel, setViajeSel] = useState(null);
 
-  // Escuchamos los viajes reales de Firebase
   useEffect(() => {
-    try {
-      const q = query(collection(db, "Viajes"), orderBy("fecha", "desc"));
-      const unsub = onSnapshot(q, (snap) => {
-        const lista = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setViajes(lista);
-      });
-      return () => unsub();
-    } catch (err) {
-      console.log("Error en Firestore:", err);
-    }
-  }, []);
+    if (!user?.uid) return;
+    // Escuchar datos del usuario
+    const unsubU = onSnapshot(doc(db, "usuarios", user.uid), (s) => {
+      setUserData(s.exists() ? { id: s.id, ...s.data() } : { id: user.uid, nombre: "Usuario", saldo: 0 });
+    });
+    // Escuchar viajes
+    const unsubV = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (s) => {
+      setViajes(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => { unsubU(); unsubV(); };
+  }, [user]);
+
+  // Pantalla de carga mientras llega Firebase
+  if (!userData) return <div className="h-screen flex items-center justify-center font-black text-blue-600 italic">CARGANDO...</div>;
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
-    
-      
-      <main className="flex-1 overflow-y-auto pb-24 bg-slate-50">
-        {vista === "inicio" ? (
+      <main className="flex-1 overflow-y-auto bg-slate-50">
+        {vista === "inicio" && (
           <VistaInicio 
             viajes={viajes} 
-            setViajeSeleccionado={() => {}} 
+            setViajeSeleccionado={setViajeSel} 
             setVista={setVista} 
-            userData={userData} 
+            userData={userData}
+            modo={modo} 
           />
-        ) : (
-          <div className="p-10 text-center">
-            <p className="text-slate-400">Pronto cargaremos la vista: {vista}</p>
-            <button onClick={() => setVista("inicio")} className="text-blue-500 underline mt-2">Volver</button>
+        )}
+        
+        {/* Vistas temporales para evitar errores de importación */}
+        {vista !== "inicio" && (
+          <div className="flex flex-col items-center justify-center h-full p-10 text-center">
+            <p className="text-slate-400 font-bold uppercase text-xs">Vista {vista} en desarrollo</p>
+            <button onClick={() => setVista("inicio")} className="mt-4 text-blue-600 font-black underline">VOLVER</button>
           </div>
         )}
       </main>
 
-      <Navbar 
-        vista={vista} 
-        modo={modo} 
-        setVista={setVista} 
-        setModo={setModo} 
-        setPasoWizard={() => {}} 
-      />
+      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={() => {}} />
     </div>
   );
 }
