@@ -1,124 +1,152 @@
 import React from 'react';
 import { 
-  ArrowLeft, Car, ShieldCheck, User, Wind, 
-  CigaretteOff, Dog, MessageCircle, MessageSquare, Star
+  ArrowLeft, MapPin, Car, User, ShieldCheck, 
+  MessageCircle, Snowflake, CigaretteOff, 
+  PawPrint, MessageSquare, Briefcase 
 } from 'lucide-react';
 
-export const VistaDetalleViaje = ({ viaje, onRegresar, onVerPerfil }) => {
-  if (!viaje) return null;
+export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
+  // Si por algún error no llega el viaje, evitamos pantalla blanca
+  if (!viaje) return (
+    <div className="h-screen flex items-center justify-center p-10 text-center">
+      <button onClick={onRegresar} className="text-blue-600 font-black">VOLVER AL INICIO</button>
+    </div>
+  );
+
+  // Lista de preferencias (puedes luego conectarlo a tu base de datos)
+  const preferencias = [
+    { icono: Snowflake, texto: "A/C" },
+    { icono: CigaretteOff, texto: "NO FUMAR" },
+    { icono: PawPrint, texto: "MASCOTAS" },
+    { icono: MessageSquare, texto: "CONVERSACIÓN" },
+    { icono: Briefcase, texto: "ESPACIO EQUIPAJE" },
+  ];
 
   return (
-    /* Eliminamos bordes superiores y fondos oscuros para que fluya con el Header Blanco */
-    <div className="bg-slate-50 min-h-full pb-32 animate-in slide-in-from-right duration-300">
+    <div className="min-h-screen bg-slate-50 pb-32 animate-in fade-in slide-in-from-right-4 duration-500">
       
-      {/* 1. BOTÓN REGRESAR MINIMALISTA */}
-      <div className="px-4 py-3">
-        <button 
-          onClick={onRegresar} 
-          className="flex items-center gap-2 text-slate-400 font-black uppercase text-[9px] tracking-[0.2em] active:scale-95 transition-all"
-        >
-          <ArrowLeft size={14} /> Volver al Inicio
+      {/* BOTÓN VOLVER (Minimalista como la foto) */}
+      <div className="p-4 pt-6">
+        <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
+          <ArrowLeft size={18} strokeWidth={3} />
+          <span className="text-[10px] font-black uppercase tracking-[2px]">Volver al Inicio</span>
         </button>
       </div>
 
-      <div className="px-4 space-y-4">
+      <div className="px-5 space-y-5">
         
-        {/* 2. TARJETA DE PRECIO Y RUTA (ESTILO LIMPIO) */}
-        <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 relative overflow-hidden">
-          <div className="absolute top-6 right-8">
-            <span className="bg-slate-50 text-slate-400 px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1">
-              <div className="w-1 h-1 bg-slate-400 rounded-full"></div> {viaje.rango || "Novato"}
-            </span>
-          </div>
-          
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo del Viaje</p>
-          <h1 className="text-4xl font-black text-blue-600 mb-6 tracking-tighter">
-            ${viaje.precio || "10"}
-          </h1>
-          
-          <div className="flex items-center gap-3 text-slate-800 font-black italic uppercase text-sm">
-            <div className="w-5 h-5 border-2 border-blue-600 rounded-full flex items-center justify-center p-0.5">
-               <div className="w-full h-full bg-blue-600 rounded-full"></div>
-            </div>
-            {viaje.cO || "VALENCIA"} 
-            <span className="text-slate-300 mx-1">→</span> 
-            {viaje.cD || "CARACAS"}
-          </div>
-        </div>
-
-        {/* 3. CONDUCTOR - DISEÑO INTEGRADO */}
-<div 
-  onClick={() => onVerPerfil && onVerPerfil(viaje.idConductor || viaje.idCreador)}
-  className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center justify-between active:bg-slate-50 transition-all cursor-pointer"
->
-  <div className="flex items-center gap-4">
-    <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
-      {viaje.fotoConductor ? (
-        <img src={viaje.fotoConductor} alt="Perfil" className="w-full h-full object-cover" />
-      ) : (
-        <User size={28} className="text-slate-300 mt-2" />
-      )}
-    </div>
-    <div>
-      <h4 className="font-black italic text-slate-800 uppercase text-base leading-tight">
-        {viaje.conductor || "CONDUCTOR"} {/* Quitamos Luis Hernández fijo */}
-      </h4>
-      <div className="flex items-center gap-2 mt-0.5">
-        <p className="text-[9px] font-bold text-green-500 flex items-center gap-1">
-          <ShieldCheck size={12} fill="currentColor" className="text-white" /> 
-          VERIFICADO
-        </p>
-        <span className="text-[9px] font-black text-amber-500 flex items-center gap-0.5">
-          <Star size={10} fill="currentColor" /> {viaje.rating || "5.0"}
-        </span>
-      </div>
-    </div>
-  </div>
-  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-    <MessageSquare size={18} />
-  </div>
-</div>
-        
-
-        {/* 4. VEHÍCULO */}
-        <div className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-4">
-          <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-            <Car size={28} />
-          </div>
-          <div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vehículo</p>
-            <h3 className="font-black italic text-slate-800 uppercase text-base leading-tight">
-              {viaje.vehiculo || "TOYOTA HILUX"}
-            </h3>
-            <div className="flex gap-2 mt-1">
-              <span className="bg-slate-50 px-2 py-0.5 rounded text-[9px] font-black text-slate-500">{viaje.placa || "ABC-123"}</span>
-              <span className="bg-slate-50 px-2 py-0.5 rounded text-[9px] font-black text-slate-500 uppercase">{viaje.color || "NEGRO"}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 5. PASAJEROS Y PREFERENCIAS (Simplificado) */}
-        <div className="grid grid-cols-1 gap-4">
-           <div className="bg-white p-5 rounded-[30px] border border-slate-100">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <User size={12} /> Puestos (0/{viaje.puestos || "1"})
-              </p>
-              <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 rounded-full bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300">
-                    <User size={14} />
-                 </div>
-                 <span className="text-[10px] font-bold text-slate-300 italic">Asiento libre...</span>
+        {/* TARJETA PRINCIPAL: COSTO Y RUTA */}
+        <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 space-y-8">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo del Viaje</p>
+              <div className="flex items-start gap-1">
+                <span className="text-3xl font-black italic text-blue-600 mt-1">$</span>
+                <span className="text-7xl font-black italic text-blue-600 leading-none">
+                  {viaje.precio || "10"}
+                </span>
               </div>
-           </div>
+            </div>
+            <div className="bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
+              <span className="text-[9px] font-black uppercase italic text-slate-500">Novato</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 py-2">
+            <div className="w-12 h-12 rounded-2xl border-2 border-blue-100 flex items-center justify-center text-blue-600 bg-blue-50">
+              <MapPin size={24} strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 flex items-center justify-between pr-4">
+              <p className="text-lg font-black italic text-slate-900 uppercase tracking-tighter">
+                {viaje.cO || "VALENCIA"}
+              </p>
+              <div className="h-[2px] w-8 bg-slate-100" />
+              <p className="text-lg font-black italic text-slate-900 uppercase tracking-tighter">
+                {viaje.cD || "CARACAS"}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* 6. BOTÓN DE ACCIÓN FIJO AL FINAL */}
-        <div className="pt-4 pb-10">
-           <button className="w-full bg-blue-600 text-white py-5 rounded-[25px] font-black italic uppercase text-sm shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
-             Pedir esta Cola
-           </button>
+        {/* INFO DEL VEHÍCULO */}
+        <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 flex items-center gap-5">
+          <div className="w-20 h-20 rounded-[25px] bg-blue-50/50 border border-blue-100 flex items-center justify-center text-blue-500">
+            <Car size={35} strokeWidth={1.5} />
+          </div>
+          <div className="flex-1">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Vehículo del Viaje</p>
+            <p className="text-xl font-black italic text-slate-800 leading-none uppercase">
+              {viaje.vM || "TOYOTA"} {viaje.vMo || "HILUX"}
+            </p>
+            <div className="flex gap-2 mt-3">
+              <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[9px] font-black border border-slate-200 uppercase">
+                {viaje.vP || "1234"}
+              </span>
+              <div className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[9px] font-black border border-slate-200 flex items-center gap-1.5 uppercase">
+                <div className="w-2 h-2 rounded-full bg-slate-800" />
+                {viaje.vC || "NEGRO"}
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* INFO DEL CONDUCTOR */}
+        <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-300">
+            <User size={30} />
+          </div>
+          <div className="flex-1">
+            <p className="text-xl font-black italic text-slate-800 leading-none uppercase underline decoration-blue-200 decoration-2 underline-offset-4">
+              {viaje.cN || "LUIS HERNÁNDEZ"}
+            </p>
+            <div className="flex items-center gap-1.5 mt-2.5">
+              <ShieldCheck size={14} className="text-green-500" />
+              <p className="text-[10px] font-black text-green-600 uppercase tracking-wider">Conductor Identificado</p>
+            </div>
+          </div>
+        </div>
+
+        {/* PASAJEROS */}
+        <div className="bg-white p-8 rounded-[35px] shadow-sm border border-slate-100 space-y-6">
+          <div className="flex justify-between items-center">
+            <p className="text-[11px] font-black italic text-slate-400 uppercase tracking-widest">Pasajeros Confirmados (0/1)</p>
+          </div>
+          <p className="text-center text-slate-400 font-bold text-sm italic">Sé el primero en reservar un puesto.</p>
+          <div className="border-2 border-dashed border-slate-100 rounded-[25px] p-5 flex items-center gap-4 bg-slate-50/50">
+            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-300">
+              <User size={20} />
+            </div>
+            <p className="text-[10px] font-black italic text-slate-400 uppercase tracking-widest">Asiento Disponible</p>
+          </div>
+        </div>
+
+        {/* PREFERENCIAS */}
+        <div className="bg-white p-8 rounded-[35px] shadow-sm border border-slate-100 space-y-6">
+          <p className="text-[11px] font-black italic text-slate-800 uppercase tracking-widest">Preferencias</p>
+          <div className="grid grid-cols-2 gap-3">
+            {preferencias.map((pref, idx) => (
+              <div key={idx} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center gap-3">
+                <pref.icono size={16} className="text-blue-500" />
+                <span className="text-[10px] font-black italic text-blue-800 uppercase leading-none">{pref.texto}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
+
+      {/* BOTONES FIJOS */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 pb-10 bg-white/80 backdrop-blur-md border-t border-slate-100 z-50 max-w-md mx-auto flex gap-3">
+        <button className="flex-1 h-16 bg-slate-900 text-white rounded-[25px] font-black uppercase text-[11px] flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all">
+          <MessageCircle size={18} />
+          Chat
+        </button>
+        <button className="flex-[2] h-16 bg-blue-600 text-white rounded-[25px] font-black uppercase text-[11px] shadow-lg shadow-blue-500/30 active:scale-95 transition-all">
+          Pedir Cola
+        </button>
+      </div>
+
     </div>
   );
 };
