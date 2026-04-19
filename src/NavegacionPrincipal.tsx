@@ -149,47 +149,53 @@ export function NavegacionPrincipal({ user }) {
         <Header userData={userData} modo={modo} />
       </div> 
 
-      <main className="flex-1 overflow-y-auto px-4 pb-24">
-        {/* 1. VISTA DE INICIO / BUSCADOR / DETALLES */}
-{vista === "inicio" && (
-  <div className="pt-4">
-    {/* Verificamos que viajeSeleccionado exista Y tenga datos */}
-    {viajeSeleccionado && Object.keys(viajeSeleccionado).length > 0 ? (
-      <VistaDetalleViaje 
-        viaje={viajeSeleccionado} 
-        onRegresar={() => setViajeSeleccionado(null)} 
-      />
-    ) : (
-      <>
-        {modo === "pasajero" ? (
-          <VistaInicio 
-            viajes={viajesFiltrados || []} 
-            setViajeSeleccionado={setViajeSeleccionado} // <--- Revisa que pases esta prop
-            setVista={setVista} 
-          />
-        ) : (
-          <WizardPublicar 
-      userData={userData}
-      pasoWizard={pasoWizard} 
-      setPasoWizard={setPasoWizard}
-      viajeForm={viajeForm} 
-      setViajeForm={setViajeForm}
-      UBICACIONES={UBICACIONES} 
-      setVista={setVista} 
-      setModo={setModo} 
-    />
-  )
-)}
+       <main className="flex-1 overflow-y-auto pb-24">
+        {vista === "inicio" && (
+          <div className="pt-4">
+            {viajeSeleccionado && Object.keys(viajeSeleccionado).length > 0 ? (
+              <VistaDetalleViaje 
+                viaje={viajeSeleccionado} 
+                onRegresar={() => setViajeSeleccionado(null)} 
+              />
+            ) : (
+              modo === "pasajero" ? (
+                <VistaInicio 
+                  userData={userData}
+                  viajes={viajesFiltrados || []} 
+                  setViajeSeleccionado={setViajeSeleccionado}
+                  setVista={setVista} 
+                />
+              ) : (
+                <WizardPublicar 
+                  userData={userData}
+                  pasoWizard={pasoWizard} 
+                  setPasoWizard={setPasoWizard}
+                  viajeForm={viajeForm} 
+                  setViajeForm={setViajeForm}
+                  UBICACIONES={UBICACIONES} 
+                  setVista={setVista} 
+                  setModo={setModo} 
+                />
+              )
+            )}
+          </div>
+        )}
+
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             misPublicaciones={misViajesPublicados}
             viajesDondeVoy={misSolicitudes.filter(s => s.estado === "confirmado")}
-            onEditar={prepararEdicion} onEliminar={(id) => deleteDoc(doc(db, "Viajes", id))}
+            onEditar={prepararEdicion} 
+            onEliminar={(id) => deleteDoc(doc(db, "Viajes", id))}
           />
         )}
 
         {vista === "inbox" && (
-          <VistaInbox historialChats={historialChats} misViajesPublicados={misViajesPublicados} abrirChat={abrirChat} />
+          <VistaInbox 
+            historialChats={historialChats} 
+            misViajesPublicados={misViajesPublicados} 
+            abrirChat={abrirChat} 
+          />
         )}
 
         {vista === "chat_privado" && chatActivo && (
@@ -202,7 +208,11 @@ export function NavegacionPrincipal({ user }) {
       </main>
 
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} />
-      <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
+      
+      {/* Verifica que perfilPublico esté definido en tus estados */}
+      {typeof perfilPublico !== 'undefined' && (
+        <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
+      )}
     </div>
   );
 }
