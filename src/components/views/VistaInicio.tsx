@@ -15,7 +15,7 @@ const manejarBusqueda = (texto, tipo) => {
   if (tipo === 'origen') setOrigen(texto);
   else setDestino(texto);
 
-  if (texto.length > 2) {
+  if (texto.length > 0) {
     const filtradas = UBICACIONES.filter(u => 
       u.ciudad.toLowerCase().includes(texto.toLowerCase())
     ).slice(0, 4); // Solo mostrar 4 sugerencias
