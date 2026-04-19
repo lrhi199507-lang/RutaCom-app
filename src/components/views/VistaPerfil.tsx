@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { db, storage } from '../../firebase/config'; // Verifica que la ruta a tu config sea correcta
+import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker'; // Para la cámara y galería
