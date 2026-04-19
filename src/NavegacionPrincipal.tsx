@@ -254,8 +254,13 @@ const abrirPerfilPublico = async (idConductor) => {
         
       </main>
 
-      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} />
-      <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
+      <Navbar 
+  vista={vista} 
+  modo={modo} 
+  setVista={setVista} 
+  setModo={setModo} 
+  setPasoWizard={setPasoWizard} // <--- AÑADE ESTA LÍNEA QUE FALTABA
+/>
     </div>
   );
 }
