@@ -200,12 +200,12 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8" />
             <h3 className="text-xl font-black italic text-slate-800 uppercase mb-6">{tipoEdicion?.label}</h3>
             <input 
-              type={tipoEdicion?.id === 'fechaNacimiento' ? "date" : "text"}
-              value={nuevoValor}
-              onChange={(e) => setNuevoValor(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 text-sm font-bold text-slate-700 outline-none mb-8"
-              autoFocus
-            />
+  type={tipoEdicion?.id === 'fechaNacimiento' ? "date" : "text"}
+  value={nuevoValor}
+  onChange={(e) => setNuevoValor(e.target.value)}
+  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 text-sm font-bold text-slate-700 outline-none mb-8"
+  autoFocus
+/>
             <div className="flex gap-4">
               <button onClick={() => setModalVisible(false)} className="flex-1 p-5 rounded-2xl text-[10px] font-black uppercase text-slate-400 bg-slate-100">Cancelar</button>
               <button onClick={guardarCambios} disabled={cargando} className="flex-1 p-5 rounded-2xl text-[10px] font-black uppercase text-white bg-blue-600">
