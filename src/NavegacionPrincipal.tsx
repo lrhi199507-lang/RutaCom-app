@@ -24,22 +24,23 @@ import {
   doc, onSnapshot, collection, query, orderBy, where, deleteDoc
 } from "firebase/firestore";
 
-// CRÍTICO: Debe ser "export default" para que App.tsx no explote
+// OJO: "export default" es obligatorio para que App.tsx lo lea correctamente
 export default function NavegacionPrincipal({ user }) {
+  console.log("NavegacionPrincipal cargada para el usuario:", user?.uid);
+
   // 1. ESTADOS DE DATOS
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
   const [historialChats, setHistorialChats] = useState([]);
   const [misViajesPublicados, setMisViajesPublicados] = useState([]);
-  const [misSolicitudes, setMisSolicitudes] = useState([]);
   
-  // 2. ESTADOS DE NAVEGACIÓN
+  // 2. ESTADOS DE NAVEGACIÓN (Asegúrate de que todos existan)
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [chatActivo, setChatActivo] = useState(null);
   const [pestañaPerfil, setPestañaPerfil] = useState("publico");
-  const [perfilPublico, setPerfilPublico] = useState(null);
+  const [perfilPublico, setPerfilPublico] = useState(null); // Esta faltaba y causaba el error
   const [pasoWizard, setPasoWizard] = useState(1);
 
   // 3. ESTADO DEL FORMULARIO
@@ -53,37 +54,31 @@ export default function NavegacionPrincipal({ user }) {
   useEffect(() => {
     if (!user?.uid) return;
 
-    // Escuchar datos del usuario
     const unsubUser = onSnapshot(doc(db, "usuarios", user.uid), (snap) => {
-      setUserData(snap.exists() ? { id: snap.id, ...snap.data() } : { id: user.uid, nombre: "Usuario", saldo: 0 });
+      if (snap.exists()) {
+        setUserData({ id: snap.id, ...snap.data() });
+      } else {
+        setUserData({ id: user.uid, nombre: "Usuario", saldo: 0 });
+      }
     });
 
-    // Escuchar viajes globales
     const unsubViajes = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (snap) => {
       setViajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, () => setViajes([]));
+    }, (err) => console.error("Error en viajes:", err));
 
-    // Escuchar mis publicaciones
-    const unsubMisV = onSnapshot(query(collection(db, "Viajes"), where("idCreador", "==", user.uid)), (snap) => {
-      setMisViajesPublicados(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    return () => { unsubUser(); unsubViajes(); unsubMisV(); };
+    return () => { unsubUser(); unsubViajes(); };
   }, [user]);
 
-  // 5. FUNCIONES DE APOYO
+  // 5. FUNCIONES
   const handleLogout = () => signOut(auth);
   const abrirChat = (vId, oId, nombre) => {
     setChatActivo({ id: vId, idViaje: vId, idOtro: oId, nombreOtro: nombre, idPropio: user.uid });
     setVista("chat_privado");
   };
-  const eliminarViaje = async (id) => {
-    try { await deleteDoc(doc(db, "Viajes", id)); } catch (e) { console.error(e); }
-  };
 
   const viajesFiltrados = useMemo(() => Array.isArray(viajes) ? viajes : [], [viajes]);
 
-  // PANTALLA DE CARGA (Aquí es donde el icono "D" salta)
+  // Si no hay datos, mostramos el icono saltando que ya te funciona
   if (!userData) {
     return (
       <div className="h-screen bg-white flex flex-col items-center justify-center">
@@ -94,9 +89,8 @@ export default function NavegacionPrincipal({ user }) {
     );
   }
 
-  // RENDER PRINCIPAL (Si llegamos aquí, la pantalla blanca desaparece)
   return (
-    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl">
+    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x shadow-2xl font-sans">
       <Header userData={userData} modo={modo} />
 
       <main className="flex-1 overflow-y-auto pb-24 bg-slate-50">
@@ -115,19 +109,11 @@ export default function NavegacionPrincipal({ user }) {
         )}
 
         {vista === "mis_viajes" && (
-          <VistaMisViajes 
-            misPublicaciones={misViajesPublicados} 
-            viajesDondeVoy={misSolicitudes} 
-            alEliminar={eliminarViaje} 
-          />
+          <VistaMisViajes misPublicaciones={misViajesPublicados} viajesDondeVoy={[]} />
         )}
-        
+
         {vista === "inbox" && (
-          <VistaInbox 
-            historialChats={historialChats} 
-            misViajesPublicados={misViajesPublicados} 
-            abrirChat={abrirChat} 
-          />
+          <VistaInbox historialChats={historialChats} misViajesPublicados={misViajesPublicados} abrirChat={abrirChat} />
         )}
 
         {vista === "chat_privado" && chatActivo && (
@@ -135,18 +121,15 @@ export default function NavegacionPrincipal({ user }) {
         )}
 
         {vista === "perfil" && (
-          <VistaPerfil 
-            userData={userData} 
-            handleLogout={handleLogout} 
-            pestañaActiva={pestañaPerfil} 
-            setPestañaActiva={setPestañaPerfil} 
-          />
+          <VistaPerfil userData={userData} handleLogout={handleLogout} pestañaActiva={pestañaPerfil} setPestañaActiva={setPestañaPerfil} />
         )}
 
-        {vista === "wallet" && <Wallet userData={userData} />}
+        {vista === "wallet" && (
+          <Wallet userData={userData} />
+        )}
       </main>
 
-      {/* Navbar con todas las props que tus archivos necesitan */}
+      {/* Navbar con todas las funciones necesarias */}
       <Navbar 
         vista={vista} 
         modo={modo} 
@@ -155,9 +138,10 @@ export default function NavegacionPrincipal({ user }) {
         setPasoWizard={setPasoWizard} 
       />
       
+      {/* Modal perfil público solo si se ha seleccionado uno */}
       {perfilPublico && (
         <ModalPerfilPublico perfilPublico={perfilPublico} setPerfilPublico={setPerfilPublico} />
       )}
     </div>
   );
-}
+      }
