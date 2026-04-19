@@ -6,7 +6,7 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 
-// AQUÍ ES DONDE IMPORTAMOS, NO DONDE CREAMOS LA FUNCIÓN
+// ESTO ES LO CORRECTO: Importamos el archivo externo
 import NavegacionPrincipal from './NavegacionPrincipal';
 
 export default function App() {
@@ -38,6 +38,7 @@ export default function App() {
     setCargando(false);
   };
 
+  // Si hay usuario, mostramos la navegación que está en el otro archivo
   if (usuario) {
     return <NavegacionPrincipal user={usuario} />;
   }
@@ -53,12 +54,12 @@ export default function App() {
       <form onSubmit={manejarAutenticacion} className="w-full max-w-xs space-y-4">
         <input 
           type="email" placeholder="Correo" 
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm"
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white"
           onChange={(e) => setEmail(e.target.value)} 
         />
         <input 
           type="password" placeholder="Contraseña" 
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm"
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white"
           onChange={(e) => setPassword(e.target.value)} 
         />
         <button className="w-full bg-blue-600 hover:bg-blue-500 transition-colors p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg">
