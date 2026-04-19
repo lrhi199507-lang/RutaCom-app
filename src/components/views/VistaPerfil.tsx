@@ -8,6 +8,25 @@ import {
 export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañaActiva }) => {
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400">CARGANDO PERFIL...</div>;
 
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [tipoEdicion, setTipoEdicion] = React.useState<{id: string, label: string, valor: string} | null>(null);
+  const [nuevoValor, setNuevoValor] = React.useState("");
+ 
+  if (!userData) return <div className="p-20 text-center font-black italic text-slate-400">CARGANDO PERFIL...</div>;
+  
+  // Función para abrir el modal
+  const abrirEdicion = (id: string, label: string, valor: string) => {
+    setTipoEdicion({ id, label, valor });
+    setNuevoValor(valor);
+    setModalVisible(true);
+  };
+
+  // Función para guardar en Firebase (Simulada por ahora, luego conectamos con updateDoc)
+  const guardarCambios = () => {
+    console.log(`Guardando ${tipoEdicion?.id}: ${nuevoValor}`);
+    setModalVisible(false);
+    alert("¡Datos actualizados correctamente!");
+  };
   const view = pestañaActiva || 'publico';
 
   // --- LÓGICA DE NIVELES Y CONFIANZA ---
@@ -111,68 +130,152 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
             </div>
           </div>
         ) : (
-          /* C. VISTA DE CUENTA */
-          <div className="p-5 space-y-7 animate-in fade-in slide-in-from-right-4 duration-500 pb-24">
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Perfil Personal</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
-                <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-all border-b border-slate-50">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
-                      {userData.fotoPerfil ? (
-                        <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
-                      ) : (
-                        <Camera size={18} className="text-slate-300"/>
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <span className="text-[11px] font-black italic text-slate-700 uppercase block leading-none">Foto de Perfil</span>
-                      <span className="text-[9px] font-bold text-blue-500 mt-1 block">Cambiar imagen</span>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="text-slate-300" />
-                </button>
-                <MenuButtonCuenta icon={UserCog} label="Nombre Completo" value={userData.nombre} />
-                <MenuButtonCuenta icon={Mail} label="Correo Electrónico" value={userData.email} />
-                <MenuButtonCuenta icon={Phone} label="Número de Teléfono" value={userData.telefono || "No asignado"} />
-                <MenuButtonCuenta icon={Calendar} label="Fecha de Nacimiento" value={userData.fechaNacimiento || "00/00/0000"} />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4">Seguridad y Verificación</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-3 space-y-2">
-                <ItemDocumento icon={FileText} label="Cédula de Identidad" desc="Foto frontal y posterior" estado={userData.kycVerificado} />
-                <ItemDocumento icon={UserCheck} label="Verificación Facial" desc="Selfie de seguridad" estado={userData.fotoVerificada} />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Mi Vehículo</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
-                <MenuButtonCuenta icon={Car} label="Datos del Carro" value={userData.vehiculo?.placa ? `${userData.vehiculo.marca} (${userData.vehiculo.placa})` : "Registrar vehículo"} />
-                <MenuButtonCuenta icon={ShieldCheck} label="Licencia de Conducir" value={userData.licenciaVerificada ? "Verificada" : "Pendiente de subir"} />
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <button 
-                onClick={handleLogout} 
-                className="w-full flex items-center justify-center gap-3 p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 active:scale-95 transition-all"
-              >
-                <LogOut size={16} /> Cerrar Sesión
-              </button>
-            </div>
+        /* C. VISTA DE CUENTA */
+<div className="p-5 space-y-7 animate-in fade-in slide-in-from-right-4 duration-500 pb-24">
+  <div className="space-y-3">
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Perfil Personal</p>
+    <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
+      
+      {/* Foto de Perfil (Habilita la cámara) */}
+      <button 
+        onClick={() => alert("Abrir Selector de Imagen")}
+        className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-all border-b border-slate-50"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+            {userData.fotoPerfil ? (
+              <img src={userData.fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+            ) : (
+              <Camera size={18} className="text-slate-300"/>
+            )}
           </div>
-        )}
+          <div className="text-left">
+            <span className="text-[11px] font-black italic text-slate-700 uppercase block leading-none">Foto de Perfil</span>
+            <span className="text-[9px] font-bold text-blue-500 mt-1 block">Cambiar imagen</span>
+          </div>
+        </div>
+        <ChevronRight size={16} className="text-slate-300" />
+      </button>
+
+      {/* Botones con Función de Edición */}
+      <MenuButtonCuenta 
+        icon={UserCog} 
+        label="Nombre Completo" 
+        value={userData.nombre} 
+        onClick={() => abrirEdicion('nombre', 'Nombre Completo', userData.nombre)}
+      />
+      <MenuButtonCuenta 
+        icon={Mail} 
+        label="Correo Electrónico" 
+        value={userData.email} 
+        onClick={() => abrirEdicion('email', 'Correo Electrónico', userData.email)}
+      />
+      <MenuButtonCuenta 
+        icon={Phone} 
+        label="Número de Teléfono" 
+        value={userData.telefono || "No asignado"} 
+        onClick={() => abrirEdicion('telefono', 'Número de Teléfono', userData.telefono || "")}
+      />
+      <MenuButtonCuenta 
+        icon={Calendar} 
+        label="Fecha de Nacimiento" 
+        value={userData.fechaNacimiento || "00/00/0000"} 
+        onClick={() => abrirEdicion('fechaNacimiento', 'Fecha de Nacimiento', userData.fechaNacimiento || "")}
+      />
+    </div>
+  </div>
+
+  <div className="space-y-3">
+    <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4">Seguridad y Verificación</p>
+    <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-3 space-y-2">
+      <ItemDocumento 
+        icon={FileText} 
+        label="Cédula de Identidad" 
+        desc="Foto frontal y posterior" 
+        estado={userData.kycVerificado} 
+      />
+      <ItemDocumento 
+        icon={UserCheck} 
+        label="Verificación Facial" 
+        desc="Selfie de seguridad" 
+        estado={userData.fotoVerificada} 
+      />
+    </div>
+  </div>
+
+  <div className="space-y-3">
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Mi Vehículo</p>
+    <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
+      <MenuButtonCuenta 
+        icon={Car} 
+        label="Datos del Carro" 
+        value={userData.vehiculo?.placa ? `${userData.vehiculo.marca} (${userData.vehiculo.placa})` : "Registrar vehículo"} 
+        onClick={() => abrirEdicion('vehiculo', 'Datos del Vehículo', userData.vehiculo?.placa || "")}
+      />
+      <MenuButtonCuenta 
+        icon={ShieldCheck} 
+        label="Licencia de Conducir" 
+        value={userData.licenciaVerificada ? "Verificada" : "Pendiente de subir"} 
+      />
+    </div>
+  </div>
+
+  <div className="pt-4">
+    <button 
+      onClick={handleLogout} 
+      className="w-full flex items-center justify-center gap-3 p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 active:scale-95 transition-all"
+    >
+      <LogOut size={16} /> Cerrar Sesión
+    </button>
+  </div>
+</div>
+)}
+
+{/* MODAL DE EDICIÓN FLOTANTE (Paso 3) */}
+{modalVisible && (
+  <div className="fixed inset-0 z-[100] flex items-end justify-center animate-in fade-in duration-300">
+    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
+    <div className="relative bg-white w-full max-w-lg rounded-t-[40px] p-8 shadow-2xl animate-in slide-in-from-bottom-10 duration-500">
+      <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8" />
+      <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] mb-2">Editando Perfil</p>
+      <h3 className="text-xl font-black italic text-slate-800 uppercase mb-6">{tipoEdicion?.label}</h3>
+      <input 
+        type="text"
+        value={nuevoValor}
+        onChange={(e) => setNuevoValor(e.target.value)}
+        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 text-sm font-bold text-slate-700 focus:border-blue-600 outline-none transition-all mb-8 shadow-inner"
+        placeholder={`Nuevo ${tipoEdicion?.label.toLowerCase()}...`}
+        autoFocus
+      />
+      <div className="flex gap-4">
+        <button 
+          onClick={() => setModalVisible(false)}
+          className="flex-1 p-5 rounded-2xl text-[10px] font-black uppercase text-slate-400 bg-slate-100 active:scale-95 transition-transform"
+        >
+          Cancelar
+        </button>
+        <button 
+          onClick={guardarCambios}
+          className="flex-1 p-5 rounded-2xl text-[10px] font-black uppercase text-white bg-blue-600 shadow-lg shadow-blue-200 active:scale-95 transition-transform"
+        >
+          Guardar
+        </button>
       </div>
     </div>
-  );
+  </div>
+)}
+
+</div>
+</div>
+);
 };
 
 // --- SUB-COMPONENTES ---
-const MenuButtonCuenta = ({ icon: Icon, label, value }: { icon: any, label: string, value: string }) => (
-    <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-all group">
+const MenuButtonCuenta = ({ icon: Icon, label, value, onClick }: { icon: any, label: string, value: string, onClick?: () => void }) => (
+    <button 
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-all group active:scale-[0.98]"
+    >
         <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
                 <Icon size={18}/>
@@ -187,6 +290,7 @@ const MenuButtonCuenta = ({ icon: Icon, label, value }: { icon: any, label: stri
         <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
     </button>
 );
+
 
 const ItemDocumento = ({ icon: Icon, label, desc, estado }: { icon: any, label: string, desc: string, estado: boolean }) => (
     <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
