@@ -17,9 +17,9 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* AREA DE SCROLL */}
-      <div className="flex-1 overflow-y-auto pb-40">
+    <div className="min-h-screen bg-slate-50 flex flex-col relative">
+      {/* AREA DE SCROLL - pb-60 para asegurar que el contenido suba por encima de los botones */}
+      <div className="flex-1 overflow-y-auto pb-60">
         
         {/* BOTÓN VOLVER */}
         <div className="p-4 pt-6">
@@ -143,8 +143,8 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
         </div>
       </div>
 
-      {/* BOTONES FIJOS ABAJO */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-10 bg-white/90 backdrop-blur-md border-t border-slate-50 z-50 max-w-md mx-auto">
+      {/* BOTONES FIJOS - Ajustados para estar ARRIBA de la barra de navegación (bottom-20) */}
+      <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-3 h-14">
           <button className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
             <MessageCircle size={16} />
