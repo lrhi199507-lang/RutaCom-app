@@ -1,11 +1,11 @@
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
-
 import React, { useState, useMemo } from 'react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { Search, MapPin, Navigation, Calendar, Clock, Wallet } from 'lucide-react';
 import { UBICACIONES } from '../../constants/ubicaciones';
 import { AutocompleteInput } from '../ui/AutocompleteInput';
+window.onerror = function(message, source, lineno, colno, error) {
+  alert("ERROR DETECTADO: " + message + " en " + source + " línea: " + lineno);
+};
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData }) => {
   // 1. ESTADO DE SEGURIDAD: Si no hay componentes críticos, mostramos un error claro
