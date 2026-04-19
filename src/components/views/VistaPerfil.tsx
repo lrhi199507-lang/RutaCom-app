@@ -200,13 +200,13 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
             <LogOut size={16} /> Cerrar Sesión
         </button>
     </div>
-  </div> // <-- Cierra el div de la pestaña "Cuenta" (línea 203 aprox)
-)}       // <-- Cierra el bloque condicional {view === 'publico' ? ... : ...}
+  </div>
+)}       
 
-      </div> {/* Cierra el contenedor de scroll (el que tiene h-full) */}
-    </div>   {/* Cierra el div principal de la vista */}
+      </div> 
+    </div>  
   );
-}; // <-- Aquí termina la función principal VistaPerfil
+}; 
 
 
 const MenuButtonCuenta = ({ icon: Icon, label, value }: { icon: any, label: string, value: string }) => (
