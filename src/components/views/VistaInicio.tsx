@@ -34,23 +34,36 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, setVista, userD
   }, [viajes, origen, destino]);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      {/* HEADER INTEGRADO */}
-      <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-50 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-md">
-            <span className="font-black text-white text-xl italic">D</span>
-          </div>
-          <div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">MODO PASAJERO</p>
-            <h1 className="text-sm font-black text-slate-900 mt-0.5">{userData?.nombre || 'Usuario'}</h1>
-          </div>
+  <div className="min-h-screen bg-slate-50 pb-24">
+    
+    {/* HEADER BLANCO MINIMALISTA (Sustituye al azul) */}
+    <div className="bg-white px-4 py-4 flex items-center justify-between shadow-sm sticky top-0 z-50 border-b border-slate-100">
+      <div className="flex items-center gap-3">
+        {/* Logo 'D' Azul con letra Negra/Blanca */}
+        <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
+          <span className="font-black text-white text-xl italic">D</span>
         </div>
-        <div className="h-10 bg-slate-950 rounded-full flex items-center gap-2 px-4">
-          <Wallet size={14} className="text-blue-500" />
-          <p className="text-xs font-black text-white">${userData?.saldo || "0.00"}</p>
+
+        <div>
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] leading-none">
+            {modo === "pasajero" ? "MODO PASAJERO" : "MODO CONDUCTOR"}
+          </p>
+          <h1 className="text-sm font-black text-slate-900 tracking-tight mt-1">
+            {userData?.nombre || 'Luis Hernández'}
+          </h1>
         </div>
       </div>
+
+      {/* Botón de Saldo/Wallet Estilo Moderno */}
+      <div className="flex items-center gap-2">
+        <button className="h-10 bg-slate-900 rounded-2xl flex items-center gap-2 px-4 shadow-md active:scale-95 transition-all">
+          <Wallet size={14} className="text-blue-500" />
+          <p className="text-xs font-black text-white tracking-tighter">
+            ${userData?.saldo || "0.00"}
+          </p>
+        </button>
+      </div>
+    </div>
 
       <div className="p-4 space-y-6">
         {/* BUSCADOR */}
