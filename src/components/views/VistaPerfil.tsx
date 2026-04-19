@@ -191,22 +191,21 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
         </div>
     </div>
 
-    {/* BOTÓN DE CIERRE */}
+       {/* BOTÓN DE CIERRE */}
     <div className="pt-4">
-        <button 
-            onClick={handleLogout} 
-            className="w-full flex items-center justify-center gap-3 p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 active:scale-95 transition-all"
-        >
-            <LogOut size={16} /> Cerrar Sesión
-        </button>
+      <button 
+        onClick={handleLogout} 
+        className="w-full flex items-center justify-center gap-3 p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 active:scale-95 transition-all"
+      >
+        <LogOut size={16} /> Cerrar Sesión
+      </button>
     </div>
   </div>
-)}       
-
-      </div> 
-    </div>  
+)}
+      </div>
+    </div>
   );
-}; 
+};
 
 
 const MenuButtonCuenta = ({ icon: Icon, label, value }: { icon: any, label: string, value: string }) => (
