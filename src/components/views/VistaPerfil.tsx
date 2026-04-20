@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -6,8 +6,7 @@ import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capa
 import { 
   LogOut, ShieldCheck, CheckCircle2, UserCog, ChevronRight,
   Camera, Phone, Mail, FileText, Car, User, Edit2, 
-  Lock, CreditCard, ShieldAlert, Calendar, Palette, Hash,
-  IdCard // Icono para la licencia
+  Lock, CreditCard, ShieldAlert, Calendar, Palette, Hash
 } from 'lucide-react';
 
 export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañaActiva }) => {
@@ -15,10 +14,10 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   const [pasoFoto, setPasoFoto] = useState(false); 
   const [tipoEdicion, setTipoEdicion] = useState<{id: string, label: string, valor: string} | null>(null);
   const [nuevoValor, setNuevoValor] = useState("");
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState(false); // Confirmado en false
   const [refresh, setRefresh] = useState(0); 
 
-  if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 uppercase tracking-widest">Cargando perfil...</div>;
+  if (!userData) return <div className="p-20 text-center font-black italic text-slate-400">CARGANDO...</div>;
   const view = pestañaActiva || 'publico';
 
   // --- LÓGICA DE NIVELES ---
@@ -28,46 +27,44 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
     { id: 'email', verificado: !!userData.email },
     { id: 'cedula', verificado: !!userData.kycVerificado },
     { id: 'licencia', verificado: !!userData.licenciaVerificada },
-    { id: 'matricula', verificado: !!userData.matriculaVerificada },
   ];
   const totalVerificados = puntosControl.filter(p => p.verificado).length;
-  const porcentajeConfianza = (totalVerificados / puntosControl.length) * 100;
+  const porcentajeConfianza = (totalVerificados / 3) * 100;
 
-  // --- FUNCIONES DE ACCIÓN ---
+  // --- FUNCIONES ---
   const abrirEdicion = (id: string, label: string, valor: string) => {
     setTipoEdicion({ id, label, valor });
     setNuevoValor(valor || "");
+    setCargando(false); // Aseguramos que el botón no esté bloqueado al abrir
     setModalVisible(true);
   };
 
   const guardarCambios = async () => {
-    if (!tipoEdicion || !userData.uid) return;
-    setCargando(true);
+    if (!tipoEdicion || !userData.uid || cargando) return;
+    
+    setCargando(true); // Aquí empieza el "Guardando..."
     try {
       const userRef = doc(db, "usuarios", userData.uid);
       const camposVehiculo = ['placa', 'modelo', 'color', 'marca'];
       
-      let updateData = {};
       if (camposVehiculo.includes(tipoEdicion.id)) {
         const campo = `vehiculo.${tipoEdicion.id}`;
-        const valorFinal = nuevoValor.toUpperCase();
-        updateData = { [campo]: valorFinal };
+        await updateDoc(userRef, { [campo]: nuevoValor.toUpperCase() });
         if(!userData.vehiculo) userData.vehiculo = {};
-        userData.vehiculo[tipoEdicion.id] = valorFinal;
+        userData.vehiculo[tipoEdicion.id] = nuevoValor.toUpperCase();
       } else {
-        updateData = { [tipoEdicion.id]: nuevoValor };
+        await updateDoc(userRef, { [tipoEdicion.id]: nuevoValor });
         userData[tipoEdicion.id] = nuevoValor; 
       }
-
-      await updateDoc(userRef, updateData);
       
       setModalVisible(false);
-      setRefresh(prev => prev + 1); // Forzar que React re-renderice los textos
-      alert("¡Cambio guardado!");
+      setRefresh(prev => prev + 1);
     } catch (e) { 
       console.error(e);
-      alert("Error al guardar en la base de datos."); 
-    } finally { setCargando(false); }
+      alert("Error de conexión"); 
+    } finally { 
+      setCargando(false); // Aquí vuelve a "Confirmar" si falla
+    }
   };
 
   const ejecutarCapturaFoto = async () => {
@@ -76,8 +73,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
         quality: 90, allowEditing: true, resultType: CameraResultType.Uri,
         source: CameraSource.Prompt,
         promptLabelHeader: "Foto de Perfil",
-        promptLabelPhoto: "Galería", 
-        promptLabelPicture: "Cámara"
+        promptLabelPhoto: "Galería", promptLabelPicture: "Cámara"
       });
       if (image.webPath) {
         setCargando(true);
@@ -86,7 +82,6 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
         const storageRef = ref(storage, `perfiles/${userData.uid}`);
         await uploadBytes(storageRef, blob);
         const url = await getDownloadURL(storageRef);
-        
         await updateDoc(doc(db, "usuarios", userData.uid), { fotoPerfil: url });
         userData.fotoPerfil = url;
         setPasoFoto(false);
@@ -97,7 +92,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col">
-      {/* NAVEGACIÓN SUPERIOR */}
+      {/* HEADER TABS */}
       <div className="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
         <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
           <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
@@ -107,76 +102,50 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
 
       <div className="flex-1 overflow-y-auto pb-32">
         {view === 'publico' ? (
-          <div className="p-5 space-y-6 animate-in fade-in duration-700">
+          <div className="p-5 space-y-6">
             {/* CABECERA NARANJA */}
-            <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative overflow-hidden">
-              <div className="absolute top-5 right-5">
-                <div className="bg-slate-900 text-white px-3 py-1 rounded-full text-[7px] font-black uppercase tracking-widest shadow-lg">Rango: {rango}</div>
-              </div>
-
+            <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
+              <div className="absolute top-5 right-5 bg-slate-900 text-white px-3 py-1 rounded-full text-[7px] font-black uppercase tracking-widest">Rango: {rango}</div>
               <div className="relative w-28 h-28 mx-auto mb-5">
                 <div className="w-full h-full rounded-full bg-gradient-to-tr from-orange-500 via-orange-300 to-slate-200 p-1 shadow-xl">
-                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-white shadow-inner">
-                    {userData.fotoPerfil ? (
-                        <img src={`${userData.fotoPerfil}?t=${refresh}`} alt="Perfil" className="w-full h-full object-cover" />
-                    ) : (
-                        <User size={50} className="text-slate-200 mt-4" />
-                    )}
+                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-white">
+                    {userData.fotoPerfil ? <img src={`${userData.fotoPerfil}?t=${refresh}`} className="w-full h-full object-cover" /> : <User size={50} className="text-slate-200 mt-4" />}
                   </div>
                 </div>
-                <button onClick={() => setPasoFoto(true)} className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2 rounded-full border-4 border-white shadow-lg active:scale-90 transition-transform"><Edit2 size={14} /></button>
+                <button onClick={() => setPasoFoto(true)} className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2 rounded-full border-4 border-white shadow-lg active:scale-90"><Edit2 size={14} /></button>
               </div>
-
-              <h2 className="text-2xl font-black italic text-slate-800 uppercase tracking-tighter">
-                {userData.nombre || "Usuario"}, <span className="text-blue-600">{userData.edad || "30"}</span>
-              </h2>
+              <h2 className="text-2xl font-black italic text-slate-800 uppercase tracking-tighter">{userData.nombre || "Usuario"}, <span className="text-blue-600">{userData.edad || "30"}</span></h2>
             </div>
 
-            {/* BARRA DE PROGRESO */}
+            {/* PROGRESO NARANJA */}
             <div className="bg-white p-7 rounded-[40px] shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-5">
-                <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-1">Estado de Confianza</p>
-                  <p className="text-lg font-black italic text-slate-800 uppercase leading-none">{totalVerificados} de {puntosControl.length} Verificados</p>
-                </div>
-                <div className="bg-orange-50 px-4 py-2 rounded-2xl border border-orange-100">
-                  <p className="text-2xl font-black italic text-orange-500 leading-none">{porcentajeConfianza.toFixed(0)}%</p>
-                </div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px]">Estado de Confianza</p>
+                <div className="bg-orange-50 px-4 py-2 rounded-2xl text-orange-500 font-black italic text-2xl">{porcentajeConfianza.toFixed(0)}%</div>
               </div>
               <div className="w-full h-4 bg-slate-100 rounded-full p-1 border border-slate-50 shadow-inner">
-                <div className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all duration-1000" style={{ width: `${porcentajeConfianza}%` }} />
+                <div className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-1000" style={{ width: `${porcentajeConfianza}%` }} />
               </div>
             </div>
           </div>
         ) : (
-          <div className="p-5 space-y-7 pb-24">
-            {/* PERFIL PERSONAL */}
+          <div className="p-5 space-y-7">
+            {/* SEGURIDAD KYC MEJORADO (Basado en tus fotos) */}
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Perfil Personal</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
-                <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => abrirEdicion('nombre', 'Nombre', userData.nombre)} />
-                <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => abrirEdicion('telefono', 'Teléfono', userData.telefono)} />
-                <MenuButton icon={Calendar} label="Nacimiento" value={userData.fechaNacimiento} onClick={() => abrirEdicion('fechaNacimiento', 'Nacimiento', userData.fechaNacimiento)} />
-              </div>
-            </div>
-
-            {/* SEGURIDAD KYC MEJORADO */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4">Seguridad y Documentos</p>
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4">Certificación de Identidad</p>
               <div className="bg-white rounded-[35px] border border-slate-100 overflow-hidden p-2">
-                <MenuButton icon={FileText} label="Cédula de Identidad" value={userData.kycVerificado ? "Verificada ✅" : "Subir Documento"} />
-                <MenuButton icon={FileText} label="Licencia de Conducir" value={userData.licenciaVerificada ? "Verificada ✅" : "Subir Licencia"} />
+                <MenuButton icon={FileText} label="Documento de Identidad (Cédula)" value={userData.kycVerificado ? "Verificado ✅" : "Pendiente de subir"} />
+                <MenuButton icon={Car} label="Licencia de Conducir" value={userData.licenciaVerificada ? "Verificada ✅" : "Pendiente de subir"} />
                 <MenuButton icon={Lock} label="Contraseña" onClick={() => abrirEdicion('password', 'Nueva Contraseña', '')} />
               </div>
             </div>
 
-            {/* VEHÍCULO */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Mi Vehículo</p>
               <div className="bg-white rounded-[35px] border border-slate-100 overflow-hidden p-2">
-                <MenuButton icon={Car} label="Marca" value={userData.vehiculo?.marca} onClick={() => abrirEdicion('marca', 'Marca', userData.vehiculo?.marca)} />
-                <MenuButton icon={Palette} label="Color" value={userData.vehiculo?.color} onClick={() => abrirEdicion('color', 'Color', userData.vehiculo?.color)} />
-                <MenuButton icon={Hash} label="Placa" value={userData.vehiculo?.placa} onClick={() => abrirEdicion('placa', 'Placa', userData.vehiculo?.placa)} />
+                <MenuButton icon={Car} label="Marca / Modelo" value={`${userData.vehiculo?.marca || ''} ${userData.vehiculo?.modelo || ''}`} onClick={() => abrirEdicion('modelo', 'Marca y Modelo', userData.vehiculo?.modelo)} />
+                <MenuButton icon={Palette} label="Color" value={userData.vehiculo?.color} onClick={() => abrirEdicion('color', 'Color del Carro', userData.vehiculo?.color)} />
+                <MenuButton icon={Hash} label="Placa" value={userData.vehiculo?.placa} onClick={() => abrirEdicion('placa', 'Número de Placa', userData.vehiculo?.placa)} />
               </div>
             </div>
 
@@ -185,25 +154,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
         )}
       </div>
 
-      {/* PANTALLA INSTRUCCIONES FOTO */}
-      {pasoFoto && (
-        <div className="fixed inset-0 z-[200] bg-white animate-in slide-in-from-bottom duration-500 flex flex-col p-8 text-center">
-          <div className="flex-1 flex flex-col items-center justify-center space-y-8">
-            <div className="w-40 h-40 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100 relative">
-               <User size={100} className="text-orange-200" />
-               <div className="absolute -top-2 -right-2 bg-green-500 p-3 rounded-full text-white shadow-lg"><CheckCircle2 size={24} /></div>
-            </div>
-            <h3 className="text-2xl font-black text-slate-800 leading-tight italic uppercase">¡Sácate una buena foto!</h3>
-            <p className="text-slate-500 font-medium italic">Sin gorra, sin lentes y con buena luz para que tus pasajeros confíen en ti.</p>
-          </div>
-          <div className="space-y-4">
-            <button onClick={ejecutarCapturaFoto} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Abrir Cámara</button>
-            <button onClick={() => setPasoFoto(false)} className="w-full bg-slate-100 text-slate-400 p-5 rounded-[25px] font-black uppercase text-xs">Ahora no</button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE EDICIÓN */}
+      {/* MODAL DE EDICIÓN - CORREGIDO */}
       {modalVisible && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
@@ -217,9 +168,31 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
               className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none focus:border-blue-600 mb-8"
               autoFocus
             />
-            <button onClick={guardarCambios} disabled={cargando} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-lg">
-                {cargando ? 'Guardando...' : 'Confirmar'}
+            <button 
+              onClick={guardarCambios} 
+              disabled={cargando}
+              className={`w-full p-5 rounded-[25px] font-black uppercase text-xs shadow-lg transition-all ${cargando ? 'bg-slate-300 text-white' : 'bg-blue-600 text-white active:scale-95'}`}
+            >
+                {cargando ? 'GUARDANDO...' : 'CONFIRMAR CAMBIOS'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* PANTALLA INSTRUCCIONES FOTO */}
+      {pasoFoto && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 text-center">
+          <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+            <div className="w-40 h-40 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100 relative">
+               <User size={100} className="text-orange-200" />
+               <div className="absolute -top-2 -right-2 bg-green-500 p-3 rounded-full text-white shadow-lg"><CheckCircle2 size={24} /></div>
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 leading-tight uppercase italic">¡Sácate una buena foto!</h3>
+            <p className="text-slate-500 font-medium italic">Mira al frente, con buena luz y sin lentes.</p>
+          </div>
+          <div className="space-y-4">
+            <button onClick={ejecutarCapturaFoto} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">Abrir Cámara</button>
+            <button onClick={() => setPasoFoto(false)} className="w-full bg-slate-100 text-slate-400 p-5 rounded-[25px] font-black uppercase text-xs">Ahora no</button>
           </div>
         </div>
       )}
@@ -227,14 +200,13 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   );
 };
 
-// COMPONENTE MENU MEJORADO
 const MenuButton = ({ icon: Icon, label, value, onClick }: any) => (
-  <button onClick={onClick} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-all border-b border-slate-50 last:border-0 active:scale-[0.98]">
+  <button onClick={onClick} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-all border-b border-slate-50 last:border-0">
     <div className="flex items-center gap-4">
       <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center"><Icon size={18} /></div>
       <div className="text-left">
         <p className="text-[10px] font-black text-slate-700 uppercase italic leading-none mb-1">{label}</p>
-        <p className="text-[9px] font-bold text-blue-500 tracking-wider truncate max-w-[180px]">{value || "Configurar"}</p>
+        <p className="text-[9px] font-bold text-blue-500 tracking-wider">{value || "Subir ahora"}</p>
       </div>
     </div>
     <ChevronRight size={16} className="text-slate-200" />
