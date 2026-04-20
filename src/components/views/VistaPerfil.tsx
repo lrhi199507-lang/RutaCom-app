@@ -49,34 +49,53 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   };
 
   // 2. Optimizamos la función de guardado
-  const subirFotoConfirmada = async () => {
-    const userId = userData?.uid;
+    const subirFotoConfirmada = async () => {
+    // 1. Forzamos la obtención del ID. Si no está en userData, lo buscamos en el objeto completo
+    const userId = userData?.uid || userData?.id;
 
-    if (!fotoTemporal || !userId) return;
+    console.log("Intentando guardar. ID detectado:", userId);
+
+    if (!fotoTemporal) {
+      alert("Error: No hay imagen en memoria.");
+      return;
+    }
+
+    if (!userId) {
+      // Si llega aquí, el problema es que el componente padre no está pasando el UID
+      alert("Error de sesión: El componente no recibió tu ID de usuario. Intenta recargar la app.");
+      return;
+    }
 
     setCargando(true);
+    
     try {
       const userRef = doc(db, "usuarios", userId);
       
-      // Intentamos el guardado con la imagen ya comprimida
       await updateDoc(userRef, { 
         fotoPerfil: fotoTemporal 
       });
       
-      userData.fotoPerfil = fotoTemporal;
+      // Actualización optimista
+      if(userData) userData.fotoPerfil = fotoTemporal;
+      
       setFotoTemporal(null);
       setPasoFoto(false);
       setRefresh(prev => prev + 1);
       
-      alert("¡Perfil actualizado con éxito!");
-    } catch (e) { 
-      console.error("Error técnico:", e);
-      // Si el error persiste, es probable que la foto siga siendo muy grande
-      alert("La foto es demasiado pesada para la base de datos actual. Intenta tomarla con menos luz o desde más lejos."); 
+      alert("¡Foto guardada exitosamente!");
+    } catch (e: any) { 
+      console.error("Error al subir:", e);
+      // Si el error es por tamaño (muy común en Firestore), te lo dirá aquí:
+      if (e.code === 'out-of-range' || e.message?.includes('too large')) {
+        alert("La foto es muy pesada. Intenta tomarla con menos luz o bajar más la calidad.");
+      } else {
+        alert("Error de base de datos: " + e.message);
+      }
     } finally { 
       setCargando(false); 
     }
   };
+  
   
   const guardarCambios = async () => {
     if (!tipoEdicion || !userData.uid || cargando) return;
