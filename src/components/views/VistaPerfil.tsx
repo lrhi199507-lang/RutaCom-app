@@ -19,6 +19,8 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   const [nuevoValor, setNuevoValor] = useState("");
   const [cargando, setCargando] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [pasoDocumento, setPasoDocumento] = useState<{tipo: 'cedula' | 'licencia' | 'selfie', activa: boolean}>({tipo: 'cedula', activa: false});
+  
 
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   const view = pestañaActiva || 'publico';
@@ -230,6 +232,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
                 <MenuButton icon={FileText} label="Cédula de Identidad" value={userData.kycVerificado ? "VERIFICADO ✅" : "PENDIENTE"} onClick={() => !userData.kycVerificado && setPasoDocumento({tipo:'cedula', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Licencia de Conducir" value={userData.licenciaVerificada ? "VERIFICADO ✅" : "PENDIENTE"} onClick={() => !userData.licenciaVerificada && setPasoDocumento({tipo:'licencia', activa:true})} />
                 <MenuButton icon={KeyRound} label="Contraseña" value="••••••••" onClick={() => alert("Función en desarrollo")} />
+                <MenuButton icon={User} label="Selfie de Identidad" value={userData.selfieVerificada ? "VERIFICADO ✅" : "PENDIENTE"} onClick={() => !userData.selfieVerificada && setPasoDocumento({tipo:'selfie', activa:true})} /> 
               </div>
             </div>
 
@@ -260,42 +263,82 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
         </div>
       )}
 
-                {/* MODAL ESCÁNER KYC */}
+            {/* MODAL ESCÁNER KYC ACTUALIZADO CON SELFIE */}
       {pasoDocumento.activa && (
         <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 overflow-hidden">
           {!fotoDocTemporal ? (
             <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-              <div className="relative w-full aspect-[1.6/1] border-2 border-white/20 rounded-3xl overflow-hidden shadow-2xl bg-slate-800">
-                <div className="absolute top-4 left-4 w-10 h-10 border-t-4 border-l-4 border-blue-500 rounded-tl-lg" />
-                <div className="absolute top-4 right-4 w-10 h-10 border-t-4 border-r-4 border-blue-500 rounded-tr-lg" />
-                <div className="absolute bottom-4 left-4 w-10 h-10 border-b-4 border-l-4 border-blue-500 rounded-bl-lg" />
-                <div className="absolute bottom-4 right-4 w-10 h-10 border-b-4 border-r-4 border-blue-500 rounded-br-lg" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-white font-black text-[10px] uppercase tracking-widest bg-blue-600/80 px-5 py-2 rounded-full">Enmarca tu {pasoDocumento.tipo}</p>
+              {/* ENMARQUE DINÁMICO: Rectangular para docs, Redondo para Selfie */}
+              <div className={`relative w-full shadow-2xl bg-slate-800 overflow-hidden transition-all duration-500 ${
+                pasoDocumento.tipo === 'selfie' 
+                ? 'aspect-square max-w-[300px] rounded-full border-4 border-dashed border-blue-500/50' 
+                : 'aspect-[1.6/1] rounded-3xl border-2 border-white/20'
+              }`}>
+                
+                {/* Esquinas (Solo se muestran si NO es selfie) */}
+                {pasoDocumento.tipo !== 'selfie' && (
+                  <>
+                    <div className="absolute top-4 left-4 w-10 h-10 border-t-4 border-l-4 border-blue-500 rounded-tl-lg" />
+                    <div className="absolute top-4 right-4 w-10 h-10 border-t-4 border-r-4 border-blue-500 rounded-tr-lg" />
+                    <div className="absolute bottom-4 left-4 w-10 h-10 border-b-4 border-l-4 border-blue-500 rounded-bl-lg" />
+                    <div className="absolute bottom-4 right-4 w-10 h-10 border-b-4 border-r-4 border-blue-500 rounded-br-lg" />
+                  </>
+                )}
+
+                {/* Animación de pulso para el Selfie */}
+                {pasoDocumento.tipo === 'selfie' && (
+                  <div className="absolute inset-0 border-[8px] border-blue-500/20 rounded-full animate-pulse" />
+                )}
+                
+                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                  <p className="text-white font-black text-[10px] uppercase tracking-widest bg-blue-600/90 px-5 py-2 rounded-full shadow-lg">
+                    {pasoDocumento.tipo === 'selfie' ? 'Ubica tu rostro aquí' : `Enmarca tu ${pasoDocumento.tipo}`}
+                  </p>
                 </div>
               </div>
-              <p className="text-white/60 text-[10px] font-black uppercase tracking-widest text-center px-10 leading-relaxed">Ubica el documento en el recuadro y evita reflejos de luz</p>
+
+              <p className="text-white/60 text-[10px] font-black uppercase tracking-widest text-center px-10 leading-relaxed">
+                {pasoDocumento.tipo === 'selfie' 
+                  ? "Asegúrate de tener buena luz y que tu rostro sea claramente visible" 
+                  : "Ubica el documento en el recuadro y evita reflejos de luz"}
+              </p>
+
               <div className="w-full pt-10">
-                <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Capturar Documento</button>
-                <button onClick={() => setPasoDocumento({tipo:'cedula', activa:false})} className="w-full text-slate-500 font-black uppercase text-[10px] mt-6">Cancelar Proceso</button>
+                <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95 transition-transform">
+                  Capturar {pasoDocumento.tipo === 'selfie' ? 'Rostro' : 'Documento'}
+                </button>
+                <button onClick={() => {
+                  setFotoDocTemporal(null);
+                  setPasoDocumento({tipo:'cedula', activa:false});
+                }} className="w-full text-slate-500 font-black uppercase text-[10px] mt-6">
+                  Cancelar Proceso
+                </button>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95">
-              <div className="w-full aspect-[1.6/1] rounded-3xl overflow-hidden border-4 border-blue-500 shadow-2xl">
-                <img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Doc" />
+              {/* Previsualización circular si es selfie */}
+              <div className={`w-full overflow-hidden border-4 border-blue-500 shadow-2xl ${
+                pasoDocumento.tipo === 'selfie' ? 'aspect-square max-w-[300px] rounded-full' : 'aspect-[1.6/1] rounded-3xl'
+              }`}>
+                <img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Captura" />
               </div>
-              <h3 className="text-white text-xl font-black uppercase italic tracking-tighter">¿Los datos se ven nítidos?</h3>
+              <h3 className="text-white text-xl font-black uppercase italic tracking-tighter">
+                {pasoDocumento.tipo === 'selfie' ? '¿Te ves bien?' : '¿Los datos se ven nítidos?'}
+              </h3>
               <div className="w-full space-y-4">
-                <button onClick={subirDocumentoFinal} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
+                <button onClick={subirDocumentoFinal} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:bg-blue-700">
                   {cargando ? 'PROCESANDO...' : 'SÍ, ENVIAR PARA VERIFICACIÓN'}
                 </button>
-                <button onClick={() => setFotoDocTemporal(null)} className="w-full bg-white/10 text-white p-5 rounded-[25px] font-black uppercase text-xs">REPETIR CAPTURA</button>
+                <button onClick={() => setFotoDocTemporal(null)} className="w-full bg-white/10 text-white p-5 rounded-[25px] font-black uppercase text-xs">
+                  REPETIR CAPTURA
+                </button>
               </div>
             </div>
           )}
         </div>
       )}
+      
 
       {/* FLUJO DE FOTO DE PERFIL */}
       {pasoFoto && (
