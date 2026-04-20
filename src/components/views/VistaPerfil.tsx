@@ -255,16 +255,39 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   );
 };
 
-const MenuButton = ({ icon: Icon, label, value, onClick }: any) => (
-  <button onClick={onClick} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors text-left">
-    <div className="flex items-center gap-5">
-      <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm"><Icon size={20} /></div>
-      <div>
-        <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5">{label}</p>
-        <p className="text-xs font-black uppercase tracking-tight text-slate-800">{value || "Configurar"}</p>
+const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
+  // Determinamos el color y texto según el estado real
+  let statusText = value || "Configurar";
+  let statusColor = "text-blue-500"; // Por defecto: Pendiente
+
+  if (status === 'revision') {
+    statusText = "EN REVISIÓN ⏳";
+    statusColor = "text-amber-500 font-bold";
+  } else if (status === 'verificado') {
+    statusText = "VERIFICADO ✅";
+    statusColor = "text-green-600 font-black";
+  }
+
+  return (
+    <button 
+      onClick={onClick} 
+      disabled={status === 'revision' || status === 'verificado'} 
+      className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors text-left disabled:opacity-80"
+    >
+      <div className="flex items-center gap-5">
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm">
+          <Icon size={20} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5">{label}</p>
+          <p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>
+            {statusText}
+          </div>
       </div>
-    </div>
-    <ChevronRight size={18} className="text-slate-200" />
-  </button>
-);
-        
+      {status !== 'verificado' && status !== 'revision' && (
+        <ChevronRight size={18} className="text-slate-200" />
+      )}
+    </button>
+  );
+};
+      
