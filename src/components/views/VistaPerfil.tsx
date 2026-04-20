@@ -19,7 +19,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   const [nuevoValor, setNuevoValor] = useState("");
   const [cargando, setCargando] = useState(false);
   const [refresh, setRefresh] = useState(0);
-  const [pasoDocumento, setPasoDocumento] = useState<{tipo: 'cedula' | 'licencia' | 'selfie', activa: boolean}>({tipo: 'cedula', activa: false});
+  const [pasoDocumento, setPasoDocumento] = useState<{tipo: 'cedula' | 'licencia' | 'selfie' | 'antecedentes', activa: boolean}>({tipo: 'cedula', activa: false});
   
 
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
@@ -120,12 +120,9 @@ const subirDocumentoFinal = async () => {
 
     try {
       const userRef = doc(db, "usuarios", userId);
-      
-      // 1. Definimos variables dinámicas
       let campoFoto = "";
       let campoEstado = "";
 
-      // 2. Switch lógico para asignar los nombres correctos de los campos en Firebase
       if (pasoDocumento.tipo === 'cedula') {
         campoFoto = 'kycFoto';
         campoEstado = 'kycVerificado';
@@ -135,29 +132,29 @@ const subirDocumentoFinal = async () => {
       } else if (pasoDocumento.tipo === 'selfie') {
         campoFoto = 'selfieFoto';
         campoEstado = 'selfieVerificada';
+      } else if (pasoDocumento.tipo === 'antecedentes') {
+        campoFoto = 'antecedentesFoto'; // Guardamos la captura del PDF o foto
+        campoEstado = 'antecedentesVerificados'; 
       }
 
-      // 3. Subida única a Firestore
       await updateDoc(userRef, { 
         [campoFoto]: fotoDocTemporal,
         [campoEstado]: true 
       });
 
-      // Actualización en la interfaz (optimista)
       if(userData) userData[campoEstado] = true;
 
       setFotoDocTemporal(null);
-      // Resetear el estado para que el modal se cierre correctamente
       setPasoDocumento({tipo: 'cedula', activa: false});
       
-      alert(`¡${pasoDocumento.tipo.toUpperCase()} guardada con éxito!`);
+      alert(`¡Documento de ${pasoDocumento.tipo} guardado!`);
     } catch (e) { 
-      console.error(e);
-      alert("Error al subir documento"); 
+      alert("Error al subir"); 
     } finally { 
       setCargando(false); 
     }
-  };
+};
+  
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
@@ -256,8 +253,10 @@ const subirDocumentoFinal = async () => {
                 <MenuButton icon={ShieldCheck} label="Licencia de Conducir" value={userData.licenciaVerificada ? "VERIFICADO ✅" : "PENDIENTE"} onClick={() => !userData.licenciaVerificada && setPasoDocumento({tipo:'licencia', activa:true})} />
                 <MenuButton icon={KeyRound} label="Contraseña" value="••••••••" onClick={() => alert("Función en desarrollo")} />
                 <MenuButton icon={User} label="Selfie de Identidad" value={userData.selfieVerificada ? "VERIFICADO ✅" : "PENDIENTE"} onClick={() => !userData.selfieVerificada && setPasoDocumento({tipo:'selfie', activa:true})} /> 
-              </div>
-            </div>
+                {/* Botón de Antecedentes Opcional */}
+<MenuButton icon={FileCheck}  label="Antecedentes Penales (Opcional)"  value={userData.antecedentesVerificados ? "NIVEL PRO 🏆" : "SUBIR PARA SUBIR NIVEL"}  onClick={() => !userData.antecedentesVerificados && setPasoDocumento({tipo:'antecedentes', activa:true})} />
+    </div>
+      </div>
 
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2">
                 <LogOut size={14} /> Cerrar Sesión
