@@ -113,27 +113,50 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
       if (image.dataUrl) setFotoDocTemporal(image.dataUrl);
     } catch (e) { console.log("Escaneo cancelado"); }
   };
-
-  const subirDocumentoFinal = async () => {
+const subirDocumentoFinal = async () => {
     const userId = userData?.uid || userData?.id;
     if (!fotoDocTemporal || !userId) return;
     setCargando(true);
+
     try {
       const userRef = doc(db, "usuarios", userId);
-      const campoBase = pasoDocumento.tipo === 'cedula' ? 'kycFoto' : 'licenciaFoto';
-      const campoEstado = pasoDocumento.tipo === 'cedula' ? 'kycVerificado' : 'licenciaVerificada';
+      
+      // 1. Definimos variables dinámicas
+      let campoFoto = "";
+      let campoEstado = "";
 
+      // 2. Switch lógico para asignar los nombres correctos de los campos en Firebase
+      if (pasoDocumento.tipo === 'cedula') {
+        campoFoto = 'kycFoto';
+        campoEstado = 'kycVerificado';
+      } else if (pasoDocumento.tipo === 'licencia') {
+        campoFoto = 'licenciaFoto';
+        campoEstado = 'licenciaVerificada';
+      } else if (pasoDocumento.tipo === 'selfie') {
+        campoFoto = 'selfieFoto';
+        campoEstado = 'selfieVerificada';
+      }
+
+      // 3. Subida única a Firestore
       await updateDoc(userRef, { 
-        [campoBase]: fotoDocTemporal,
-        [campoEstado]: true // Aprobado automáticamente para tus pruebas
+        [campoFoto]: fotoDocTemporal,
+        [campoEstado]: true 
       });
 
-      userData[campoEstado] = true;
+      // Actualización en la interfaz (optimista)
+      if(userData) userData[campoEstado] = true;
+
       setFotoDocTemporal(null);
+      // Resetear el estado para que el modal se cierre correctamente
       setPasoDocumento({tipo: 'cedula', activa: false});
-      alert(`¡${pasoDocumento.tipo.toUpperCase()} verificada con éxito!`);
-    } catch (e) { alert("Error al subir documento"); }
-    finally { setCargando(false); }
+      
+      alert(`¡${pasoDocumento.tipo.toUpperCase()} guardada con éxito!`);
+    } catch (e) { 
+      console.error(e);
+      alert("Error al subir documento"); 
+    } finally { 
+      setCargando(false); 
+    }
   };
 
   return (
