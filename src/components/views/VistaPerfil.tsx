@@ -12,7 +12,6 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   // --- ESTADOS ---
   const [modalVisible, setModalVisible] = useState(false);
   const [pasoFoto, setPasoFoto] = useState(false); 
-  const [pasoDocumento, setPasoDocumento] = useState<{tipo: 'cedula' | 'licencia', activa: boolean}>({tipo: 'cedula', activa: false});
   const [fotoTemporal, setFotoTemporal] = useState<string | null>(null);
   const [fotoDocTemporal, setFotoDocTemporal] = useState<string | null>(null);
   const [tipoEdicion, setTipoEdicion] = useState<{id: string, label: string, valor: string} | null>(null);
