@@ -70,27 +70,48 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
       }
     } catch (e) { console.log("Cancelado"); }
   };
+// --- NUEVA FUNCIÓN PARA FOTO SIN STORAGE ---
+const subirFotoConfirmada = async () => {
+  if (!fotoTemporal || !userData.uid) return;
+  setCargando(true);
+  try {
+    const userRef = doc(db, "usuarios", userData.uid);
+    
+    // Guardamos la foto directamente como texto (Base64) en Firestore
+    await updateDoc(userRef, { 
+      fotoPerfil: fotoTemporal // fotoTemporal ya contiene la data en base64 o blob local
+    });
 
-  const subirFotoConfirmada = async () => {
-    if (!fotoTemporal || !userData.uid) return;
-    setCargando(true);
-    try {
-      const response = await fetch(fotoTemporal);
-      const blob = await response.blob();
-      const storageRef = ref(storage, `perfiles/${userData.uid}`);
-      await uploadBytes(storageRef, blob);
-      const url = await getDownloadURL(storageRef);
-      
-      await updateDoc(doc(db, "usuarios", userData.uid), { fotoPerfil: url });
-      userData.fotoPerfil = url;
-      
-      setFotoTemporal(null);
-      setPasoFoto(false);
-      setRefresh(prev => prev + 1);
-    } catch (e) { alert("Error al subir imagen"); } 
-    finally { setCargando(false); }
-  };
+    userData.fotoPerfil = fotoTemporal;
+    setFotoTemporal(null);
+    setPasoFoto(false);
+    setRefresh(prev => prev + 1);
+    alert("¡Foto de perfil actualizada!");
+  } catch (e) {
+    console.error(e);
+    alert("Error al guardar la foto en la base de datos.");
+  } finally {
+    setCargando(false);
+  }
+};
 
+// --- CAPTURA DE IMAGEN AJUSTADA ---
+const seleccionarImagen = async (source: CameraSource) => {
+  try {
+    const image = await CapacitorCamera.getPhoto({
+      quality: 40, // Bajamos la calidad para que el texto no sea demasiado largo
+      allowEditing: false,
+      resultType: CameraResultType.DataUrl, // CAMBIO CLAVE: Obtenemos el texto de la imagen
+      source: source
+    });
+    
+    if (image.dataUrl) {
+      setFotoTemporal(image.dataUrl); 
+    }
+  } catch (e) { console.log("Cancelado"); }
+};
+
+  
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col">
       {/* NAVEGACIÓN TABS */}
