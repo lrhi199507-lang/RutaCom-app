@@ -32,10 +32,12 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   const porcentajeConfianza = (totalVerificados / 3) * 100;
 
   // --- FUNCIONES DE CÁMARA Y GUARDADO ---
+    // 1. Reducimos la calidad al 20% y limitamos el tamaño
   const seleccionarImagen = async (source: CameraSource) => {
     try {
       const image = await CapacitorCamera.getPhoto({
-        quality: 50, 
+        quality: 20, // Calidad muy baja para ahorrar espacio
+        width: 500,  // Redimensionamos a 500px (suficiente para un perfil circular)
         allowEditing: false,
         resultType: CameraResultType.DataUrl, 
         source: source
@@ -45,47 +47,36 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
       }
     } catch (e) { console.log("Cancelado"); }
   };
-  // --- FUNCIÓN DE GUARDADO CORREGIDA ---
-    const subirFotoConfirmada = async () => {
-    // Intentamos obtener el ID de tres formas para asegurar el tiro
-    const userId = userData?.uid || userData?.id || (userData as any)?.userId;
 
-    if (!fotoTemporal) {
-      alert("No hay ninguna foto seleccionada");
-      return;
-    }
+  // 2. Optimizamos la función de guardado
+  const subirFotoConfirmada = async () => {
+    const userId = userData?.uid;
 
-    if (!userId) {
-      console.error("DEBUG - Datos de usuario recibidos:", userData);
-      alert("Error: No se detecta tu sesión activa. Por favor, reingresa a la app.");
-      return;
-    }
+    if (!fotoTemporal || !userId) return;
 
     setCargando(true);
     try {
       const userRef = doc(db, "usuarios", userId);
       
-      // Actualizamos Firestore cumpliendo tu regla de 'dueño edita'
+      // Intentamos el guardado con la imagen ya comprimida
       await updateDoc(userRef, { 
         fotoPerfil: fotoTemporal 
       });
       
-      // Actualización visual inmediata
       userData.fotoPerfil = fotoTemporal;
-      
       setFotoTemporal(null);
       setPasoFoto(false);
       setRefresh(prev => prev + 1);
       
-      alert("¡Perfil actualizado!");
+      alert("¡Perfil actualizado con éxito!");
     } catch (e) { 
-      console.error("Error de Firebase:", e);
-      alert("Error al guardar: Verifica tu conexión o permisos."); 
+      console.error("Error técnico:", e);
+      // Si el error persiste, es probable que la foto siga siendo muy grande
+      alert("La foto es demasiado pesada para la base de datos actual. Intenta tomarla con menos luz o desde más lejos."); 
     } finally { 
       setCargando(false); 
     }
   };
-  
   
   const guardarCambios = async () => {
     if (!tipoEdicion || !userData.uid || cargando) return;
