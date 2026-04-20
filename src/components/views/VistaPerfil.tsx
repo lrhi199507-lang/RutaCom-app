@@ -45,24 +45,49 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
       }
     } catch (e) { console.log("Cancelado"); }
   };
-
+  // --- FUNCIÓN DE GUARDADO CORREGIDA ---
   const subirFotoConfirmada = async () => {
-    if (!fotoTemporal || !userData.uid || cargando) return;
+    // 1. Verificaciones de seguridad
+    if (!fotoTemporal) {
+      alert("No hay ninguna foto seleccionada");
+      return;
+    }
+    if (!userData?.uid) {
+      alert("Error: No se encontró el ID del usuario");
+      return;
+    }
+
     setCargando(true);
+    console.log("Iniciando guardado de foto para el usuario:", userData.uid);
+
     try {
       const userRef = doc(db, "usuarios", userData.uid);
-      await updateDoc(userRef, { fotoPerfil: fotoTemporal });
       
-      userData.fotoPerfil = fotoTemporal; // Actualización optimista
+      // 2. Subida directa a Firestore como Base64 (DataUrl)
+      await updateDoc(userRef, { 
+        fotoPerfil: fotoTemporal 
+      });
+      
+      console.log("Firestore actualizado correctamente");
+
+      // 3. Actualización local inmediata para que el usuario vea el cambio
+      userData.fotoPerfil = fotoTemporal; 
+      
+      // 4. Limpieza de estados
       setFotoTemporal(null);
       setPasoFoto(false);
-      setRefresh(prev => prev + 1);
-      alert("¡Foto de perfil actualizada!");
+      setRefresh(prev => prev + 1); // Forzar re-render de la imagen en el perfil
+      
+      alert("¡Foto de perfil actualizada con éxito!");
     } catch (e) { 
-      alert("Error al guardar la foto"); 
-    } finally { setCargando(false); }
+      console.error("Error completo al guardar foto:", e);
+      alert("Error al guardar: " + (e instanceof Error ? e.message : "Desconocido")); 
+    } finally { 
+      setCargando(false); 
+    }
   };
-
+  
+  
   const guardarCambios = async () => {
     if (!tipoEdicion || !userData.uid || cargando) return;
     setCargando(true);
