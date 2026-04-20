@@ -46,42 +46,41 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
     } catch (e) { console.log("Cancelado"); }
   };
   // --- FUNCIÓN DE GUARDADO CORREGIDA ---
-  const subirFotoConfirmada = async () => {
-    // 1. Verificaciones de seguridad
+    const subirFotoConfirmada = async () => {
+    // Intentamos obtener el ID de tres formas para asegurar el tiro
+    const userId = userData?.uid || userData?.id || (userData as any)?.userId;
+
     if (!fotoTemporal) {
       alert("No hay ninguna foto seleccionada");
       return;
     }
-    if (!userData?.uid) {
-      alert("Error: No se encontró el ID del usuario");
+
+    if (!userId) {
+      console.error("DEBUG - Datos de usuario recibidos:", userData);
+      alert("Error: No se detecta tu sesión activa. Por favor, reingresa a la app.");
       return;
     }
 
     setCargando(true);
-    console.log("Iniciando guardado de foto para el usuario:", userData.uid);
-
     try {
-      const userRef = doc(db, "usuarios", userData.uid);
+      const userRef = doc(db, "usuarios", userId);
       
-      // 2. Subida directa a Firestore como Base64 (DataUrl)
+      // Actualizamos Firestore cumpliendo tu regla de 'dueño edita'
       await updateDoc(userRef, { 
         fotoPerfil: fotoTemporal 
       });
       
-      console.log("Firestore actualizado correctamente");
-
-      // 3. Actualización local inmediata para que el usuario vea el cambio
-      userData.fotoPerfil = fotoTemporal; 
+      // Actualización visual inmediata
+      userData.fotoPerfil = fotoTemporal;
       
-      // 4. Limpieza de estados
       setFotoTemporal(null);
       setPasoFoto(false);
-      setRefresh(prev => prev + 1); // Forzar re-render de la imagen en el perfil
+      setRefresh(prev => prev + 1);
       
-      alert("¡Foto de perfil actualizada con éxito!");
+      alert("¡Perfil actualizado!");
     } catch (e) { 
-      console.error("Error completo al guardar foto:", e);
-      alert("Error al guardar: " + (e instanceof Error ? e.message : "Desconocido")); 
+      console.error("Error de Firebase:", e);
+      alert("Error al guardar: Verifica tu conexión o permisos."); 
     } finally { 
       setCargando(false); 
     }
