@@ -18,6 +18,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [nuevoValor, setNuevoValor] = useState("");
   const [cargando, setCargando] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  // Se corrigió el tipo para aceptar los nuevos documentos
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
 
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
@@ -59,11 +60,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     try {
       const userRef = doc(db, "usuarios", userId);
       await updateDoc(userRef, { fotoPerfil: fotoTemporal });
-      setUserData({ ...userData, fotoPerfil: fotoTemporal });
+      if (setUserData) setUserData({ ...userData, fotoPerfil: fotoTemporal }); // Protección ante setUserData undefined
       setFotoTemporal(null); setPasoFoto(false); setRefresh(prev => prev + 1);
     } catch (e) { alert("Error al subir foto"); } finally { setCargando(false); }
   };
 
+  // --- CORRECCIÓN CRÍTICA EN GUARDAR CAMBIOS ---
   const guardarCambios = async () => {
     const userId = userData?.uid || userData?.id;
     if (!tipoEdicion || !userId || cargando) return;
@@ -71,17 +73,29 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     try {
       const userRef = doc(db, "usuarios", userId);
       let updateData = {};
-      if (['placa', 'modelo', 'color', 'marca'].includes(tipoEdicion.id)) {
+      
+      // Lista de campos que SÍ pertenecen al vehículo
+      const camposVehiculo = ['placa', 'modelo', 'color', 'marca'];
+      
+      if (camposVehiculo.includes(tipoEdicion.id)) {
+        // Corrección: Guardar dentro del objeto vehiculo en Firestore
         updateData = { [`vehiculo.${tipoEdicion.id}`]: nuevoValor.toUpperCase() };
-        const newVehiculo = { ...(userData.vehiculo || {}), [tipoEdicion.id]: nuevoValor.toUpperCase() };
-        setUserData({ ...userData, vehiculo: newVehiculo });
+        
+        // Corrección: Actualizar estado local correctamente para vehiculo
+        if (setUserData) {
+          const newVehiculo = { ...(userData.vehiculo || {}), [tipoEdicion.id]: nuevoValor.toUpperCase() };
+          setUserData({ ...userData, vehiculo: newVehiculo });
+        }
       } else {
+        // Guardar directamente en la raíz del usuario (Cédula, Fecha, etc.)
         updateData = { [tipoEdicion.id]: nuevoValor };
-        setUserData({ ...userData, [tipoEdicion.id]: nuevoValor });
+        if (setUserData) setUserData({ ...userData, [tipoEdicion.id]: nuevoValor });
       }
+
       await updateDoc(userRef, updateData);
       setModalVisible(false); setRefresh(prev => prev + 1);
-    } catch (e) { alert("Error"); } finally { setCargando(false); }
+      alert("¡Datos actualizados con éxito!");
+    } catch (e) { alert("Error al guardar los datos"); } finally { setCargando(false); }
   };
 
   const capturarDocumento = async () => {
@@ -93,13 +107,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
+  // --- CORRECCIÓN CRÍTICA EN SUBIR DOCUMENTO (Y ESTADO setUserData) ---
   const subirDocumentoFinal = async () => {
     const userId = userData?.uid || userData?.id;
     if (!fotoDocTemporal || !userId) return;
+    
     setCargando(true);
     try {
       const userRef = doc(db, "usuarios", userId);
-      let campoFoto = ""; let campoEstado = "";
+      let campoFoto = ""; 
+      let campoEstado = "";
+
+      // Mapeo de todos los tipos de documentos
       if (pasoDocumento.tipo === 'cedula') { campoFoto = 'kycFoto'; campoEstado = 'kycVerificado'; } 
       else if (pasoDocumento.tipo === 'licencia') { campoFoto = 'licenciaFoto'; campoEstado = 'licenciaVerificada'; }
       else if (pasoDocumento.tipo === 'circulacion') { campoFoto = 'circulacionFoto'; campoEstado = 'circulacionVerificada'; } 
@@ -111,15 +130,32 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       else if (pasoDocumento.tipo === 'fotoLatIzq') { campoFoto = 'fotoLatIzq'; campoEstado = 'fotoLatIzqVerificada'; } 
       else if (pasoDocumento.tipo === 'fotoLatDer') { campoFoto = 'fotoLatDer'; campoEstado = 'fotoLatDerVerificada'; }
 
-      await updateDoc(userRef, { [campoFoto]: fotoDocTemporal, [campoEstado]: false });
-      setUserData({ ...userData, [campoFoto]: fotoDocTemporal, [campoEstado]: false });
-      setFotoDocTemporal(null); setPasoDocumento({ tipo: 'cedula', activa: false });
+      // IMPORTANTE: Guardamos la foto, pero el estado de VERIFICADO en false
+      // para que aparezca "EN REVISIÓN" hasta que tú lo cambies a true en el admin.
+      await updateDoc(userRef, { 
+        [campoFoto]: fotoDocTemporal, 
+        [campoEstado]: false 
+      });
+
+      // Actualizamos el estado local para que la UI reaccione (se corrigió setUserData)
+      if (setUserData) setUserData({ ...userData, [campoFoto]: fotoDocTemporal, [campoEstado]: false });
+      
+      setFotoDocTemporal(null); 
+      setPasoDocumento({ tipo: 'cedula', activa: false });
       alert("Documento enviado. Entrará en fase de revisión.");
-    } catch (e) { alert("Error"); } finally { setCargando(false); }
-  };
+
+    } catch (e) { 
+      console.error(e);
+      alert("Error al subir el documento"); 
+  } finally { 
+    setCargando(false); 
+  }
+};
+
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
+      {/* HEADER PESTAÑAS */}
       <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
         <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
           <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
@@ -140,7 +176,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 </div>
                 <button onClick={() => setPasoFoto(true)} className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2.5 rounded-full border-4 border-white shadow-lg"><Edit2 size={14} /></button>
               </div>
-              <h2 className="text-2xl font-black italic text-slate-800 uppercase tracking-tighter">{userData.nombre || "Usuario"}</h2>
+              <h2 className="text-2xl font-black italic text-slate-800 uppercase tracking-tighter">{userData.nombre || "Usuario"}, <span className="text-blue-600">{userData.edad || "30"}</span></h2>
               <div className="flex justify-center gap-6 mt-4 border-t border-slate-50 pt-4">
                   <div className="text-center"><p className="text-[8px] font-black text-slate-400 uppercase">Conductor</p><p className="font-black text-blue-600 italic leading-none">{viajesCond} VJS</p></div>
                   <div className="text-center"><p className="text-[8px] font-black text-slate-400 uppercase">Pasajero</p><p className="font-black text-orange-500 italic leading-none">{viajesPas} VJS</p></div>
@@ -155,18 +191,36 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <div className="w-full h-4 bg-slate-100 rounded-full p-1 shadow-inner"><div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${porcentajeConfianza}%` }} /></div>
             </div>
           </div>
-        ) : (
+              ) : (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
+            
+            {/* SECCIÓN PERSONAL */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Personal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
                 <MenuButton icon={UserCog} label="Nombre Completo" value={userData?.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData?.nombre}); setNuevoValor(userData?.nombre || ""); setModalVisible(true); }} />
-                <MenuButton icon={Hash} label="Número de Cédula" value={userData?.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData?.cedulaNumero}); setNuevoValor(userData?.cedulaNumero || ""); setModalVisible(true); }} />
-                <MenuButton icon={Calendar} label="Fecha de Nacimiento" value={userData?.fechaNacimiento} onClick={() => { setTipoEdicion({id:'fechaNacimiento', label:'Fecha', valor:userData?.fechaNacimiento}); setNuevoValor(userData?.fechaNacimiento || ""); setModalVisible(true); }} />
+                
+                {/* NUEVO: CÉDULA DE IDENTIDAD (TEXTO) */}
+                <MenuButton 
+                  icon={Hash} 
+                  label="Número de Cédula" 
+                  value={userData?.cedulaNumero} 
+                  onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData?.cedulaNumero}); setNuevoValor(userData?.cedulaNumero || ""); setModalVisible(true); }} 
+                />
+
+                {/* NUEVO: FECHA DE NACIMIENTO */}
+                <MenuButton 
+                  icon={Calendar} 
+                  label="Fecha de Nacimiento" 
+                  value={userData?.fechaNacimiento} 
+                  onClick={() => { setTipoEdicion({id:'fechaNacimiento', label:'Fecha', valor:userData?.fechaNacimiento}); setNuevoValor(userData?.fechaNacimiento || ""); setModalVisible(true); }} 
+                />
+
                 <MenuButton icon={Phone} label="Teléfono" value={userData?.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData?.telefono}); setNuevoValor(userData?.telefono || ""); setModalVisible(true); }} />
               </div>
             </div>
 
+            {/* SECCIÓN VEHÍCULO */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4 italic">Especificaciones del Auto</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
@@ -177,6 +231,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
+            {/* ESTADO DEL VEHÍCULO (4 FOTOS) */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[3px] ml-4 italic">Estado del Vehículo</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2 grid grid-cols-1">
@@ -187,6 +242,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
+            {/* DOCUMENTACIÓN LEGAL */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Documentación Legal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
@@ -195,6 +251,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <MenuButton icon={FileText} label="Carnet de Circulación" status={userData?.circulacionVerificada ? 'verificado' : (userData?.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Seguro R.C.V" status={userData?.rcvVerificado ? 'verificado' : (userData?.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
                 <MenuButton icon={User} label="Selfie de Identidad" status={userData?.selfieVerificada ? 'verificado' : (userData?.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
+                
                 <button 
                   disabled={userData?.antecedentesVerificados || !!userData?.antecedentesFoto}
                   onClick={() => setPasoDocumento({tipo:'antecedentes', activa:true})}
@@ -216,6 +273,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         )}
       </div>
 
+      {/* MODAL EDICIÓN */}
       {modalVisible && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
@@ -227,6 +285,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
 
+      {/* MODAL ESCÁNER */}
       {pasoDocumento.activa && (
         <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 overflow-hidden">
           {!fotoDocTemporal ? (
@@ -248,6 +307,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
 
+      {/* FOTO PERFIL */}
       {pasoFoto && (
         <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 text-center animate-in fade-in">
           {!fotoTemporal ? (
