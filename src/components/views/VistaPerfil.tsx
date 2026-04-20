@@ -284,9 +284,8 @@ const subirDocumentoFinal = async () => {
         </div>
       )}
 
-            {/* MODAL ESCÁNER KYC ACTUALIZADO CON SELFIE */}
-      {pasoDocumento.activa && (
-        <div className="space-y-3 px-5 mt-8">
+                  {/* SECCIÓN SEGURIDAD (CON SELFIE Y ANTECEDENTES DORADOS) */}
+      <div className="space-y-3 px-5 mt-8">
         <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad y Verificación</p>
         <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
           
@@ -338,6 +337,35 @@ const subirDocumentoFinal = async () => {
         </button>
       </div>
 
+      {/* MODAL ESCÁNER DINÁMICO (SITÚALO AQUÍ PARA CERRAR LA LÓGICA) */}
+      {pasoDocumento.activa && (
+        <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 overflow-hidden">
+          {!fotoDocTemporal ? (
+            <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+              <div className={`relative w-full shadow-2xl bg-slate-800 overflow-hidden transition-all duration-500 ${pasoDocumento.tipo === 'selfie' ? 'aspect-square max-w-[300px] rounded-full border-4 border-dashed border-blue-500/50' : 'aspect-[1.6/1] rounded-3xl border-2 border-white/20'}`}>
+                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                  <p className="text-white font-black text-[10px] uppercase tracking-widest bg-blue-600/90 px-5 py-2 rounded-full">
+                    {pasoDocumento.tipo === 'selfie' ? 'Ubica tu rostro aquí' : `Enmarca tu ${pasoDocumento.tipo}`}
+                  </p>
+                </div>
+              </div>
+              <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Capturar</button>
+              <button onClick={() => setPasoDocumento({tipo:'cedula', activa:false})} className="w-full text-slate-500 font-black uppercase text-[10px] mt-2">Cancelar</button>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95">
+              <div className={`w-full overflow-hidden border-4 border-blue-500 shadow-2xl ${pasoDocumento.tipo === 'selfie' ? 'aspect-square max-w-[300px] rounded-full' : 'aspect-[1.6/1] rounded-3xl'}`}>
+                <img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Captura" />
+              </div>
+              <button onClick={subirDocumentoFinal} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
+                {cargando ? 'PROCESANDO...' : 'SÍ, ENVIAR'}
+              </button>
+              <button onClick={() => setFotoDocTemporal(null)} className="w-full bg-white/10 text-white p-5 rounded-[25px] font-black uppercase text-xs">REPETIR</button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* FLUJO DE FOTO DE PERFIL */}
       {pasoFoto && (
         <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 text-center animate-in fade-in">
@@ -345,15 +373,10 @@ const subirDocumentoFinal = async () => {
             <div className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-sm mx-auto">
               <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100 relative shadow-inner">
                 <User size={100} className="text-orange-200" />
-                <div className="absolute -top-2 -right-2 bg-green-500 p-3 rounded-full text-white shadow-lg animate-bounce"><CheckCircle2 size={24} /></div>
               </div>
-              <div className="space-y-2">
-                <h3 className="text-3xl font-black text-slate-800 uppercase italic tracking-tighter">¡Dile Cheese!</h3>
-                <p className="text-slate-400 font-bold italic leading-tight uppercase text-[10px] tracking-widest">Reglas: Sin lentes • Buena luz • Rostro visible</p>
-              </div>
+              <h3 className="text-3xl font-black text-slate-800 uppercase italic">¡Dile Cheese!</h3>
               <div className="w-full space-y-4 pt-10">
                 <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">Abrir Cámara</button>
-                <button onClick={() => seleccionarImagen(CameraSource.Photos)} className="w-full bg-slate-100 text-slate-600 p-5 rounded-[25px] font-black uppercase text-xs">Desde Galería</button>
                 <button onClick={() => setPasoFoto(false)} className="w-full text-slate-400 font-black uppercase text-[10px] pt-4">Ahora no</button>
               </div>
             </div>
@@ -362,13 +385,10 @@ const subirDocumentoFinal = async () => {
               <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl">
                 <img src={fotoTemporal} className="w-full h-full object-cover" alt="Previsualización" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 uppercase italic">¿Quedaste bien?</h3>
-              <div className="w-full space-y-4 max-w-xs">
-                <button onClick={subirFotoConfirmada} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
-                  {cargando ? 'GUARDANDO...' : 'SÍ, USAR ESTA FOTO'}
-                </button>
-                <button onClick={() => setFotoTemporal(null)} className="w-full bg-slate-100 text-slate-500 p-5 rounded-[25px] font-black uppercase text-xs">TOMAR OTRA</button>
-              </div>
+              <button onClick={subirFotoConfirmada} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
+                {cargando ? 'GUARDANDO...' : 'SÍ, USAR ESTA FOTO'}
+              </button>
+              <button onClick={() => setFotoTemporal(null)} className="w-full bg-slate-100 text-slate-500 p-5 rounded-[25px] font-black uppercase text-xs">TOMAR OTRA</button>
             </div>
           )}
         </div>
@@ -377,20 +397,18 @@ const subirDocumentoFinal = async () => {
   );
 };
 
-// COMPONENTE AUXILIAR PARA LOS BOTONES
 const MenuButton = ({ icon: Icon, label, value, onClick }: any) => (
-  <button onClick={onClick} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors">
+  <button onClick={onClick} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors text-left">
     <div className="flex items-center gap-5">
       <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm">
         <Icon size={20} />
       </div>
-      <div className="text-left">
+      <div>
         <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5">{label}</p>
-        <p className={`text-xs font-black uppercase tracking-tight ${value && (value.includes('✅') || value.includes('VERIFICADO')) ? 'text-slate-800' : 'text-blue-500'}`}>
-          {value || "Configurar"}
-        </p>
+        <p className="text-xs font-black uppercase tracking-tight text-slate-800">{value || "Configurar"}</p>
       </div>
     </div>
     <ChevronRight size={18} className="text-slate-200" />
   </button>
 );
+    
