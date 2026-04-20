@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { 
-  LogOut, ShieldCheck, CheckCircle2, UserCog, ChevronRight,
-  Camera, Phone, Mail, FileText, Car, User, Edit2, 
-  Lock, CreditCard, ShieldAlert, Calendar, Palette, Hash
+  UserCog, ChevronRight, Phone, FileText, Car, User, Edit2, 
+  Lock, Calendar, Palette, Hash, CheckCircle2
 } from 'lucide-react';
 
 export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañaActiva }) => {
@@ -14,185 +13,169 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
   const [pasoFoto, setPasoFoto] = useState(false); 
   const [tipoEdicion, setTipoEdicion] = useState<{id: string, label: string, valor: string} | null>(null);
   const [nuevoValor, setNuevoValor] = useState("");
-  const [cargando, setCargando] = useState(false); // Confirmado en false
-  const [refresh, setRefresh] = useState(0); 
+  const [cargando, setCargando] = useState(false);
+  const [refresh, setRefresh] = useState(0);
 
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400">CARGANDO...</div>;
   const view = pestañaActiva || 'publico';
 
-  // --- LÓGICA DE NIVELES ---
-  const totalViajes = userData.viajesRealizados || 0;
-  const rango = totalViajes >= 10 ? "Plata" : "Novato";
-  const puntosControl = [
-    { id: 'email', verificado: !!userData.email },
-    { id: 'cedula', verificado: !!userData.kycVerificado },
-    { id: 'licencia', verificado: !!userData.licenciaVerificada },
-  ];
-  const totalVerificados = puntosControl.filter(p => p.verificado).length;
-  const porcentajeConfianza = (totalVerificados / 3) * 100;
+  // --- LÓGICA DE PROGRESO ---
+  const totalVerificados = [userData.email, userData.kycVerificado, userData.licenciaVerificada].filter(Boolean).length;
+  const porcentaje = (totalVerificados / 3) * 100;
 
-  // --- FUNCIONES ---
-  const abrirEdicion = (id: string, label: string, valor: string) => {
-    setTipoEdicion({ id, label, valor });
-    setNuevoValor(valor || "");
-    setCargando(false); // Aseguramos que el botón no esté bloqueado al abrir
-    setModalVisible(true);
-  };
-
+  // --- GUARDAR DATOS ---
   const guardarCambios = async () => {
-    if (!tipoEdicion || !userData.uid || cargando) return;
-    
-    setCargando(true); // Aquí empieza el "Guardando..."
+    if (!tipoEdicion || !userData.uid) return;
+    setCargando(true);
     try {
       const userRef = doc(db, "usuarios", userData.uid);
-      const camposVehiculo = ['placa', 'modelo', 'color', 'marca'];
-      
-      if (camposVehiculo.includes(tipoEdicion.id)) {
-        const campo = `vehiculo.${tipoEdicion.id}`;
-        await updateDoc(userRef, { [campo]: nuevoValor.toUpperCase() });
+      let dataParaActualizar = {};
+
+      // Detectar si es campo de vehículo o general
+      if (['placa', 'modelo', 'color', 'marca'].includes(tipoEdicion.id)) {
+        dataParaActualizar = { [`vehiculo.${tipoEdicion.id}`]: nuevoValor.toUpperCase() };
         if(!userData.vehiculo) userData.vehiculo = {};
         userData.vehiculo[tipoEdicion.id] = nuevoValor.toUpperCase();
       } else {
-        await updateDoc(userRef, { [tipoEdicion.id]: nuevoValor });
-        userData[tipoEdicion.id] = nuevoValor; 
+        dataParaActualizar = { [tipoEdicion.id]: nuevoValor };
+        userData[tipoEdicion.id] = nuevoValor;
       }
-      
+
+      await updateDoc(userRef, dataParaActualizar);
       setModalVisible(false);
       setRefresh(prev => prev + 1);
-    } catch (e) { 
-      console.error(e);
-      alert("Error de conexión"); 
-    } finally { 
-      setCargando(false); // Aquí vuelve a "Confirmar" si falla
+      alert("¡Guardado correctamente!");
+    } catch (e) {
+      console.error("Error al guardar:", e);
+      alert("Error de conexión con la base de datos.");
+    } finally {
+      setCargando(false);
     }
   };
 
-  const ejecutarCapturaFoto = async () => {
+  // --- CAPTURAR FOTO (DIRECTO) ---
+  const capturarImagen = async (fuente: 'CAMERA' | 'PHOTOS') => {
     try {
       const image = await CapacitorCamera.getPhoto({
-        quality: 90, allowEditing: true, resultType: CameraResultType.Uri,
-        source: CameraSource.Prompt,
-        promptLabelHeader: "Foto de Perfil",
-        promptLabelPhoto: "Galería", promptLabelPicture: "Cámara"
+        quality: 60, // Bajamos un poco la calidad para que suba más rápido
+        allowEditing: false, // ELIMINADO EL EDITOR MOLESTO
+        resultType: CameraResultType.Uri,
+        source: fuente === 'CAMERA' ? CameraSource.Camera : CameraSource.Photos
       });
+
       if (image.webPath) {
         setCargando(true);
         const response = await fetch(image.webPath);
         const blob = await response.blob();
         const storageRef = ref(storage, `perfiles/${userData.uid}`);
+        
         await uploadBytes(storageRef, blob);
         const url = await getDownloadURL(storageRef);
+        
         await updateDoc(doc(db, "usuarios", userData.uid), { fotoPerfil: url });
         userData.fotoPerfil = url;
+        
         setPasoFoto(false);
         setRefresh(prev => prev + 1);
+        alert("Foto actualizada");
       }
-    } catch (e) { console.log("Cancelado"); } finally { setCargando(false); }
+    } catch (e) {
+      console.log("Acción cancelada");
+    } finally {
+      setCargando(false);
+    }
   };
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col">
-      {/* HEADER TABS */}
-      <div className="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
-        <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
-          <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
-          <button onClick={() => setPestañaActiva('cuenta')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'cuenta' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Cuenta</button>
+      {/* TABS SUPERIORES */}
+      <div className="p-4 bg-white sticky top-0 z-50 border-b border-slate-100">
+        <div className="flex bg-slate-100 p-1 rounded-full max-w-md mx-auto">
+          <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-full text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
+          <button onClick={() => setPestañaActiva('cuenta')} className={`flex-1 py-3 rounded-full text-[10px] font-black uppercase transition-all ${view === 'cuenta' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Cuenta</button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto pb-24">
         {view === 'publico' ? (
           <div className="p-5 space-y-6">
-            {/* CABECERA NARANJA */}
-            <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
-              <div className="absolute top-5 right-5 bg-slate-900 text-white px-3 py-1 rounded-full text-[7px] font-black uppercase tracking-widest">Rango: {rango}</div>
-              <div className="relative w-28 h-28 mx-auto mb-5">
-                <div className="w-full h-full rounded-full bg-gradient-to-tr from-orange-500 via-orange-300 to-slate-200 p-1 shadow-xl">
+            <div className="bg-white p-8 rounded-[40px] shadow-sm text-center relative">
+              <div className="relative w-28 h-28 mx-auto mb-4">
+                <div className="w-full h-full rounded-full bg-gradient-to-tr from-orange-500 to-orange-200 p-1 shadow-lg">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-white">
-                    {userData.fotoPerfil ? <img src={`${userData.fotoPerfil}?t=${refresh}`} className="w-full h-full object-cover" /> : <User size={50} className="text-slate-200 mt-4" />}
+                    {userData.fotoPerfil ? <img src={`${userData.fotoPerfil}?t=${refresh}`} className="w-full h-full object-cover" /> : <User size={50} className="text-slate-200" />}
                   </div>
                 </div>
-                <button onClick={() => setPasoFoto(true)} className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2 rounded-full border-4 border-white shadow-lg active:scale-90"><Edit2 size={14} /></button>
+                <button onClick={() => setPasoFoto(true)} className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full border-2 border-white shadow-md"><Edit2 size={12} /></button>
               </div>
-              <h2 className="text-2xl font-black italic text-slate-800 uppercase tracking-tighter">{userData.nombre || "Usuario"}, <span className="text-blue-600">{userData.edad || "30"}</span></h2>
+              <h2 className="text-xl font-black italic text-slate-800 uppercase">{userData.nombre || "Usuario"}</h2>
             </div>
 
-            {/* PROGRESO NARANJA */}
-            <div className="bg-white p-7 rounded-[40px] shadow-sm border border-slate-100">
-              <div className="flex justify-between items-center mb-5">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px]">Estado de Confianza</p>
-                <div className="bg-orange-50 px-4 py-2 rounded-2xl text-orange-500 font-black italic text-2xl">{porcentajeConfianza.toFixed(0)}%</div>
-              </div>
-              <div className="w-full h-4 bg-slate-100 rounded-full p-1 border border-slate-50 shadow-inner">
-                <div className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-1000" style={{ width: `${porcentajeConfianza}%` }} />
-              </div>
+            <div className="bg-white p-6 rounded-[30px] border border-slate-100">
+               <div className="flex justify-between items-center mb-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confianza</p>
+                  <p className="text-xl font-black italic text-orange-500">{porcentaje.toFixed(0)}%</p>
+               </div>
+               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-orange-500 transition-all duration-700" style={{ width: `${porcentaje}%` }} />
+               </div>
             </div>
           </div>
         ) : (
-          <div className="p-5 space-y-7">
-            {/* SEGURIDAD KYC MEJORADO (Basado en tus fotos) */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4">Certificación de Identidad</p>
-              <div className="bg-white rounded-[35px] border border-slate-100 overflow-hidden p-2">
-                <MenuButton icon={FileText} label="Documento de Identidad (Cédula)" value={userData.kycVerificado ? "Verificado ✅" : "Pendiente de subir"} />
-                <MenuButton icon={Car} label="Licencia de Conducir" value={userData.licenciaVerificada ? "Verificada ✅" : "Pendiente de subir"} />
-                <MenuButton icon={Lock} label="Contraseña" onClick={() => abrirEdicion('password', 'Nueva Contraseña', '')} />
-              </div>
+          <div className="p-5 space-y-6">
+            <div className="bg-white rounded-[30px] border border-slate-100 overflow-hidden p-2">
+              <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre || ""); setModalVisible(true); }} />
+              <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono || ""); setModalVisible(true); }} />
             </div>
 
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4">Mi Vehículo</p>
-              <div className="bg-white rounded-[35px] border border-slate-100 overflow-hidden p-2">
-                <MenuButton icon={Car} label="Marca / Modelo" value={`${userData.vehiculo?.marca || ''} ${userData.vehiculo?.modelo || ''}`} onClick={() => abrirEdicion('modelo', 'Marca y Modelo', userData.vehiculo?.modelo)} />
-                <MenuButton icon={Palette} label="Color" value={userData.vehiculo?.color} onClick={() => abrirEdicion('color', 'Color del Carro', userData.vehiculo?.color)} />
-                <MenuButton icon={Hash} label="Placa" value={userData.vehiculo?.placa} onClick={() => abrirEdicion('placa', 'Número de Placa', userData.vehiculo?.placa)} />
-              </div>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-4">Seguridad</p>
+            <div className="bg-white rounded-[30px] border border-slate-100 overflow-hidden p-2">
+              <MenuButton icon={FileText} label="Cédula" value={userData.kycVerificado ? "Verificada ✅" : "Pendiente"} />
+              <MenuButton icon={FileText} label="Licencia" value={userData.licenciaVerificada ? "Verificada ✅" : "Pendiente"} />
             </div>
 
-            <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100">Cerrar Sesión</button>
+            <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[25px] font-black uppercase text-[10px]">Cerrar Sesión</button>
           </div>
         )}
       </div>
 
-      {/* MODAL DE EDICIÓN - CORREGIDO */}
+      {/* MODAL DE EDICIÓN MEJORADO */}
       {modalVisible && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
-          <div className="relative bg-white w-full rounded-t-[40px] p-10 animate-in slide-in-from-bottom-10 shadow-2xl">
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8" />
-            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] mb-2">Editar {tipoEdicion?.label}</h4>
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
+          <div className="relative bg-white w-full rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom">
+            <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">Editar {tipoEdicion?.label}</h4>
             <input 
-              type={tipoEdicion?.id === 'fechaNacimiento' ? "date" : "text"}
+              type="text"
               value={nuevoValor}
               onChange={(e) => setNuevoValor(e.target.value)}
-              className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none focus:border-blue-600 mb-8"
-              autoFocus
+              className="w-full bg-slate-50 p-5 rounded-2xl font-bold text-lg border-2 border-slate-100 focus:border-blue-600 outline-none mb-6"
             />
             <button 
-              onClick={guardarCambios} 
+              onClick={guardarCambios}
               disabled={cargando}
-              className={`w-full p-5 rounded-[25px] font-black uppercase text-xs shadow-lg transition-all ${cargando ? 'bg-slate-300 text-white' : 'bg-blue-600 text-white active:scale-95'}`}
+              className="w-full bg-blue-600 text-white p-5 rounded-full font-black uppercase text-xs shadow-lg active:scale-95"
             >
-                {cargando ? 'GUARDANDO...' : 'CONFIRMAR CAMBIOS'}
+              {cargando ? 'PROCESANDO...' : 'GUARDAR CAMBIOS'}
             </button>
           </div>
         </div>
       )}
 
-      {/* PANTALLA INSTRUCCIONES FOTO */}
+      {/* PANTALLA FOTO - BOTONES DIRECTOS */}
       {pasoFoto && (
         <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 text-center">
           <div className="flex-1 flex flex-col items-center justify-center space-y-8">
-            <div className="w-40 h-40 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100 relative">
+            <div className="w-40 h-40 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100">
                <User size={100} className="text-orange-200" />
-               <div className="absolute -top-2 -right-2 bg-green-500 p-3 rounded-full text-white shadow-lg"><CheckCircle2 size={24} /></div>
             </div>
-            <h3 className="text-2xl font-black text-slate-800 leading-tight uppercase italic">¡Sácate una buena foto!</h3>
-            <p className="text-slate-500 font-medium italic">Mira al frente, con buena luz y sin lentes.</p>
+            <h3 className="text-2xl font-black text-slate-800 uppercase italic">¡Sácate una buena foto!</h3>
+            <p className="text-slate-400 font-medium">Sin lentes, mira de frente y con buena luz.</p>
           </div>
           <div className="space-y-4">
-            <button onClick={ejecutarCapturaFoto} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">Abrir Cámara</button>
-            <button onClick={() => setPasoFoto(false)} className="w-full bg-slate-100 text-slate-400 p-5 rounded-[25px] font-black uppercase text-xs">Ahora no</button>
+            <button onClick={() => capturarImagen('CAMERA')} className="w-full bg-blue-600 text-white p-5 rounded-full font-black uppercase text-xs shadow-xl active:scale-95">Tomar Foto Ahora</button>
+            <button onClick={() => capturarImagen('PHOTOS')} className="w-full bg-white text-blue-600 border-2 border-blue-600 p-5 rounded-full font-black uppercase text-xs">Elegir de la Galería</button>
+            <button onClick={() => setPasoFoto(false)} className="w-full text-slate-400 font-black uppercase text-[10px] pt-4">Cancelar</button>
           </div>
         </div>
       )}
@@ -201,12 +184,12 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
 };
 
 const MenuButton = ({ icon: Icon, label, value, onClick }: any) => (
-  <button onClick={onClick} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-all border-b border-slate-50 last:border-0">
+  <button onClick={onClick} className="w-full flex items-center justify-between p-4 border-b border-slate-50 last:border-0 active:bg-slate-50">
     <div className="flex items-center gap-4">
       <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center"><Icon size={18} /></div>
       <div className="text-left">
-        <p className="text-[10px] font-black text-slate-700 uppercase italic leading-none mb-1">{label}</p>
-        <p className="text-[9px] font-bold text-blue-500 tracking-wider">{value || "Subir ahora"}</p>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+        <p className="text-[11px] font-bold text-slate-700">{value || "Configurar ahora"}</p>
       </div>
     </div>
     <ChevronRight size={16} className="text-slate-200" />
