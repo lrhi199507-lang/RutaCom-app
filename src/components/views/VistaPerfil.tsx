@@ -176,83 +176,78 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
               <div className="w-full h-4 bg-slate-100 rounded-full p-1 shadow-inner"><div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${porcentajeConfianza}%` }} /></div>
             </div>
           </div>// 1. ACTUALIZA LA SECCIÓN DE "MI CUENTA" (Dentro del return principal)
-      ) : (
-  <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-20">
-    
-    {/* BLOQUE 1: INFORMACIÓN PERSONAL */}
-    <div className="space-y-3">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Personal</p>
-      <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
-        <MenuButton icon={UserCog} label="Nombre Completo" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre || ""); setModalVisible(true); }} />
-        <MenuButton icon={Hash} label="Número de Cédula" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero || ""); setModalVisible(true); }} />
-        <MenuButton icon={Calendar} label="Fecha de Nacimiento" value={userData.fechaNacimiento} onClick={() => { setTipoEdicion({id:'fechaNacimiento', label:'Fecha', valor:userData.fechaNacimiento}); setNuevoValor(userData.fechaNacimiento || ""); setModalVisible(true); }} />
-        <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono || ""); setModalVisible(true); }} />
-      </div>
-    </div>
-
-    {/* BLOQUE 2: DETALLES DEL VEHÍCULO */}
-    <div className="space-y-3">
-      <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4 italic">Especificaciones del Auto</p>
-      <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
-        <MenuButton icon={Car} label="Marca" value={userData.vehiculo?.marca} onClick={() => { setTipoEdicion({id:'marca', label:'Marca', valor:userData.vehiculo?.marca}); setNuevoValor(userData.vehiculo?.marca || ""); setModalVisible(true); }} />
-        <MenuButton icon={Gauge} label="Modelo" value={userData.vehiculo?.modelo} onClick={() => { setTipoEdicion({id:'modelo', label:'Modelo', valor:userData.vehiculo?.modelo}); setNuevoValor(userData.vehiculo?.modelo || ""); setModalVisible(true); }} />
-        <MenuButton icon={Palette} label="Color" value={userData.vehiculo?.color} onClick={() => { setTipoEdicion({id:'color', label:'Color', valor:userData.vehiculo?.color}); setNuevoValor(userData.vehiculo?.color || ""); setModalVisible(true); }} />
-        <MenuButton icon={Hash} label="Placa / Matrícula" value={userData.vehiculo?.placa} onClick={() => { setTipoEdicion({id:'placa', label:'Placa', valor:userData.vehiculo?.placa}); setNuevoValor(userData.vehiculo?.placa || ""); setModalVisible(true); }} />
-      </div>
-    </div>
-
-    {/* BLOQUE 3: FOTOS DEL VEHÍCULO (NUEVO) */}
-    <div className="space-y-3">
-      <div className="flex justify-between items-center px-4">
-        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[3px] italic">Estado del Vehículo</p>
-        <span className="text-[8px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full uppercase">4 Ángulos Requeridos</span>
-      </div>
-      <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2 grid grid-cols-2 gap-1">
-        <MenuButton icon={Camera} label="Frontal" status={userData.fotoFrontalVerificada ? 'verificado' : (userData.fotoFrontal ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true, reglas: "Asegúrate de que se vea la placa y los faros delanteros con buena luz."})} />
-        <MenuButton icon={Camera} label="Trasera" status={userData.fotoTraseraVerificada ? 'verificado' : (userData.fotoTrasera ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true, reglas: "Debe visualizarse claramente la placa trasera y el modelo del auto."})} />
-        <MenuButton icon={Camera} label="Lateral Izq." status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.fotoLatIzq ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true, reglas: "Toma la foto de costado capturando ambas puertas del lado del conductor."})} />
-        <MenuButton icon={Camera} label="Lateral Der." status={userData.fotoLatDerVerificada ? 'verificado' : (userData.fotoLatDer ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true, reglas: "Toma la foto de costado capturando las puertas del lado del pasajero."})} />
-      </div>
-    </div>
-
-    {/* BLOQUE 4: SEGURIDAD Y DOCUMENTACIÓN LEGAL */}
-    <div className="space-y-3">
-      <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Documentación Legal</p>
-      <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
-        <MenuButton icon={FileText} label="Foto de Cédula" status={userData.kycVerificado ? 'verificado' : (userData.kycFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
-        <MenuButton icon={ShieldCheck} label="Licencia de Conducir" status={userData.licenciaVerificada ? 'verificado' : (userData.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
-        <MenuButton icon={FileText} label="Carnet de Circulación" status={userData.circulacionVerificada ? 'verificado' : (userData.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
-        <MenuButton icon={ShieldCheck} label="Seguro R.C.V" status={userData.rcvVerificado ? 'verificado' : (userData.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
-        <MenuButton icon={User} label="Selfie de Identidad" status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
-
-        {/* Record Criminal Dorado */}
-        <button 
-          disabled={userData.antecedentesVerificados || !!userData.antecedentesFoto}
-          onClick={() => setPasoDocumento({tipo:'antecedentes', activa:true})}
-          className="w-full flex items-center justify-between p-5 border-t border-slate-50 bg-orange-50/30 active:bg-orange-100 transition-colors disabled:opacity-70"
-        >
-          <div className="flex items-center gap-5">
-            <div className="w-11 h-11 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-sm">
-              <FileCheck size={20} />
+              ) : (
+          <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
+            
+            {/* SECCIÓN PERSONAL */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Personal</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
+                <MenuButton icon={UserCog} label="Nombre Completo" value={userData?.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData?.nombre}); setNuevoValor(userData?.nombre || ""); setModalVisible(true); }} />
+                <MenuButton icon={Hash} label="Número de Cédula" value={userData?.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData?.cedulaNumero}); setNuevoValor(userData?.cedulaNumero || ""); setModalVisible(true); }} />
+                <MenuButton icon={Calendar} label="Fecha de Nacimiento" value={userData?.fechaNacimiento} onClick={() => { setTipoEdicion({id:'fechaNacimiento', label:'Fecha', valor:userData?.fechaNacimiento}); setNuevoValor(userData?.fechaNacimiento || ""); setModalVisible(true); }} />
+                <MenuButton icon={Phone} label="Teléfono" value={userData?.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData?.telefono}); setNuevoValor(userData?.telefono || ""); setModalVisible(true); }} />
+              </div>
             </div>
-            <div className="text-left">
-              <p className="text-[10px] font-black text-orange-400 uppercase italic mb-1">Record Criminal (Opcional)</p>
-              <p className="text-xs font-black uppercase text-orange-600">
-                {userData.antecedentesVerificados ? "CONDUCTOR PRO 🏆" : (userData.antecedentesFoto ? "EN REVISIÓN ⏳" : "SUBIR PARA DESTACAR")}
-              </p>
+
+            {/* SECCIÓN VEHÍCULO */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4 italic">Especificaciones del Auto</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
+                <MenuButton icon={Car} label="Marca" value={userData?.vehiculo?.marca} onClick={() => { setTipoEdicion({id:'marca', label:'Marca', valor:userData?.vehiculo?.marca}); setNuevoValor(userData?.vehiculo?.marca || ""); setModalVisible(true); }} />
+                <MenuButton icon={Gauge} label="Modelo" value={userData?.vehiculo?.modelo} onClick={() => { setTipoEdicion({id:'modelo', label:'Modelo', valor:userData?.vehiculo?.modelo}); setNuevoValor(userData?.vehiculo?.modelo || ""); setModalVisible(true); }} />
+                <MenuButton icon={Palette} label="Color" value={userData?.vehiculo?.color} onClick={() => { setTipoEdicion({id:'color', label:'Color', valor:userData?.vehiculo?.color}); setNuevoValor(userData?.vehiculo?.color || ""); setModalVisible(true); }} />
+                <MenuButton icon={Hash} label="Placa / Matrícula" value={userData?.vehiculo?.placa} onClick={() => { setTipoEdicion({id:'placa', label:'Placa', valor:userData?.vehiculo?.placa}); setNuevoValor(userData?.vehiculo?.placa || ""); setModalVisible(true); }} />
+              </div>
             </div>
+
+            {/* ESTADO DEL VEHÍCULO (4 FOTOS) */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[3px] ml-4 italic">Estado del Vehículo</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2 grid grid-cols-1">
+                <MenuButton icon={Camera} label="Foto Frontal" status={userData?.fotoFrontalVerificada ? 'verificado' : (userData?.fotoFrontal ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
+                <MenuButton icon={Camera} label="Foto Trasera" status={userData?.fotoTraseraVerificada ? 'verificado' : (userData?.fotoTrasera ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
+                <MenuButton icon={Camera} label="Lateral Izquierda" status={userData?.fotoLatIzqVerificada ? 'verificado' : (userData?.fotoLatIzq ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
+                <MenuButton icon={Camera} label="Lateral Derecha" status={userData?.fotoLatDerVerificada ? 'verificado' : (userData?.fotoLatDer ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
+              </div>
+            </div>
+
+            {/* DOCUMENTACIÓN LEGAL */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Documentación Legal</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
+                <MenuButton icon={FileText} label="Foto de Cédula" status={userData?.kycVerificado ? 'verificado' : (userData?.kycFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
+                <MenuButton icon={ShieldCheck} label="Licencia de Conducir" status={userData?.licenciaVerificada ? 'verificado' : (userData?.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
+                <MenuButton icon={FileText} label="Carnet de Circulación" status={userData?.circulacionVerificada ? 'verificado' : (userData?.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
+                <MenuButton icon={ShieldCheck} label="Seguro R.C.V" status={userData?.rcvVerificado ? 'verificado' : (userData?.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
+                <MenuButton icon={User} label="Selfie de Identidad" status={userData?.selfieVerificada ? 'verificado' : (userData?.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
+                
+                <button 
+                  disabled={userData?.antecedentesVerificados || !!userData?.antecedentesFoto}
+                  onClick={() => setPasoDocumento({tipo:'antecedentes', activa:true})}
+                  className="w-full flex items-center justify-between p-5 border-t border-slate-50 bg-orange-50/30 active:bg-orange-100 transition-colors disabled:opacity-70"
+                >
+                  <div className="flex items-center gap-5">
+                    <div className="w-11 h-11 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-sm">
+                      <FileCheck size={20} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-orange-400 uppercase italic mb-1">Record Criminal (Opcional)</p>
+                      <p className="text-xs font-black uppercase text-orange-600">
+                        {userData?.antecedentesVerificados ? "CONDUCTOR PRO 🏆" : (userData?.antecedentesFoto ? "EN REVISIÓN ⏳" : "SUBIR PARA DESTACAR")}
+                      </p>
+                    </div>
+                  </div>
+                  {!userData?.antecedentesFoto && !userData?.antecedentesVerificados && <ChevronRight size={18} className="text-orange-200" />}
+                </button>
+              </div>
+            </div>
+
+            <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all">
+              <LogOut size={14} /> Cerrar Sesión
+            </button>
           </div>
-          {!userData.antecedentesFoto && !userData.antecedentesVerificados && <ChevronRight size={18} className="text-orange-200" />}
-        </button>
-      </div>
-    </div>
-
-    <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all">
-      <LogOut size={14} /> Cerrar Sesión
-    </button>
-  </div>
-)}
-        
+        )}
       </div>
 
       {/* MODAL EDICIÓN */}
