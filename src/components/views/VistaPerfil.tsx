@@ -260,45 +260,42 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
         </div>
       )}
 
-          {/* MODAL ESCÁNER KYC (RECUADRO TIPO BLA BLACAR) */}
+                {/* MODAL ESCÁNER KYC */}
       {pasoDocumento.activa && (
         <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 overflow-hidden">
           {!fotoDocTemporal ? (
             <div className="flex-1 flex flex-col items-center justify-center space-y-6">
               <div className="relative w-full aspect-[1.6/1] border-2 border-white/20 rounded-3xl overflow-hidden shadow-2xl bg-slate-800">
-                 {/* Esquinas del escáner */}
-                 <div className="absolute top-4 left-4 w-10 h-10 border-t-4 border-l-4 border-blue-500 rounded-tl-lg" />
-                 <div className="absolute top-4 right-4 w-10 h-10 border-t-4 border-r-4 border-blue-500 rounded-tr-lg" />
-                 <div className="absolute bottom-4 left-4 w-10 h-10 border-b-4 border-l-4 border-blue-500 rounded-bl-lg" />
-                 <div className="absolute bottom-4 right-4 w-10 h-10 border-b-4 border-r-4 border-blue-500 rounded-br-lg" />
-                 
-                 <div className="absolute inset-0 flex items-center justify-center">
-                    <p className="text-white font-black text-[10px] uppercase tracking-widest bg-blue-600/80 px-5 py-2 rounded-full">Enmarca tu {pasoDocumento.tipo}</p>
-                 </div>
+                <div className="absolute top-4 left-4 w-10 h-10 border-t-4 border-l-4 border-blue-500 rounded-tl-lg" />
+                <div className="absolute top-4 right-4 w-10 h-10 border-t-4 border-r-4 border-blue-500 rounded-tr-lg" />
+                <div className="absolute bottom-4 left-4 w-10 h-10 border-b-4 border-l-4 border-blue-500 rounded-bl-lg" />
+                <div className="absolute bottom-4 right-4 w-10 h-10 border-b-4 border-r-4 border-blue-500 rounded-br-lg" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <p className="text-white font-black text-[10px] uppercase tracking-widest bg-blue-600/80 px-5 py-2 rounded-full">Enmarca tu {pasoDocumento.tipo}</p>
+                </div>
               </div>
               <p className="text-white/60 text-[10px] font-black uppercase tracking-widest text-center px-10 leading-relaxed">Ubica el documento en el recuadro y evita reflejos de luz</p>
               <div className="w-full pt-10">
-                 <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Capturar Documento</button>
-                 <button onClick={() => setPasoDocumento({tipo:'cedula', activa:false})} className="w-full text-slate-500 font-black uppercase text-[10px] mt-6">Cancelar Proceso</button>
+                <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Capturar Documento</button>
+                <button onClick={() => setPasoDocumento({tipo:'cedula', activa:false})} className="w-full text-slate-500 font-black uppercase text-[10px] mt-6">Cancelar Proceso</button>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95">
-               <div className="w-full aspect-[1.6/1] rounded-3xl overflow-hidden border-4 border-blue-500 shadow-2xl">
-                  <img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Doc" />
-               </div>
-               <h3 className="text-white text-xl font-black uppercase italic tracking-tighter">¿Los datos se ven nítidos?</h3>
-               <div className="w-full space-y-4">
-                 <button onClick={subirDocumentoFinal} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
-                    {cargando ? 'PROCESANDO...' : 'SÍ, ENVIAR PARA VERIFICACIÓN'}
-                 </button>
-                 <button onClick={() => setFotoDocTemporal(null)} className="w-full bg-white/10 text-white p-5 rounded-[25px] font-black uppercase text-xs">REPETIR CAPTURA</button>
-               </div>
+              <div className="w-full aspect-[1.6/1] rounded-3xl overflow-hidden border-4 border-blue-500 shadow-2xl">
+                <img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Doc" />
+              </div>
+              <h3 className="text-white text-xl font-black uppercase italic tracking-tighter">¿Los datos se ven nítidos?</h3>
+              <div className="w-full space-y-4">
+                <button onClick={subirDocumentoFinal} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
+                  {cargando ? 'PROCESANDO...' : 'SÍ, ENVIAR PARA VERIFICACIÓN'}
+                </button>
+                <button onClick={() => setFotoDocTemporal(null)} className="w-full bg-white/10 text-white p-5 rounded-[25px] font-black uppercase text-xs">REPETIR CAPTURA</button>
+              </div>
             </div>
           )}
         </div>
       )}
-      
 
       {/* FLUJO DE FOTO DE PERFIL */}
       {pasoFoto && (
@@ -306,8 +303,8 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
           {!fotoTemporal ? (
             <div className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-sm mx-auto">
               <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100 relative shadow-inner">
-                 <User size={100} className="text-orange-200" />
-                 <div className="absolute -top-2 -right-2 bg-green-500 p-3 rounded-full text-white shadow-lg animate-bounce"><CheckCircle2 size={24} /></div>
+                <User size={100} className="text-orange-200" />
+                <div className="absolute -top-2 -right-2 bg-green-500 p-3 rounded-full text-white shadow-lg animate-bounce"><CheckCircle2 size={24} /></div>
               </div>
               <div className="space-y-2">
                 <h3 className="text-3xl font-black text-slate-800 uppercase italic tracking-tighter">¡Dile Cheese!</h3>
@@ -321,4 +318,35 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center space-y-10 animate-in zoom-in-95">
-         
+              <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl">
+                <img src={fotoTemporal} className="w-full h-full object-cover" alt="Previsualización" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 uppercase italic">¿Quedaste bien?</h3>
+              <div className="w-full space-y-4 max-w-xs">
+                <button onClick={subirFotoConfirmada} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
+                  {cargando ? 'GUARDANDO...' : 'SÍ, USAR ESTA FOTO'}
+                </button>
+                <button onClick={() => setFotoTemporal(null)} className="w-full bg-slate-100 text-slate-500 p-5 rounded-[25px] font-black uppercase text-xs">TOMAR OTRA</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MenuButton = ({ icon: Icon, label, value, onClick }: any) => (
+  <button onClick={onClick} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors">
+    <div className="flex items-center gap-5">
+      <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm"><Icon size={20} /></div>
+      <div className="text-left">
+        <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5">{label}</p>
+        <p className={`text-xs font-black uppercase tracking-tight ${value && value !== "Configurar" ? 'text-slate-800' : 'text-blue-500'}`}>
+          {value || "Configurar"}
+        </p>
+      </div>
+    </div>
+    <ChevronRight size={18} className="text-slate-200" />
+  </button>
+);
