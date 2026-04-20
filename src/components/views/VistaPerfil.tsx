@@ -260,7 +260,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
         </div>
       )}
 
-      {/* MODAL ESCÁNER KYC (RECUADRO TIPO BLA BLACAR) */}
+          {/* MODAL ESCÁNER KYC (RECUADRO TIPO BLA BLACAR) */}
       {pasoDocumento.activa && (
         <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 overflow-hidden">
           {!fotoDocTemporal ? (
@@ -298,6 +298,7 @@ export const VistaPerfil = ({ userData, handleLogout, pestañaActiva, setPestañ
           )}
         </div>
       )}
+      
 
       {/* FLUJO DE FOTO DE PERFIL */}
       {pasoFoto && (
