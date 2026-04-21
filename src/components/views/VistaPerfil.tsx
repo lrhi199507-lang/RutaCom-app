@@ -358,11 +358,6 @@ const rechazarDocumentos = async (userId: string) => {
                 <MenuButton icon={ShieldCheck} label="Licencia" status={userData.licenciaVerificada ? 'verificado' : (userData.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
                 <MenuButton icon={FileText} label="Circulación" status={userData.circulacionVerificada ? 'verificado' : (userData.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Seguro RCV" status={userData.rcvVerificado ? 'verificado' : (userData.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
-
-                if (status === 'revision') { statusText = "REVISIÓN ⏳"; statusColor = "text-amber-500"; }
-else if (status === 'verificado') { statusText = "LISTO ✅"; statusColor = "text-green-600"; }
-else if (status === 'rechazado') { statusText = "REINTENTAR ⚠️"; statusColor = "text-orange-600"; } // <-- Añadir esto
-  
              <MenuButton  icon={User}   label="Selfie con Documento" status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setModalInstruccionesSelfie(true)} />
 </div>
 </div>
@@ -570,18 +565,50 @@ else if (status === 'rechazado') { statusText = "REINTENTAR ⚠️"; statusColor
 };
 
 const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
-  let statusText = value || "Configurar";
-  let statusColor = "text-blue-500"; 
-  if (status === 'revision') { statusText = "REVISIÓN ⏳"; statusColor = "text-amber-500"; }
-  else if (status === 'verificado') { statusText = "LISTO ✅"; statusColor = "text-green-600"; }
+  // 1. Definimos variables para que el código sea fácil de leer
+  let statusText = value || "Configurar"
+  let statusColor = "text-blue-500"
+
+  // 2. Usamos una lógica de estados vertical (sin puntos y coma molestos)
+  if (status === 'revision') {
+    statusText = "REVISIÓN ⏳"
+    statusColor = "text-amber-500"
+  } 
+  
+  if (status === 'verificado') {
+    statusText = "LISTO ✅"
+    statusColor = "text-green-600"
+  }
+
+  if (status === 'rechazado') {
+    statusText = "REINTENTAR ⚠️"
+    statusColor = "text-orange-600"
+  }
 
   return (
-    <button onClick={onClick} disabled={status === 'verificado' || status === 'revision'} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors disabled:opacity-80">
+    <button 
+      onClick={onClick} 
+      disabled={status === 'verificado' || status === 'revision'} 
+      className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors disabled:opacity-80"
+    >
       <div className="flex items-center gap-5">
-        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm"><Icon size={20} /></div>
-        <div className="text-left"><p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">{label}</p><p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>{statusText}</p></div>
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm">
+          <Icon size={20} />
+        </div>
+        <div className="text-left">
+          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">
+            {label}
+          </p>
+          <p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>
+            {statusText}
+          </p>
+        </div>
       </div>
-      {status !== 'verificado' && status !== 'revision' && <ChevronRight size={18} className="text-slate-200" />}
+      
+      {/* Solo mostramos la flecha si NO está verificado o en revisión */}
+      {status !== 'verificado' && status !== 'revision' && (
+        <ChevronRight size={18} className="text-slate-200" />
+      )}
     </button>
-  );
-};
+  )
+}
