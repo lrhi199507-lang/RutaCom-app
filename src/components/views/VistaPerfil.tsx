@@ -414,7 +414,6 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
     <p className="text-[10px] font-black text-red-600 uppercase tracking-[3px] ml-4 italic">Panel de Control</p>
     <div className="bg-slate-900 rounded-[35px] shadow-lg overflow-hidden p-2">
       <button 
-        {/* REVISA ESTA LÍNEA AQUÍ ABAJO */}
         onClick={() => { cargarUsuariosAdmin(); setPestañaActiva('admin'); }}
         className="w-full flex items-center justify-between p-5 active:bg-slate-800 transition-colors text-left"
       >
