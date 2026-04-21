@@ -26,6 +26,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   const view = pestañaActiva || 'publico';
 
+  const ADMIN_EMAIL = "lrhi199507@gmail.com"; // <--- Pon aquí tu correo oficial
+const esAdmin = userData?.email === ADMIN_EMAIL;
+
   // --- LÓGICA DE RANGOS (Basado en Experiencia de Viajes) ---
   const viajesCond = userData.viajesRealizados || 0;
   const viajesPas = userData.viajesComoPasajero || 0;
@@ -381,6 +384,28 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                 </button>
               </div>
             </div>
+            {esAdmin && (
+  <div className="space-y-3 mt-8">
+    <p className="text-[10px] font-black text-red-600 uppercase tracking-[3px] ml-4 italic">Panel de Control</p>
+    <div className="bg-slate-900 rounded-[35px] shadow-lg overflow-hidden p-2">
+      <button 
+        onClick={() => setPestañaActiva('admin')}
+        className="w-full flex items-center justify-between p-5 active:bg-slate-800 transition-colors text-left"
+      >
+        <div className="flex items-center gap-5">
+          <div className="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-sm">
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">Acceso Restringido</p>
+            <p className="text-xs font-black uppercase tracking-tight text-white">Gestionar Verificaciones</p>
+          </div>
+        </div>
+        <ChevronRight size={18} className="text-white/20" />
+      </button>
+    </div>
+  </div>
+)}
             
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all mb-10"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
