@@ -146,12 +146,16 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setUsuariosAdmin(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
-  const aprobarUsuario = async (userId: string) => {
+  // 1. FUNCIÓN DE APROBACIÓN CORREGIDA
+const aprobarUsuario = async (userId: string) => {
+  if (!userId) return;
   setCargando(true);
   try {
+    // Usamos el ID directamente que viene de Firebase
     const userRef = doc(db, "usuarios", userId);
     await updateDoc(userRef, {
       kycVerificado: true,
+      // Al aprobar el perfil, damos por válidos estos campos
       licenciaVerificada: true,
       circulacionVerificada: true,
       rcvVerificado: true,
@@ -159,16 +163,45 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       fotoTraseraVerificada: true,
       fotoLatIzqVerificada: true,
       fotoLatDerVerificada: true,
-      selfieVerificada: true
+      selfieVerificada: true,
+      puntosSeguridad: 100 // Opcional: para forzar el 100%
     });
-    alert("Usuario verificado exitosamente");
-    cargarUsuariosAdmin(); // Recargar la lista
-  } catch (e) {
-    alert("Error al aprobar");
+    
+    alert("¡Usuario Verificado con éxito!");
+    await cargarUsuariosAdmin(); // Refrescar lista
+  } catch (e: any) {
+    console.error("Error completo:", e);
+    alert("Error de permisos: Verifica las Reglas de Firebase o si el ID es correcto.");
   } finally {
     setCargando(false);
   }
 };
+
+// 2. SECCIÓN DE IMÁGENES CON ZOOM (Dentro del .map de admin)
+// Busca donde dice {/* Muestra de Fotos Pendientes */} y reemplázalo por esto:
+
+<div className="grid grid-cols-3 gap-2">
+  {[
+    { img: u.kycFoto, label: 'Cédula' },
+    { img: u.selfieFoto, label: 'Selfie + ID' },
+    { img: u.fotoFrontal, label: 'Vehículo (Placa)' }
+  ].map((item, idx) => (
+    item.img && (
+      <div key={idx} className="space-y-1">
+        <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
+        <div 
+          onClick={() => window.open(item.img, '_blank')} // Abre la foto original en grande
+          className="relative w-full h-28 bg-black rounded-2xl overflow-hidden border border-white/10 active:scale-95 transition-transform"
+        >
+          <img src={item.img} className="w-full h-full object-cover" alt={item.label} />
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <Edit2 size={12} className="text-white opacity-50" />
+          </div>
+        </div>
+      </div>
+    )
+  ))}
+</div>
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
