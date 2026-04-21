@@ -387,6 +387,32 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
         )}
       </div>
 
+      {modalClave && (
+  <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalClave(false)} />
+    <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom duration-300">
+      <h4 className="text-[10px] font-black text-blue-600 uppercase mb-2 tracking-[2px]">ACTUALIZAR SEGURIDAD</h4>
+      <p className="text-[9px] font-bold text-slate-400 mb-6 uppercase">Escribe tu nueva clave maestra</p>
+      
+      <input 
+        type="password"
+        placeholder="Nueva contraseña"
+        value={claves.nueva}
+        onChange={(e) => setClaves({...claves, nueva: e.target.value})}
+        className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none mb-8 focus:border-blue-500 transition-colors"
+      />
+      
+      <button 
+        onClick={cambiarContraseña}
+        disabled={cargando}
+        className="w-full bg-slate-900 text-white p-5 rounded-[25px] font-black uppercase text-xs active:scale-95 transition-all shadow-lg"
+      >
+        {cargando ? 'Procesando...' : 'CAMBIAR CONTRASEÑA'}
+      </button>
+    </div>
+  </div>
+)}
+      
       {/* MODAL DE EDICIÓN DE TEXTO INTELIGENTE */}
 {modalVisible && (
   <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
