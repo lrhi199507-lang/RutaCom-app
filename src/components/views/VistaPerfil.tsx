@@ -25,6 +25,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados'>('pendientes');
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
+  const [modalInstruccionesSelfie, setModalInstruccionesSelfie] = useState(false);
+// Asegúrate de tener ya los estados para la cámara (pasoDocumento, subirDocumentoFinal, etc.)
   
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
@@ -293,9 +295,15 @@ const aprobarUsuario = async (userId: string) => {
                 <MenuButton icon={ShieldCheck} label="Licencia" status={userData.licenciaVerificada ? 'verificado' : (userData.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
                 <MenuButton icon={FileText} label="Circulación" status={userData.circulacionVerificada ? 'verificado' : (userData.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Seguro RCV" status={userData.rcvVerificado ? 'verificado' : (userData.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
-                <MenuButton icon={User} label="Selfie" status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
-              </div>
-            </div>
+                <MenuButton 
+      icon={User} 
+      label="Selfie con Documento" // <-- Nombre modificado
+      status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} 
+      onClick={() => setModalInstruccionesSelfie(true)} // <-- Ahora abre las instrucciones
+    />
+  </div>
+</div>
+            
 
             {esAdmin && (
               <button onClick={() => { cargarUsuariosAdmin(); setPestañaActiva('admin'); }} className="w-full bg-slate-900 text-white p-5 rounded-[30px] flex items-center justify-between shadow-xl">
