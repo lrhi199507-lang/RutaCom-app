@@ -204,9 +204,6 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
       alert("Enviado. Pronto revisaremos tus datos.");
     } catch (e) { alert("Error al subir"); } finally { setCargando(false); }
   };
-console.log("Mi correo en Firebase es:", userData?.email);
-console.log("El ADMIN_EMAIL que puse es:", ADMIN_EMAIL);
-console.log("¿Son iguales?:", userData?.email === ADMIN_EMAIL);
   
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
@@ -565,3 +562,13 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
     </button>
   );
 };
+
+{/* BLOQUE DE DEPURE SEGURO - BORRAR LUEGO */}
+<div className="p-4 bg-yellow-100 m-4 rounded-2xl border border-yellow-200">
+  <p className="text-[9px] font-black uppercase text-yellow-700 mb-1">Diagnóstico de Admin:</p>
+  <p className="text-[10px] font-mono text-slate-800">Registrado: "{userData?.email}"</p>
+  <p className="text-[10px] font-mono text-slate-800">Configurado: "{ADMIN_EMAIL}"</p>
+  <p className="text-[10px] font-black mt-2 text-red-600">
+    ¿IGUALES?: {userData?.email === ADMIN_EMAIL ? "SÍ ✅" : "NO ❌"}
+  </p>
+</div>
