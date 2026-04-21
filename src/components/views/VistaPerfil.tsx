@@ -35,6 +35,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     return "NOVATO";
   };
 
+  // Lógica para el siguiente nivel
+const calcularSiguienteNivel = () => {
+  const total = totalTrayectoria;
+  if (total < 10) return { meta: 10, faltan: 10 - total, nombre: "PLATA" };
+  if (total < 20) return { meta: 20, faltan: 20 - total, nombre: "ORO" };
+  if (total < 50) return { meta: 50, faltan: 50 - total, nombre: "LEYENDA" };
+  return { meta: total, faltan: 0, nombre: "MÁXIMO" };
+};
+
+const proximoNivel = calcularSiguienteNivel();
+const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 100);
+  
   // --- LÓGICA DE SEGURIDAD (El Progreso de Verificación) ---
   const puntosSeguridad = [
     !!userData.kycVerificado,         // 1. Cédula
@@ -170,6 +182,38 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
+            {/* SECCIÓN DE NIVEL Y TRAYECTORIA */}
+<div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-4">
+  <div className="flex justify-between items-end">
+    <div>
+      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Próximo Nivel: {proximoNivel.nombre}</p>
+      <p className="text-sm font-black text-slate-800 italic uppercase">
+        {proximoNivel.faltan > 0 
+          ? `Te faltan ${proximoNivel.faltan} viajes` 
+          : "¡Eres una Leyenda!"}
+      </p>
+    </div>
+    <div className="text-right">
+      <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">
+        {totalTrayectoria} / {proximoNivel.meta} VJS
+      </span>
+    </div>
+  </div>
+
+  {/* Barra de Progreso de Nivel */}
+  <div className="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+    <div 
+      className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-1000"
+      style={{ width: `${porcentajeNivel}%` }}
+    />
+  </div>
+
+  <div className="flex justify-between">
+    <p className="text-[7px] font-black text-slate-300 uppercase">Nivel Actual</p>
+    <p className="text-[7px] font-black text-slate-300 uppercase">Meta {proximoNivel.nombre}</p>
+  </div>
+</div>
+  
             {/* SECCIÓN DE PROGRESO DE SEGURIDAD */}
             <div className="bg-white p-7 rounded-[40px] shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-5">
