@@ -204,7 +204,10 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
       alert("Enviado. Pronto revisaremos tus datos.");
     } catch (e) { alert("Error al subir"); } finally { setCargando(false); }
   };
-
+console.log("Mi correo en Firebase es:", userData?.email);
+console.log("El ADMIN_EMAIL que puse es:", ADMIN_EMAIL);
+console.log("¿Son iguales?:", userData?.email === ADMIN_EMAIL);
+  
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
       {/* NAVEGACIÓN SUPERIOR */}
