@@ -110,6 +110,24 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
     } catch (e) { alert("Error al guardar"); } finally { setCargando(false); }
   };
 
+  const formatearCedula = (valor: string) => {
+  // Solo deja números
+  const soloNumeros = valor.replace(/\D/g, '');
+  // Agrega puntos cada 3 dígitos
+  return soloNumeros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+  const formatearFecha = (valor: string) => {
+  let v = valor.replace(/\D/g, '').slice(0, 8); // Solo 8 números
+  if (v.length >= 5) {
+    return `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
+  } else if (v.length >= 3) {
+    return `${v.slice(0, 2)}/${v.slice(2)}`;
+  }
+  return v;
+};
+  
+
   const capturarDocumento = async () => {
     try {
       const image = await CapacitorCamera.getPhoto({
@@ -308,17 +326,51 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
         )}
       </div>
 
-      {/* MODAL DE EDICIÓN DE TEXTO */}
-      {modalVisible && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
-          <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom duration-300">
-            <h4 className="text-[10px] font-black text-blue-600 uppercase mb-2 tracking-[2px]">EDITAR {tipoEdicion?.label}</h4>
-            <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none mb-8 uppercase focus:border-blue-500 transition-colors" autoFocus />
-            <button onClick={guardarCambios} disabled={cargando} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs active:scale-95 transition-all shadow-lg">{cargando ? 'Guardando...' : 'CONFIRMAR CAMBIO'}</button>
-          </div>
-        </div>
-      )}
+      {/* MODAL DE EDICIÓN DE TEXTO INTELIGENTE */}
+{modalVisible && (
+  <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
+    <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom duration-300">
+      <h4 className="text-[10px] font-black text-blue-600 uppercase mb-2 tracking-[2px]">
+        EDITAR {tipoEdicion?.label}
+      </h4>
+      
+      <input 
+        value={nuevoValor} 
+        onChange={(e) => {
+          let val = e.target.value;
+          if (tipoEdicion?.id === 'cedulaNumero') {
+            setNuevoValor(formatearCedula(val));
+          } else if (tipoEdicion?.id === 'fechaNacimiento') {
+            setNuevoValor(formatearFecha(val));
+          } else {
+            setNuevoValor(val);
+          }
+        }} 
+        // Marcador de fondo (Referente)
+        placeholder={
+          tipoEdicion?.id === 'fechaNacimiento' ? "DD/MM/AAAA" : 
+          tipoEdicion?.id === 'cedulaNumero' ? "Ej: 23.426.582" : ""
+        }
+        className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none mb-8 uppercase focus:border-blue-500 transition-colors placeholder:text-slate-300" 
+        autoFocus 
+        keyboardType={
+          (tipoEdicion?.id === 'cedulaNumero' || tipoEdicion?.id === 'fechaNacimiento') 
+          ? "numeric" : "default"
+        }
+      />
+      
+      <button 
+        onClick={guardarCambios} 
+        disabled={cargando} 
+        className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs active:scale-95 transition-all shadow-lg"
+      >
+        {cargando ? 'Guardando...' : 'CONFIRMAR CAMBIO'}
+      </button>
+    </div>
+  </div>
+)}
+      
 
       {/* MODAL DE CAPTURA DE DOCUMENTOS */}
       {pasoDocumento.activa && (
