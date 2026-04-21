@@ -567,11 +567,56 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                           <p className="text-slate-500 text-[9px] font-mono">{u.email}</p>
                         </div>
                       </div>
+            {/* BOTÓN DE CERRAR SESIÓN */}
+            <button 
+              onClick={handleLogout} 
+              className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all mb-10 mt-8"
+            >
+              <LogOut size={14} /> Cerrar Sesión
+            </button>
+          </div>
+        )}
+
+        {/* --- PANEL DE ADMINISTRACIÓN --- */}
+        {view === 'admin' && (
+          <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+            {/* Cabecera */}
+            <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between">
+              <button onClick={() => setPestañaActiva('cuenta')} className="text-white/50 bg-white/5 p-2 rounded-xl">
+                <ChevronRight className="rotate-180" size={20} />
+              </button>
+              <h2 className="text-white font-black italic uppercase tracking-tighter text-sm">Control Maestro</h2>
+              <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl">
+                <RefreshCw size={20} />
+              </button>
+            </div>
+
+            {/* Lista de Usuarios */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+              <p className="text-[10px] font-black text-slate-500 uppercase ml-2 italic tracking-widest text-white">Solicitudes Pendientes:</p>
+              
+              {usuariosAdmin.length === 0 ? (
+                <div className="p-10 text-center text-slate-600 font-bold italic">No hay datos. Toca refrescar ↻</div>
+              ) : (
+                usuariosAdmin
+                  .filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada))
+                  .map((u: any) => (
+                    <div key={u.id} className="bg-slate-900 border border-white/5 p-4 rounded-[30px] space-y-4 shadow-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-white/10">
+                          <img src={u.fotoPerfil || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" alt="perfil" />
+                        </div>
+                        <div className="text-white text-left">
+                          <p className="font-black text-xs uppercase italic">{u.nombre}</p>
+                          <p className="text-slate-500 text-[9px] font-mono">{u.email}</p>
+                        </div>
+                      </div>
+
                       {u.kycFoto && !u.kycVerificado && (
                         <div className="space-y-2">
                           <p className="text-[9px] font-black text-amber-500 uppercase italic">Documento:</p>
                           <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black">
-                            <img src={u.kycFoto} className="w-full h-48 object-contain" />
+                            <img src={u.kycFoto} className="w-full h-48 object-contain" alt="kyc" />
                             <button 
                               onClick={() => aprobarDocumento(u.id, 'kycVerificado')}
                               className="absolute bottom-2 right-2 bg-green-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-transform"
@@ -590,7 +635,7 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
       </div>
     );
 };
-            
+
           
       {modalClave && (
   <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
