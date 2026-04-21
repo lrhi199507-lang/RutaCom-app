@@ -423,13 +423,13 @@ const rechazarDocumentos = async (userId: string) => {
             }
             return u.kycVerificado;
           })
-          .map(u => {
+                    .map(u => {
             const estaExpandido = usuarioExpandidoAdmin === u.id;
 
             return (
               <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden shadow-2xl transition-all duration-300">
                 
-                {/* 1. VISTA COMPACTA: El nombre y la flecha */}
+                {/* 1. VISTA COMPACTA */}
                 <button 
                   onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)}
                   className={`w-full flex items-center justify-between p-5 text-white active:bg-white/5 transition-colors ${estaExpandido ? 'bg-white/5 border-b border-white/10' : ''}`}
@@ -453,7 +453,7 @@ const rechazarDocumentos = async (userId: string) => {
                   </div>
                 </button>
 
-                {/* 2. VISTA EXPANDIDA: Fotos y Botones */}
+                {/* 2. VISTA EXPANDIDA */}
                 {estaExpandido && (
                   <div className="p-6 space-y-5 animate-in slide-in-from-top duration-300">
                     
@@ -505,8 +505,9 @@ const rechazarDocumentos = async (userId: string) => {
                           onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
                           className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase ${u.cuentaBloqueada ? 'bg-blue-600' : 'bg-red-600'} text-white shadow-lg`}
                         >
-                      {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
-                      </button>
+                          {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -517,6 +518,7 @@ const rechazarDocumentos = async (userId: string) => {
     </div>
   </div>
 )}
+        
                
     
 
