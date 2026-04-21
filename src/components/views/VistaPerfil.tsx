@@ -276,28 +276,93 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
 
-        {/* ADMIN VIEW */}
-        {view === 'admin' && (
-          <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
-            <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
-              <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl"><ChevronRight size={20} className="rotate-180" /></button>
-              <h2 className="font-black italic uppercase text-sm">Panel Administrativo</h2>
-              <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32 text-white">
-              {usuariosAdmin.length === 0 ? <p className="text-center p-10 text-slate-500 italic">Cargando datos...</p> : 
-                usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).map(u => (
-                  <div key={u.id} className="bg-slate-900 border border-white/5 p-4 rounded-[30px] space-y-4">
-                    <p className="font-black text-xs uppercase italic">{u.nombre}</p>
-                    {u.kycFoto && !u.kycVerificado && <img src={u.kycFoto} className="w-full h-40 object-contain rounded-xl bg-black" />}
-                    <button className="w-full bg-green-600 p-3 rounded-xl font-black text-[10px] uppercase">Aprobar Todo</button>
-                  </div>
-                ))
-              }
-            </div>
-          </div>
-        )}
+        {/* ADMIN VIEW - CONTROL MAESTRO */}
+{view === 'admin' && (
+  <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+    <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
+      <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl">
+        <ChevronRight size={20} className="rotate-180" />
+      </button>
+      <div className="text-center">
+        <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
+        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
       </div>
+      <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl active:rotate-180 transition-transform duration-500">
+        <RefreshCw size={20} />
+      </button>
+    </div>
+
+    {/* Selector de Sub-pestaña Admin */}
+    <div className="flex bg-slate-900 p-1 border-b border-white/5">
+      <button 
+        onClick={() => setSubPestañaAdmin('pendientes')}
+        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}
+      >
+        Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
+      </button>
+      <button 
+        onClick={() => setSubPestañaAdmin('aprobados')}
+        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}
+      >
+        Aprobados ({usuariosAdmin.filter(u => u.kycVerificado).length})
+      </button>
+    </div>
+
+    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+      {cargando ? (
+        <p className="text-center p-10 text-slate-500 italic animate-pulse">Sincronizando base de datos...</p>
+      ) : (
+        usuariosAdmin
+          .filter(u => {
+            if (subPestañaAdmin === 'pendientes') {
+              return (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada);
+            }
+            return u.kycVerificado;
+          })
+          .map(u => (
+            <div key={u.id} className="bg-slate-900 border border-white/5 p-5 rounded-[35px] space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-black text-white text-xs uppercase italic">{u.nombre}</p>
+                  <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
+                </div>
+                {u.kycVerificado && <div className="bg-green-500/20 text-green-500 text-[8px] font-black px-3 py-1 rounded-full">VERIFICADO</div>}
+              </div>
+
+              {/* Muestra de Fotos Pendientes */}
+              <div className="grid grid-cols-2 gap-2">
+                {u.kycFoto && (
+                  <div className="space-y-1">
+                    <p className="text-[7px] font-black text-slate-500 uppercase">Documento ID</p>
+                    <img src={u.kycFoto} className="w-full h-24 object-cover rounded-2xl bg-black border border-white/5" onClick={() => window.open(u.kycFoto)} />
+                  </div>
+                )}
+                {u.fotoFrontal && (
+                  <div className="space-y-1">
+                    <p className="text-[7px] font-black text-slate-500 uppercase">Vehículo Frontal</p>
+                    <img src={u.fotoFrontal} className="w-full h-24 object-cover rounded-2xl bg-black border border-white/5" />
+                  </div>
+                )}
+              </div>
+
+              {subPestañaAdmin === 'pendientes' && (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => aprobarUsuario(u.id)}
+                    className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95"
+                  >
+                    Aprobar Verificación
+                  </button>
+                  <button className="bg-red-500/10 text-red-500 px-4 rounded-2xl font-black text-[9px] uppercase">Rechazar</button>
+                </div>
+              )}
+            </div>
+          ))
+      )}
+    </div>
+  </div>
+)}
+        
 
       {/* MODALES */}
       {modalVisible && (
