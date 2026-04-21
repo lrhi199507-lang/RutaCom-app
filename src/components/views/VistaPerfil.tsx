@@ -353,8 +353,10 @@ const rechazarDocumentos = async (userId: string) => {
         )}
 
         {/* ADMIN VIEW - CONTROL MAESTRO */}
+{/* VISTA ADMINISTRATIVA: CONTROL MAESTRO */}
 {view === 'admin' && (
   <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+    {/* Header */}
     <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
       <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl">
         <ChevronRight size={20} className="rotate-180" />
@@ -368,41 +370,26 @@ const rechazarDocumentos = async (userId: string) => {
       </button>
     </div>
 
-    {/* Selector de Sub-pestaña Admin */}
-    <div className="flex flex-col gap-2 mt-4">
-    {/* BOTÓN PRINCIPAL: APROBAR */}
-    <button 
-      onClick={() => aprobarUsuario(u.id)}
-      className="w-full bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95"
-    >
-      Aprobar Verificación
-    </button>
-    
-    <div className="flex gap-2">
-      {/* BOTÓN SECUNDARIO: RECHAZAR FOTOS (Si están borrosas) */}
+    {/* Selector de Sub-pestañas */}
+    <div className="flex bg-slate-900 p-1 border-b border-white/5">
       <button 
-        onClick={() => rechazarDocumentos(u.id)}
-        className="flex-1 bg-amber-500/10 text-amber-600 p-4 rounded-2xl font-black text-[9px] uppercase border border-amber-500/20"
+        onClick={() => setSubPestañaAdmin('pendientes')}
+        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}
       >
-        Rechazar Fotos
+        Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
       </button>
-      
-      {/* BOTÓN CRÍTICO: BLOQUEAR (Si el usuario es problemático) */}
       <button 
-        onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
-        className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase transition-colors ${
-          u.cuentaBloqueada ? 'bg-blue-600 text-white' : 'bg-red-600 text-white'
-        }`}
+        onClick={() => setSubPestañaAdmin('aprobados')}
+        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}
       >
-        {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
+        Aprobados ({usuariosAdmin.filter(u => u.kycVerificado).length})
       </button>
     </div>
-  </div>
-)}
 
+    {/* Lista de Usuarios */}
     <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
       {cargando ? (
-        <p className="text-center p-10 text-slate-500 italic animate-pulse">Sincronizando base de datos...</p>
+        <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando base de datos...</p>
       ) : (
         usuariosAdmin
           .filter(u => {
@@ -418,52 +405,70 @@ const rechazarDocumentos = async (userId: string) => {
                   <p className="font-black text-white text-xs uppercase italic">{u.nombre}</p>
                   <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
                 </div>
-                {u.kycVerificado && <div className="bg-green-500/20 text-green-500 text-[8px] font-black px-3 py-1 rounded-full">VERIFICADO</div>}
+                {u.kycVerificado && !u.cuentaBloqueada && <div className="bg-green-500/20 text-green-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">VERIFICADO</div>}
+                {u.cuentaBloqueada && <div className="bg-red-500/20 text-red-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">BLOQUEADO</div>}
               </div>
 
-              
-{/* Muestra de Fotos Pendientes con Zoom */}
-<div className="grid grid-cols-3 gap-2">
-  {[
-    { img: u.kycFoto, label: 'Cédula' },
-    { img: u.selfieFoto, label: 'Selfie + ID' },
-    { img: u.fotoFrontal, label: 'Vehículo (Placa)' }
-  ].map((item, idx) => (
-    <div key={idx} className="space-y-1">
-      <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
-      <div 
-        onClick={() => item.img ? setFotoZoom(item.img) : null}
-        className={`w-full h-24 rounded-2xl overflow-hidden border border-white/5 bg-slate-800 flex items-center justify-center ${!item.img && 'opacity-30'}`}
-      >
-        {item.img ? (
-          <img src={item.img} className="w-full h-full object-cover" alt="Doc" />
-        ) : (
-          <Camera size={16} className="text-slate-600" />
-        )}
-      </div>
-    </div>
-  ))}
-</div>
+              {/* Muestra de Fotos con Zoom */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { img: u.kycFoto, label: 'Cédula' },
+                  { img: u.selfieFoto, label: 'Selfie + ID' },
+                  { img: u.fotoFrontal, label: 'Vehículo' }
+                ].map((item, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
+                    <div 
+                      onClick={() => item.img ? setFotoZoom(item.img) : null}
+                      className={`w-full h-20 rounded-2xl overflow-hidden border border-white/5 bg-slate-800 flex items-center justify-center ${!item.img && 'opacity-30'}`}
+                    >
+                      {item.img ? (
+                        <img src={item.img} className="w-full h-full object-cover" alt={item.label} />
+                      ) : (
+                        <Camera size={14} className="text-slate-600" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-                            {subPestañaAdmin === 'pendientes' && (
-                <div className="flex gap-2">
+              {/* BOTONES DE ACCIÓN ADMINISTRATIVA */}
+              <div className="flex flex-col gap-2 mt-2">
+                {subPestañaAdmin === 'pendientes' && (
                   <button 
                     onClick={() => aprobarUsuario(u.id)}
-                    className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95"
+                    className="w-full bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95"
                   >
                     Aprobar Verificación
                   </button>
-                  <button className="bg-red-500/10 text-red-500 px-4 rounded-2xl font-black text-[9px] uppercase">Rechazar</button>
+                )}
+                
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => rechazarDocumentos(u.id)}
+                    className="flex-1 bg-amber-500/10 text-amber-600 p-4 rounded-2xl font-black text-[9px] uppercase border border-amber-500/20 active:scale-95"
+                  >
+                    Rechazar Fotos
+                  </button>
+                  <button 
+                    onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
+                    className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase transition-all active:scale-95 ${
+                      u.cuentaBloqueada ? 'bg-blue-600 text-white' : 'bg-red-600 text-white'
+                    }`}
+                  >
+                    {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           ))
       )}
     </div>
   </div>
 )}
-        
-      </div> {/* <-- ESTA LLAVE ES LA QUE FALTABA PARA CERRAR EL DIV PRINCIPAL DE LA VISTA */}
+
+</div> {/* AQUÍ CIERRA EL DIV PRINCIPAL QUE CONTIENE LAS VISTAS */}
+      
 
       {/* MODALES */}
       {modalVisible && (
