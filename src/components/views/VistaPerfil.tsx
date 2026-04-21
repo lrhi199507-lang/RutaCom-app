@@ -165,7 +165,8 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
   }
   return v;
 };
-  
+  const auth = getAuth();
+const esAdmin = auth.currentUser?.email === ADMIN_EMAIL;
 
   const capturarDocumento = async () => {
     try {
@@ -385,15 +386,9 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
               </div>
             </div>
 
-            {/* 1. EL DIAGNÓSTICO (Para ver qué está pasando) */}
-<div style={{ backgroundColor: '#fef9c3', padding: '15px', margin: '15px', borderRadius: '20px', border: '1px solid #fde047' }}>
-  <p style={{ fontSize: '10px', fontWeight: '900', color: '#854d0e', marginBottom: '5px' }}>DIAGNÓSTICO DE ADMIN:</p>
-  <p style={{ fontSize: '11px', color: '#1e293b', fontFamily: 'monospace' }}>Registrado: "{userData?.email}"</p>
-  <p style={{ fontSize: '11px', color: '#1e293b', fontFamily: 'monospace' }}>Configurado: "{ADMIN_EMAIL}"</p>
-  <p style={{ fontSize: '12px', fontWeight: '900', color: userData?.email === ADMIN_EMAIL ? '#16a34a' : '#dc2626', marginTop: '10px' }}>
-    ¿IGUALES?: {userData?.email === ADMIN_EMAIL ? "SÍ ✅" : "NO ❌"}
-  </p>
-</div>
+            <p style={{ fontSize: '11px', color: '#1e293b', fontFamily: 'monospace' }}>
+  Auth Directo: "{getAuth().currentUser?.email}"
+</p>
             
             {esAdmin && (
   <div className="space-y-3 mt-8">
