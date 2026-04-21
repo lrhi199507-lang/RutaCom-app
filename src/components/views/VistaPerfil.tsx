@@ -24,6 +24,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [claves, setClaves] = useState({ actual: "", nueva: "" });
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados'>('pendientes');
+  const [fotoZoom, setFotoZoom] = useState<string | null>(null);
+  
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   const view = pestañaActiva || 'publico';
