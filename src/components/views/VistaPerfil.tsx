@@ -552,54 +552,60 @@ const rechazarDocumentos = async (userId: string) => {
           )}
         </div>
       )}
-
-      {/* MODAL DE ZOOM PARA EL ADMINISTRADOR */}
-{fotoZoom && (
-  <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex flex-col p-4 animate-in fade-in duration-200">
-    <div className="flex justify-end p-4">
-      <button onClick={() => setFotoZoom(null)} className="bg-white/10 p-3 rounded-full text-white">
-        <ChevronRight size={24} className="rotate-180" />
-      </button>
+  {/* MODAL DE ZOOM PARA EL ADMINISTRADOR */}
+  {fotoZoom && (
+    <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex flex-col p-4 animate-in fade-in duration-200">
+      <div className="flex justify-end p-4">
+        <button onClick={() => setFotoZoom(null)} className="bg-white/10 p-3 rounded-full text-white">
+          <ChevronRight size={24} className="rotate-180" />
+        </button>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-2">
+        <img 
+          src={fotoZoom} 
+          className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl border-2 border-white/10" 
+          alt="Zoom"
+        />
+      </div>
+      <p className="text-center text-slate-500 font-black text-[10px] uppercase py-6 italic">Toca la flecha para volver</p>
     </div>
-    <div className="flex-1 flex items-center justify-center p-2">
-      <img 
-        src={fotoZoom} 
-        className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl border-2 border-white/10" 
-        alt="Zoom"
-      />
-    </div>
-    <p className="text-center text-slate-500 font-black text-[10px] uppercase py-6 italic">Toca la flecha para volver</p>
-  </div>
-)}
-      
+  )}
 
-      {pasoFoto && (
-        <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
-          {!fotoTemporal ? (
-            <>
-              <div className="w-44 h-44 bg-orange-50 rounded-full border-8 border-orange-100 flex items-center justify-center mb-10"><User size={100} className="text-orange-200" /></div>
-              <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">Tomar Foto Perfil</button>
-              <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Cerrar</button>
-            </>
-          ) : (
-            <>
-              <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl mb-10"><img src={fotoTemporal} className="w-full h-full object-cover" alt="Perfil" /></div>
-              <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Confirmar</button>
-              <button onClick={() => setFotoTemporal(null)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Elegir otra</button>
-            </>
-          )}
-        </div>
+  {/* MODAL DE FOTO DE PERFIL */}
+  {pasoFoto && (
+    <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
+      {!fotoTemporal ? (
+        <>
+          <div className="w-44 h-44 bg-orange-50 rounded-full border-8 border-orange-100 flex items-center justify-center mb-10">
+            <User size={100} className="text-orange-200" />
+          </div>
+          <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">
+            Tomar Foto Perfil
+          </button>
+          <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Cerrar</button>
+        </>
+      ) : (
+        <>
+          <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl mb-10">
+            <img src={fotoTemporal} className="w-full h-full object-cover" alt="Perfil" />
+          </div>
+          <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
+            Confirmar
+          </button>
+          <button onClick={() => setFotoTemporal(null)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Elegir otra</button>
+        </>
       )}
     </div>
+  )}
+    </div> // Cierre del div principal del return
   );
-};
+}; // Cierre de VistaPerfil
 
+// COMPONENTE AUXILIAR FUERA DE LA CLASE PRINCIPAL
 const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
-  // 1. Definimos variables para que el código sea fácil de leer
   let statusText = value || "Configurar"
   let statusColor = "text-blue-500"
 
-  // 2. Usamos una lógica de estados vertical (sin puntos y coma molestos)
   if (status === 'revision') {
     statusText = "REVISIÓN ⏳"
     statusColor = "text-amber-500"
@@ -635,10 +641,10 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
         </div>
       </div>
       
-      {/* Solo mostramos la flecha si NO está verificado o en revisión */}
       {status !== 'verificado' && status !== 'revision' && (
         <ChevronRight size={18} className="text-slate-200" />
       )}
     </button>
-  )
-}
+  );
+};
+      
