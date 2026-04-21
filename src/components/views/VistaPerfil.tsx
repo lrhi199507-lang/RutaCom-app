@@ -414,7 +414,8 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
     <p className="text-[10px] font-black text-red-600 uppercase tracking-[3px] ml-4 italic">Panel de Control</p>
     <div className="bg-slate-900 rounded-[35px] shadow-lg overflow-hidden p-2">
       <button 
-        onClick={() => setPestañaActiva('admin')}
+        {/* REVISA ESTA LÍNEA AQUÍ ABAJO */}
+        onClick={() => { cargarUsuariosAdmin(); setPestañaActiva('admin'); }}
         className="w-full flex items-center justify-between p-5 active:bg-slate-800 transition-colors text-left"
       >
         <div className="flex items-center gap-5">
@@ -431,7 +432,7 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
     </div>
   </div>
 )}
-                        {/* BOTÓN DE CERRAR SESIÓN */}
+                {/* BOTÓN DE CERRAR SESIÓN */}
             <button 
               onClick={handleLogout} 
               className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all mb-10"
