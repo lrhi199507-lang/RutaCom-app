@@ -384,6 +384,17 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                 </button>
               </div>
             </div>
+
+            {/* 1. EL DIAGNÓSTICO (Para ver qué está pasando) */}
+<div style={{ backgroundColor: '#fef9c3', padding: '15px', margin: '15px', borderRadius: '20px', border: '1px solid #fde047' }}>
+  <p style={{ fontSize: '10px', fontWeight: '900', color: '#854d0e', marginBottom: '5px' }}>DIAGNÓSTICO DE ADMIN:</p>
+  <p style={{ fontSize: '11px', color: '#1e293b', fontFamily: 'monospace' }}>Registrado: "{userData?.email}"</p>
+  <p style={{ fontSize: '11px', color: '#1e293b', fontFamily: 'monospace' }}>Configurado: "{ADMIN_EMAIL}"</p>
+  <p style={{ fontSize: '12px', fontWeight: '900', color: userData?.email === ADMIN_EMAIL ? '#16a34a' : '#dc2626', marginTop: '10px' }}>
+    ¿IGUALES?: {userData?.email === ADMIN_EMAIL ? "SÍ ✅" : "NO ❌"}
+  </p>
+</div>
+            
             {esAdmin && (
   <div className="space-y-3 mt-8">
     <p className="text-[10px] font-black text-red-600 uppercase tracking-[3px] ml-4 italic">Panel de Control</p>
@@ -563,12 +574,3 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   );
 };
 
-{/* BLOQUE DE DEPURE SEGURO - BORRAR LUEGO */}
-<div className="p-4 bg-yellow-100 m-4 rounded-2xl border border-yellow-200">
-  <p className="text-[9px] font-black uppercase text-yellow-700 mb-1">Diagnóstico de Admin:</p>
-  <p className="text-[10px] font-mono text-slate-800">Registrado: "{userData?.email}"</p>
-  <p className="text-[10px] font-mono text-slate-800">Configurado: "{ADMIN_EMAIL}"</p>
-  <p className="text-[10px] font-black mt-2 text-red-600">
-    ¿IGUALES?: {userData?.email === ADMIN_EMAIL ? "SÍ ✅" : "NO ❌"}
-  </p>
-</div>
