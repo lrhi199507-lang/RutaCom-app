@@ -181,6 +181,42 @@ const aprobarUsuario = async (userId: string) => {
   }
 };
 
+  
+const toggleBloqueoUsuario = async (userId: string, estadoActual: boolean) => {
+  const confirmacion = window.confirm(estadoActual ? "¿Desbloquear usuario?" : "¿ESTÁS SEGURO DE BLOQUEAR ESTE USUARIO? No podrá usar la app.");
+  if (!confirmacion) return;
+
+  try {
+    const userRef = doc(db, "usuarios", userId);
+    await updateDoc(userRef, {
+      cuentaBloqueada: !estadoActual,
+      motivoBloqueo: !estadoActual ? "Incumplimiento de normas comunitarias" : ""
+    });
+    alert("Estado de cuenta actualizado");
+    cargarUsuariosAdmin();
+  } catch (e) {
+    alert("Error al cambiar estado");
+  }
+};
+
+const rechazarDocumentos = async (userId: string) => {
+  const confirmacion = window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo.");
+  if (!confirmacion) return;
+
+  try {
+    const userRef = doc(db, "usuarios", userId);
+    await updateDoc(userRef, {
+      kycVerificado: false,
+      kycFoto: null, 
+      selfieFoto: null,
+      fotoFrontalVerificada: false
+    });
+    alert("Documentos rechazados.");
+    cargarUsuariosAdmin();
+  } catch (e) {
+    alert("Error al rechazar");
+  }
+};
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
       {/* NAV */}
@@ -333,20 +369,36 @@ const aprobarUsuario = async (userId: string) => {
     </div>
 
     {/* Selector de Sub-pestaña Admin */}
-    <div className="flex bg-slate-900 p-1 border-b border-white/5">
+    <div className="flex flex-col gap-2 mt-4">
+    {/* BOTÓN PRINCIPAL: APROBAR */}
+    <button 
+      onClick={() => aprobarUsuario(u.id)}
+      className="w-full bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95"
+    >
+      Aprobar Verificación
+    </button>
+    
+    <div className="flex gap-2">
+      {/* BOTÓN SECUNDARIO: RECHAZAR FOTOS (Si están borrosas) */}
       <button 
-        onClick={() => setSubPestañaAdmin('pendientes')}
-        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}
+        onClick={() => rechazarDocumentos(u.id)}
+        className="flex-1 bg-amber-500/10 text-amber-600 p-4 rounded-2xl font-black text-[9px] uppercase border border-amber-500/20"
       >
-        Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
+        Rechazar Fotos
       </button>
+      
+      {/* BOTÓN CRÍTICO: BLOQUEAR (Si el usuario es problemático) */}
       <button 
-        onClick={() => setSubPestañaAdmin('aprobados')}
-        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}
+        onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
+        className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase transition-colors ${
+          u.cuentaBloqueada ? 'bg-blue-600 text-white' : 'bg-red-600 text-white'
+        }`}
       >
-        Aprobados ({usuariosAdmin.filter(u => u.kycVerificado).length})
+        {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
       </button>
     </div>
+  </div>
+)}
 
     <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
       {cargando ? (
