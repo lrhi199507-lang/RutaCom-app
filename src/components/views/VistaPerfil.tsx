@@ -505,20 +505,19 @@ const rechazarDocumentos = async (userId: string) => {
                           onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
                           className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase ${u.cuentaBloqueada ? 'bg-blue-600' : 'bg-red-600'} text-white shadow-lg`}
                         >
-                                                  {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
+                      {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })
+                )}
+              </div>
+            );
+          })
       )}
     </div>
   </div>
 )}
-        
+               
     
 
       {/* MODALES */}
