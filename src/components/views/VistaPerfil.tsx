@@ -409,121 +409,113 @@ const rechazarDocumentos = async (userId: string) => {
       </button>
     </div>
     
-{/* lista de usuarios admin */}
-<div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
-  {cargando ? (
-    <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">
-      Sincronizando base de datos...
-    </p>
-  ) : (
-    usuariosAdmin
-      .filter(u => {
-        if (subPestañaAdmin === 'pendientes') {
-          return (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada);
-        }
-        return u.kycVerificado;
-      })
-      .map(u => {
-        const estaExpandido = usuarioExpandidoAdmin === u.id; // Comprueba si esta tarjeta es la "abierta"
+        {/* Lista de Usuarios con Sistema de Acordeón */}
+    <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
+      {cargando ? (
+        <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">
+          Sincronizando base de datos...
+        </p>
+      ) : (
+        usuariosAdmin
+          .filter(u => {
+            if (subPestañaAdmin === 'pendientes') {
+              return (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada);
+            }
+            return u.kycVerificado;
+          })
+          .map(u => {
+            const estaExpandido = usuarioExpandidoAdmin === u.id;
 
-        return (
-          <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden shadow-2xl transition-all duration-300">
-            
-            {/* 1. VISTA COMPACTA (La Barra Principal Pulsable) */}
-            <button 
-              onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} // Si haces clic, toggle open/close
-              className={`w-full flex items-center justify-between p-5 text-white active:bg-white/5 ${estaExpandido && 'border-b border-white/5 bg-white/5'}`}
-            >
-              <div className="flex items-center gap-4">
-                {/* Miniatura o Inicial */}
-                <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-slate-500 text-sm border border-white/5">
-                  {u.nombre.charAt(0)}
-                </div>
-                {/* Nombre y Correo */}
-                <div className="text-left">
-                  <p className="font-black text-xs uppercase italic leading-none mb-1.5">{u.nombre}</p>
-                  <p className="text-[9px] text-slate-500 font-bold leading-none">{u.correo || u.email}</p>
-                </div>
-              </div>
-              
-              {/* Icono de Flecha con Rotación */}
-              <div className="flex items-center gap-3">
-                {u.cuentaBloqueada && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title="Bloqueado" />}
-                <ChevronRight 
-                  size={20} 
-                  className={`text-slate-600 transition-transform duration-300 ${estaExpandido ? '-rotate-90' : 'rotate-90'}`} 
-                />
-              </div>
-            </button>
-
-            {/* 2. VISTA EXPANDIDA (Los Detalles Ocultos) */}
-            {estaExpandido && (
-              <div className="p-6 space-y-5 animate-in slide-in-from-top duration-300">
+            return (
+              <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden shadow-2xl transition-all duration-300">
                 
-                {/* Badges de Estado */}
-                <div className="flex gap-2">
-                  {u.kycVerificado && !u.cuentaBloqueada && <div className="bg-green-500/20 text-green-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">VERIFICADO ✅</div>}
-                  {u.cuentaBloqueada && <div className="bg-red-500/20 text-red-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">CUENTA BLOQUEADA ⛔</div>}
-                </div>
+                {/* 1. VISTA COMPACTA: El nombre y la flecha */}
+                <button 
+                  onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)}
+                  className={`w-full flex items-center justify-between p-5 text-white active:bg-white/5 transition-colors ${estaExpandido ? 'bg-white/5 border-b border-white/10' : ''}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-slate-500 text-sm border border-white/5">
+                      {u.nombre ? u.nombre.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-black text-xs uppercase italic leading-none mb-1.5">{u.nombre}</p>
+                      <p className="text-[9px] text-slate-500 font-bold leading-none">{u.correo || u.email}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {u.cuentaBloqueada && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+                    <ChevronRight 
+                      size={18} 
+                      className={`text-slate-600 transition-transform duration-500 ${estaExpandido ? 'rotate-90' : 'rotate-0'}`} 
+                    />
+                  </div>
+                </button>
 
-                {/* Muestra de Fotos con Zoom */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { img: u.kycFoto, label: 'Cédula' },
-                    { img: u.selfieFoto, label: 'Selfie + ID' },
-                    { img: u.fotoFrontal, label: 'Vehículo' }
-                  ].map((item, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
-                      <div 
-                        onClick={() => item.img ? setFotoZoom(item.img) : null}
-                        className={`w-full h-20 rounded-2xl overflow-hidden border border-white/5 bg-slate-800 flex items-center justify-center ${!item.img && 'opacity-30'}`}
-                      >
-                        {item.img ? (
-                          <img src={item.img} className="w-full h-full object-cover" alt={item.label} />
-                        ) : (
-                          <Camera size={14} className="text-slate-600" />
-                        )}
+                {/* 2. VISTA EXPANDIDA: Fotos y Botones */}
+                {estaExpandido && (
+                  <div className="p-6 space-y-5 animate-in slide-in-from-top duration-300">
+                    
+                    <div className="flex gap-2">
+                      {u.kycVerificado && !u.cuentaBloqueada && <div className="bg-green-500/20 text-green-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">VERIFICADO ✅</div>}
+                      {u.cuentaBloqueada && <div className="bg-red-500/20 text-red-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">BLOQUEADO ⛔</div>}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { img: u.kycFoto, label: 'Cédula' },
+                        { img: u.selfieFoto, label: 'Selfie + ID' },
+                        { img: u.fotoFrontal, label: 'Vehículo' }
+                      ].map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
+                          <div 
+                            onClick={() => item.img && setFotoZoom(item.img)}
+                            className={`w-full h-20 rounded-2xl overflow-hidden border border-white/5 bg-slate-800 flex items-center justify-center ${!item.img && 'opacity-30'}`}
+                          >
+                            {item.img ? (
+                              <img src={item.img} className="w-full h-full object-cover" alt="Documento" />
+                            ) : (
+                              <Camera size={14} className="text-slate-600" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col gap-2 pt-2">
+                      {subPestañaAdmin === 'pendientes' && (
+                        <button 
+                          onClick={() => aprobarUsuario(u.id)}
+                          className="w-full bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95 transition-transform"
+                        >
+                          Aprobar Verificación
+                        </button>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => rechazarDocumentos(u.id)}
+                          className="flex-1 bg-amber-500/10 text-amber-600 p-4 rounded-2xl font-black text-[9px] uppercase border border-amber-500/20"
+                        >
+                          Rechazar
+                        </button>
+                        <button 
+                          onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
+                          className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase ${u.cuentaBloqueada ? 'bg-blue-600' : 'bg-red-600'} text-white shadow-lg`}
+                        >
+                          {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* BOTONES DE ACCIÓN (Los mismos de antes) */}
-                <div className="flex flex-col gap-2 mt-2">
-                  {subPestañaAdmin === 'pendientes' && (
-                    <button 
-                      onClick={() => aprobarUsuario(u.id)}
-                      className="w-full bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95"
-                    >
-                      Aprobar Verificación
-                    </button>
-                  )}
-                  
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => rechazarDocumentos(u.id)}
-                      className="flex-1 bg-amber-500/10 text-amber-600 p-4 rounded-2xl font-black text-[9px] uppercase border border-amber-500/20 active:scale-95"
-                    >
-                      Rechazar Fotos
-                    </button>
-                    <button 
-                      onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
-                      className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase transition-all active:scale-95 ${
-                        u.cuentaBloqueada ? 'bg-blue-600 text-white' : 'bg-red-600 text-white'
-                      }`}
-                    >
-                      {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
-                    </button>
                   </div>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        );
-      })
-  )}
-</div>
+            );
+          })
+      )}
+    </div>
     
 
       {/* MODALES */}
