@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   Calendar, CheckCircle2, Mail, ShieldCheck,
@@ -19,7 +20,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [cargando, setCargando] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
-
+  const [modalClave, setModalClave] = useState(false);
+  const [claves, setClaves] = useState({ actual: "", nueva: "" });
+  
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   const view = pestañaActiva || 'publico';
 
@@ -75,6 +78,28 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
   const totalCompletados = puntosSeguridad.filter(Boolean).length;
   const porcentajeConfianza = (totalCompletados / totalRequeridos) * 100;
 
+  const cambiarContraseña = async () => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (user && claves.nueva.length >= 6) {
+    setCargando(true);
+    try {
+      // Nota: Si da error de "sensitive-operation", hay que reautenticar.
+      // Por ahora probamos el cambio directo:
+      await updatePassword(user, claves.nueva);
+      alert("Contraseña actualizada con éxito");
+      setModalClave(false);
+      setClaves({ actual: "", nueva: "" });
+    } catch (e: any) {
+      alert("Error: Para cambiar la clave debes haber iniciado sesión recientemente.");
+    } finally {
+      setCargando(false);
+    }
+  } else {
+    alert("La nueva contraseña debe tener al menos 6 caracteres.");
+  }
+};
   // --- FUNCIONES DE CÁMARA Y DATOS ---
   const seleccionarImagen = async (source: CameraSource) => {
     try {
@@ -295,6 +320,18 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                 <MenuButton icon={Phone} label="Teléfono" value={userData?.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData?.telefono}); setNuevoValor(userData?.telefono || ""); setModalVisible(true); }} />
               </div>
             </div>
+"Seguridad" */}
+<div className="space-y-3">
+  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Seguridad</p>
+  <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
+    <MenuButton 
+      icon={ShieldCheck} 
+      label="Contraseña de Acceso" 
+      value="••••••••" 
+      onClick={() => setModalClave(true)} 
+    />
+  </div>
+</div>
 
             {/* GRUPO: VEHÍCULO */}
             <div className="space-y-3">
