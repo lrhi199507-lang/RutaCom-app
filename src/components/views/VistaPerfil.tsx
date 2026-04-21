@@ -214,6 +214,16 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
               </div>
             </div>
 
+            {/* SELLO DE VERIFICACIÓN DE VEHÍCULO (Solo si está todo aprobado) */}
+{(userData.fotoFrontalVerificada && userData.fotoTraseraVerificada && 
+  userData.fotoLatIzqVerificada && userData.fotoLatDerVerificada) && (
+  <div className="mt-4 flex items-center justify-center gap-2 bg-green-50 py-2 px-4 rounded-2xl border border-green-100 animate-bounce">
+    <ShieldCheck size={16} className="text-green-600" />
+    <span className="text-[10px] font-black text-green-700 uppercase italic">Vehículo Inspeccionado por Dame la cola</span>
+  </div>
+)}
+            
+
             {/* SECCIÓN DE NIVEL Y TRAYECTORIA */}
 <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-4">
   <div className="flex justify-between items-end">
