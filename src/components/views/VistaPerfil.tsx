@@ -516,6 +516,9 @@ const rechazarDocumentos = async (userId: string) => {
           })
       )}
     </div>
+    </div>
+  </div>
+)}
     
 
       {/* MODALES */}
