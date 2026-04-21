@@ -9,6 +9,7 @@ import {
   Car, Palette, Hash, Gauge, LogOut, FileCheck, Camera
 } from 'lucide-react';
 
+const auth = getAuth();
 export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva }: any) => {
   // --- ESTADOS DEL SISTEMA ---
   const [modalVisible, setModalVisible] = useState(false);
@@ -85,7 +86,6 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
   const porcentajeConfianza = (totalCompletados / totalRequeridos) * 100;
 
   const cambiarContraseña = async () => {
-  const auth = getAuth();
   const user = auth.currentUser;
 
   if (user && claves.nueva.length >= 6) {
