@@ -622,7 +622,7 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                               className="absolute bottom-2 right-2 bg-green-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-transform"
                             >
                               Aprobar ✅
-                            </button>
+                                                        </button>
                           </div>
                         </div>
                       )}
@@ -632,10 +632,11 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
             </div>
           </div>
         )}
-      </div>
-    );
-};
 
+      </div> {/* ESTE DIV CIERRA EL CONTENEDOR PRINCIPAL DE LA VISTA */}
+    ); // ESTE CIERRA EL RETURN
+}; // ESTE CIERRA EL COMPONENTE (VistaPerfil)
+            
           
       {modalClave && (
   <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
