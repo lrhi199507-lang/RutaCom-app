@@ -26,10 +26,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   const view = pestañaActiva || 'publico';
 
-  const ADMIN_EMAIL = "lrhi199507@gmail.com"; 
-
-// Aquí usamos 'auth.currentUser' porque vimos que 'userData' venía vacío
-const esAdmin = auth.currentUser?.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim();
+  const ADMIN_EMAIL = "lrhi199507@gmail.com";
+// Añadimos el "?" después de email para que si es nulo, no rompa la app
+const esAdmin = auth.currentUser?.email ? auth.currentUser.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
+  
   
 
   // --- LÓGICA DE RANGOS (Basado en Experiencia de Viajes) ---
