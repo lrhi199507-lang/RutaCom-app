@@ -29,6 +29,11 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const ADMIN_EMAIL = "lrhi199507@gmail.com"; // <--- Pon aquí tu correo oficial
 const esAdmin = userData?.email === ADMIN_EMAIL;
 
+// 2. Crea la constante 'esAdmin' justo aquí
+const auth = getAuth();
+const esAdmin = auth.currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  
+
   // --- LÓGICA DE RANGOS (Basado en Experiencia de Viajes) ---
   const viajesCond = userData.viajesRealizados || 0;
   const viajesPas = userData.viajesComoPasajero || 0;
@@ -165,9 +170,7 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
   }
   return v;
 };
-  const auth = getAuth();
-const esAdmin = auth.currentUser?.email === ADMIN_EMAIL;
-
+  
   const capturarDocumento = async () => {
     try {
       const image = await CapacitorCamera.getPhoto({
@@ -189,7 +192,7 @@ const esAdmin = auth.currentUser?.email === ADMIN_EMAIL;
       switch(pasoDocumento.tipo) {
         case 'cedula': campoFoto = 'kycFoto'; campoEstado = 'kycVerificado'; break;
         case 'licencia': campoFoto = 'licenciaFoto'; campoEstado = 'licenciaVerificada'; break;
-        case 'circulacion': campoFoto = 'circulacionFoto'; campoEstado = 'circulacionVerificada'; break;
+        case 'circulacion': campoFoto = 'circulacinFoto'; campoEstado = 'circulacionVerificada'; break;
         case 'rcv': campoFoto = 'rcvFoto'; campoEstado = 'rcvVerificado'; break;
         case 'selfie': campoFoto = 'selfieFoto'; campoEstado = 'selfieVerificada'; break;
         case 'antecedentes': campoFoto = 'antecedentesFoto'; campoEstado = 'antecedentesVerificados'; break;
