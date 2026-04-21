@@ -31,7 +31,8 @@ const esAdmin = userData?.email === ADMIN_EMAIL;
 
 // 2. Crea la constante 'esAdmin' justo aquí
 const auth = getAuth();
-const esAdmin = auth.currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+const esAdmin = auth.currentUser?.email?.includes("lrhi199507");
+  
   
 
   // --- LÓGICA DE RANGOS (Basado en Experiencia de Viajes) ---
