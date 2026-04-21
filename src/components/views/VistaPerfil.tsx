@@ -35,6 +35,17 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     return "NOVATO";
   };
 
+  const obtenerColorRango = (rango: string) => {
+  switch(rango) {
+    case "PLATA": return "bg-slate-400";
+    case "ORO": return "bg-yellow-500";
+    case "LEYENDA": return "bg-slate-900";
+    default: return "bg-blue-600"; // NOVATO
+  }
+};
+
+const rangoActual = obtenerRango();
+
   // Lógica para el siguiente nivel
 const calcularSiguienteNivel = () => {
   const total = totalTrayectoria;
@@ -181,7 +192,10 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
           <div className="p-5 space-y-6">
             {/* CARD PRINCIPAL */}
             <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
-              <div className="absolute top-5 right-5"><div className="bg-slate-900 text-white px-3 py-1 rounded-full text-[7px] font-black uppercase tracking-widest">RANGO: {obtenerRango()}</div></div>
+              <div className="absolute top-5 right-5">
+              <div className={`${obtenerColorRango(rangoActual)} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}> {rangoActual}
+              </div>
+              </div>
               
               <div className="relative w-28 h-28 mx-auto mb-5">
                 <div className="w-full h-full rounded-full bg-gradient-to-tr from-orange-500 to-slate-200 p-1 shadow-xl">
