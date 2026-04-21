@@ -320,7 +320,7 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                 <MenuButton icon={Phone} label="Teléfono" value={userData?.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData?.telefono}); setNuevoValor(userData?.telefono || ""); setModalVisible(true); }} />
               </div>
             </div>
-"Seguridad" */}
+"Seguridad"
 <div className="space-y-3">
   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Seguridad</p>
   <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
