@@ -179,32 +179,6 @@ const aprobarUsuario = async (userId: string) => {
   }
 };
 
-// 2. SECCIÓN DE IMÁGENES CON ZOOM (Dentro del .map de admin)
-// Busca donde dice {/* Muestra de Fotos Pendientes */} y reemplázalo por esto:
-
-<div className="grid grid-cols-3 gap-2">
-  {[
-    { img: u.kycFoto, label: 'Cédula' },
-    { img: u.selfieFoto, label: 'Selfie + ID' },
-    { img: u.fotoFrontal, label: 'Vehículo (Placa)' }
-  ].map((item, idx) => (
-    item.img && (
-      <div key={idx} className="space-y-1">
-        <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
-        <div 
-          onClick={() => window.open(item.img, '_blank')} // Abre la foto original en grande
-          className="relative w-full h-28 bg-black rounded-2xl overflow-hidden border border-white/10 active:scale-95 transition-transform"
-        >
-          <img src={item.img} className="w-full h-full object-cover" alt={item.label} />
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-            <Edit2 size={12} className="text-white opacity-50" />
-          </div>
-        </div>
-      </div>
-    )
-  ))}
-</div>
-
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
       {/* NAV */}
@@ -387,21 +361,29 @@ const aprobarUsuario = async (userId: string) => {
                 {u.kycVerificado && <div className="bg-green-500/20 text-green-500 text-[8px] font-black px-3 py-1 rounded-full">VERIFICADO</div>}
               </div>
 
-              {/* Muestra de Fotos Pendientes */}
-              <div className="grid grid-cols-2 gap-2">
-                {u.kycFoto && (
-                  <div className="space-y-1">
-                    <p className="text-[7px] font-black text-slate-500 uppercase">Documento ID</p>
-                    <img src={u.kycFoto} className="w-full h-24 object-cover rounded-2xl bg-black border border-white/5" onClick={() => window.open(u.kycFoto)} />
-                  </div>
-                )}
-                {u.fotoFrontal && (
-                  <div className="space-y-1">
-                    <p className="text-[7px] font-black text-slate-500 uppercase">Vehículo Frontal</p>
-                    <img src={u.fotoFrontal} className="w-full h-24 object-cover rounded-2xl bg-black border border-white/5" />
-                  </div>
-                )}
-              </div>
+              
+{/* Muestra de Fotos Pendientes con Zoom */}
+<div className="grid grid-cols-3 gap-2">
+  {[
+    { img: u.kycFoto, label: 'Cédula' },
+    { img: u.selfieFoto, label: 'Selfie + ID' },
+    { img: u.fotoFrontal, label: 'Vehículo (Placa)' }
+  ].map((item, idx) => (
+    <div key={idx} className="space-y-1">
+      <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
+      <div 
+        onClick={() => item.img ? setFotoZoom(item.img) : null}
+        className={`w-full h-24 rounded-2xl overflow-hidden border border-white/5 bg-slate-800 flex items-center justify-center ${!item.img && 'opacity-30'}`}
+      >
+        {item.img ? (
+          <img src={item.img} className="w-full h-full object-cover" alt="Doc" />
+        ) : (
+          <Camera size={16} className="text-slate-600" />
+        )}
+      </div>
+    </div>
+  ))}
+</div>
 
                             {subPestañaAdmin === 'pendientes' && (
                 <div className="flex gap-2">
@@ -453,6 +435,26 @@ const aprobarUsuario = async (userId: string) => {
           )}
         </div>
       )}
+
+      {/* MODAL DE ZOOM PARA EL ADMINISTRADOR */}
+{fotoZoom && (
+  <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex flex-col p-4 animate-in fade-in duration-200">
+    <div className="flex justify-end p-4">
+      <button onClick={() => setFotoZoom(null)} className="bg-white/10 p-3 rounded-full text-white">
+        <ChevronRight size={24} className="rotate-180" />
+      </button>
+    </div>
+    <div className="flex-1 flex items-center justify-center p-2">
+      <img 
+        src={fotoZoom} 
+        className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl border-2 border-white/10" 
+        alt="Zoom"
+      />
+    </div>
+    <p className="text-center text-slate-500 font-black text-[10px] uppercase py-6 italic">Toca la flecha para volver</p>
+  </div>
+)}
+      
 
       {pasoFoto && (
         <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
