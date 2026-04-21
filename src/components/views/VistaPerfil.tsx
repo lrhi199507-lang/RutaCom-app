@@ -477,6 +477,97 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                       </div>
 
                       {u.kycFoto && !u.kycVerificado && (
+            {/* GRUPO: LEGAL */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Documentación Legal</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 overflow-hidden p-2">
+                <MenuButton icon={FileText} label="Foto de Cédula" status={userData?.kycVerificado ? 'verificado' : (userData?.kycFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
+                <MenuButton icon={ShieldCheck} label="Licencia de Conducir" status={userData?.licenciaVerificada ? 'verificado' : (userData?.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
+                <MenuButton icon={FileText} label="Carnet de Circulación" status={userData?.circulacionVerificada ? 'verificado' : (userData?.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
+                <MenuButton icon={ShieldCheck} label="Seguro R.C.V" status={userData?.rcvVerificado ? 'verificado' : (userData?.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
+                <MenuButton icon={User} label="Selfie de Identidad" status={userData?.selfieVerificada ? 'verificado' : (userData?.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
+                
+                <button 
+                  disabled={userData?.antecedentesVerificados || !!userData?.antecedentesFoto}
+                  onClick={() => setPasoDocumento({tipo:'antecedentes', activa:true})}
+                  className="w-full flex items-center justify-between p-5 border-t border-slate-50 bg-orange-50/30 active:bg-orange-100 transition-colors disabled:opacity-70"
+                >
+                  <div className="flex items-center gap-5">
+                    <div className="w-11 h-11 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-sm"><FileCheck size={20} /></div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-orange-400 uppercase italic mb-1">Record Criminal (Opcional)</p>
+                      <p className="text-xs font-black uppercase text-orange-600">{userData?.antecedentesVerificados ? "CONDUCTOR PRO 🏆" : (userData?.antecedentesFoto ? "EN REVISIÓN ⏳" : "SUBIR PARA DESTACAR")}</p>
+                    </div>
+                  </div>
+                  {!userData?.antecedentesFoto && !userData?.antecedentesVerificados && <ChevronRight size={18} className="text-orange-200" />}
+                </button>
+              </div>
+            </div>
+
+            {esAdmin && (
+              <div className="space-y-3 mt-8">
+                <p className="text-[10px] font-black text-red-600 uppercase tracking-[3px] ml-4 italic">Panel de Control</p>
+                <div className="bg-slate-900 rounded-[35px] shadow-lg overflow-hidden p-2">
+                  <button 
+                    onClick={() => { cargarUsuariosAdmin(); setPestañaActiva('admin'); }}
+                    className="w-full flex items-center justify-between p-5 active:bg-slate-800 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-sm">
+                        <ShieldCheck size={20} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">Acceso Restringido</p>
+                        <p className="text-xs font-black uppercase tracking-tight text-white">Gestionar Verificaciones</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="text-white/20" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* BOTÓN DE CERRAR SESIÓN */}
+            <button 
+              onClick={handleLogout} 
+              className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all mb-10 mt-8"
+            >
+              <LogOut size={14} /> Cerrar Sesión
+            </button>
+          </div>
+        )} {/* <--- ESTA ES LA LLAVE QUE FALTABA PARA CERRAR LA VISTA DE CUENTA */}
+
+        {/* --- PANEL DE ADMINISTRACIÓN --- */}
+        {view === 'admin' && (
+          <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+            <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between">
+              <button onClick={() => setPestañaActiva('cuenta')} className="text-white/50 bg-white/5 p-2 rounded-xl">
+                <ChevronRight className="rotate-180" size={20} />
+              </button>
+              <h2 className="text-white font-black italic uppercase tracking-tighter text-sm">Control Maestro</h2>
+              <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl">
+                <RefreshCw size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+              <p className="text-[10px] font-black text-slate-500 uppercase ml-2 italic tracking-widest">Solicitudes Pendientes:</p>
+              {usuariosAdmin.length === 0 ? (
+                <div className="p-10 text-center text-slate-600 font-bold italic">No hay datos. Toca refrescar ↻</div>
+              ) : (
+                usuariosAdmin
+                  .filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada))
+                  .map(u => (
+                    <div key={u.id} className="bg-slate-900 border border-white/5 p-4 rounded-[30px] space-y-4 shadow-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-white/10">
+                          <img src={u.fotoPerfil || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="text-white">
+                          <p className="font-black text-xs uppercase italic">{u.nombre}</p>
+                          <p className="text-slate-500 text-[9px] font-mono">{u.email}</p>
+                        </div>
+                      </div>
+                      {u.kycFoto && !u.kycVerificado && (
                         <div className="space-y-2">
                           <p className="text-[9px] font-black text-amber-500 uppercase italic">Documento:</p>
                           <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black">
@@ -496,13 +587,11 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
             </div>
           </div>
         )}
-
-      </div> // Cierre del contenedor principal (el que tiene el scroll)
-    ); // Cierre del return
-}; // Cierre final del componente VistaPerfil
-      
+      </div>
+    );
+};
             
-            
+          
       {modalClave && (
   <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalClave(false)} />
