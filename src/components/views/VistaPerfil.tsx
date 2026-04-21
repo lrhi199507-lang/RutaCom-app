@@ -26,13 +26,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   const view = pestañaActiva || 'publico';
 
-  const ADMIN_EMAIL = "lrhi199507@gmail.com"; // <--- Pon aquí tu correo oficial
-const esAdmin = userData?.email === ADMIN_EMAIL;
+  const ADMIN_EMAIL = "lrhi199507@gmail.com"; 
 
-// 2. Crea la constante 'esAdmin' justo aquí
-const auth = getAuth();
-const esAdmin = auth.currentUser?.email?.includes("lrhi199507");
-  
+// Aquí usamos 'auth.currentUser' porque vimos que 'userData' venía vacío
+const esAdmin = auth.currentUser?.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim();
   
 
   // --- LÓGICA DE RANGOS (Basado en Experiencia de Viajes) ---
