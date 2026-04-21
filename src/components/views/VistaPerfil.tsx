@@ -368,7 +368,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 )}
               </div>
 
-              {subPestañaAdmin === 'pendientes' && (
+                            {subPestañaAdmin === 'pendientes' && (
                 <div className="flex gap-2">
                   <button 
                     onClick={() => aprobarUsuario(u.id)}
@@ -386,6 +386,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   </div>
 )}
         
+      </div> {/* <-- ESTA LLAVE ES LA QUE FALTABA PARA CERRAR EL DIV PRINCIPAL DE LA VISTA */}
 
       {/* MODALES */}
       {modalVisible && (
@@ -410,7 +411,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             </>
           ) : (
             <>
-              <div className="w-full aspect-[1.6/1] rounded-3xl overflow-hidden border-4 border-blue-500"><img src={fotoDocTemporal} className="w-full h-full object-cover" /></div>
+              <div className="w-full aspect-[1.6/1] rounded-3xl overflow-hidden border-4 border-blue-500"><img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Documento" /></div>
               <button onClick={subirDocumentoFinal} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Enviar Datos</button>
               <button onClick={() => setFotoDocTemporal(null)} className="text-white font-black uppercase text-[10px]">Repetir</button>
             </>
@@ -428,7 +429,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             </>
           ) : (
             <>
-              <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl mb-10"><img src={fotoTemporal} className="w-full h-full object-cover" /></div>
+              <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl mb-10"><img src={fotoTemporal} className="w-full h-full object-cover" alt="Perfil" /></div>
               <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Confirmar</button>
               <button onClick={() => setFotoTemporal(null)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Elegir otra</button>
             </>
