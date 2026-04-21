@@ -200,8 +200,7 @@ const toggleBloqueoUsuario = async (userId: string, estadoActual: boolean) => {
 };
 
 const rechazarDocumentos = async (userId: string) => {
-  const confirmacion = window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo.");
-  if (!confirmacion) return;
+  if (!window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo.")) return;
 
   try {
     const userRef = doc(db, "usuarios", userId);
@@ -209,14 +208,17 @@ const rechazarDocumentos = async (userId: string) => {
       kycVerificado: false,
       kycFoto: null, 
       selfieFoto: null,
-      fotoFrontalVerificada: false
+      fotoFrontalVerificada: false,
+      estadoRevision: "rechazado", // <-- Esta es la señal
+      mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, asegúrate de que sean legibles y vuelve a intentarlo."
     });
-    alert("Documentos rechazados.");
+    alert("Documentos rechazados y usuario notificado.");
     cargarUsuariosAdmin();
   } catch (e) {
     alert("Error al rechazar");
   }
 };
+  
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
       {/* NAV */}
@@ -298,6 +300,10 @@ const rechazarDocumentos = async (userId: string) => {
                 <MenuButton icon={Hash} label="Cédula" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
                 <MenuButton icon={ShieldCheck} label="Contraseña" value="••••••••" onClick={() => setModalClave(true)} />
+                <MenuButton icon={FileText}  label="Cédula de Identidad"
+  // Si está rechazado y no hay foto, le ponemos un estado visual de alerta
+                  status={userData.estadoRevision === 'rechazado' && !userData.kycFoto ? 'rechazado' : (userData.kycVerificado ? 'verificado' : (userData.kycFoto ? 'revision' : 'pendiente'))}
+                 onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
               </div>
             </div>
 
@@ -323,6 +329,27 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             </div>
 
+            {/* AVISO DE RECHAZO PARA EL USUARIO */}
+{userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
+  <div className="mx-6 mb-6 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6 animate-in zoom-in duration-300">
+    <div className="flex items-start gap-4">
+      <div className="bg-orange-500 p-2 rounded-xl text-white">
+        <AlertCircle size={20} />
+      </div>
+      <div className="flex-1">
+        <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Atención Requerida</p>
+        <p className="text-[11px] font-bold text-slate-700 leading-relaxed">
+          {userData.mensajeAdmin || "Tus documentos no pudieron ser verificados. Por favor, súbelos nuevamente con mejor iluminación y enfoque."}
+        </p>
+      </div>
+    </div>
+    <div className="mt-4 flex justify-end">
+      <p className="text-[8px] font-black text-orange-400 uppercase tracking-tighter">Acción necesaria en sección Legal ↓</p>
+    </div>
+  </div>
+)}
+            
+
             {/* LEGAL - RESTAURADO */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Legal</p>
@@ -331,13 +358,13 @@ const rechazarDocumentos = async (userId: string) => {
                 <MenuButton icon={ShieldCheck} label="Licencia" status={userData.licenciaVerificada ? 'verificado' : (userData.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
                 <MenuButton icon={FileText} label="Circulación" status={userData.circulacionVerificada ? 'verificado' : (userData.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Seguro RCV" status={userData.rcvVerificado ? 'verificado' : (userData.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
-                <MenuButton 
-      icon={User} 
-      label="Selfie con Documento" // <-- Nombre modificado
-      status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} 
-      onClick={() => setModalInstruccionesSelfie(true)} // <-- Ahora abre las instrucciones
-    />
-  </div>
+
+                if (status === 'revision') { statusText = "REVISIÓN ⏳"; statusColor = "text-amber-500"; }
+else if (status === 'verificado') { statusText = "LISTO ✅"; statusColor = "text-green-600"; }
+else if (status === 'rechazado') { statusText = "REINTENTAR ⚠️"; statusColor = "text-orange-600"; } // <-- Añadir esto
+  
+             <MenuButton  icon={User}   label="Selfie con Documento" status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setModalInstruccionesSelfie(true)} />
+</div>
 </div>
             
 
