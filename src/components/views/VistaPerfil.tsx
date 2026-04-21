@@ -476,7 +476,7 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
                         </div>
                       </div>
 
-                      {u.kycFoto && !u.kycVerificado && (
+                    
             {/* GRUPO: LEGAL */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Documentación Legal</p>
