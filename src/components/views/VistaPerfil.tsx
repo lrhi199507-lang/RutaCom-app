@@ -23,7 +23,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [modalClave, setModalClave] = useState(false);
   const [claves, setClaves] = useState({ actual: "", nueva: "" });
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
-  
+  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados'>('pendientes');
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   const view = pestañaActiva || 'publico';
@@ -146,6 +146,29 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setUsuariosAdmin(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
+  const aprobarUsuario = async (userId: string) => {
+  setCargando(true);
+  try {
+    const userRef = doc(db, "usuarios", userId);
+    await updateDoc(userRef, {
+      kycVerificado: true,
+      licenciaVerificada: true,
+      circulacionVerificada: true,
+      rcvVerificado: true,
+      fotoFrontalVerificada: true,
+      fotoTraseraVerificada: true,
+      fotoLatIzqVerificada: true,
+      fotoLatDerVerificada: true,
+      selfieVerificada: true
+    });
+    alert("Usuario verificado exitosamente");
+    cargarUsuariosAdmin(); // Recargar la lista
+  } catch (e) {
+    alert("Error al aprobar");
+  } finally {
+    setCargando(false);
+  }
+};
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
