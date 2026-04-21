@@ -547,110 +547,145 @@ const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 1
           } else if (tipoEdicion?.id === 'fechaNacimiento') {
             setNuevoValor(formatearFecha(val));
           } else {
-            setNuevoValor(val);
-          }
-        }} 
-        // Marcador de fondo (Referente)
-        placeholder={
-          tipoEdicion?.id === 'fechaNacimiento' ? "DD/MM/AAAA" : 
-          tipoEdicion?.id === 'cedulaNumero' ? "Ej: 23.426.582" : ""
-        }
-        className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none mb-8 uppercase focus:border-blue-500 transition-colors placeholder:text-slate-300" 
-        autoFocus 
-        keyboardType={
-          (tipoEdicion?.id === 'cedulaNumero' || tipoEdicion?.id === 'fechaNacimiento') 
-          ? "numeric" : "default"
-        }
-      />
-      
-      <button 
-        onClick={guardarCambios} 
-        disabled={cargando} 
-        className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs active:scale-95 transition-all shadow-lg"
-      >
-        {cargando ? 'Guardando...' : 'CONFIRMAR CAMBIO'}
-      </button>
-    </div>
-  </div>
-)}
-      
+            {/* BOTÓN DE CERRAR SESIÓN */}
+            <button 
+              onClick={handleLogout} 
+              className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all mb-10"
+            >
+              <LogOut size={14} /> Cerrar Sesión
+            </button>
+          </div>
+        )}
 
-      {/* MODAL DE CAPTURA DE DOCUMENTOS */}
-      {pasoDocumento.activa && (
-        <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 overflow-hidden">
-          {!fotoDocTemporal ? (
-            <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-              <div className="text-center"><p className="text-blue-500 font-black text-[10px] uppercase italic tracking-widest mb-2">Asistente de seguridad</p><p className="text-white text-sm font-bold uppercase">{pasoDocumento.reglas || "Asegúrate de que el documento sea legible"}</p></div>
-              <div className={`relative w-full shadow-2xl bg-slate-800 ${pasoDocumento.tipo === 'selfie' ? 'aspect-square rounded-full border-4 border-dashed border-blue-500/50' : 'aspect-[1.6/1] rounded-3xl border-2 border-white/20'}`}>
-                <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-white/30 font-black text-[10px] uppercase italic tracking-tighter">Posiciona el documento aquí</div>
-              </div>
-              <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95">Capturar Foto</button>
-              <button onClick={() => setPasoDocumento({tipo:'cedula', activa:false})} className="w-full text-slate-500 font-black uppercase text-[10px] mt-4">Cancelar</button>
+        {/* PANEL DE ADMINISTRACIÓN */}
+        {view === 'admin' && (
+          <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+            <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between">
+              <button onClick={() => setPestañaActiva('cuenta')} className="text-white/50 bg-white/5 p-2 rounded-xl">
+                <ChevronRight className="rotate-180" size={20} />
+              </button>
+              <h2 className="text-white font-black italic uppercase tracking-tighter text-sm">Control Maestro</h2>
+              <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl">
+                <RefreshCw size={20} />
+              </button>
             </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95 duration-300">
-              <div className={`w-full overflow-hidden border-4 border-blue-50 shadow-2xl ${pasoDocumento.tipo === 'selfie' ? 'aspect-square rounded-full' : 'aspect-[1.6/1] rounded-3xl'}`}><img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Preview" /></div>
-              <div className="w-full space-y-3">
-                <button onClick={subirDocumentoFinal} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95">{cargando ? 'Subiendo...' : 'ENVIAR A REVISIÓN'}</button>
-                <button onClick={() => setFotoDocTemporal(null)} className="w-full bg-white/10 text-white p-5 rounded-[25px] font-black uppercase text-xs active:bg-white/20">REPETIR FOTO</button>
-              </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+              <p className="text-[10px] font-black text-slate-500 uppercase ml-2 italic tracking-widest">Solicitudes Pendientes:</p>
+              {usuariosAdmin.length === 0 ? (
+                <div className="p-10 text-center text-slate-600 font-bold italic">No hay datos. Toca refrescar ↻</div>
+              ) : (
+                usuariosAdmin
+                  .filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada))
+                  .map(u => (
+                    <div key={u.id} className="bg-slate-900 border border-white/5 p-4 rounded-[30px] space-y-4 shadow-2xl">
+                      <div className="flex items-center gap-3 text-white">
+                        <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden">
+                          <img src={u.fotoPerfil || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <p className="font-black text-xs uppercase italic">{u.nombre}</p>
+                          <p className="text-slate-500 text-[9px] font-mono">{u.email}</p>
+                        </div>
+                      </div>
+                      {u.kycFoto && !u.kycVerificado && (
+                        <div className="space-y-2">
+                          <p className="text-[9px] font-black text-amber-500 uppercase italic">Documento:</p>
+                          <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black">
+                            <img src={u.kycFoto} className="w-full h-48 object-contain" />
+                            <button 
+                              onClick={() => aprobarDocumento(u.id, 'kycVerificado')}
+                              className="absolute bottom-2 right-2 bg-green-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase"
+                            >
+                              Aprobar ✅
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* MODAL DE FOTO DE PERFIL */}
-      {pasoFoto && (
-        <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 text-center animate-in fade-in duration-300">
-          {!fotoTemporal ? (
-            <div className="flex-1 flex flex-col items-center justify-center space-y-8">
-              <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100 relative shadow-inner"><User size={100} className="text-orange-200" /></div>
-              <h3 className="text-3xl font-black text-slate-800 uppercase italic">¡Sonríe!</h3>
-              <div className="w-full space-y-3">
+        {/* --- MODALES DEL SISTEMA (DENTRO DEL COMPONENTE) --- */}
+        
+        {modalClave && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalClave(false)} />
+            <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom duration-300">
+              <h4 className="text-[10px] font-black text-blue-600 uppercase mb-2 tracking-[2px]">ACTUALIZAR SEGURIDAD</h4>
+              <p className="text-[9px] font-bold text-slate-400 mb-6 uppercase">Escribe tu nueva clave maestra</p>
+              <input type="password" placeholder="Nueva contraseña" value={claves.nueva} onChange={(e) => setClaves({...claves, nueva: e.target.value})} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none mb-8 focus:border-blue-500 transition-colors" />
+              <button onClick={cambiarContraseña} disabled={cargando} className="w-full bg-slate-900 text-white p-5 rounded-[25px] font-black uppercase text-xs active:scale-95 transition-all shadow-lg">{cargando ? 'Procesando...' : 'CAMBIAR CONTRASEÑA'}</button>
+            </div>
+          </div>
+        )}
+
+        {modalVisible && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
+            <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom duration-300">
+              <h4 className="text-[10px] font-black text-blue-600 uppercase mb-2 tracking-[2px]">EDITAR {tipoEdicion?.label}</h4>
+              <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg border-2 border-slate-100 outline-none mb-8 uppercase focus:border-blue-500" autoFocus />
+              <button onClick={guardarCambios} disabled={cargando} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs active:scale-95 transition-all shadow-lg">{cargando ? 'Guardando...' : 'CONFIRMAR CAMBIO'}</button>
+            </div>
+          </div>
+        )}
+
+        {pasoDocumento.activa && (
+          <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 overflow-hidden">
+            {!fotoDocTemporal ? (
+              <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+                <div className="text-center"><p className="text-blue-500 font-black text-[10px] uppercase italic tracking-widest mb-2">Asistente</p></div>
+                <div className={`relative w-full shadow-2xl bg-slate-800 ${pasoDocumento.tipo === 'selfie' ? 'aspect-square rounded-full border-4 border-dashed border-blue-500/50' : 'aspect-[1.6/1] rounded-3xl border-2 border-white/20'}`}></div>
+                <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95">Capturar Foto</button>
+                <button onClick={() => setPasoDocumento({...pasoDocumento, activa: false})} className="w-full text-slate-500 font-black uppercase text-[10px] mt-4">Cancelar</button>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+                <div className="w-full overflow-hidden border-4 border-blue-50 rounded-3xl aspect-[1.6/1]"><img src={fotoDocTemporal} className="w-full h-full object-cover" /></div>
+                <button onClick={subirDocumentoFinal} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">ENVIAR</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {pasoFoto && (
+          <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 text-center animate-in fade-in duration-300">
+            {!fotoTemporal ? (
+              <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+                <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center border-8 border-orange-100 shadow-inner"><User size={100} className="text-orange-200" /></div>
                 <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95">Tomar Foto</button>
-                <button onClick={() => seleccionarImagen(CameraSource.Photos)} className="w-full bg-slate-100 text-slate-600 p-5 rounded-[25px] font-black uppercase text-xs">Galería</button>
+                <button onClick={() => setPasoFoto(false)} className="w-full text-slate-400 font-black uppercase text-[10px]">Cerrar</button>
               </div>
-              <button onClick={() => setPasoFoto(false)} className="w-full text-slate-400 font-black uppercase text-[10px]">Cerrar</button>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center space-y-10 animate-in zoom-in-95 duration-300">
-              <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl"><img src={fotoTemporal} className="w-full h-full object-cover" alt="Preview" /></div>
-              <div className="w-full space-y-3">
-                <button onClick={subirFotoConfirmada} disabled={cargando} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95">ESTA ME GUSTA</button>
-                <button onClick={() => setFotoTemporal(null)} className="w-full bg-slate-100 text-slate-500 p-5 rounded-[25px] font-black uppercase text-xs">CAMBIAR</button>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center space-y-10 animate-in zoom-in-95 duration-300">
+                <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl"><img src={fotoTemporal} className="w-full h-full object-cover" /></div>
+                <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95">ESTA ME GUSTA</button>
               </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+            )}
+          </div>
+        )}
 
-// COMPONENTE DE BOTÓN DE MENÚ (REUTILIZABLE)
-const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
+      </div> // Cierre final de la vista principal
+    ); // Cierre del return
+}; // Cierre del componente
+
+// COMPONENTE DE BOTÓN DE MENÚ (ESTE VA FUERA DEL COMPONENTE PRINCIPAL)
+  const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-blue-500"; 
   if (status === 'revision') { statusText = "EN REVISIÓN ⏳"; statusColor = "text-amber-500"; }
   else if (status === 'verificado') { statusText = "VERIFICADO ✅"; statusColor = "text-green-600"; }
 
   return (
-    <button 
-      onClick={onClick} 
-      disabled={status === 'verificado' || status === 'revision'} 
-      className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors text-left disabled:opacity-90"
-    >
+    <button onClick={onClick} disabled={status === 'verificado' || status === 'revision'} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors text-left disabled:opacity-90">
       <div className="flex items-center gap-5">
-        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm">
-          <Icon size={20} />
-        </div>
-        <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">{label}</p>
-          <p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>{statusText}</p>
-        </div>
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm"><Icon size={20} /></div>
+        <div><p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">{label}</p><p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>{statusText}</p></div>
       </div>
       {status !== 'verificado' && status !== 'revision' && <ChevronRight size={18} className="text-slate-200" />}
     </button>
   );
 };
-
