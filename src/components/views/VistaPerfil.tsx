@@ -590,7 +590,7 @@ const rechazarDocumentos = async (userId: string) => {
   );
 };
 
-const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
+  const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-blue-500";
 
@@ -624,4 +624,3 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
     </button>
   );
 };
-      
