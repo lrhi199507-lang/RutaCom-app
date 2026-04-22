@@ -119,28 +119,52 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const subirDocumentoFinal = async () => {
-    if (!fotoDocTemporal) return;
-    setCargando(true);
-    try {
-      const fieldMap: any = {
-        cedula: { f: 'kycFoto', v: 'kycVerificado' },
-        licencia: { f: 'licenciaFoto', v: 'licenciaVerificada' },
-        circulacion: { f: 'circulacionFoto', v: 'circulacionVerificada' },
-        rcv: { f: 'rcvFoto', v: 'rcvVerificado' },
-        selfie: { f: 'selfieFoto', v: 'selfieVerificada' },
-        fotoFrontal: { f: 'fotoFrontal', v: 'fotoFrontalVerificada' },
-        fotoTrasera: { f: 'fotoTrasera', v: 'fotoTraseraVerificada' },
-        fotoLatIzq: { f: 'fotoLatIzq', v: 'fotoLatIzqVerificada' },
-        fotoLatDer: { f: 'fotoLatDer', v: 'fotoLatDerVerificada' }
-      };
-      const { f, v } = fieldMap[pasoDocumento.tipo];
-      await updateDoc(doc(db, "usuarios", userData.uid || userData.id), { [f]: fotoDocTemporal, [v]: false });
-      setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
-      setFotoDocTemporal(null); setPasoDocumento({ tipo: 'cedula', activa: false });
-      alert("Enviado para revisión.");
-    } catch (e) { alert("Error"); } finally { setCargando(false); }
-  };
+  if (!fotoDocTemporal) return;
+  setCargando(true);
 
+  try {
+    const fieldMap: any = {
+      cedula: { f: 'kycFoto', v: 'kycVerificado' },
+      licencia: { f: 'licenciaFoto', v: 'licenciaVerificada' },
+      circulacion: { f: 'circulacionFoto', v: 'circulacionVerificada' },
+      rcv: { f: 'rcvFoto', v: 'rcvVerificado' },
+      selfie: { f: 'selfieFoto', v: 'selfieVerificada' },
+      fotoFrontal: { f: 'fotoFrontal', v: 'fotoFrontalVerificada' },
+      fotoTrasera: { f: 'fotoTrasera', v: 'fotoTraseraVerificada' },
+      fotoLatIzq: { f: 'fotoLatIzq', v: 'fotoLatIzqVerificada' },
+      fotoLatDer: { f: 'fotoLatDer', v: 'fotoLatDerVerificada' }
+    };
+    
+    const { f, v } = fieldMap[pasoDocumento.tipo];
+    
+    // 1. ESPERAMOS a que Firebase nos confirme el guardado
+    await updateDoc(doc(db, "usuarios", userData.uid || userData.id), { 
+      [f]: fotoDocTemporal, 
+      [v]: false // Queda en revisión
+    });
+    
+    // 2. Si llegamos aquí, ES UN ÉXITO.
+    // Actualizamos la interfaz LOCAL para que se vea el cambio inmediatamente.
+    setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
+    
+    // 3. Limpiamos la cámara y mostramos un mensaje de ÉXITO
+    setFotoDocTemporal(null); 
+    setPasoDocumento({ tipo: 'cedula', activa: false });
+    alert("¡Datos enviados con éxito! Quedan en revisión.");
+
+  } catch (e: any) {
+    // Si Firebase da error (ej: falta de permisos), caeremos aquí.
+    console.error("Error al subir:", e);
+    // Mostramos el mensaje de error REAL, no un 'Error' genérico.
+    alert("Error de conexión: Por favor, intenta de nuevo o verifica tu conexión.");
+  
+  } finally {
+    // 4. Se ejecute éxito o error, quitamos la pantalla de carga.
+    setCargando(false);
+  }
+};
+  
+  
   const cargarUsuariosAdmin = async () => {
     setCargando(true);
     try {
