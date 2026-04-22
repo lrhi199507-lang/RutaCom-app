@@ -165,14 +165,41 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const rechazarDocumentos = async (userId: string) => {
-    if (!window.confirm("¿Rechazar fotos?")) return;
-    try {
-      const userRef = doc(db, "usuarios", userId);
-      await updateDoc(userRef, { kycVerificado: false, kycFoto: null, selfieFoto: null, estadoRevision: "rechazado", mensajeAdmin: "Documentos no legibles." });
-      alert("Rechazado.");
-      cargarUsuariosAdmin();
-    } catch (e) { alert("Error"); }
-  };
+  if (!window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo y desaparecerá de esta lista.")) return;
+
+  try {
+    const userRef = doc(db, "usuarios", userId);
+    
+    // Limpiamos TODO para que el filtro de .filter(u => u.kycFoto...) no lo encuentre
+    await updateDoc(userRef, {
+      // Reset de verificación
+      kycVerificado: false,
+      selfieVerificada: false,
+      fotoFrontalVerificada: false,
+      fotoTraseraVerificada: false,
+      fotoLatIzqVerificada: false,
+      fotoLatDerVerificada: false,
+      
+      // Borrado de fotos (para que desaparezcan del Admin)
+      kycFoto: null, 
+      selfieFoto: null,
+      fotoFrontal: null,
+      fotoTrasera: null,
+      fotoLatIzq: null,
+      fotoLatDer: null,
+
+      // Estado para el usuario
+      estadoRevision: "rechazado",
+      mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, asegúrate de que sean legibles y vuelve a intentarlo."
+    });
+
+    alert("Documentos eliminados. El usuario ha sido notificado.");
+    await cargarUsuariosAdmin(); // Refresca la lista para que desaparezca el card
+  } catch (e) {
+    alert("Error al rechazar");
+  }
+};
+  
 
     return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
@@ -344,23 +371,40 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                           <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
                         </button>
                         {estaExpandido && (
-                          <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
-                            <div className="grid grid-cols-3 gap-2">
-                              {[{ img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' }, { img: u.fotoFrontal, label: 'Auto' }].map((item, idx) => (
-                                <div key={idx} onClick={() => item.img && setFotoZoom(item.img)} className="bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5">
-                                  {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="m-auto mt-6 text-slate-700" />}
-                                </div>
-                              ))}
-                            </div>
-                            <div className="flex gap-2">
-                              {subPestañaAdmin === 'pendientes' && (
-                                <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-                              )}
-                              <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+  <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
+    <div className="grid grid-cols-3 gap-2">
+      {[
+        { img: u.kycFoto, label: 'Cédula' }, 
+        { img: u.selfieFoto, label: 'Selfie' }, 
+        { img: u.fotoFrontal, label: 'Auto' } // <--- Aquí faltaba cerrar el objeto y la lista
+      ].map((item, idx) => (
+        <div key={idx} className="flex flex-col gap-1">
+          {/* Título de la foto */}
+          <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
+          
+          <div 
+            onClick={() => item.img && setFotoZoom(item.img)} 
+            className="bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center"
+          > 
+            {item.img ? (
+              <img src={item.img} className="w-full h-full object-cover" />
+            ) : (
+              <Camera size={14} className="text-slate-700" />
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+    {/* No olvides que aquí abajo deben seguir tus botones de Aprobar/Rechazar */}
+    <div className="flex gap-2">
+      {subPestañaAdmin === 'pendientes' && (
+        <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+      )}
+      <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
+    </div>
+  </div>
+)}     
+                     </div>
                     );
                   })
               )}
