@@ -143,7 +143,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { alert("Error"); } finally { setCargando(false); }
   };
 
-  const aprobarUsuario = async (userId: string) => {
+    const aprobarUsuario = async (userId: string) => {
     if (!userId) return;
     setCargando(true);
     try {
@@ -151,12 +151,31 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await updateDoc(userRef, {
         kycVerificado: true, licenciaVerificada: true, circulacionVerificada: true, rcvVerificado: true,
         fotoFrontalVerificada: true, fotoTraseraVerificada: true, fotoLatIzqVerificada: true,
-        fotoLatDerVerificada: true, selfieVerificada: true, puntosSeguridad: 100
+        fotoLatDerVerificada: true, selfieVerificada: true, estadoRevision: 'aprobado'
       });
-      alert("¡Usuario Verificado con éxito!");
+      alert("¡Usuario Verificado!");
       await cargarUsuariosAdmin();
-    } catch (e) { alert("Error de permisos"); } finally { setCargando(false); }
+    } catch (e) { alert("Error"); } finally { setCargando(false); }
   };
+
+  const rechazarDocumentos = async (userId: string) => {
+    if (!window.confirm("¿Rechazar documentos? Se borrarán las fotos actuales y el usuario deberá subirlas de nuevo.")) return;
+    setCargando(true);
+    try {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, {
+        // Ponemos todo en null para que "desaparezca" de pendientes
+        kycFoto: null, kycVerificado: false,
+        selfieFoto: null, selfieVerificada: false,
+        fotoFrontal: null, fotoFrontalVerificada: false,
+        estadoRevision: 'rechazado',
+        mensajeAdmin: "Tus documentos han sido rechazados por falta de claridad o datos incorrectos. Por favor, intenta subirlos nuevamente con mejor iluminación."
+      });
+      alert("Documentos rechazados. El usuario ha sido notificado.");
+      await cargarUsuariosAdmin();
+    } catch (e) { alert("Error al rechazar"); } finally { setCargando(false); }
+  };
+  
 
   const cargarUsuariosAdmin = async () => {
     setCargando(true);
@@ -179,7 +198,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       <div className="flex-1 overflow-y-auto pb-32">
         {view === 'publico' && (
           <div className="p-5 space-y-6 animate-in fade-in duration-500">
-            {/* CARD PERFIL CON BOTÓN EN NOMBRE */}
+                      {/* CARD PERFIL - DISEÑO LIMPIO SIN BOTÓN EN NOMBRE */}
             <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
               <div className="absolute top-5 right-5">
                 <div className={`${obtenerColorRango(rangoActual)} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}>{rangoActual}</div>
@@ -191,28 +210,27 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                     {userData.fotoPerfil ? <img src={userData.fotoPerfil} className="w-full h-full object-cover" alt="P" /> : <User size={50} className="text-slate-200" />}
                   </div>
                 </div>
-                <button onClick={() => setPasoFoto(true)} className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2.5 rounded-full border-4 border-white shadow-lg"><Edit2 size={14} /></button>
+                {/* Lápiz para editar foto corregido */}
+                <button 
+                  onClick={() => setPasoFoto(true)} 
+                  className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2.5 rounded-full border-4 border-white shadow-lg z-10 active:scale-90 transition-transform"
+                >
+                  <Edit2 size={14} />
+                </button>
               </div>
 
-              {/* NOMBRE COMO BOTÓN PARA PERFIL PÚBLICO */}
-              <button 
-                onClick={() => setVerPerfilPublicoChofer(true)}
-                className="flex items-center justify-center gap-2 mx-auto active:scale-95 transition-transform group"
-              >
-                <h2 className="text-2xl font-black italic text-slate-800 uppercase tracking-tighter group-hover:text-blue-600 transition-colors">
-                  {userData.nombre || "Usuario"}
-                </h2>
-                <div className="bg-slate-100 p-1.5 rounded-full text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
-                  <ChevronRight size={16} />
-                </div>
-              </button>
+              {/* EL NOMBRE AHORA ES SOLO TEXTO, NO BOTÓN */}
+              <h2 className="text-2xl font-black italic text-slate-800 uppercase tracking-tighter">
+                {userData.nombre || "Usuario"}
+              </h2>
 
               <div className="flex justify-center gap-6 mt-4 border-t border-slate-50 pt-4">
                 <div className="text-center"><p className="text-[8px] font-black text-slate-400 uppercase">Conductor</p><p className="font-black text-blue-600 italic leading-none">{viajesCond} VJS</p></div>
                 <div className="text-center"><p className="text-[8px] font-black text-slate-400 uppercase">Pasajero</p><p className="font-black text-orange-500 italic leading-none">{viajesPas} VJS</p></div>
               </div>
             </div>
-
+            
+            
             {/* SELLO VEHICULO */}
             {(userData.fotoFrontalVerificada && userData.fotoTraseraVerificada) && (
               <div className="flex items-center justify-center gap-2 bg-green-50 py-2 px-4 rounded-2xl border border-green-100 animate-bounce">
@@ -276,13 +294,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             </div>
 
             {/* FOTOS DEL AUTO */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[3px] ml-4 italic">Fotos del Auto</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={Camera} label="Frontal" status={userData.fotoFrontalVerificada ? 'verificado' : (userData.fotoFrontal ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
                 <MenuButton icon={Camera} label="Trasera" status={userData.fotoTraseraVerificada ? 'verificado' : (userData.fotoTrasera ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
+                <MenuButton icon={Camera} label="Lateral Izquierdo" status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.fotoLatIzq ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
+                <MenuButton icon={Camera} label="Lateral Derecho" status={userData.fotoLatDerVerificada ? 'verificado' : (userData.fotoLatDer ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
               </div>
-            </div>
+            
 
             {/* SECCIÓN LEGAL COMPLETA */}
             <div className="space-y-3">
@@ -355,10 +373,14 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             </div>
                           ))}
                         </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-                          <button className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
-                        </div>
+                         <div className="flex gap-2">
+                          {/* Solo mostrar Aprobar si no está verificado */}
+                          {!u.kycVerificado && (
+                            <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar Todo</button>
+                          )}
+                          {/* El botón de rechazar siempre disponible para revocar o corregir */}
+                          <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar / Borrar</button>
+                        </div>  
                       </div>
                     )}
                   </div>
