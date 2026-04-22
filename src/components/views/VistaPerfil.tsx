@@ -297,7 +297,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 mt-4"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
         )}
-                          {/* PANEL ADMINISTRATIVO */}
+
+                {/* PANEL ADMINISTRATIVO */}
         {view === 'admin' && (
           <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
             <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
@@ -447,4 +448,4 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
     </button>
   );
 };
-                      
+                                  
