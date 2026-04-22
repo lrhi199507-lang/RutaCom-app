@@ -518,9 +518,6 @@ const rechazarDocumentos = async (userId: string) => {
     </div>
   </div>
 )}
-        
-               
-    
 
       {/* MODALES */}
       {modalVisible && (
@@ -576,49 +573,36 @@ const rechazarDocumentos = async (userId: string) => {
     <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
       {!fotoTemporal ? (
         <>
-          <div className="w-44 h-44 bg-orange-50 rounded-full border-8 border-orange-100 flex items-center justify-center mb-10">
-            <User size={100} className="text-orange-200" />
-          </div>
-          <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">
-            Tomar Foto Perfil
-          </button>
+          <div className="w-44 h-44 bg-orange-50 rounded-full border-8 border-orange-100 flex items-center justify-center mb-10"><User size={100} className="text-orange-200" /></div>
+          <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">Tomar Foto Perfil</button>
           <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Cerrar</button>
         </>
       ) : (
         <>
-          <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl mb-10">
-            <img src={fotoTemporal} className="w-full h-full object-cover" alt="Perfil" />
-          </div>
-          <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
-            Confirmar
-          </button>
+          <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl mb-10"><img src={fotoTemporal} className="w-full h-full object-cover" alt="Perfil" /></div>
+          <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Confirmar</button>
           <button onClick={() => setFotoTemporal(null)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Elegir otra</button>
         </>
       )}
     </div>
   )}
-    </div> // Cierre del div principal del return
+    </div>
   );
-}; // Cierre de VistaPerfil
+};
 
-// COMPONENTE AUXILIAR FUERA DE LA CLASE PRINCIPAL
 const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
-  let statusText = value || "Configurar"
-  let statusColor = "text-blue-500"
+  let statusText = value || "Configurar";
+  let statusColor = "text-blue-500";
 
   if (status === 'revision') {
-    statusText = "REVISIÓN ⏳"
-    statusColor = "text-amber-500"
-  } 
-  
-  if (status === 'verificado') {
-    statusText = "LISTO ✅"
-    statusColor = "text-green-600"
-  }
-
-  if (status === 'rechazado') {
-    statusText = "REINTENTAR ⚠️"
-    statusColor = "text-orange-600"
+    statusText = "REVISIÓN ⏳";
+    statusColor = "text-amber-500";
+  } else if (status === 'verificado') {
+    statusText = "LISTO ✅";
+    statusColor = "text-green-600";
+  } else if (status === 'rechazado') {
+    statusText = "REINTENTAR ⚠️";
+    statusColor = "text-orange-600";
   }
 
   return (
@@ -632,18 +616,11 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
           <Icon size={20} />
         </div>
         <div className="text-left">
-          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">
-            {label}
-          </p>
-          <p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>
-            {statusText}
-          </p>
+          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">{label}</p>
+          <p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>{statusText}</p>
         </div>
       </div>
-      
-      {status !== 'verificado' && status !== 'revision' && (
-        <ChevronRight size={18} className="text-slate-200" />
-      )}
+      {status !== 'verificado' && status !== 'revision' && <ChevronRight size={18} className="text-slate-200" />}
     </button>
   );
 };
