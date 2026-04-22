@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, updateDoc, getDocs, collection } from 'firebase/firestore';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { getAuth, updatePassword } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
-  Calendar, ShieldCheck, RefreshCw,
+  Calendar, ShieldCheck, RefreshCw, AlertCircle,
   Car, Palette, Hash, Gauge, LogOut, FileCheck, Camera
 } from 'lucide-react';
 
@@ -151,74 +151,51 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setUsuariosAdmin(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
-  // 1. FUNCIÓN DE APROBACIÓN CORREGIDA
-const aprobarUsuario = async (userId: string) => {
-  if (!userId) return;
-  setCargando(true);
-  try {
-    // Usamos el ID directamente que viene de Firebase
-    const userRef = doc(db, "usuarios", userId);
-    await updateDoc(userRef, {
-      kycVerificado: true,
-      // Al aprobar el perfil, damos por válidos estos campos
-      licenciaVerificada: true,
-      circulacionVerificada: true,
-      rcvVerificado: true,
-      fotoFrontalVerificada: true,
-      fotoTraseraVerificada: true,
-      fotoLatIzqVerificada: true,
-      fotoLatDerVerificada: true,
-      selfieVerificada: true,
-      puntosSeguridad: 100 // Opcional: para forzar el 100%
-    });
-    
-    alert("¡Usuario Verificado con éxito!");
-    await cargarUsuariosAdmin(); // Refrescar lista
-  } catch (e: any) {
-    console.error("Error completo:", e);
-    alert("Error de permisos: Verifica las Reglas de Firebase o si el ID es correcto.");
-  } finally {
-    setCargando(false);
-  }
-};
 
-  
-const toggleBloqueoUsuario = async (userId: string, estadoActual: boolean) => {
-  const confirmacion = window.confirm(estadoActual ? "¿Desbloquear usuario?" : "¿ESTÁS SEGURO DE BLOQUEAR ESTE USUARIO? No podrá usar la app.");
-  if (!confirmacion) return;
+  const aprobarUsuario = async (userId: string) => {
+    if (!userId) return;
+    setCargando(true);
+    try {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, {
+        kycVerificado: true,
+        licenciaVerificada: true,
+        circulacionVerificada: true,
+        rcvVerificado: true,
+        fotoFrontalVerificada: true,
+        fotoTraseraVerificada: true,
+        fotoLatIzqVerificada: true,
+        fotoLatDerVerificada: true,
+        selfieVerificada: true,
+        estadoRevision: "aprobado"
+      });
+      alert("¡Usuario Verificado con éxito!");
+      await cargarUsuariosAdmin();
+    } catch (e: any) {
+      alert("Error al aprobar.");
+    } finally {
+      setCargando(false);
+    }
+  };
 
-  try {
-    const userRef = doc(db, "usuarios", userId);
-    await updateDoc(userRef, {
-      cuentaBloqueada: !estadoActual,
-      motivoBloqueo: !estadoActual ? "Incumplimiento de normas comunitarias" : ""
-    });
-    alert("Estado de cuenta actualizado");
-    cargarUsuariosAdmin();
-  } catch (e) {
-    alert("Error al cambiar estado");
-  }
-};
-
-const rechazarDocumentos = async (userId: string) => {
-  if (!window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo.")) return;
-
-  try {
-    const userRef = doc(db, "usuarios", userId);
-    await updateDoc(userRef, {
-      kycVerificado: false,
-      kycFoto: null, 
-      selfieFoto: null,
-      fotoFrontalVerificada: false,
-      estadoRevision: "rechazado", // <-- Esta es la señal
-      mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, asegúrate de que sean legibles y vuelve a intentarlo."
-    });
-    alert("Documentos rechazados y usuario notificado.");
-    cargarUsuariosAdmin();
-  } catch (e) {
-    alert("Error al rechazar");
-  }
-};
+  const rechazarDocumentos = async (userId: string) => {
+    if (!window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo.")) return;
+    try {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, {
+        kycVerificado: false,
+        kycFoto: null, 
+        selfieFoto: null,
+        fotoFrontalVerificada: false,
+        estadoRevision: "rechazado",
+        mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, asegúrate de que sean legibles y vuelve a intentarlo."
+      });
+      alert("Documentos rechazados.");
+      cargarUsuariosAdmin();
+    } catch (e) {
+      alert("Error al rechazar");
+    }
+  };
   
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
@@ -233,7 +210,6 @@ const rechazarDocumentos = async (userId: string) => {
       <div className="flex-1 overflow-y-auto pb-32">
         {view === 'publico' && (
           <div className="p-5 space-y-6 animate-in fade-in duration-500">
-            {/* CARD PERFIL */}
             <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
               <div className="absolute top-5 right-5">
                 <div className={`${obtenerColorRango(rangoActual)} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}>{rangoActual}</div>
@@ -253,7 +229,6 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             </div>
 
-            {/* SELLO VEHICULO */}
             {(userData.fotoFrontalVerificada && userData.fotoTraseraVerificada) && (
               <div className="flex items-center justify-center gap-2 bg-green-50 py-2 px-4 rounded-2xl border border-green-100 animate-bounce">
                 <ShieldCheck size={16} className="text-green-600" />
@@ -261,7 +236,6 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             )}
 
-            {/* NIVEL */}
             <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-4">
               <div className="flex justify-between items-end">
                 <div>
@@ -275,7 +249,6 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             </div>
 
-            {/* SEGURIDAD - NARANJA COMO ANTES */}
             <div className="bg-white p-7 rounded-[40px] shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-5">
                 <div>
@@ -293,7 +266,6 @@ const rechazarDocumentos = async (userId: string) => {
 
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
-            {/* PERSONAL */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Personal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -301,14 +273,9 @@ const rechazarDocumentos = async (userId: string) => {
                 <MenuButton icon={Hash} label="Cédula" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
                 <MenuButton icon={ShieldCheck} label="Contraseña" value="••••••••" onClick={() => setModalClave(true)} />
-                <MenuButton icon={FileText}  label="Cédula de Identidad"
-  // Si está rechazado y no hay foto, le ponemos un estado visual de alerta
-                  status={userData.estadoRevision === 'rechazado' && !userData.kycFoto ? 'rechazado' : (userData.kycVerificado ? 'verificado' : (userData.kycFoto ? 'revision' : 'pendiente'))}
-                 onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
               </div>
             </div>
 
-            {/* VEHICULO */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4 italic">Vehículo</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -319,7 +286,6 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             </div>
 
-            {/* ESTADO CARRO - RESTAURADO */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[3px] ml-4 italic">Fotos del Auto</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -330,7 +296,6 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             </div>
 
-                        {/* AVISO DE RECHAZO PARA EL USUARIO */}
             {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
               <div className="mx-6 mb-6 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6 animate-in zoom-in duration-300">
                 <div className="flex items-start gap-4">
@@ -340,17 +305,13 @@ const rechazarDocumentos = async (userId: string) => {
                   <div className="flex-1">
                     <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Atención Requerida</p>
                     <p className="text-[11px] font-bold text-slate-700 leading-relaxed">
-                      {userData.mensajeAdmin || "Tus documentos no pudieron ser verificados. Por favor, súbelos nuevamente con mejor iluminación y enfoque."}
+                      {userData.mensajeAdmin || "Tus documentos no pudieron ser verificados. Por favor, súbelos nuevamente."}
                     </p>
                   </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <p className="text-[8px] font-black text-orange-400 uppercase tracking-tighter">Acción necesaria en sección Legal ↓</p>
                 </div>
               </div>
             )}
 
-            {/* SECCIÓN LEGAL */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Legal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -362,9 +323,8 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             </div>
 
-            {/* BOTÓN ADMIN */}
             {esAdmin && (
-              <button onClick={() => { cargarUsuariosAdmin(); setView('admin'); }} className="w-full bg-slate-900 text-white p-5 rounded-[30px] flex items-center justify-between shadow-xl mt-6">
+              <button onClick={() => { cargarUsuariosAdmin(); setPestañaActiva('admin'); }} className="w-full bg-slate-900 text-white p-5 rounded-[30px] flex items-center justify-between shadow-xl mt-6">
                 <div className="flex items-center gap-4">
                   <ShieldCheck size={20} className="text-red-500" />
                   <p className="font-black text-xs uppercase italic">Control Maestro</p>
@@ -379,11 +339,10 @@ const rechazarDocumentos = async (userId: string) => {
           </div>
         )}
 
-        {/* VISTA ADMINISTRATIVA: CONTROL MAESTRO */}
         {view === 'admin' && (
           <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
             <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
-              <button onClick={() => setView('perfil')} className="bg-white/5 p-2 rounded-xl">
+              <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl">
                 <ChevronRight size={20} className="rotate-180" />
               </button>
               <div className="text-center">
@@ -448,8 +407,9 @@ const rechazarDocumentos = async (userId: string) => {
             </div>
           </div>
         )}
+      </div>
 
-      {/* MODALES FINALES */}
+      {/* MODALES */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
@@ -472,7 +432,7 @@ const rechazarDocumentos = async (userId: string) => {
             </>
           ) : (
             <>
-              <div className="w-full aspect-video rounded-3xl overflow-hidden border-4 border-blue-500"><img src={fotoDocTemporal} className="w-full h-full object-cover" /></div>
+              <div className="w-full aspect-video rounded-3xl overflow-hidden border-4 border-blue-50"><img src={fotoDocTemporal} className="w-full h-full object-cover" /></div>
               <button onClick={subirDocumentoFinal} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">Enviar Documento</button>
               <button onClick={() => setFotoDocTemporal(null)} className="text-white font-black uppercase text-[10px]">Repetir</button>
             </>
@@ -528,4 +488,3 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
     </button>
   );
 };
-      
