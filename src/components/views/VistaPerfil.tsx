@@ -330,28 +330,27 @@ const rechazarDocumentos = async (userId: string) => {
               </div>
             </div>
 
-            {/* AVISO DE RECHAZO PARA EL USUARIO */}
-{userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
-  <div className="mx-6 mb-6 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6 animate-in zoom-in duration-300">
-    <div className="flex items-start gap-4">
-      <div className="bg-orange-500 p-2 rounded-xl text-white">
-        <AlertCircle size={20} />
-      </div>
-      <div className="flex-1">
-        <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Atención Requerida</p>
-        <p className="text-[11px] font-bold text-slate-700 leading-relaxed">
-          {userData.mensajeAdmin || "Tus documentos no pudieron ser verificados. Por favor, súbelos nuevamente con mejor iluminación y enfoque."}
-        </p>
-      </div>
-    </div>
-    <div className="mt-4 flex justify-end">
-      <p className="text-[8px] font-black text-orange-400 uppercase tracking-tighter">Acción necesaria en sección Legal ↓</p>
-    </div>
-  </div>
-)}
-            
+                        {/* AVISO DE RECHAZO PARA EL USUARIO */}
+            {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
+              <div className="mx-6 mb-6 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6 animate-in zoom-in duration-300">
+                <div className="flex items-start gap-4">
+                  <div className="bg-orange-500 p-2 rounded-xl text-white">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Atención Requerida</p>
+                    <p className="text-[11px] font-bold text-slate-700 leading-relaxed">
+                      {userData.mensajeAdmin || "Tus documentos no pudieron ser verificados. Por favor, súbelos nuevamente con mejor iluminación y enfoque."}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <p className="text-[8px] font-black text-orange-400 uppercase tracking-tighter">Acción necesaria en sección Legal ↓</p>
+                </div>
+              </div>
+            )}
 
-            {/* LEGAL - RESTAURADO */}
+            {/* SECCIÓN LEGAL */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Legal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -359,173 +358,104 @@ const rechazarDocumentos = async (userId: string) => {
                 <MenuButton icon={ShieldCheck} label="Licencia" status={userData.licenciaVerificada ? 'verificado' : (userData.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
                 <MenuButton icon={FileText} label="Circulación" status={userData.circulacionVerificada ? 'verificado' : (userData.circulacionFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'circulacion', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Seguro RCV" status={userData.rcvVerificado ? 'verificado' : (userData.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
-             <MenuButton  icon={User}   label="Selfie con Documento" status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setModalInstruccionesSelfie(true)} />
-</div>
-</div>
-            
+                <MenuButton icon={User} label="Selfie con Documento" status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setModalInstruccionesSelfie(true)} />
+              </div>
+            </div>
 
+            {/* BOTÓN ADMIN */}
             {esAdmin && (
-              <button onClick={() => { cargarUsuariosAdmin(); setPestañaActiva('admin'); }} className="w-full bg-slate-900 text-white p-5 rounded-[30px] flex items-center justify-between shadow-xl">
-                <div className="flex items-center gap-4"><ShieldCheck size={20} className="text-red-500" /><p className="font-black text-xs uppercase italic">Control Maestro</p></div>
+              <button onClick={() => { cargarUsuariosAdmin(); setView('admin'); }} className="w-full bg-slate-900 text-white p-5 rounded-[30px] flex items-center justify-between shadow-xl mt-6">
+                <div className="flex items-center gap-4">
+                  <ShieldCheck size={20} className="text-red-500" />
+                  <p className="font-black text-xs uppercase italic">Control Maestro</p>
+                </div>
                 <ChevronRight size={20} />
               </button>
             )}
 
-            <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2"><LogOut size={14} /> Cerrar Sesión</button>
+            <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 mt-4">
+              <LogOut size={14} /> Cerrar Sesión
+            </button>
           </div>
         )}
 
-        {/* ADMIN VIEW - CONTROL MAESTRO */}
-{/* VISTA ADMINISTRATIVA: CONTROL MAESTRO */}
-{view === 'admin' && (
-  <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
-    {/* Header */}
-    <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
-      <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl">
-        <ChevronRight size={20} className="rotate-180" />
-      </button>
-      <div className="text-center">
-        <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
-        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
-      </div>
-      <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl active:rotate-180 transition-transform duration-500">
-        <RefreshCw size={20} />
-      </button>
-    </div>
-
-    {/* Selector de Sub-pestañas */}
-    <div className="flex bg-slate-900 p-1 border-b border-white/5">
-      <button 
-        onClick={() => setSubPestañaAdmin('pendientes')}
-        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}
-      >
-        Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
-      </button>
-      <button 
-        onClick={() => setSubPestañaAdmin('aprobados')}
-        className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}
-      >
-        Aprobados ({usuariosAdmin.filter(u => u.kycVerificado).length})
-      </button>
-    </div>
-    
-        {/* Lista de Usuarios con Sistema de Acordeón */}
-    <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
-      {cargando ? (
-        <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">
-          Sincronizando base de datos...
-        </p>
-      ) : (
-        usuariosAdmin
-          .filter(u => {
-            if (subPestañaAdmin === 'pendientes') {
-              return (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada);
-            }
-            return u.kycVerificado;
-          })
-                    .map(u => {
-            const estaExpandido = usuarioExpandidoAdmin === u.id;
-
-            return (
-              <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden shadow-2xl transition-all duration-300">
-                
-                {/* 1. VISTA COMPACTA */}
-                <button 
-                  onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)}
-                  className={`w-full flex items-center justify-between p-5 text-white active:bg-white/5 transition-colors ${estaExpandido ? 'bg-white/5 border-b border-white/10' : ''}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-slate-500 text-sm border border-white/5">
-                      {u.nombre ? u.nombre.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-xs uppercase italic leading-none mb-1.5">{u.nombre}</p>
-                      <p className="text-[9px] text-slate-500 font-bold leading-none">{u.correo || u.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    {u.cuentaBloqueada && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
-                    <ChevronRight 
-                      size={18} 
-                      className={`text-slate-600 transition-transform duration-500 ${estaExpandido ? 'rotate-90' : 'rotate-0'}`} 
-                    />
-                  </div>
-                </button>
-
-                {/* 2. VISTA EXPANDIDA */}
-                {estaExpandido && (
-                  <div className="p-6 space-y-5 animate-in slide-in-from-top duration-300">
-                    
-                    <div className="flex gap-2">
-                      {u.kycVerificado && !u.cuentaBloqueada && <div className="bg-green-500/20 text-green-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">VERIFICADO ✅</div>}
-                      {u.cuentaBloqueada && <div className="bg-red-500/20 text-red-500 text-[8px] font-black px-3 py-1 rounded-full uppercase">BLOQUEADO ⛔</div>}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { img: u.kycFoto, label: 'Cédula' },
-                        { img: u.selfieFoto, label: 'Selfie + ID' },
-                        { img: u.fotoFrontal, label: 'Vehículo' }
-                      ].map((item, idx) => (
-                        <div key={idx} className="space-y-1">
-                          <p className="text-[7px] font-black text-slate-500 uppercase text-center">{item.label}</p>
-                          <div 
-                            onClick={() => item.img && setFotoZoom(item.img)}
-                            className={`w-full h-20 rounded-2xl overflow-hidden border border-white/5 bg-slate-800 flex items-center justify-center ${!item.img && 'opacity-30'}`}
-                          >
-                            {item.img ? (
-                              <img src={item.img} className="w-full h-full object-cover" alt="Documento" />
-                            ) : (
-                              <Camera size={14} className="text-slate-600" />
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-col gap-2 pt-2">
-                      {subPestañaAdmin === 'pendientes' && (
-                        <button 
-                          onClick={() => aprobarUsuario(u.id)}
-                          className="w-full bg-green-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase shadow-lg active:scale-95 transition-transform"
-                        >
-                          Aprobar Verificación
-                        </button>
-                      )}
-                      
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => rechazarDocumentos(u.id)}
-                          className="flex-1 bg-amber-500/10 text-amber-600 p-4 rounded-2xl font-black text-[9px] uppercase border border-amber-500/20"
-                        >
-                          Rechazar
-                        </button>
-                        <button 
-                          onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)}
-                          className={`flex-1 p-4 rounded-2xl font-black text-[9px] uppercase ${u.cuentaBloqueada ? 'bg-blue-600' : 'bg-red-600'} text-white shadow-lg`}
-                        >
-                          {u.cuentaBloqueada ? 'Desbloquear' : 'Bloquear'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+        {/* VISTA ADMINISTRATIVA: CONTROL MAESTRO */}
+        {view === 'admin' && (
+          <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+            <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
+              <button onClick={() => setView('perfil')} className="bg-white/5 p-2 rounded-xl">
+                <ChevronRight size={20} className="rotate-180" />
+              </button>
+              <div className="text-center">
+                <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
+                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
               </div>
-            );
-          })
-      )}
-    </div>
-  </div>
-)}
+              <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl">
+                <RefreshCw size={20} />
+              </button>
+            </div>
 
-      {/* MODALES */}
+            <div className="flex bg-slate-900 p-1 border-b border-white/5">
+              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>
+                Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
+              </button>
+              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>
+                Aprobados ({usuariosAdmin.filter(u => u.kycVerificado).length})
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
+              {cargando ? (
+                <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
+              ) : (
+                usuariosAdmin
+                  .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
+                  .map(u => {
+                    const estaExpandido = usuarioExpandidoAdmin === u.id;
+                    return (
+                      <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden">
+                        <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-xs">{u.nombre?.charAt(0).toUpperCase()}</div>
+                            <div className="text-left">
+                              <p className="font-black text-xs uppercase italic">{u.nombre}</p>
+                              <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
+                            </div>
+                          </div>
+                          <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
+                        </button>
+                        {estaExpandido && (
+                          <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
+                            <div className="grid grid-cols-3 gap-2">
+                              {[{ img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' }, { img: u.fotoFrontal, label: 'Auto' }].map((item, idx) => (
+                                <div key={idx} onClick={() => item.img && setFotoZoom(item.img)} className="bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5">
+                                  {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="m-auto mt-6 text-slate-700" />}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex gap-2">
+                              {subPestañaAdmin === 'pendientes' && (
+                                <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+                              )}
+                              <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </div>
+        )}
+
+      {/* MODALES FINALES */}
       {modalVisible && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+        <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
-          <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom duration-300">
-            <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest">Editar {tipoEdicion?.label}</h4>
-            <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg mb-8 outline-none border-2 border-slate-100 uppercase" autoFocus />
+          <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
+            <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">Editar {tipoEdicion?.label}</h4>
+            <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg mb-8 outline-none border-2 border-slate-100 uppercase text-center" autoFocus />
             <button onClick={guardarCambios} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-lg">Guardar</button>
           </div>
         </div>
@@ -535,92 +465,67 @@ const rechazarDocumentos = async (userId: string) => {
         <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 items-center justify-center space-y-6">
           {!fotoDocTemporal ? (
             <>
-              <p className="text-white text-sm font-black uppercase italic tracking-widest">Foto de {pasoDocumento.tipo}</p>
-              <div className="w-full aspect-[1.6/1] bg-slate-800 rounded-3xl border-2 border-dashed border-white/20 flex items-center justify-center"><Camera size={50} className="text-slate-700" /></div>
-              <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95">Capturar</button>
-              <button onClick={() => setPasoDocumento({...pasoDocumento, activa: false})} className="text-slate-500 font-black uppercase text-[10px]">Cerrar</button>
+              <p className="text-white text-sm font-black uppercase italic tracking-widest text-center">Capturar {pasoDocumento.tipo}</p>
+              <div className="w-full aspect-video bg-slate-800 rounded-3xl border-2 border-dashed border-white/20 flex items-center justify-center"><Camera size={40} className="text-slate-700" /></div>
+              <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">Tomar Foto</button>
+              <button onClick={() => setPasoDocumento({...pasoDocumento, activa: false})} className="text-slate-500 font-black uppercase text-[10px]">Cancelar</button>
             </>
           ) : (
             <>
-              <div className="w-full aspect-[1.6/1] rounded-3xl overflow-hidden border-4 border-blue-500"><img src={fotoDocTemporal} className="w-full h-full object-cover" alt="Documento" /></div>
-              <button onClick={subirDocumentoFinal} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Enviar Datos</button>
+              <div className="w-full aspect-video rounded-3xl overflow-hidden border-4 border-blue-500"><img src={fotoDocTemporal} className="w-full h-full object-cover" /></div>
+              <button onClick={subirDocumentoFinal} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">Enviar Documento</button>
               <button onClick={() => setFotoDocTemporal(null)} className="text-white font-black uppercase text-[10px]">Repetir</button>
             </>
           )}
         </div>
       )}
-  {/* MODAL DE ZOOM PARA EL ADMINISTRADOR */}
-  {fotoZoom && (
-    <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex flex-col p-4 animate-in fade-in duration-200">
-      <div className="flex justify-end p-4">
-        <button onClick={() => setFotoZoom(null)} className="bg-white/10 p-3 rounded-full text-white">
-          <ChevronRight size={24} className="rotate-180" />
-        </button>
-      </div>
-      <div className="flex-1 flex items-center justify-center p-2">
-        <img 
-          src={fotoZoom} 
-          className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl border-2 border-white/10" 
-          alt="Zoom"
-        />
-      </div>
-      <p className="text-center text-slate-500 font-black text-[10px] uppercase py-6 italic">Toca la flecha para volver</p>
-    </div>
-  )}
 
-  {/* MODAL DE FOTO DE PERFIL */}
-  {pasoFoto && (
-    <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
-      {!fotoTemporal ? (
-        <>
-          <div className="w-44 h-44 bg-orange-50 rounded-full border-8 border-orange-100 flex items-center justify-center mb-10"><User size={100} className="text-orange-200" /></div>
-          <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-xl">Tomar Foto Perfil</button>
-          <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Cerrar</button>
-        </>
-      ) : (
-        <>
-          <div className="w-72 h-72 rounded-full overflow-hidden border-8 border-blue-50 shadow-2xl mb-10"><img src={fotoTemporal} className="w-full h-full object-cover" alt="Perfil" /></div>
-          <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">Confirmar</button>
-          <button onClick={() => setFotoTemporal(null)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Elegir otra</button>
-        </>
+      {fotoZoom && (
+        <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex flex-col p-4" onClick={() => setFotoZoom(null)}>
+          <div className="flex justify-end p-4"><button className="bg-white/10 p-3 rounded-full text-white"><ChevronRight size={24} className="rotate-180" /></button></div>
+          <div className="flex-1 flex items-center justify-center"><img src={fotoZoom} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl" /></div>
+        </div>
       )}
-    </div>
-  )}
+
+      {pasoFoto && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
+          {!fotoTemporal ? (
+            <>
+              <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center mb-10"><User size={80} className="text-orange-200" /></div>
+              <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs">Tomar Foto Perfil</button>
+              <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Cerrar</button>
+            </>
+          ) : (
+            <>
+              <div className="w-64 h-64 rounded-full overflow-hidden border-8 border-blue-50 mb-10"><img src={fotoTemporal} className="w-full h-full object-cover" /></div>
+              <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">Confirmar Foto</button>
+              <button onClick={() => setFotoTemporal(null)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Elegir otra</button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
-  const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
+const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-blue-500";
-
-  if (status === 'revision') {
-    statusText = "REVISIÓN ⏳";
-    statusColor = "text-amber-500";
-  } else if (status === 'verificado') {
-    statusText = "LISTO ✅";
-    statusColor = "text-green-600";
-  } else if (status === 'rechazado') {
-    statusText = "REINTENTAR ⚠️";
-    statusColor = "text-orange-600";
-  }
+  if (status === 'revision') { statusText = "REVISIÓN ⏳"; statusColor = "text-amber-500"; }
+  if (status === 'verificado') { statusText = "LISTO ✅"; statusColor = "text-green-600"; }
+  if (status === 'rechazado') { statusText = "REINTENTAR ⚠️"; statusColor = "text-orange-600"; }
 
   return (
-    <button 
-      onClick={onClick} 
-      disabled={status === 'verificado' || status === 'revision'} 
-      className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 transition-colors disabled:opacity-80"
-    >
+    <button onClick={onClick} disabled={status === 'verificado' || status === 'revision'} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 disabled:opacity-80">
       <div className="flex items-center gap-5">
-        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm">
-          <Icon size={20} />
-        </div>
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm"><Icon size={20} /></div>
         <div className="text-left">
-          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 tracking-tight">{label}</p>
-          <p className={`text-xs font-black uppercase tracking-tight ${statusColor}`}>{statusText}</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5">{label}</p>
+          <p className={`text-xs font-black uppercase ${statusColor}`}>{statusText}</p>
         </div>
       </div>
       {status !== 'verificado' && status !== 'revision' && <ChevronRight size={18} className="text-slate-200" />}
     </button>
   );
 };
+      
