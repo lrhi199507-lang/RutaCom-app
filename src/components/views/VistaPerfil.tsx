@@ -387,7 +387,7 @@ const rechazarDocumentos = async (userId: string) => {
                           </div>
                           <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
                         </button>
-                         {estaExpandido && (
+                                                {estaExpandido && (
                           <div className="p-6 pt-0 space-y-6 animate-in slide-in-from-top duration-200">
                             {/* Etiquetas de las fotos y miniaturas */}
                             <div className="grid grid-cols-3 gap-2 text-center">
@@ -430,7 +430,7 @@ const rechazarDocumentos = async (userId: string) => {
             </div>
           </div>
         )}
-        
+
       {/* MODALES */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
@@ -489,7 +489,9 @@ const rechazarDocumentos = async (userId: string) => {
     </div>
   );
 };
+      
 
+                        
 const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-blue-500";
