@@ -177,25 +177,29 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setCargando(false);
     }
   };
+const rechazarDocumentos = async (userId: string) => {
+  if (!window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo.")) return;
 
-  const rechazarDocumentos = async (userId: string) => {
-    if (!window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo.")) return;
-    try {
-      const userRef = doc(db, "usuarios", userId);
-      await updateDoc(userRef, {
-        kycVerificado: false,
-        kycFoto: null, 
-        selfieFoto: null,
-        fotoFrontalVerificada: false,
-        estadoRevision: "rechazado",
-        mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, asegúrate de que sean legibles y vuelve a intentarlo."
-      });
-      alert("Documentos rechazados.");
-      cargarUsuariosAdmin();
-    } catch (e) {
-      alert("Error al rechazar");
-    }
-  };
+  try {
+    const userRef = doc(db, "usuarios", userId);
+    // Limpiamos las fotos y marcamos como RECHAZADO para que salga de la lista de pendientes del admin
+    await updateDoc(userRef, {
+      kycVerificado: false,
+      kycFoto: null, 
+      selfieFoto: null,
+      fotoFrontal: null, // Limpiamos también la del vehículo
+      fotoFrontalVerificada: false,
+      estadoRevision: "rechazado", 
+      mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, sube fotos legibles."
+    });
+    alert("Documentos rechazados.");
+    setUsuarioExpandidoAdmin(null); // Cerramos el acordeón
+    await cargarUsuariosAdmin(); // Recargamos la lista
+  } catch (e) {
+    alert("Error al rechazar");
+  }
+};
+  
   
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
@@ -383,20 +387,39 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                           </div>
                           <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
                         </button>
-                        {estaExpandido && (
-                          <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
-                            <div className="grid grid-cols-3 gap-2">
-                              {[{ img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' }, { img: u.fotoFrontal, label: 'Auto' }].map((item, idx) => (
-                                <div key={idx} onClick={() => item.img && setFotoZoom(item.img)} className="bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5">
-                                  {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="m-auto mt-6 text-slate-700" />}
+                         {estaExpandido && (
+                          <div className="p-6 pt-0 space-y-6 animate-in slide-in-from-top duration-200">
+                            {/* Etiquetas de las fotos y miniaturas */}
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                              <div>
+                                <p className="text-[7px] font-black text-slate-500 uppercase mb-2 tracking-widest">Cédula</p>
+                                <div onClick={() => u.kycFoto && setFotoZoom(u.kycFoto)} className="bg-slate-800 aspect-square rounded-2xl overflow-hidden border border-white/5 flex items-center justify-center">
+                                  {u.kycFoto ? <img src={u.kycFoto} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
                                 </div>
-                              ))}
+                              </div>
+                              <div>
+                                <p className="text-[7px] font-black text-slate-500 uppercase mb-2 tracking-widest">Selfie + ID</p>
+                                <div onClick={() => u.selfieFoto && setFotoZoom(u.selfieFoto)} className="bg-slate-800 aspect-square rounded-2xl overflow-hidden border border-white/5 flex items-center justify-center">
+                                  {u.selfieFoto ? <img src={u.selfieFoto} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-[7px] font-black text-slate-500 uppercase mb-2 tracking-widest">Vehículo</p>
+                                <div onClick={() => u.fotoFrontal && setFotoZoom(u.fotoFrontal)} className="bg-slate-800 aspect-square rounded-2xl overflow-hidden border border-white/5 flex items-center justify-center">
+                                  {u.fotoFrontal ? <img src={u.fotoFrontal} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex gap-2">
-                              {subPestañaAdmin === 'pendientes' && (
-                                <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-                              )}
-                              <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
+
+                            {/* Botones de acción */}
+                            <div className="space-y-2">
+                               {subPestañaAdmin === 'pendientes' && (
+                                 <button onClick={() => aprobarUsuario(u.id)} className="w-full bg-green-600 text-white p-4 rounded-2xl font-black text-[10px] uppercase shadow-lg">Aprobar Verificación</button>
+                               )}
+                               <div className="flex gap-2">
+                                  <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-slate-800 text-orange-500 p-4 rounded-2xl font-black text-[9px] uppercase border border-white/5">Rechazar Fotos</button>
+                                  <button onClick={() => toggleBloqueoUsuario(u.id, u.cuentaBloqueada)} className="flex-1 bg-red-600 text-white p-4 rounded-2xl font-black text-[9px] uppercase">Bloquear</button>
+                               </div>
                             </div>
                           </div>
                         )}
@@ -407,8 +430,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             </div>
           </div>
         )}
-      </div>
-
+        
       {/* MODALES */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
