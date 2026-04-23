@@ -95,6 +95,23 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { alert("Error"); } finally { setCargando(false); }
   };
 
+  const togglePreferencia = async (campo, nuevoEstado) => {
+  try {
+    const uid = auth.currentUser?.uid || userData.id;
+    const userRef = doc(db, "usuarios", uid);
+
+    // 1. Guardamos en Firebase de una vez
+    await updateDoc(userRef, { [campo]: nuevoEstado });
+
+    // 2. Actualizamos la pantalla local
+    setUserData({ ...userData, [campo]: nuevoEstado });
+
+  } catch (e) {
+    console.log("Error al guardar preferencia:", e);
+  }
+};
+  
+  
 const guardarCambios = async () => {
   if (!tipoEdicion || !nuevoValor) return;
   
