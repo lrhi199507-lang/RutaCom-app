@@ -3,7 +3,6 @@ import { db } from '../../firebaseConfig';
 import { doc, updateDoc, getDocs, collection } from 'firebase/firestore';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth } from 'firebase/auth';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle,
