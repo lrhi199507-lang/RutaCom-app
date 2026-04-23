@@ -111,12 +111,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { alert("Error"); } finally { setCargando(false); }
   };
 
-  const capturarDocumento = async () => {
-    try {
-      const image = await CapacitorCamera.getPhoto({ quality: 35, width: 900, resultType: CameraResultType.DataUrl, source: CameraSource.Camera });
-      if (image.dataUrl) setFotoDocTemporal(image.dataUrl);
-    } catch (e) { console.log("Cancelado"); }
-  };
+const capturarDocumento = async () => {
+  try {
+    const image = await CapacitorCamera.getPhoto({ quality: 40, width: 800, resultType: CameraResultType.DataUrl, source: CameraSource.Camera,  saveToGallery: false  });
+
+    if (image.dataUrl) {
+      setFotoDocTemporal(image.dataUrl);
+    }
+  } catch (e) { 
+    console.log("El usuario canceló la cámara"); 
+  }
+};
+  
 
   const subirDocumentoFinal = async () => {
   if (!fotoDocTemporal) return;
