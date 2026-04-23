@@ -435,7 +435,7 @@ const verificarCuentaCorreo = async () => {
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
                 <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
               <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
-              <MenuButton icon={UserCog} label="Sobre mí (Bio)"   value={userData.bio   ? (userData.bio.length > 60 ? userData.bio.substring(0, 60) + "..." : userData.bio)    : "Escribe algo sobre ti..." }    onClick={() => {     setTipoEdicion({id:'bio', label:'Biografía', valor:userData.bio});     setNuevoValor(userData.bio || "");      setModalVisible(true);    }} />
+              <MenuButton icon={UserCog} label="Sobre mí (Bio)" value={userData?.bio || "Escribe algo sobre ti..."}  onClick={() => {  setTipoEdicion({id: 'bio', label: 'Biografía', valor: userData?.bio});  setNuevoValor(userData?.bio || ""); setModalVisible(true);  }} />
                 
                <MenuButton icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => alert("El correo no se puede cambiar por ahora por seguridad.")} />
             <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña"  onClick={enviarResetContraseña}  />
@@ -727,7 +727,7 @@ const verificarCuentaCorreo = async () => {
   );
 };
 
-// COMPONENTE DE BOTÓN (REUTILIZABLE)
+// COMPONENTE DE BOTÓN (REUTILIZABLE) - VERSIÓN CORREGIDA
 const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-blue-500";
@@ -736,16 +736,32 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   if (status === 'rechazado') { statusText = "REINTENTAR ⚠️"; statusColor = "text-orange-600"; }
 
   return (
-    <button onClick={onClick} disabled={status === 'verificado' || status === 'revision'} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 disabled:opacity-80">
-      <div className="flex items-center gap-5">
-        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm"><Icon size={20} /></div>
-        <div className="text-left">
-          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5">{label}</p>
-          <p className={`text-xs font-black uppercase ${statusColor}`}>{statusText}</p>
+    <button 
+      onClick={onClick} 
+      disabled={status === 'verificado' || status === 'revision'} 
+      className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 disabled:opacity-80 overflow-hidden"
+    >
+      <div className="flex items-center gap-5 flex-1 min-w-0">
+        {/* Icono - flex-shrink-0 para que no se aplaste */}
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm flex-shrink-0">
+          <Icon size={20} />
+        </div>
+
+        {/* Textos - min-w-0 y flex-1 para que el texto sepa que debe cortarse */}
+        <div className="text-left flex-1 min-w-0">
+          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 truncate">
+            {label}
+          </p>
+          <p className={`text-xs font-black uppercase ${statusColor} truncate`}>
+            {statusText}
+          </p>
         </div>
       </div>
-      {status !== 'verificado' && status !== 'revision' && <ChevronRight size={18} className="text-slate-200" />}
+
+      {/* Flecha Derecha */}
+      {status !== 'verificado' && status !== 'revision' && (
+        <ChevronRight size={18} className="text-slate-200 ml-3 flex-shrink-0" />
+      )}
     </button>
   );
 };
-                                  
