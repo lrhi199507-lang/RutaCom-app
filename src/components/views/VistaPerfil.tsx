@@ -645,17 +645,42 @@ const verificarCuentaCorreo = async () => {
       </div>
 
       {/* MODALES DE EDICIÓN Y CÁMARA */}
-      {modalVisible && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
-          <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
-            <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">Editar {tipoEdicion?.label}</h4>
-            <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg mb-8 outline-none border-2 border-slate-100 uppercase text-center" autoFocus />
-            <button onClick={guardarCambios} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-lg">Guardar</button>
-          </div>
-        </div>
+{modalVisible && (
+  <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
+    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
+    <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
+      <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">
+        Editar {tipoEdicion?.label}
+      </h4>
+
+      {/* LÓGICA INTELIGENTE: Si es bio usa textarea, si no usa input */}
+      {tipoEdicion?.id === 'bio' ? (
+        <textarea 
+          value={nuevoValor} 
+          onChange={(e) => setNuevoValor(e.target.value)} 
+          className="w-full bg-slate-50 p-6 rounded-3xl font-medium text-sm mb-8 outline-none border-2 border-slate-100 min-h-[150px] resize-none text-slate-600 leading-relaxed"
+          placeholder="Ej: Hola, soy Luis. Trabajo en sistemas y viajo diario..."
+          autoFocus 
+        />
+      ) : (
+        <input 
+          value={nuevoValor} 
+          onChange={(e) => setNuevoValor(e.target.value)} 
+          className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg mb-8 outline-none border-2 border-slate-100 uppercase text-center" 
+          autoFocus 
+        />
       )}
 
+      <button 
+        onClick={guardarCambios} 
+        className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-lg active:scale-95 transition-transform"
+      >
+        Guardar Cambios
+      </button>
+    </div>
+  </div>
+)}
+      
       {pasoDocumento.activa && (
         <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 items-center justify-center space-y-6">
           {!fotoDocTemporal ? (
