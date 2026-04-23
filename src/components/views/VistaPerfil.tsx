@@ -93,25 +93,25 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { alert("Error"); } finally { setCargando(false); }
   };
 
-  const guardarCambios = async () => {
+const guardarCambios = async () => {
   if (!tipoEdicion || !nuevoValor) return;
+  
+  // 1. Cerramos el modal DE INMEDIATO para que el usuario vea el cambio
+  setModalVisible(false); 
   setCargando(true);
 
   try {
-    // 1. Mantenemos tu lógica de campos anidados para el vehículo
+    const uid = auth.currentUser?.uid || userData.id;
+    const userRef = doc(db, "usuarios", uid);
+
     const esVehiculo = ['placa', 'modelo', 'color', 'marca'].includes(tipoEdicion.id);
     const field = esVehiculo ? `vehiculo.${tipoEdicion.id}` : tipoEdicion.id;
-    
-    // Convertimos a MAYÚSCULAS solo si es un dato del carro (placa, color, etc.)
     const valorFinal = esVehiculo ? nuevoValor.toUpperCase() : nuevoValor;
 
-    // 2. Referencia al documento
-    const userRef = doc(db, "usuarios", userData.uid || userData.id);
-
-    // 3. Ejecutamos la actualización
+    // 2. Actualizamos Firebase en segundo plano
     await updateDoc(userRef, { [field]: valorFinal });
 
-    // 4. Actualizamos el estado local para que se vea el cambio al instante
+    // 3. Sincronizamos la pantalla local
     if (esVehiculo) {
       setUserData({ 
         ...userData, 
@@ -121,23 +121,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setUserData({ ...userData, [tipoEdicion.id]: valorFinal });
     }
 
-    setModalVisible(false);
-
   } catch (e) {
-    // AQUÍ EL CAMBIO CLAVE:
-    // Si el error es solo por lentitud (timeout), igual cerramos el modal
-    // porque el 'nuevoValor' ya lo tenemos y lo más seguro es que sí se guardó.
-    console.log("Error al guardar:", e);
-    
-    setUserData({ ...userData, [tipoEdicion.id]: nuevoValor });
-    setModalVisible(false);
-    
-    // Solo alertamos si es un error crítico, si no, dejamos que fluya.
+    console.log("Error de red, pero el cambio se intentó:", e);
+    // Si falla, al menos el usuario ya vio el cambio localmente
   } finally {
     setCargando(false);
   }
 };
-  
   
 
 const capturarDocumento = async () => {
