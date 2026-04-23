@@ -123,52 +123,47 @@ const capturarDocumento = async () => {
   }
 };
   
-
   const subirDocumentoFinal = async () => {
-  if (!fotoDocTemporal) return;
-  setCargando(true);
+    if (!fotoDocTemporal) return;
+    setCargando(true);
 
-  try {
-    const fieldMap: any = {
-      cedula: { f: 'kycFoto', v: 'kycVerificado' },
-      licencia: { f: 'licenciaFoto', v: 'licenciaVerificada' },
-      circulacion: { f: 'circulacionFoto', v: 'circulacionVerificada' },
-      rcv: { f: 'rcvFoto', v: 'rcvVerificado' },
-      selfie: { f: 'selfieFoto', v: 'selfieVerificada' },
-      fotoFrontal: { f: 'fotoFrontal', v: 'fotoFrontalVerificada' },
-      fotoTrasera: { f: 'fotoTrasera', v: 'fotoTraseraVerificada' },
-      fotoLatIzq: { f: 'fotoLatIzq', v: 'fotoLatIzqVerificada' },
-      fotoLatDer: { f: 'fotoLatDer', v: 'fotoLatDerVerificada' }
-    };
-    
-    const { f, v } = fieldMap[pasoDocumento.tipo];
-    
-    // 1. ESPERAMOS a que Firebase nos confirme el guardado
-    await updateDoc(doc(db, "usuarios", userData.uid || userData.id), { 
-      [f]: fotoDocTemporal, 
-      [v]: false // Queda en revisión
-    });
-    
-    // 2. Si llegamos aquí, ES UN ÉXITO.
-    // Actualizamos la interfaz LOCAL para que se vea el cambio inmediatamente.
-    setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
-    
-    // 3. Limpiamos la cámara y mostramos un mensaje de ÉXITO
-    setFotoDocTemporal(null); 
-    setPasoDocumento({ tipo: 'cedula', activa: false });
-    alert("¡Datos enviados con éxito! Quedan en revisión.");
+    try {
+      const fieldMap: any = {
+        cedula: { f: 'kycFoto', v: 'kycVerificado' },
+        selfie: { f: 'selfieFoto', v: 'selfieVerificada' },
+        licencia: { f: 'licenciaFoto', v: 'licenciaVerificada' },
+        rcv: { f: 'rcvFoto', v: 'rcvVerificado' },
+        fotoFrontal: { f: 'fotoFrontal', v: 'fotoFrontalVerificada' },
+        fotoTrasera: { f: 'fotoTrasera', v: 'fotoTraseraVerificada' },
+        fotoLatIzq: { f: 'fotoLatIzq', v: 'fotoLatIzqVerificada' },
+        fotoLatDer: { f: 'fotoLatDer', v: 'fotoLatDerVerificada' }
+      };
+      
+      const { f, v } = fieldMap[pasoDocumento.tipo];
+      
+      await updateDoc(doc(db, "usuarios", userData.uid || userData.id), { 
+        [f]: fotoDocTemporal, 
+        [v]: false,
+        estadoRevision: "pendiente" 
+      });
+      
+      setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
+      
+      setFotoDocTemporal(null); 
+      setPasoDocumento({ ...pasoDocumento, activa: false });
+      
+      // Solo avisamos éxito si llegamos aquí sin errores
+      alert("¡Enviado! Tu documento está en revisión.");
 
-  } catch (e: any) {
-    // Si Firebase da error (ej: falta de permisos), caeremos aquí.
-    console.error("Error al subir:", e);
-    // Mostramos el mensaje de error REAL, no un 'Error' genérico.
-    alert("Error de conexión: Por favor, intenta de nuevo o verifica tu conexión.");
+    } catch (e: any) {
+      console.error("Error al subir:", e);
+      // Solo mostramos error si el documento es demasiado grande o no hay internet
+      alert("Hubo un problema de conexión, pero verifica tu perfil; es posible que se haya enviado.");
+    } finally {
+      setCargando(false);
+    }
+  };
   
-  } finally {
-    // 4. Se ejecute éxito o error, quitamos la pantalla de carga.
-    setCargando(false);
-  }
-};
   
   
   const cargarUsuariosAdmin = async () => {
@@ -299,21 +294,50 @@ const capturarDocumento = async () => {
           </div>
         )}
 
-        {/* VISTA DE CUENTA */}
+                {/* VISTA DE CUENTA */}
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
+            
+            {/* DATOS BÁSICOS */}
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Personal</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Básica</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
-                <MenuButton icon={Hash} label="Cédula" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
+                <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
-                <MenuButton icon={FileText} label="Cédula de Identidad" status={userData.estadoRevision === 'rechazado' && !userData.kycFoto ? 'rechazado' : (userData.kycVerificado ? 'verificado' : (userData.kycFoto ? 'revision' : 'pendiente'))} onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
               </div>
             </div>
 
+            {/* SEGURIDAD PERSONAL - AQUÍ ESTÁN LOS QUE FALTABAN */}
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4 italic">Vehículo</p>
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+                <MenuButton 
+                  icon={FileText} label="Foto de Cédula" 
+                  status={userData.kycVerificado ? 'verificado' : (userData.kycFoto ? 'revision' : (userData.estadoRevision === 'rechazado' ? 'rechazado' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} 
+                />
+                <MenuButton 
+                  icon={User} label="Selfie con Documento" 
+                  status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} 
+                  onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} 
+                />
+                <MenuButton 
+                  icon={ShieldCheck} label="Licencia de Conducir" 
+                  status={userData.licenciaVerificada ? 'verificado' : (userData.licenciaFoto ? 'revision' : 'pendiente')} 
+                  onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} 
+                />
+                <MenuButton 
+                  icon={ShieldCheck} label="Seguro RCV" 
+                  status={userData.rcvVerificado ? 'verificado' : (userData.rcvFoto ? 'revision' : 'pendiente')} 
+                  onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} 
+                />
+              </div>
+            </div>
+
+            {/* VEHÍCULO DETALLES */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4 italic">Datos del Vehículo</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={Car} label="Marca" value={userData.vehiculo?.marca} onClick={() => { setTipoEdicion({id:'marca', label:'Marca', valor:userData.vehiculo?.marca}); setNuevoValor(userData.vehiculo?.marca || ""); setModalVisible(true); }} />
                 <MenuButton icon={Gauge} label="Modelo" value={userData.vehiculo?.modelo} onClick={() => { setTipoEdicion({id:'modelo', label:'Modelo', valor:userData.vehiculo?.modelo}); setNuevoValor(userData.vehiculo?.modelo || ""); setModalVisible(true); }} />
@@ -322,6 +346,7 @@ const capturarDocumento = async () => {
               </div>
             </div>
 
+            {/* FOTOS DEL AUTO */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[3px] ml-4 italic">Fotos del Auto</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -332,13 +357,14 @@ const capturarDocumento = async () => {
               </div>
             </div>
 
+            {/* MENSAJE DE RECHAZO */}
             {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
-              <div className="mx-6 mb-6 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6 animate-in zoom-in duration-300">
+              <div className="mx-2 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6">
                 <div className="flex items-start gap-4">
                   <div className="bg-orange-500 p-2 rounded-xl text-white"><AlertCircle size={20} /></div>
                   <div className="flex-1">
-                    <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Atención Requerida</p>
-                    <p className="text-[11px] font-bold text-slate-700 leading-relaxed">{userData.mensajeAdmin || "Tus documentos no pudieron ser verificados."}</p>
+                    <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Documentos Rechazados</p>
+                    <p className="text-[11px] font-bold text-slate-700">{userData.mensajeAdmin || "Por favor sube las fotos nuevamente."}</p>
                   </div>
                 </div>
               </div>
@@ -354,6 +380,7 @@ const capturarDocumento = async () => {
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 mt-4"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
         )}
+        
 
                 {/* PANEL ADMINISTRATIVO */}
         {view === 'admin' && (
