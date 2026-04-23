@@ -440,28 +440,29 @@ const verificarCuentaCorreo = async () => {
             <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña"  onClick={enviarResetContraseña}  />
               </div>
             </div>
-<div className="bg-white p-5 rounded-[30px] shadow-sm mt-4"><p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">Personalidad al conducir</p>
+<div className="bg-white p-5 rounded-[30px] shadow-sm mt-4">
+  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">Personalidad al conducir</p>
   
   <div className="flex flex-row gap-3">
     {/* BOTÓN: HABLAR */}
     <TouchableOpacity 
-      onPress={() => togglePreferencia('hablador', !userData.hablador)}
-      className={`flex-1 py-3 rounded-2xl border items-center ${userData.hablador ? 'bg-blue-500 border-blue-500' : 'bg-slate-50 border-slate-100'}`}
+      onPress={() => togglePreferencia('hablador', !(userData?.hablador || false))}
+      className={`flex-1 py-3 rounded-2xl border items-center ${userData?.hablador ? 'bg-blue-500 border-blue-500' : 'bg-slate-50 border-slate-100'}`}
     >
-      <Text className="text-lg mb-1">{userData.hablador ? '💬' : '🔇'}</Text>
-      <Text className={`text-[10px] font-black uppercase ${userData.hablador ? 'text-white' : 'text-slate-400'}`}>
-        {userData.hablador ? 'Conversador' : 'Poco hablar'}
+      <Text className="text-lg mb-1">{userData?.hablador ? '💬' : '🔇'}</Text>
+      <Text className={`text-[10px] font-black uppercase ${userData?.hablador ? 'text-white' : 'text-slate-400'}`}>
+        {userData?.hablador ? 'Conversador' : 'Poco hablar'}
       </Text>
     </TouchableOpacity>
 
     {/* BOTÓN: MÚSICA */}
     <TouchableOpacity 
-      onPress={() => togglePreferencia('musica', !userData.musica)}
-      className={`flex-1 py-3 rounded-2xl border items-center ${userData.musica ? 'bg-blue-500 border-blue-500' : 'bg-slate-50 border-slate-100'}`}
+      onPress={() => togglePreferencia('musica', !(userData?.musica || false))}
+      className={`flex-1 py-3 rounded-2xl border items-center ${userData?.musica ? 'bg-blue-500 border-blue-500' : 'bg-slate-50 border-slate-100'}`}
     >
-      <Text className="text-lg mb-1">{userData.musica ? '🎵' : '🔇'}</Text>
-      <Text className={`text-[10px] font-black uppercase ${userData.musica ? 'text-white' : 'text-slate-400'}`}>
-        {userData.musica ? 'Con Música' : 'Sin Música'}
+      <Text className="text-lg mb-1">{userData?.musica ? '🎵' : '🔇'}</Text>
+      <Text className={`text-[10px] font-black uppercase ${userData?.musica ? 'text-white' : 'text-slate-400'}`}>
+        {userData?.musica ? 'Con Música' : 'Sin Música'}
       </Text>
     </TouchableOpacity>
   </div>
