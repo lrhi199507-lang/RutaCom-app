@@ -275,29 +275,41 @@ const verificarCuentaCorreo = async () => {
         {/* VISTA PÚBLICA (PERFIL) */}
         {view === 'publico' && (
           <div className="p-5 space-y-6 animate-in fade-in duration-500">
-               {auth.currentUser && !auth.currentUser.emailVerified && (
-      <div className="bg-blue-600 rounded-[30px] p-5 shadow-lg border-b-4 border-blue-800 animate-pulse">
-        <div className="flex items-center gap-4">
-          <div className="bg-white/20 p-2 rounded-xl text-white">
-            <AlertCircle size={20} />
-          </div>
-          <div className="flex-1">
-            <p className="text-[10px] font-black text-white uppercase italic tracking-widest leading-none mb-1">
-              Cuenta Pendiente
-            </p>
-            <p className="text-[11px] font-bold text-blue-100">
-              Verifica tu correo para activar todas las funciones.
-            </p>
-          </div>
-          <button 
-            onClick={verificarCuentaCorreo}
-            className="bg-white text-blue-600 px-4 py-2 rounded-2xl text-[9px] font-black uppercase shadow-sm active:scale-95 transition-transform"
-          >
-            Enviar Link
-          </button>
+               {/* AVISO DE VERIFICACIÓN INTELIGENTE */}
+{auth.currentUser && !auth.currentUser.emailVerified && (
+  <div className="bg-blue-600 rounded-[30px] p-5 shadow-lg border-b-4 border-blue-800 animate-in zoom-in">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-4">
+        <div className="bg-white/20 p-2 rounded-xl text-white">
+          <AlertCircle size={20} />
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] font-black text-white uppercase italic tracking-widest leading-none mb-1">
+            Correo sin verificar
+          </p>
+          <p className="text-[11px] font-bold text-blue-100">
+            Revisa tu email para activar tu cuenta.
+          </p>
         </div>
       </div>
-    )}
+      
+      <div className="flex gap-2">
+        <button 
+          onClick={verificarCuentaCorreo}
+          className="flex-1 bg-white/10 text-white border border-white/20 py-2.5 rounded-2xl text-[9px] font-black uppercase"
+        >
+          Reenviar Link
+        </button>
+        <button 
+          onClick={actualizarEstadoVerificacion}
+          className="flex-1 bg-white text-blue-600 py-2.5 rounded-2xl text-[9px] font-black uppercase shadow-sm active:scale-95 transition-all"
+        >
+          ¡Ya lo hice! ✨
+        </button>
+      </div>
+    </div>
+  </div>
+)}
             <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
               <div className="absolute top-5 right-5">
                 <div className={`${obtenerColorRango(rangoActual)} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}>{rangoActual}</div>
