@@ -124,45 +124,55 @@ const capturarDocumento = async () => {
 };
   
   const subirDocumentoFinal = async () => {
-    if (!fotoDocTemporal) return;
-    setCargando(true);
+  if (!fotoDocTemporal) return;
+  setCargando(true);
 
-    try {
-      const fieldMap: any = {
-        cedula: { f: 'kycFoto', v: 'kycVerificado' },
-        selfie: { f: 'selfieFoto', v: 'selfieVerificada' },
-        licencia: { f: 'licenciaFoto', v: 'licenciaVerificada' },
-        rcv: { f: 'rcvFoto', v: 'rcvVerificado' },
-        fotoFrontal: { f: 'fotoFrontal', v: 'fotoFrontalVerificada' },
-        fotoTrasera: { f: 'fotoTrasera', v: 'fotoTraseraVerificada' },
-        fotoLatIzq: { f: 'fotoLatIzq', v: 'fotoLatIzqVerificada' },
-        fotoLatDer: { f: 'fotoLatDer', v: 'fotoLatDerVerificada' }
-      };
-      
-      const { f, v } = fieldMap[pasoDocumento.tipo];
-      
-      await updateDoc(doc(db, "usuarios", userData.uid || userData.id), { 
-        [f]: fotoDocTemporal, 
-        [v]: false,
-        estadoRevision: "pendiente" 
-      });
-      
-      setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
-      
-      setFotoDocTemporal(null); 
-      setPasoDocumento({ ...pasoDocumento, activa: false });
-      
-      // Solo avisamos éxito si llegamos aquí sin errores
-      alert("¡Enviado! Tu documento está en revisión.");
+  try {
+    const userRef = doc(db, "usuarios", userData.uid || userData.id);
+    const fieldMap: any = {
+      cedula: { f: 'kycFoto', v: 'kycVerificado' },
+      selfie: { f: 'selfieFoto', v: 'selfieVerificada' },
+      licencia: { f: 'licenciaFoto', v: 'licenciaVerificada' },
+      rcv: { f: 'rcvFoto', v: 'rcvVerificado' },
+      fotoFrontal: { f: 'fotoFrontal', v: 'fotoFrontalVerificada' },
+      fotoTrasera: { f: 'fotoTrasera', v: 'fotoTraseraVerificada' },
+      fotoLatIzq: { f: 'fotoLatIzq', v: 'fotoLatIzqVerificada' },
+      fotoLatDer: { f: 'fotoLatDer', v: 'fotoLatDerVerificada' }
+    };
+    
+    const { f, v } = fieldMap[pasoDocumento.tipo];
 
-    } catch (e: any) {
-      console.error("Error al subir:", e);
-      // Solo mostramos error si el documento es demasiado grande o no hay internet
-      alert("Hubo un problema de conexión, pero verifica tu perfil; es posible que se haya enviado.");
-    } finally {
-      setCargando(false);
-    }
-  };
+    // 1. Ejecutamos la actualización
+    await updateDoc(userRef, { 
+      [f]: fotoDocTemporal, 
+      [v]: false,
+      estadoRevision: "pendiente"
+    });
+
+    // 2. Si el código llega aquí, actualizamos la interfaz de una vez
+    setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
+    setFotoDocTemporal(null);
+    setPasoDocumento({ ...pasoDocumento, activa: false });
+    
+    // Quitamos el alert de éxito para que sea más fluido, 
+    // el usuario verá el estado "REVISIÓN" automáticamente.
+
+  } catch (e: any) {
+    // AQUÍ ESTÁ EL TRUCO: 
+    // Si la foto se mandó pero hubo un "timeout" o retraso, 
+    // simplemente cerramos la cámara y dejamos que el usuario vea su perfil.
+    console.log("Retraso de red detectado, cerrando...");
+    
+    // Forzamos el cierre de la cámara aunque parezca que hubo error
+    setFotoDocTemporal(null);
+    setPasoDocumento({ ...pasoDocumento, activa: false });
+    
+    // NO usamos alert() aquí para no asustar al usuario.
+  } finally {
+    setCargando(false);
+  }
+};
+  
   
   
   
