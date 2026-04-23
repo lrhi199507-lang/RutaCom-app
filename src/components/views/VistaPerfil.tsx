@@ -440,49 +440,33 @@ const verificarCuentaCorreo = async () => {
             <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña"  onClick={enviarResetContraseña}  />
               </div>
             </div>
-
-            <div className="bg-white p-6 rounded-[30px] shadow-sm mt-4">  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">Mi Personalidad al Volante</p>
-            {/* SECCIÓN MINI BIO */}
-  <div className="mb-6">
-    <p className="text-[11px] font-bold text-slate-400 mb-2">MINI BIOGRAFÍA</p>
-    <TextInput
-      multiline
-      maxLength={120}
-      placeholder="Ej: Soy puntual, viajo tranquilo y me gusta conocer gente nueva..."
-      value={bio}
-      onChangeText={setBio}
-      className="bg-slate-50 rounded-2xl p-4 text-slate-600 text-sm italic h-24"
-      textAlignVertical="top"
-    />
-  </div>
-
-  {/* SECCIÓN DE TAGS (Los que no se repiten con los de afuera) */}
-  <p className="text-[11px] font-bold text-slate-400 mb-2">SOY UN CONDUCTOR...</p>
-  <div className="flex flex-wrap gap-2">
-    
-    {/* Botón: Conversador */}
+<div className="bg-white p-5 rounded-[30px] shadow-sm mt-4"><p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">Personalidad al conducir</p>
+  
+  <div className="flex flex-row gap-3">
+    {/* BOTÓN: HABLAR */}
     <TouchableOpacity 
-      onPress={() => setHablador(!hablador)}
-      className={`px-4 py-2 rounded-full border ${hablador ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-200'}`}
+      onPress={() => togglePreferencia('hablador', !userData.hablador)}
+      className={`flex-1 py-3 rounded-2xl border items-center ${userData.hablador ? 'bg-blue-500 border-blue-500' : 'bg-slate-50 border-slate-100'}`}
     >
-      <Text className={`text-xs font-bold ${hablador ? 'text-white' : 'text-slate-400'}`}>
-        {hablador ? '💬 Muy Conversador' : '💬 Poco Hablador'}
+      <Text className="text-lg mb-1">{userData.hablador ? '💬' : '🔇'}</Text>
+      <Text className={`text-[10px] font-black uppercase ${userData.hablador ? 'text-white' : 'text-slate-400'}`}>
+        {userData.hablador ? 'Conversador' : 'Poco hablar'}
       </Text>
     </TouchableOpacity>
 
-    {/* Botón: Música */}
+    {/* BOTÓN: MÚSICA */}
     <TouchableOpacity 
-      onPress={() => setMusica(!musica)}
-      className={`px-4 py-2 rounded-full border ${musica ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-200'}`}
+      onPress={() => togglePreferencia('musica', !userData.musica)}
+      className={`flex-1 py-3 rounded-2xl border items-center ${userData.musica ? 'bg-blue-500 border-blue-500' : 'bg-slate-50 border-slate-100'}`}
     >
-      <Text className={`text-xs font-bold ${musica ? 'text-white' : 'text-slate-400'}`}>
-        {musica ? '🎵 Pongo Música' : '🔇 Prefiero Silencio'}
+      <Text className="text-lg mb-1">{userData.musica ? '🎵' : '🔇'}</Text>
+      <Text className={`text-[10px] font-black uppercase ${userData.musica ? 'text-white' : 'text-slate-400'}`}>
+        {userData.musica ? 'Con Música' : 'Sin Música'}
       </Text>
     </TouchableOpacity>
-
   </div>
 </div>
-
+            
               
             {/* SEGURIDAD PERSONAL - AQUÍ ESTÁN LOS QUE FALTABAN */}
             <div className="space-y-3">
