@@ -1,9 +1,12 @@
 import React from 'react';
+import PerfilPublico from './PerfilPublico';
 import { 
   ArrowLeft, MapPin, Car, User, ShieldCheck, 
   MessageCircle, Snowflake, CigaretteOff, 
-  PawPrint, MessageSquare, Briefcase 
+  PawPrint, MessageSquare, Briefcase,
+  ChevronRight // <--- AGREGA ESTE AQUÍ
 } from 'lucide-react';
+
 
 export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
   if (!viaje) return null;
@@ -15,6 +18,9 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
     { icono: MessageSquare, texto: "CONVERSACIÓN" },
     { icono: Briefcase, texto: "EQUIPAJE" },
   ];
+
+  const [verPerfil, setVerPerfil] = React.useState(false);
+  
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative">
@@ -100,21 +106,32 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
             </div>
           </div>
 
-          {/* CONDUCTOR */}
-          <div className="bg-white p-5 rounded-[30px] shadow-sm border border-slate-100 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300">
-              <User size={20} />
-            </div>
-            <div className="flex-1">
-              <p className="text-base font-black italic text-slate-700 leading-none uppercase underline decoration-blue-100 decoration-2 underline-offset-2">
-                {viaje.cN || "LUIS HERNÁNDEZ"}
-              </p>
-              <div className="flex items-center gap-1 mt-1.5">
-                <ShieldCheck size={12} className="text-green-500" />
-                <p className="text-[8px] font-black text-green-600 uppercase">Conductor Verificado</p>
-              </div>
-            </div>
-          </div>
+          {/* CONDUCTOR (ACTUALIZADO CON CLIC) */}
+<div 
+  onClick={() => setVerPerfil(true)} 
+  className="bg-white p-5 rounded-[30px] shadow-sm border border-slate-100 flex items-center gap-4 active:bg-slate-50 cursor-pointer transition-all"
+>
+  <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 overflow-hidden shadow-inner">
+    {/* Si el objeto viaje ya trae la foto, se verá aquí */}
+    {viaje.fotoConductor ? (
+      <img src={viaje.fotoConductor} className="w-full h-full object-cover" alt="Perfil" />
+    ) : (
+      <User size={20} />
+    )}
+  </div>
+  <div className="flex-1">
+    <p className="text-base font-black italic text-slate-700 leading-none uppercase underline decoration-blue-100 decoration-2 underline-offset-2">
+      {viaje.cN || "CONDUCTOR"}
+    </p>
+    <div className="flex items-center gap-1 mt-1.5">
+      <ShieldCheck size={12} className="text-blue-500 fill-blue-50" />
+      <p className="text-[8px] font-black text-blue-600 uppercase tracking-tighter">Ver Perfil Verificado</p>
+    </div>
+  </div>
+  {/* Una pequeña flechita para indicar que se puede entrar */}
+  <ChevronRight size={14} className="text-slate-200" />
+</div>
+          
 
           {/* PASAJEROS */}
           <div className="bg-white p-6 rounded-[30px] shadow-sm border border-slate-100 space-y-4">
@@ -155,6 +172,20 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
           </button>
         </div>
       </div>
+      {/* CAPA ENCIMA PARA EL PERFIL PÚBLICO */}
+{verPerfil && (
+  <PerfilPublico 
+    conductor={{
+      nombre: viaje.cN,
+      bio: viaje.bioConductor, // Asegúrate de que el objeto viaje traiga estos datos
+      hablador: viaje.prefHablador,
+      musica: viaje.prefMusica,
+      fotoPerfil: viaje.fotoConductor
+    }} 
+    onClose={() => setVerPerfil(false)} 
+  />
+)}
+      
     </div>
   );
 };
