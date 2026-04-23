@@ -435,6 +435,7 @@ const verificarCuentaCorreo = async () => {
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
                 <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
               <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
+              <MenuButton icon={UserCog} label="Sobre mí (Bio)"  value={userData.bio || "Escribe algo sobre ti..."}  onClick={() => {   setTipoEdicion({id:'bio', label:'Biografía', valor:userData.bio});   setNuevoValor(userData.bio || ""); setModalVisible(true); }} />
                {/* Campo de Correo (Solo lectura) */}
                <MenuButton icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => alert("El correo no se puede cambiar por ahora por seguridad.")} />
             <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña"  onClick={enviarResetContraseña}  />
