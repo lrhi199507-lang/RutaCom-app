@@ -174,8 +174,6 @@ const capturarDocumento = async () => {
 };
   
   
-  
-  
   const cargarUsuariosAdmin = async () => {
     setCargando(true);
     try {
@@ -234,6 +232,33 @@ const capturarDocumento = async () => {
     alert("Error al rechazar");
   }
 };
+
+  // Función para enviar correo de restablecimiento de contraseña
+const enviarResetContraseña = async () => {
+  const email = auth.currentUser?.email;
+  if (!email) return;
+
+  try {
+    const { sendPasswordResetEmail } = await import('firebase/auth');
+    await sendPasswordResetEmail(auth, email);
+    alert("Te hemos enviado un correo a " + email + " para que cambies tu contraseña. Revisa tu bandeja de entrada o spam.");
+  } catch (error) {
+    alert("Error al enviar el correo. Inténtalo más tarde.");
+  }
+};
+
+// Función para enviar correo de verificación (Para cuentas nuevas)
+const verificarCuentaCorreo = async () => {
+  if (auth.currentUser) {
+    try {
+      const { sendEmailVerification } = await import('firebase/auth');
+      await sendEmailVerification(auth.currentUser);
+      alert("Correo de verificación enviado. Por favor, revisa tu email.");
+    } catch (error) {
+      alert("No pudimos enviar el correo de verificación en este momento.");
+    }
+  }
+};
   
 
     return (
@@ -250,6 +275,29 @@ const capturarDocumento = async () => {
         {/* VISTA PÚBLICA (PERFIL) */}
         {view === 'publico' && (
           <div className="p-5 space-y-6 animate-in fade-in duration-500">
+               {auth.currentUser && !auth.currentUser.emailVerified && (
+      <div className="bg-blue-600 rounded-[30px] p-5 shadow-lg border-b-4 border-blue-800 animate-pulse">
+        <div className="flex items-center gap-4">
+          <div className="bg-white/20 p-2 rounded-xl text-white">
+            <AlertCircle size={20} />
+          </div>
+          <div className="flex-1">
+            <p className="text-[10px] font-black text-white uppercase italic tracking-widest leading-none mb-1">
+              Cuenta Pendiente
+            </p>
+            <p className="text-[11px] font-bold text-blue-100">
+              Verifica tu correo para activar todas las funciones.
+            </p>
+          </div>
+          <button 
+            onClick={verificarCuentaCorreo}
+            className="bg-white text-blue-600 px-4 py-2 rounded-2xl text-[9px] font-black uppercase shadow-sm active:scale-95 transition-transform"
+          >
+            Enviar Link
+          </button>
+        </div>
+      </div>
+    )}
             <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
               <div className="absolute top-5 right-5">
                 <div className={`${obtenerColorRango(rangoActual)} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}>{rangoActual}</div>
@@ -314,7 +362,10 @@ const capturarDocumento = async () => {
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
                 <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
-                <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
+              <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
+               {/* Campo de Correo (Solo lectura) */}
+               <MenuButton icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => alert("El correo no se puede cambiar por ahora por seguridad.")} />
+            <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña"  onClick={enviarResetContraseña}  />
               </div>
             </div>
 
