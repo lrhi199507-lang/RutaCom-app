@@ -259,6 +259,28 @@ const verificarCuentaCorreo = async () => {
     }
   }
 };
+
+  const actualizarEstadoVerificacion = async () => {
+  if (!auth.currentUser) return;
+  
+  setCargando(true);
+  try {
+    // Esto obliga a la App a preguntarle a Firebase: "¿Ya verificó este usuario?"
+    await auth.currentUser.reload();
+    
+    if (auth.currentUser.emailVerified) {
+      alert("¡Excelente! Tu correo ha sido verificado con éxito.");
+      // Forzamos un refresco de la interfaz
+      setUserData({...userData}); 
+    } else {
+      alert("Aún no detectamos la verificación. Asegúrate de hacer clic en el enlace que te enviamos.");
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setCargando(false);
+  }
+};
   
 
     return (
