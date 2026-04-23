@@ -26,7 +26,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   const [modalInstruccionesSelfie, setModalInstruccionesSelfie] = useState(false);
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
-
+  const [bio, setBio] = useState(userData.bio || "");
+  const [hablador, setHablador] = useState(userData.hablador || false);
+  const [musica, setMusica] = useState(userData.musica || false);
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   // VARIABLE DE VISTA (Corregida para usar pestañaActiva)
@@ -422,6 +424,49 @@ const verificarCuentaCorreo = async () => {
               </div>
             </div>
 
+            <div className="bg-white p-6 rounded-[30px] shadow-sm mt-4">  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">Mi Personalidad al Volante</p>
+            {/* SECCIÓN MINI BIO */}
+  <div className="mb-6">
+    <p className="text-[11px] font-bold text-slate-400 mb-2">MINI BIOGRAFÍA</p>
+    <TextInput
+      multiline
+      maxLength={120}
+      placeholder="Ej: Soy puntual, viajo tranquilo y me gusta conocer gente nueva..."
+      value={bio}
+      onChangeText={setBio}
+      className="bg-slate-50 rounded-2xl p-4 text-slate-600 text-sm italic h-24"
+      textAlignVertical="top"
+    />
+  </div>
+
+  {/* SECCIÓN DE TAGS (Los que no se repiten con los de afuera) */}
+  <p className="text-[11px] font-bold text-slate-400 mb-2">SOY UN CONDUCTOR...</p>
+  <div className="flex flex-wrap gap-2">
+    
+    {/* Botón: Conversador */}
+    <TouchableOpacity 
+      onPress={() => setHablador(!hablador)}
+      className={`px-4 py-2 rounded-full border ${hablador ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-200'}`}
+    >
+      <Text className={`text-xs font-bold ${hablador ? 'text-white' : 'text-slate-400'}`}>
+        {hablador ? '💬 Muy Conversador' : '💬 Poco Hablador'}
+      </Text>
+    </TouchableOpacity>
+
+    {/* Botón: Música */}
+    <TouchableOpacity 
+      onPress={() => setMusica(!musica)}
+      className={`px-4 py-2 rounded-full border ${musica ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-200'}`}
+    >
+      <Text className={`text-xs font-bold ${musica ? 'text-white' : 'text-slate-400'}`}>
+        {musica ? '🎵 Pongo Música' : '🔇 Prefiero Silencio'}
+      </Text>
+    </TouchableOpacity>
+
+  </div>
+</div>
+
+              
             {/* SEGURIDAD PERSONAL - AQUÍ ESTÁN LOS QUE FALTABAN */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
