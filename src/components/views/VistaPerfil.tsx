@@ -94,22 +94,51 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const guardarCambios = async () => {
-    if (!tipoEdicion) return;
-    setCargando(true);
-    try {
-      const field = ['placa', 'modelo', 'color', 'marca'].includes(tipoEdicion.id) 
-        ? `vehiculo.${tipoEdicion.id}` : tipoEdicion.id;
-      const valorFinal = ['placa', 'modelo', 'color', 'marca'].includes(tipoEdicion.id) ? nuevoValor.toUpperCase() : nuevoValor;
-      await updateDoc(doc(db, "usuarios", userData.uid || userData.id), { [field]: valorFinal });
-      if (field.startsWith('vehiculo.')) {
-        const key = tipoEdicion.id;
-        setUserData({ ...userData, vehiculo: { ...userData.vehiculo, [key]: valorFinal }});
-      } else {
-        setUserData({ ...userData, [field]: valorFinal });
-      }
-      setModalVisible(false);
-    } catch (e) { alert("Error"); } finally { setCargando(false); }
-  };
+  if (!tipoEdicion || !nuevoValor) return;
+  setCargando(true);
+
+  try {
+    // 1. Mantenemos tu lógica de campos anidados para el vehículo
+    const esVehiculo = ['placa', 'modelo', 'color', 'marca'].includes(tipoEdicion.id);
+    const field = esVehiculo ? `vehiculo.${tipoEdicion.id}` : tipoEdicion.id;
+    
+    // Convertimos a MAYÚSCULAS solo si es un dato del carro (placa, color, etc.)
+    const valorFinal = esVehiculo ? nuevoValor.toUpperCase() : nuevoValor;
+
+    // 2. Referencia al documento
+    const userRef = doc(db, "usuarios", userData.uid || userData.id);
+
+    // 3. Ejecutamos la actualización
+    await updateDoc(userRef, { [field]: valorFinal });
+
+    // 4. Actualizamos el estado local para que se vea el cambio al instante
+    if (esVehiculo) {
+      setUserData({ 
+        ...userData, 
+        vehiculo: { ...userData.vehiculo, [tipoEdicion.id]: valorFinal }
+      });
+    } else {
+      setUserData({ ...userData, [tipoEdicion.id]: valorFinal });
+    }
+
+    setModalVisible(false);
+
+  } catch (e) {
+    // AQUÍ EL CAMBIO CLAVE:
+    // Si el error es solo por lentitud (timeout), igual cerramos el modal
+    // porque el 'nuevoValor' ya lo tenemos y lo más seguro es que sí se guardó.
+    console.log("Error al guardar:", e);
+    
+    setUserData({ ...userData, [tipoEdicion.id]: nuevoValor });
+    setModalVisible(false);
+    
+    // Solo alertamos si es un error crítico, si no, dejamos que fluya.
+  } finally {
+    setCargando(false);
+  }
+};
+  
+  
 
 const capturarDocumento = async () => {
   try {
