@@ -118,6 +118,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
     </p>
   </div>
 </div>
+  </div>
 
       {/* BOTONES DE ACCIÓN FIJOS */}
       <div className="p-6 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0,05)]">
