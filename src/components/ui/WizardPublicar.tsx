@@ -107,16 +107,28 @@ export const WizardPublicar = ({
       </div>
 
       <button 
-        onClick={publicarRuta} 
-        disabled={!viajeForm.origen || !viajeForm.destino}
-        className={`w-full py-5 ${viajeEditando ? 'bg-blue-600' : 'bg-green-500'} text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2`}
-      >
-        {viajeEditando ? (
-          <><Check size={18}/> Guardar Cambios</>
-        ) : (
-          <><ShieldCheck size={18}/> ¡Publicar Ruta Ahora!</>
-        )}
-      </button>
+  onClick={() => {
+    // 1. Inyectamos la foto y datos del usuario al formulario antes de enviar
+    setViajeForm({
+      ...viajeForm,
+      fotoPerfil: userData?.fotoPerfil || "", 
+      conductor: userData?.nombre || "Conductor",
+      uidConductor: userData?.id || ""
+    });
+    
+    // 2. Ejecutamos la función de publicar que ya tenías
+    publicarRuta();
+  }} 
+  disabled={!viajeForm.origen || !viajeForm.destino}
+  className={`w-full py-5 ${viajeEditando ? 'bg-blue-600' : 'bg-green-500'} text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2`}
+>
+  {viajeEditando ? (
+    <><Check size={18}/> Guardar Cambios</>
+  ) : (
+    <><ShieldCheck size={18}/> ¡Publicar Ruta Ahora!</>
+  )}
+</button>
+      
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Revisar detalles</button>
     </div>
   );
