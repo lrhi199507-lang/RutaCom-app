@@ -105,37 +105,26 @@ export const WizardPublicar = ({
           </button>
         ))}
       </div>
+{/* En WizardPublicar.tsx */}
 <button 
   onClick={() => {
-    // 1. Creamos el objeto con los datos finales INMEDIATAMENTE
     const datosParaEnviar = {
       ...viajeForm,
       fotoPerfil: userData?.fotoPerfil || "", 
       conductor: userData?.nombre || "Conductor",
       uidConductor: userData?.id || "",
-      // Inyectamos esto para que el perfil no salga en blanco
+      bioConductor: userData?.bio || "",
       prefHablador: userData?.prefHablador ?? true,
-      prefMusica: userData?.prefMusica ?? true,
-      bioConductor: userData?.bio || ""
+      prefMusica: userData?.prefMusica ?? true
     };
     
-    // 2. Se lo mandamos a la función. 
-    // Si estás editando, asegúrate de que pasarle también el ID
-    publicarRuta(datosParaEnviar);
-  }} 
-  disabled={!viajeForm.origen || !viajeForm.destino}
-  className={`w-full py-5 ${viajeEditando ? 'bg-blue-600' : 'bg-green-500'} text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all`}
+    publicarRuta(datosParaEnviar); // <--- Esto envía la maleta de datos al padre
+  }}
+  // ... resto de clases
 >
-  {viajeEditando ? (
-    <><Check size={18}/> Guardar Cambios</>
-  ) : (
-    <><ShieldCheck size={18}/> ¡Publicar Ruta Ahora!</>
-  )}
+  ¡Publicar Ruta Ahora!
 </button>
-      
-      
-      
-      <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Revisar detalles</button>
+     <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Revisar detalles</button>
     </div>
   );
 };
