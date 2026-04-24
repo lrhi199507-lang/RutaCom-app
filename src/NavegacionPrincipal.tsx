@@ -128,28 +128,33 @@ export default function NavegacionPrincipal({ user }) {
     setVista={setVista}
     setModo={setModo}
     publicarRuta={async (datosFinales) => {
+      // 1. Verificamos en consola que los datos llegaron al padre
+      console.log("Datos recibidos para publicar:", datosFinales);
+
       try {
-        // Usamos la colección "Viajes" (con V mayúscula)
+        // 2. Intentamos guardar en Firebase
         await addDoc(collection(db, "Viajes"), {
           ...datosFinales,
           fecha: new Date().toISOString(),
-          estado: "disponible"
+          estado: "disponible",
+          timestamp: Date.now()
         });
-        
-        // Limpiamos el formulario para la próxima vez
+
+        // 3. Feedback visual: Esto es lo que faltaba para que "diga algo"
+        alert("✅ ¡Ruta publicada con éxito en Dame la cola!");
+
+        // 4. Limpiamos y regresamos
         setViajeForm({
           origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
           preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
         });
         setPasoWizard(1);
-        
-        // Regresamos al inicio
         setVista("inicio");
         setModo("conductor");
-        
+
       } catch (error) {
-        console.error("Error al publicar:", error);
-        alert("No se pudo publicar la ruta. Revisa tu conexión.");
+        console.error("Error en Firebase:", error);
+        alert("❌ Error al publicar: " + error.message);
       }
     }}
   />
