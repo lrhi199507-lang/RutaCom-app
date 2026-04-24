@@ -113,8 +113,8 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
 >
   <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 overflow-hidden shadow-inner">
     {/* Si el objeto viaje ya trae la foto, se verá aquí */}
-    {viaje.fotoConductor ? (
-      <img src={viaje.fotoConductor} className="w-full h-full object-cover" alt="Perfil" />
+    {viaje.fotoPerfil ? (
+      <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" />
     ) : (
       <User size={20} />
     )}
