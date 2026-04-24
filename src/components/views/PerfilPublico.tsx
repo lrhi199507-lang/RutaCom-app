@@ -21,14 +21,18 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
       <div className="flex-1 overflow-y-auto px-6 -mt-12 bg-white rounded-t-[40px] relative">
         {/* FOTO Y NOMBRE */}
         <div className="flex flex-col items-center">
-          <div className="w-28 h-28 bg-slate-200 rounded-[35px] border-4 border-white shadow-2xl overflow-hidden mb-4">
-            <img 
-              src={conductor.fotoPerfil || "https://via.placeholder.com/150"} 
-              className="w-full h-full object-cover" 
-              alt="Perfil"
-            />
-          </div>
-          <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+          <div className="w-28 h-28 bg-slate-200 rounded-[35px] border-4 border-white shadow-2xl overflow-hidden mb-4 flex items-center justify-center">
+  {conductor.fotoPerfil ? (
+    <img 
+      src={conductor.fotoPerfil} 
+      className="w-full h-full object-cover" 
+      alt="" // Deja el alt vacío para que no salga el texto "Perfil" si falla
+    />
+  ) : (
+    <User size={40} className="text-slate-400" />
+  )}
+</div>
+         <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
             {conductor.nombre} 
             <span className="text-blue-500 text-xl">✅</span>
           </h2>
