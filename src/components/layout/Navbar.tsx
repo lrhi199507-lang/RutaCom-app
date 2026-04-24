@@ -1,5 +1,4 @@
 import React from "react";
-// Importamos PlusCircle que es el que ya tienes en tu lista
 import { Search, PlusCircle, MessageSquare, User, Map } from "lucide-react";
 
 export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard }) => {
@@ -24,17 +23,20 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard }) => {
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Viajes</span>
       </button>
 
-      {/* BOTÓN 3: PUBLICAR (Ahora es el del medio, simple y sutil) */}
+      {/* BOTÓN 3: PUBLICAR (CORREGIDO Y CON COLOR DORADO) */}
       <button 
         onClick={() => {
-          setVista("inicio");
-          setModo("chofer");
-          setPasoWizard(1);
+          setVista("publicar"); // <--- CAMBIADO: Ahora sí abre el Wizard
+          setModo("conductor");  // Cambiamos a modo conductor
+          setPasoWizard(1);     // Reiniciamos al paso 1
         }} 
-        // Le damos un poco más de tamaño y el color azul siempre activo para que resalte sutilmente
-        className="flex flex-col items-center gap-1 text-blue-600 flex-1 hover:scale-105 transition-transform"
+        className={`flex flex-col items-center gap-1 flex-1 transition-all active:scale-90 ${
+          vista === "publicar" 
+            ? "text-blue-600 scale-110" // Azul cuando estás publicando
+            : "text-amber-500 hover:text-amber-600" // DORADO cuando estás en otra pestaña
+        }`}
       >
-        <PlusCircle size={22} strokeWidth={3} /> {/* Un poco más grande que los otros */}
+        <PlusCircle size={26} strokeWidth={3} /> {/* Un poco más grande para que destaque */}
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Publicar</span>
       </button>
 
