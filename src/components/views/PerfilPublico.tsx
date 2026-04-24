@@ -22,19 +22,22 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
 
       {/* CONTENIDO SCROLLEABLE */}
       <div className="flex-1 overflow-y-auto px-6 -mt-12 bg-white rounded-t-[40px] relative">
-        {/* FOTO Y NOMBRE */}
-        <div className="flex flex-col items-center">
-          <div className="w-28 h-28 bg-slate-200 rounded-[35px] border-4 border-white shadow-2xl overflow-hidden mb-4 flex items-center justify-center">
-  {conductor.fotoPerfil ? (
-    <img 
-      src={conductor.fotoPerfil} 
-      className="w-full h-full object-cover" 
-      alt="" // Deja el alt vacío para que no salga el texto "Perfil" si falla
-    />
-  ) : (
-    <User size={40} className="text-slate-400" />
-  )}
-</div>
+       {/* FOTO Y NOMBRE */}
+<div className="flex flex-col items-center">
+  <div className="w-28 h-28 bg-white rounded-[35px] border-4 border-white shadow-2xl overflow-hidden mb-4 flex items-center justify-center relative">
+    {/* Fondo de seguridad por si la foto falla */}
+    <div className="absolute inset-0 bg-slate-100 -z-10" />
+    
+    {conductor.fotoPerfil ? (
+      <img 
+        src={conductor.fotoPerfil} 
+        className="w-full h-full object-cover" 
+        alt="" 
+      />
+    ) : (
+      <User size={40} className="text-slate-300" />
+    )}
+  </div>
          <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
             {conductor.nombre} 
             <span className="text-blue-500 text-xl">✅</span>
@@ -95,18 +98,26 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
   </button>
 </div>
 
-        {/* INFO DE CONFIANZA */}
-        <div className="mt-8 space-y-4 mb-32 border-t border-slate-50 pt-6">
-          <div className="flex items-center gap-4 text-slate-500 px-2">
-            <ShieldCheck size={20} className="text-blue-500" />
-            <p className="text-xs font-bold">Identidad verificada con Cédula</p>
-          </div>
-          <div className="flex items-center gap-4 text-slate-500 px-2">
-            <Star size={20} className="text-amber-500" />
-            <p className="text-xs font-bold">4.9 • 15 viajes completados</p>
-          </div>
-        </div>
-      </div>
+        {/* INFO DE CONFIANZA LIMPIA */}
+<div className="mt-8 space-y-4 mb-32 border-t border-slate-50 pt-6">
+  <div className="flex items-center gap-4 text-slate-500 px-2">
+    <div className="bg-blue-50 p-2.5 rounded-2xl">
+      <ShieldCheck size={20} className="text-blue-500" />
+    </div>
+    <p className="text-xs font-bold text-slate-600 tracking-tight">
+      Identidad verificada con Cédula
+    </p>
+  </div>
+  
+  <div className="flex items-center gap-4 text-slate-500 px-2">
+    <div className="bg-slate-50 p-2.5 rounded-2xl">
+      <Car size={20} className="text-slate-400" />
+    </div>
+    <p className="text-xs font-bold text-slate-600 tracking-tight">
+      <span className="font-black text-slate-800">15 viajes</span> completados con éxito
+    </p>
+  </div>
+</div>
 
       {/* BOTONES DE ACCIÓN FIJOS */}
       <div className="p-6 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0,05)]">
