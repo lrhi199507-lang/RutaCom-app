@@ -12,9 +12,8 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
       {/* HEADER DE LA TARJETA */}
       <div className="flex justify-between items-start gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 border border-slate-200">
-            <User size={20} />
-          </div>
+          <div className="w-12 h-12 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden flex items-center justify-center text-slate-300"> {viaje.fotoConductor ? ( <img  src={viaje.fotoConductor} className="w-full h-full object-cover"   alt="Perfil" /> ) : ( <User size={20} />)}
+        </div>
           <div>
             <h3 className="text-sm font-black italic uppercase text-slate-800 flex items-center gap-1.5 tracking-tight">
               {viaje.conductor || "Conductor"} 
