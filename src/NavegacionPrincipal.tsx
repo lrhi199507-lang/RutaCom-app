@@ -155,7 +155,13 @@ export default function NavegacionPrincipal({ user }) {
   />
 )}
 </main>
-      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={() => {}} />
+ <Navbar 
+  vista={vista} 
+  modo={modo} 
+  setVista={setVista} 
+  setModo={setModo} 
+  setPasoWizard={setPasoWizard} // <--- Ahora sí le pasamos la función real
+/>
     </div>
   );
 }
