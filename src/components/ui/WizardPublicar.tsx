@@ -3,7 +3,7 @@ import { MapPin, Navigation, Users, DollarSign, Clock, ShieldCheck, Check } from
 
 export const WizardPublicar = ({ 
   pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
-  viajeEditando // <--- TIENE QUE ESTAR AQUÍ
+  viajeEditando, userData // <--- AGREGAMOS userData AQUÍ
 }) => {
   
   // PASO 1: UBICACIONES
@@ -82,7 +82,6 @@ export const WizardPublicar = ({
       <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Preferencias</h2>
       
       <div className="grid grid-cols-2 gap-3">
-        {/* AGREGAMOS EL ?. PARA QUE NO EXPLOTE SI PREFERENCIAS ES NULL */}
         {viajeForm?.preferencias && Object.keys(viajeForm.preferencias).map((pref) => (
           <button 
             key={pref}
@@ -95,7 +94,6 @@ export const WizardPublicar = ({
             })}
             className={`p-3 rounded-2xl border-2 text-[9px] font-black uppercase italic flex items-center justify-between ${viajeForm.preferencias[pref] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-100 text-slate-400'}`}
           >
-            {/* TRADUCCIÓN SIMPLE PARA QUE NO SE VEA EL NOMBRE TÉCNICO */}
             {pref === 'ac' ? 'Aire Acond.' : 
              pref === 'noFumar' ? 'No Fumar' : 
              pref === 'mascotas' ? 'Mascotas' : 
@@ -105,26 +103,31 @@ export const WizardPublicar = ({
           </button>
         ))}
       </div>
-{/* En WizardPublicar.tsx */}
-<button 
-  onClick={() => {
-    const datosParaEnviar = {
-      ...viajeForm,
-      fotoPerfil: userData?.fotoPerfil || "", 
-      conductor: userData?.nombre || "Conductor",
-      uidConductor: userData?.id || "",
-      bioConductor: userData?.bio || "",
-      prefHablador: userData?.prefHablador ?? true,
-      prefMusica: userData?.prefMusica ?? true
-    };
-    
-    publicarRuta(datosParaEnviar); // <--- Esto envía la maleta de datos al padre
-  }}
-  // ... resto de clases
->
-  ¡Publicar Ruta Ahora!
-</button>
-     <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Revisar detalles</button>
+
+      <button 
+        onClick={() => {
+          const datosParaEnviar = {
+            ...viajeForm,
+            fotoPerfil: userData?.fotoPerfil || "", 
+            conductor: userData?.nombre || "Conductor",
+            uidConductor: userData?.id || "",
+            bioConductor: userData?.bio || "",
+            prefHablador: userData?.prefHablador ?? true,
+            prefMusica: userData?.prefMusica ?? true
+          };
+          
+          publicarRuta(datosParaEnviar);
+        }}
+        disabled={!viajeForm.origen || !viajeForm.destino}
+        className="w-full mt-4 py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+      >
+        <ShieldCheck size={18}/>
+        ¡Publicar Ruta Ahora!
+      </button>
+
+      <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">
+        Revisar detalles
+      </button>
     </div>
   );
 };
