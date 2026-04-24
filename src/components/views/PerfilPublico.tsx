@@ -1,5 +1,8 @@
 import React from 'react';
-import { ChevronLeft, MessageCircle, Phone, ShieldCheck, Star, Music, MessageSquare } from 'lucide-react';
+import { 
+  ChevronLeft, MessageCircle, Phone, ShieldCheck, 
+  Star, Music, MessageSquare, User // <--- AGREGA ESTE
+} from 'lucide-react';
 
 
 const PerfilPublico = ({ conductor, onClose }: any) => {
@@ -39,6 +42,12 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
           <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1 italic">
             Conductor Verificado
           </p>
+          <div className="mt-3 bg-green-50 px-4 py-1.5 rounded-full border border-green-100 flex items-center gap-2">
+  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+  <span className="text-[9px] font-black uppercase text-green-700 italic tracking-wider">
+    Respuesta Inmediata
+  </span>
+</div>
         </div>
 
         {/* BIO (SOBRE MÍ) */}
@@ -65,6 +74,26 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
             </div>
           </div>
         </div>
+
+        <div className="mt-8">
+  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-4 ml-2">Opiniones y reseñas</p>
+  <button className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[30px] flex items-center justify-between active:scale-95 transition-all group">
+    <div className="flex items-center gap-4">
+      <div className="bg-amber-100 p-3 rounded-2xl group-hover:bg-amber-200 transition-colors">
+        <Star size={20} className="text-amber-600 fill-amber-600" />
+      </div>
+      <div className="text-left">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Calificación</p>
+        <p className="text-base font-black text-slate-700 italic">
+          4.9 <span className="text-slate-400 font-bold text-xs ml-1">(24 opiniones)</span>
+        </p>
+      </div>
+    </div>
+    <div className="text-blue-600">
+        <ChevronLeft size={20} className="rotate-180" />
+    </div>
+  </button>
+</div>
 
         {/* INFO DE CONFIANZA */}
         <div className="mt-8 space-y-4 mb-32 border-t border-slate-50 pt-6">
