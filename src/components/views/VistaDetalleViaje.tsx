@@ -176,16 +176,15 @@ export const VistaDetalleViaje = ({ viaje, onRegresar }) => {
 {verPerfil && (
   <PerfilPublico 
     conductor={{
-      nombre: viaje.cN,
-      bio: viaje.bioConductor, // Asegúrate de que el objeto viaje traiga estos datos
+      nombre: viaje.cN || viaje.conductor,
+      fotoPerfil: viaje.fotoPerfil, // <--- REVISA QUE ESTO DIGA fotoPerfil
+      bio: viaje.bioConductor,
       hablador: viaje.prefHablador,
-      musica: viaje.prefMusica,
-      fotoPerfil: viaje.fotoConductor
+      musica: viaje.prefMusica
     }} 
     onClose={() => setVerPerfil(false)} 
   />
 )}
-      
     </div>
   );
 };
