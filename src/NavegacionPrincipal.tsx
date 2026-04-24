@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, orderBy, addDoc } from "firebase/firestore";
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
@@ -20,6 +20,52 @@ export default function NavegacionPrincipal({ user }) {
   const [modo, setModo] = useState("pasajero");
   const [viajeSel, setViajeSel] = useState(null);
   const [pestañaPerfil, setPestañaPerfil] = useState("publico");
+    // --- ESTADOS PARA EL WIZARD DE PUBLICACIÓN ---
+  const [pasoWizard, setPasoWizard] = useState(1);
+  const [viajeForm, setViajeForm] = useState({
+    origen: "",
+    destino: "",
+    precio: "",
+    asientos: "4",
+    horaSalida: "",
+    preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
+  });
+
+  // Base de datos de ubicaciones para el autocompletado
+  const UBICACIONES = {
+    "Carabobo": ["Valencia", "Naguanagua", "San Diego", "Guacara", "Puerto Cabello"],
+    "Distrito Capital": ["Caracas"],
+    "Aragua": ["Maracay", "Turmero", "La Victoria"],
+    "Lara": ["Barquisimeto", "Cabudare"],
+    "Zulia": ["Maracaibo"]
+  };
+
+  // Función para enviar a Firebase (Colección "Viajes")
+  const publicarRuta = async (datosFinales) => {
+    try {
+      const { addDoc, collection } = await import("firebase/firestore");
+      
+      await addDoc(collection(db, "Viajes"), {
+        ...datosFinales,
+        fecha: new Date().toISOString(),
+        estado: "disponible"
+      });
+
+      // Limpiamos el formulario y regresamos al inicio
+      setViajeForm({
+        origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
+        preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
+      });
+      setPasoWizard(1);
+      setVista("inicio");
+      setModo("conductor");
+      
+    } catch (error) {
+      console.error("Error al publicar:", error);
+      alert("Error al conectar con la base de datos");
+    }
+  };
+  
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -70,11 +116,11 @@ export default function NavegacionPrincipal({ user }) {
     setPestañaActiva={setPestañaPerfil}
   />
 )}
-  {vista === "publicar" && (
+        
+{vista === "publicar" && (
   <WizardPublicar 
     userData={userData} 
-    // Agregamos todas las props que el Wizard necesita
-    pasoWizard={pasoWizard} // Asegúrate de tener const [pasoWizard, setPasoWizard] = useState(1); arriba
+    pasoWizard={pasoWizard} 
     setPasoWizard={setPasoWizard}
     viajeForm={viajeForm} 
     setViajeForm={setViajeForm}
@@ -83,22 +129,29 @@ export default function NavegacionPrincipal({ user }) {
     setModo={setModo}
     publicarRuta={async (datosFinales) => {
       try {
-        // 1. Guardamos en la colección "Viajes" (con V mayúscula como en tu useEffect)
+        // Usamos la colección "Viajes" (con V mayúscula)
         await addDoc(collection(db, "Viajes"), {
           ...datosFinales,
           fecha: new Date().toISOString(),
           estado: "disponible"
         });
         
-        // 2. Al terminar, regresamos al inicio
+        // Limpiamos el formulario para la próxima vez
+        setViajeForm({
+          origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
+          preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
+        });
+        setPasoWizard(1);
+        
+        // Regresamos al inicio
         setVista("inicio");
         setModo("conductor");
-        alert("¡Ruta publicada con éxito! 🚗");
+        
       } catch (error) {
         console.error("Error al publicar:", error);
-        alert("No se pudo publicar la ruta.");
+        alert("No se pudo publicar la ruta. Revisa tu conexión.");
       }
-    }} 
+    }}
   />
 )}
 </main>
