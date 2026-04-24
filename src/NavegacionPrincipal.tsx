@@ -71,14 +71,36 @@ export default function NavegacionPrincipal({ user }) {
   />
 )}
   {vista === "publicar" && (
-    <WizardPublicar 
-      userData={userData} 
-      onFinalizar={() => {
+  <WizardPublicar 
+    userData={userData} 
+    // Agregamos todas las props que el Wizard necesita
+    pasoWizard={pasoWizard} // Asegúrate de tener const [pasoWizard, setPasoWizard] = useState(1); arriba
+    setPasoWizard={setPasoWizard}
+    viajeForm={viajeForm} 
+    setViajeForm={setViajeForm}
+    UBICACIONES={UBICACIONES}
+    setVista={setVista}
+    setModo={setModo}
+    publicarRuta={async (datosFinales) => {
+      try {
+        // 1. Guardamos en la colección "Viajes" (con V mayúscula como en tu useEffect)
+        await addDoc(collection(db, "Viajes"), {
+          ...datosFinales,
+          fecha: new Date().toISOString(),
+          estado: "disponible"
+        });
+        
+        // 2. Al terminar, regresamos al inicio
         setVista("inicio");
         setModo("conductor");
-      }} 
-    />
-  )}
+        alert("¡Ruta publicada con éxito! 🚗");
+      } catch (error) {
+        console.error("Error al publicar:", error);
+        alert("No se pudo publicar la ruta.");
+      }
+    }} 
+  />
+)}
 </main>
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={() => {}} />
     </div>
