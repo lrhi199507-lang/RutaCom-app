@@ -1,9 +1,8 @@
 import React from 'react';
 import { 
   ChevronLeft, MessageCircle, Phone, ShieldCheck, 
-  Star, Music, MessageSquare, User // <--- AGREGA ESTE
+  Star, Music, MessageSquare, User, Car // <--- SE AGREGÓ 'Car' AQUÍ
 } from 'lucide-react';
-
 
 const PerfilPublico = ({ conductor, onClose }: any) => {
   if (!conductor) return null;
@@ -22,23 +21,21 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
 
       {/* CONTENIDO SCROLLEABLE */}
       <div className="flex-1 overflow-y-auto px-6 -mt-12 bg-white rounded-t-[40px] relative">
-       {/* FOTO Y NOMBRE */}
-<div className="flex flex-col items-center">
-  <div className="w-28 h-28 bg-white rounded-[35px] border-4 border-white shadow-2xl overflow-hidden mb-4 flex items-center justify-center relative">
-    {/* Fondo de seguridad por si la foto falla */}
-    <div className="absolute inset-0 bg-slate-100 -z-10" />
-    
-    {conductor.fotoPerfil ? (
-      <img 
-        src={conductor.fotoPerfil} 
-        className="w-full h-full object-cover" 
-        alt="" 
-      />
-    ) : (
-      <User size={40} className="text-slate-300" />
-    )}
-  </div>
-         <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+        {/* FOTO Y NOMBRE */}
+        <div className="flex flex-col items-center">
+          <div className="w-28 h-28 bg-white rounded-[35px] border-4 border-white shadow-2xl overflow-hidden mb-4 flex items-center justify-center relative">
+            <div className="absolute inset-0 bg-slate-100 -z-10" />
+            {conductor.fotoPerfil ? (
+              <img 
+                src={conductor.fotoPerfil} 
+                className="w-full h-full object-cover" 
+                alt="" 
+              />
+            ) : (
+              <User size={40} className="text-slate-300" />
+            )}
+          </div>
+          <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
             {conductor.nombre} 
             <span className="text-blue-500 text-xl">✅</span>
           </h2>
@@ -46,11 +43,11 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
             Conductor Verificado
           </p>
           <div className="mt-3 bg-green-50 px-4 py-1.5 rounded-full border border-green-100 flex items-center gap-2">
-  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-  <span className="text-[9px] font-black uppercase text-green-700 italic tracking-wider">
-    Respuesta Inmediata
-  </span>
-</div>
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[9px] font-black uppercase text-green-700 italic tracking-wider">
+              Respuesta Inmediata
+            </span>
+          </div>
         </div>
 
         {/* BIO (SOBRE MÍ) */}
@@ -78,47 +75,48 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
           </div>
         </div>
 
+        {/* OPINIONES */}
         <div className="mt-8">
-  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-4 ml-2">Opiniones y reseñas</p>
-  <button className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[30px] flex items-center justify-between active:scale-95 transition-all group">
-    <div className="flex items-center gap-4">
-      <div className="bg-amber-100 p-3 rounded-2xl group-hover:bg-amber-200 transition-colors">
-        <Star size={20} className="text-amber-600 fill-amber-600" />
-      </div>
-      <div className="text-left">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Calificación</p>
-        <p className="text-base font-black text-slate-700 italic">
-          4.9 <span className="text-slate-400 font-bold text-xs ml-1">(24 opiniones)</span>
-        </p>
-      </div>
-    </div>
-    <div className="text-blue-600">
-        <ChevronLeft size={20} className="rotate-180" />
-    </div>
-  </button>
-</div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-4 ml-2">Opiniones y reseñas</p>
+          <button className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[30px] flex items-center justify-between active:scale-95 transition-all group">
+            <div className="flex items-center gap-4">
+              <div className="bg-amber-100 p-3 rounded-2xl group-hover:bg-amber-200 transition-colors">
+                <Star size={20} className="text-amber-600 fill-amber-600" />
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Calificación</p>
+                <p className="text-base font-black text-slate-700 italic">
+                  4.9 <span className="text-slate-400 font-bold text-xs ml-1">(24 opiniones)</span>
+                </p>
+              </div>
+            </div>
+            <div className="text-blue-600">
+                <ChevronLeft size={20} className="rotate-180" />
+            </div>
+          </button>
+        </div>
 
         {/* INFO DE CONFIANZA LIMPIA */}
-<div className="mt-8 space-y-4 mb-32 border-t border-slate-50 pt-6">
-  <div className="flex items-center gap-4 text-slate-500 px-2">
-    <div className="bg-blue-50 p-2.5 rounded-2xl">
-      <ShieldCheck size={20} className="text-blue-500" />
-    </div>
-    <p className="text-xs font-bold text-slate-600 tracking-tight">
-      Identidad verificada con Cédula
-    </p>
-  </div>
-  
-  <div className="flex items-center gap-4 text-slate-500 px-2">
-    <div className="bg-slate-50 p-2.5 rounded-2xl">
-      <Car size={20} className="text-slate-400" />
-    </div>
-    <p className="text-xs font-bold text-slate-600 tracking-tight">
-      <span className="font-black text-slate-800">15 viajes</span> completados con éxito
-    </p>
-  </div>
-</div>
-  </div>
+        <div className="mt-8 space-y-4 mb-32 border-t border-slate-50 pt-6">
+          <div className="flex items-center gap-4 text-slate-500 px-2">
+            <div className="bg-blue-50 p-2.5 rounded-2xl">
+              <ShieldCheck size={20} className="text-blue-500" />
+            </div>
+            <p className="text-xs font-bold text-slate-600 tracking-tight">
+              Identidad verificada con Cédula
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-4 text-slate-500 px-2">
+            <div className="bg-slate-50 p-2.5 rounded-2xl">
+              <Car size={20} className="text-slate-400" />
+            </div>
+            <p className="text-xs font-bold text-slate-600 tracking-tight">
+              <span className="font-black text-slate-800">15 viajes</span> completados con éxito
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* BOTONES DE ACCIÓN FIJOS */}
       <div className="p-6 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0,05)]">
