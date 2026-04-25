@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 
 // IMPORTACIÓN DESDE TU ARCHIVO DE CONSTANTES
-import { UBICACIONES } from '../constants/ubicaciones';
+import { UBICACIONES } from "../../constants/ubicaciones";
+
 
 // FUNCIÓN PARA DETECTAR EL ESTADO AUTOMÁTICAMENTE
 const obtenerEstado = (ciudadNombre) => {
