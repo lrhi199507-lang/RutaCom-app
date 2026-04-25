@@ -16,27 +16,31 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
 
     // FORZAR FECHA LOCAL BLINDADA CONTRA FORMATOS RAROS O TIMESTAMP
   const formatearFechaLocal = (fechaValor) => {
-    if (!fechaValor) return "Hoy";
+  // Si no hay fecha, que diga "Pendiente" o "Error" para que lo detectes de una vez
+  if (!fechaValor) return "Fecha no disp."; 
+  
+  try {
+    // Si viene de Firebase/MongoDB como ISOString o string YYYY-MM-DD
+    const soloFecha = String(fechaValor).split('T')[0]; 
+    const partes = soloFecha.split('-');
     
-    try {
-      // 1. Convertimos a string y cortamos en la "T" para ignorar horas/zonas si las trae
-      const soloFecha = String(fechaValor).split('T')[0]; 
-      
-      // 2. Extraemos año, mes y día limpios
-      const [year, month, day] = soloFecha.split('-');
-      
-      // 3. Verificamos que tengamos los datos correctos
-      if (!year || !month || !day) return "Hoy";
-      
-      // 4. Creamos la fecha forzando los números locales
-      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-ES', { 
-        weekday: 'short', day: 'numeric', month: 'short' 
-      });
-    } catch (error) {
-      console.error("Error procesando fecha:", error);
-      return "Hoy"; // Fallback para que la app nunca crashee
-    }
-  };
+    if (partes.length !== 3) return "Formato inválido";
+    
+    const [year, month, day] = partes;
+    
+    // Forzamos la creación de la fecha local
+    const fechaObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    
+    return fechaObj.toLocaleDateString('es-ES', { 
+      weekday: 'short', 
+      day: 'numeric', 
+      month: 'short' 
+    });
+  } catch (error) {
+    return "Error fecha";
+  }
+};
+  
   
 
   return (
