@@ -204,49 +204,44 @@ export const WizardPublicar = ({
       try { await publicarRuta(obj); } catch(e) { console.error(e); } 
     };
 
-    // 1. Limpiamos las ciudades para la base de datos
     const [ciudadOri] = viajeForm.origen.split(', ');
     const [ciudadDest] = viajeForm.destino.split(', ');
 
-    // 2. Definimos el objeto base (Ida)
     const base = {
-  ...viajeForm,
-  idCreador: userData.id,
-  uidConductor: userData.id,
-  fotoPerfil: userData?.fotoPerfil || "",
-  
-  // 1. Mantenemos esta para que las listas que usan .conductor no se rompan
-  conductor: userData?.nombre || "Usuario", 
-  
-  // 2. Agregamos esta para el Perfil Público (acceso directo)
-  bio: userData?.bio || "", 
+      ...viajeForm,
+      idCreador: userData.id,
+      uidConductor: userData.id,
+      fotoPerfil: userData?.fotoPerfil || "",
+      conductor: userData?.nombre || "Usuario", 
+      bio: userData?.bio || "", 
+      datosConductor: {
+        nombre: userData?.nombre || "Usuario",
+        foto: userData?.fotoPerfil || "",
+        bio: userData?.bio || ""
+      },
+      estado: "disponible",
+      cO: ciudadOri || viajeForm.origen, 
+      cD: ciudadDest || viajeForm.destino,
+      fecha: viajeForm.fechaSalida,
+      hora: viajeForm.horaSalida,
+      // 🔥 Esto asegura que la IDA tenga la etiqueta azul
+      tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
+    };
 
-  // 3. OPCIONAL: Creamos el objeto completo por si el perfil lo pide así
-  datosConductor: {
-    nombre: userData?.nombre || "Usuario",
-    foto: userData?.fotoPerfil || "",
-    bio: userData?.bio || ""
-  },
-
-  estado: "disponible",
-  cO: ciudadOri || viajeForm.origen, 
-  cD: ciudadDest || viajeForm.destino,
-  fecha: viajeForm.fechaSalida,
-  hora: viajeForm.horaSalida,
-  tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
-};
+    // 🔥 ¡ESTA ES LA LÍNEA QUE FALTABA! (Publica la IDA siempre)
+    await publicarViaje(base);
     
     // 4. Si el usuario marcó regreso, publicamos el segundo viaje (Vuelta)
     if (viajeForm.publicarRegreso) {
       await publicarViaje({
         ...base,
-        cO: ciudadDest || viajeForm.destino, // Invertimos Origen
-        cD: ciudadOri || viajeForm.origen,    // Invertimos Destino
+        cO: ciudadDest || viajeForm.destino, 
+        cD: ciudadOri || viajeForm.origen,    
         origen: viajeForm.destino,
         destino: viajeForm.origen,
         fecha: viajeForm.fechaRegreso,
         hora: viajeForm.horaRegreso,
-        // Marcamos como 'vuelta_de_ruta' para que NO salga el aviso verde aquí
+        // 🔥 Marcamos como 'vuelta_de_ruta' para que NO salga el aviso azul aquí
         tipoRuta: "vuelta_de_ruta" 
       });
     }
@@ -258,6 +253,7 @@ export const WizardPublicar = ({
 >
   <ShieldCheck size={20} /> ¡Publicar Ahora!
 </button>
+      
       
       
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
