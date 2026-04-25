@@ -204,48 +204,52 @@ export const WizardPublicar = ({
       try { await publicarRuta(obj); } catch(e) { console.error(e); } 
     };
 
-    // --- NUEVA LÓGICA DE LIMPIEZA ---
-    // Separamos "Valencia, Carabobo" en ["Valencia", "Carabobo"]
+    // 1. Limpiamos las ciudades para la base de datos
     const [ciudadOri] = viajeForm.origen.split(', ');
     const [ciudadDest] = viajeForm.destino.split(', ');
 
+    // 2. Definimos el objeto base (Ida)
     const base = {
-      ...viajeForm,
+      ...viajeForm, // Aquí ya viaja 'referencia', 'equipaje', 'preferencias', etc.
       idCreador: userData.id,
       uidConductor: userData.id,
       fotoPerfil: userData?.fotoPerfil || "",
       conductor: userData?.nombre || "Usuario",
       estado: "disponible",
-      // Guardamos la ciudad limpia para que la Vista de Detalle la reconozca
       cO: ciudadOri || viajeForm.origen, 
       cD: ciudadDest || viajeForm.destino,
       fecha: viajeForm.fechaSalida,
       hora: viajeForm.horaSalida,
+      // Si hay regreso, marcamos esta como 'ida_y_vuelta' para mostrar el aviso verde
       tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
     };
-    // --------------------------------
 
+    // 3. Publicamos el viaje de Ida
     await publicarViaje(base);
 
+    // 4. Si el usuario marcó regreso, publicamos el segundo viaje (Vuelta)
     if (viajeForm.publicarRegreso) {
       await publicarViaje({
         ...base,
-        cO: ciudadDest || viajeForm.destino, // Invertimos para la vuelta
-        cD: ciudadOri || viajeForm.origen,
+        cO: ciudadDest || viajeForm.destino, // Invertimos Origen
+        cD: ciudadOri || viajeForm.origen,    // Invertimos Destino
         origen: viajeForm.destino,
         destino: viajeForm.origen,
         fecha: viajeForm.fechaRegreso,
         hora: viajeForm.horaRegreso,
-        tipoRuta: "vuelta_de_ruta"
+        // Marcamos como 'vuelta_de_ruta' para que NO salga el aviso verde aquí
+        tipoRuta: "vuelta_de_ruta" 
       });
     }
-    alert("✅ ¡Listo!");
+
+    alert("✅ ¡Viaje publicado con éxito!");
     setVista("inicio");
   }}
   className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
 >
   <ShieldCheck size={20} /> ¡Publicar Ahora!
 </button>
+      
       
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
     </div>
