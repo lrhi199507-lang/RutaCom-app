@@ -1,9 +1,21 @@
 import React from 'react';
 import PerfilPublico from './PerfilPublico';
 import { 
-  ArrowLeft, MapPin, Car, User, ShieldCheck, 
+  ArrowLeft, MapPin, User, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight 
 } from 'lucide-react';
+
+// IMPORTACIÓN DESDE TU ARCHIVO DE CONSTANTES
+import { UBICACIONES } from '../constants/ubicaciones';
+
+// FUNCIÓN PARA DETECTAR EL ESTADO AUTOMÁTICAMENTE
+const obtenerEstado = (ciudadNombre) => {
+  if (!ciudadNombre) return "Estado";
+  const estadoEncontrado = Object.keys(UBICACIONES).find(estado => 
+    UBICACIONES[estado].includes(ciudadNombre)
+  );
+  return estadoEncontrado || "Venezuela";
+};
 
 export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
   if (!viaje) return null;
@@ -13,16 +25,6 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
   // Lógica para contar pasajeros reales
   const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
-
-  const obtenerEstado = (ciudadNombre) => {
-  if (!ciudadNombre) return "Estado";
-
-  const estadoEncontrado = Object.keys(UBICACIONES).find(estado => 
-    UBICACIONES[estado].includes(ciudadNombre)
-  );
-
-  return estadoEncontrado || "Venezuela";
-};
 
   // Función para formatear hora a 12h (AM/PM)
   const formatearHora12h = (hora24) => {
@@ -34,16 +36,16 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
     return `${h12}:${minutos} ${ampm}`;
   };
 
+  // Función para formatear fecha (Vie, 24 Abr)
   const formatearFechaLimpia = (fechaString) => {
-  if (!fechaString) return "";
-  const fecha = new Date(fechaString);
-  // Formato: Vie, 24 Abr (Abreviado y limpio)
-  return fecha.toLocaleDateString('es-ES', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).replace('.', ''); 
-};
+    if (!fechaString) return "";
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleDateString('es-ES', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    }).replace('.', ''); 
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative">
@@ -77,58 +79,54 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
 
-            {/* RUTA DINÁMICA ACTUALIZADA */}
-<div className="flex items-center justify-between px-2">
-  <div className="flex flex-col items-center flex-1 text-center">
-    <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600">
-      <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-    </div>
-    {/* Nombre de la Ciudad de Origen */}
-    <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">
-      {viaje.cO || "Ciudad"}
-    </p>
-    {/* Lógica de Estado para Origen */}
-    <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">
-      {viaje.cO === 'Valencia' ? 'Carabobo' : 'Estado'}
-    </p>
-  </div>
+            {/* RUTA DINÁMICA CON DETECCIÓN AUTOMÁTICA */}
+            <div className="flex items-center justify-between px-2">
+              <div className="flex flex-col items-center flex-1 text-center">
+                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                </div>
+                <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">
+                  {viaje.cO || "Origen"}
+                </p>
+                <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">
+                  {obtenerEstado(viaje.cO)}
+                </p>
+              </div>
 
-  <div className="flex-1 flex flex-col items-center px-2">
-    <div className="w-full h-[2px] bg-slate-100 rounded-full relative flex items-center">
-      <div className="absolute left-0 h-full bg-blue-600 rounded-full w-[100%]" />
-    </div>
-    <div className="mt-2 bg-slate-50 px-3 py-0.5 rounded-md border border-slate-100">
-      <span className="text-[7px] font-black text-slate-400 uppercase italic tracking-widest">Ruta</span>
-    </div>
-  </div>
+              <div className="flex-1 flex flex-col items-center px-2">
+                <div className="w-full h-[2px] bg-slate-100 rounded-full relative flex items-center">
+                  <div className="absolute left-0 h-full bg-blue-600 rounded-full w-[100%]" />
+                </div>
+                <div className="mt-2 bg-slate-50 px-3 py-0.5 rounded-md border border-slate-100">
+                  <span className="text-[7px] font-black text-slate-400 uppercase italic tracking-widest">Ruta</span>
+                </div>
+              </div>
 
-  <div className="flex flex-col items-center flex-1 text-center">
-    <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center border-2 border-slate-200">
-      <MapPin size={16} className="text-slate-300" />
-    </div>
-    {/* Nombre de la Ciudad de Destino */}
-    <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">
-      {viaje.cD || "Ciudad"}
-    </p>
-    {/* Lógica de Estado para Destino */}
-    <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">
-      {viaje.cD === 'Caracas' ? 'Distrito Cap.' : 'Estado'}
-    </p>
-  </div>
-</div>
+              <div className="flex flex-col items-center flex-1 text-center">
+                <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center border-2 border-slate-200">
+                  <MapPin size={16} className="text-slate-300" />
+                </div>
+                <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">
+                  {viaje.cD || "Destino"}
+                </p>
+                <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">
+                  {obtenerEstado(viaje.cD)}
+                </p>
+              </div>
+            </div>
 
-            {/* INFO DE RETORNO CON NUEVO FORMATO */}
-{(viaje.publicarRegreso && !viaje.esRetorno) && (
-  <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
-    <Repeat size={16} className="text-green-600" />
-    <div>
-      <p className="text-[8px] font-black text-green-700 uppercase italic">Con Retorno Programado</p>
-      <p className="text-[10px] font-bold text-green-600">
-        Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
-      </p>
-    </div>
-  </div>
-)}
+            {/* INFO DE RETORNO: SOLO SI ES EL VIAJE DE IDA */}
+            {(viaje.publicarRegreso && !viaje.esRetorno) && (
+              <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
+                <Repeat size={16} className="text-green-600" />
+                <div>
+                  <p className="text-[8px] font-black text-green-700 uppercase italic">Con Retorno Programado</p>
+                  <p className="text-[10px] font-bold text-green-600">
+                    Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* CONDUCTOR */}
@@ -167,7 +165,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
             )}
           </div>
 
-          {/* PREFERENCIAS Y EQUIPAJE DINÁMICO */}
+          {/* PREFERENCIAS Y EQUIPAJE */}
           <div className="bg-white p-6 rounded-[30px] shadow-sm border border-slate-100 space-y-4">
             <p className="text-[9px] font-black italic text-slate-800 uppercase tracking-widest leading-none">Preferencias del viaje</p>
             <div className="grid grid-cols-2 gap-2">
@@ -211,8 +209,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
       <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-3 h-14">
           <button className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
-            <MessageCircle size={16} />
-            Chat
+            <MessageCircle size={16} /> Chat
           </button>
           <button className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
             Reservar Cola
@@ -235,3 +232,4 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
     </div>
   );
 };
+            
