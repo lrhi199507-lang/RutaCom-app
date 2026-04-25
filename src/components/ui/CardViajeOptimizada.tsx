@@ -96,8 +96,8 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="flex items-center gap-2 text-slate-500">
           <Clock size={14} />
-          <p className="text-[10px] font-bold truncate">Salida: <span className='font-black'>{viaje.hora || viaje.horaSalida || "--:--"}</span></p>
-        </div>
+          <p className="text-[10px] font-bold truncate">Salida: <span className='font-black'> {viaje.hora ? new Date(`2000-01-01T${viaje.hora}`).toLocaleTimeString('en-US', {  hour: 'numeric',    minute: '2-digit',   hour12: true   }) : "--:--"} </span> </p>
+          </div>
         <div className="flex items-center gap-2 text-slate-500">
           <Users size={14} />
           <p className="text-[10px] font-bold">Puestos: <span className='font-black'>{viaje.asientos || viaje.puestos || "0"}</span></p>
