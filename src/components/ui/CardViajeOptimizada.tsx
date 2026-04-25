@@ -55,16 +55,18 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
     ${viaje.precio || "0"}
   </p>
   
-  {/* INDICADOR DE PUESTOS MEJORADO (TITILANTE) */}
+  {/* INDICADOR LINEAL Y DELICADO */}
   {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
     <div className="mt-1 flex justify-end">
-      <span className="animate-pulse bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-        {/* El puntito que late */}
-        <span className="relative flex h-1.5 w-1.5">
+      {/* Eliminamos el padding excesivo y forzamos el texto en una línea */}
+      <span className="animate-pulse bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap">
+        {/* Puntito animado más pequeño y delicado */}
+        <span className="relative flex h-1 w-1">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+          <span className="relative inline-flex rounded-full h-1 w-1 bg-white"></span>
         </span>
-        { (viaje.asientos === 1 || viaje.puestos === 1) ? '¡Último Puesto!' : 'Últimos Puestos' }
+        {/* Texto lineal */}
+        {(viaje.asientos === 1 || viaje.puestos === 1) ? 'Último Puesto!' : 'Últimos Puestos'}
       </span>
     </div>
   )}
