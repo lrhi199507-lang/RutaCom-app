@@ -10,7 +10,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
       
-      {/* 1. CABECERA PRINCIPAL (Con el Saldo de la Wallet) */}
+      {/* 1. CABECERA PRINCIPAL (Blanca con Saldo) */}
       <div className="bg-white px-6 pt-12 pb-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-blue-600 rounded-[18px] flex items-center justify-center shadow-lg shadow-blue-100">
@@ -22,28 +22,31 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
           </div>
         </div>
 
-        {/* INDICADOR DE WALLET (Igual a la pantalla de Buscar/Detalles) */}
+        {/* INDICADOR DE WALLET */}
         <div className="bg-slate-900 text-white px-4 py-2.5 rounded-[20px] flex items-center gap-3 shadow-xl">
           <Wallet size={16} className="text-blue-400" />
           <span className="text-sm font-black italic">$80.00</span>
         </div>
       </div>
 
-      {/* 2. BARRA DE NAVEGACIÓN "VOLVER" (Mismo estilo que Detalles de Viaje) */}
+      {/* 2. BARRA DE NAVEGACIÓN "VOLVER" (Estilo exacto a la primera foto) */}
       <div className="bg-white px-6 py-2 border-b border-slate-50 flex-shrink-0">
         <button 
           onClick={onClose}
-          className="flex items-center gap-2 group active:scale-95 transition-all"
+          className="flex items-center gap-2 active:scale-95 transition-all"
         >
-          <ChevronLeft size={18} className="text-slate-400 group-hover:text-slate-600" />
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic group-hover:text-slate-600">Volver</span>
+          {/* Flecha simple sin fondo circular */}
+          <ChevronLeft size={20} className="text-slate-400" strokeWidth={2.5} />
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+            Volver
+          </span>
         </button>
       </div>
 
-      {/* 3. CONTENIDO CON FONDO OSCURITO (slate-50) */}
-      <div className="flex-1 overflow-y-auto bg-slate-50/80 px-6 pt-8">
+      {/* 3. CONTENIDO CON FONDO GRIS CLARO (slate-50) */}
+      <div className="flex-1 overflow-y-auto bg-slate-50 px-6 pt-8">
         
-        {/* FOTO DE PERFIL CENTRAL (Tarjeta Blanca) */}
+        {/* TARJETA DE PERFIL (Blanca para resaltar) */}
         <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col items-center mb-8">
           <div className="w-28 h-28 bg-white rounded-[35px] border-4 border-slate-50 shadow-xl overflow-hidden mb-4 flex items-center justify-center">
             {conductor.fotoPerfil ? (
@@ -52,7 +55,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
               <User size={40} className="text-slate-200" />
             )}
           </div>
-          <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2 italic text-center leading-tight">
+          <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2 italic text-center">
             {conductor.nombre} 
             <span className="text-blue-600 text-xl">✅</span>
           </h2>
@@ -67,7 +70,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
           </div>
         </div>
 
-        {/* SOBRE EL CONDUCTOR (Tarjeta Blanca) */}
+        {/* BIOGRAFÍA */}
         <div className="mb-8">
           <p className="text-[9px] font-black text-blue-500 uppercase tracking-[3px] ml-4 mb-2 italic">Sobre el conductor</p>
           <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm">
@@ -77,7 +80,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
           </div>
         </div>
 
-        {/* ESTILO DE VIAJE (Tarjetas Blancas) */}
+        {/* ESTILO DE VIAJE */}
         <div className="mb-8">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-[3px] ml-4 mb-3 italic">Estilo de viaje</p>
           <div className="grid grid-cols-2 gap-3">
@@ -92,7 +95,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
           </div>
         </div>
 
-        {/* ESTADÍSTICAS Y OPINIONES (Tarjetas Blancas) */}
+        {/* ESTADÍSTICAS */}
         <div className="grid grid-cols-2 gap-3 mb-8">
             <div className="bg-white p-4 rounded-[28px] border border-slate-100 flex items-center gap-3 shadow-sm">
               <ShieldCheck size={18} className="text-blue-500" />
@@ -104,6 +107,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
             </div>
         </div>
 
+        {/* OPINIONES */}
         <div className="mb-32">
           <button className="w-full bg-white border border-slate-100 p-5 rounded-[35px] flex items-center justify-between shadow-sm active:scale-95 transition-all">
             <div className="flex items-center gap-4">
@@ -122,9 +126,9 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
         </div>
       </div>
 
-      {/* 4. ACCIONES FIJAS */}
+      {/* 4. BOTONES DE ACCIÓN */}
       <div className="p-6 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
-        <button className="flex-1 bg-slate-100 text-slate-700 h-14 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95">
+        <button className="flex-1 bg-slate-50 text-slate-700 h-14 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 border border-slate-100">
           <MessageCircle size={18} className="text-blue-600" /> Chat App
         </button>
         <button className="flex-1 bg-green-500 text-white h-14 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-green-100 active:scale-95">
