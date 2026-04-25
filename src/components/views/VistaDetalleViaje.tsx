@@ -239,17 +239,19 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
       </div>
 
       {verPerfil && (
-        <PerfilPublico 
-          conductor={{
-            nombre: viaje.cN || viaje.conductor,
-            fotoPerfil: viaje.fotoPerfil,
-            bio: viaje.bioConductor,
-            hablador: viaje.prefHablador,
-            musica: viaje.prefMusica
-          }} 
-          onClose={() => setVerPerfil(false)} 
-        />
-      )}
+  <PerfilPublico 
+    conductor={{
+      // 🔥 Buscamos en todos los lugares donde podría estar guardada la bio
+      bio: viaje.bio || viaje.datosConductor?.bio || viaje.bioConductor, 
+      nombre: viaje.cN || viaje.conductor,
+      fotoPerfil: viaje.fotoPerfil,
+      hablador: viaje.prefHablador,
+      musica: viaje.prefMusica
+    }} 
+    onClose={() => setVerPerfil(false)} 
+  />
+)}
+      
     </div>
   );
 };
