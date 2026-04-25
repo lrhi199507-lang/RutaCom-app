@@ -215,6 +215,7 @@ export const WizardPublicar = ({
       uidConductor: userData.id,
       fotoPerfil: userData?.fotoPerfil || "",
       conductor: userData?.nombre || "Usuario",
+      bio: userData?.bio || "", 
       estado: "disponible",
       cO: ciudadOri || viajeForm.origen, 
       cD: ciudadDest || viajeForm.destino,
