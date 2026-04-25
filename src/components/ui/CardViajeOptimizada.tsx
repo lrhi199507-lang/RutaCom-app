@@ -95,9 +95,24 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
       {/* INFO ADICIONAL */}
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="flex items-center gap-2 text-slate-500">
-          <Clock size={14} />
-          <p className="text-[10px] font-bold truncate">Salida: <span className='font-black'> {viaje.hora ? new Date(`2000-01-01T${viaje.hora}`).toLocaleTimeString('en-US', {  hour: 'numeric',    minute: '2-digit',   hour12: true   }) : "--:--"} </span> </p>
-          </div>
+  <Clock size={14} />
+  <p className="text-[10px] font-bold truncate flex items-center gap-1">
+    Salida: 
+    <span className='font-black'>
+      {viaje.hora ? new Date(`2000-01-01T${viaje.hora}`).toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      }) : "--:--"}
+    </span>
+    {/* ICONO DINÁMICO SOL/LUNA */}
+    <span className="text-[12px]">
+      {viaje.hora && (parseInt(viaje.hora.split(':')[0]) >= 6 && parseInt(viaje.hora.split(':')[0]) < 18 ? '☀️' : '🌙')}
+    </span>
+  </p>
+</div>
+        
+          
         <div className="flex items-center gap-2 text-slate-500">
           <Users size={14} />
           <p className="text-[10px] font-bold">Puestos: <span className='font-black'>{viaje.asientos || viaje.puestos || "0"}</span></p>
