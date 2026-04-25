@@ -105,25 +105,35 @@ export const WizardPublicar = ({
       </div>
 
       <button 
-        onClick={() => {
-          const datosParaEnviar = {
-            ...viajeForm,
-            fotoPerfil: userData?.fotoPerfil || "", 
-            conductor: userData?.nombre || "Conductor",
-            uidConductor: userData?.id || "",
-            bioConductor: userData?.bio || "",
-            prefHablador: userData?.prefHablador ?? true,
-            prefMusica: userData?.prefMusica ?? true
-          };
-          
-          publicarRuta(datosParaEnviar);
-        }}
-        disabled={!viajeForm.origen || !viajeForm.destino}
-        className="w-full mt-4 py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
-      >
-        <ShieldCheck size={18}/>
-        ¡Publicar Ruta Ahora!
-      </button>
+  onClick={() => {
+    // Verificación de seguridad en el código
+    if (!userData?.id) {
+      alert("Error: Inicia sesión para publicar");
+      return;
+    }
+
+    const datosParaEnviar = {
+      ...viajeForm,
+      idCreador: userData.id, // <--- ESTO ES LO QUE PIDE TU REGLA
+      uidConductor: userData.id,
+      fotoPerfil: userData?.fotoPerfil || "", 
+      conductor: userData?.nombre || "Luis Raúl",
+      bioConductor: userData?.bio || "",
+      prefHablador: userData?.prefHablador ?? true,
+      prefMusica: userData?.prefMusica ?? true,
+      estado: "disponible",
+      fecha: new Date().toISOString()
+    };
+    
+    publicarRuta(datosParaEnviar);
+  }}
+  disabled={!viajeForm.origen || !viajeForm.destino}
+  className="w-full mt-6 py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl shadow-green-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
+>
+  <ShieldCheck size={20} />
+  ¡Publicar Ruta Ahora!
+</button>
+      
 
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">
         Revisar detalles
