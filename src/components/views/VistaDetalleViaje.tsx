@@ -80,6 +80,24 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
 
+            {/* PUNTO DE ENCUENTRO / REFERENCIA */}
+{viaje.referencia && (
+  <div className="bg-blue-50/50 p-5 rounded-[30px] border border-blue-100/50">
+    <div className="flex items-center gap-3 mb-2">
+      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+        <MapPin size={14} className="text-blue-600" />
+      </div>
+      <p className="text-[9px] font-black text-blue-900 uppercase tracking-widest italic">
+        Punto de encuentro
+      </p>
+    </div>
+    <p className="text-[11px] font-bold text-slate-600 leading-relaxed pl-1">
+      "{viaje.referencia}"
+    </p>
+  </div>
+)}
+            
+
             {/* RUTA DINÁMICA CON DETECCIÓN AUTOMÁTICA */}
             <div className="flex items-center justify-between px-2">
               <div className="flex flex-col items-center flex-1 text-center">
