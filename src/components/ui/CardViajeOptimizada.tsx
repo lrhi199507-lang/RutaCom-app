@@ -14,14 +14,30 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
     return partes[index] ? partes[index].trim() : "";
   };
 
-  // FORZAR FECHA LOCAL PARA EVITAR DESFASE UTC (-1 DÍA)
-  const formatearFechaLocal = (fechaString) => {
-    if (!fechaString) return "Hoy";
-    const [year, month, day] = fechaString.split('-');
-    return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
-      weekday: 'short', day: 'numeric', month: 'short' 
-    });
+    // FORZAR FECHA LOCAL BLINDADA CONTRA FORMATOS RAROS O TIMESTAMP
+  const formatearFechaLocal = (fechaValor) => {
+    if (!fechaValor) return "Hoy";
+    
+    try {
+      // 1. Convertimos a string y cortamos en la "T" para ignorar horas/zonas si las trae
+      const soloFecha = String(fechaValor).split('T')[0]; 
+      
+      // 2. Extraemos año, mes y día limpios
+      const [year, month, day] = soloFecha.split('-');
+      
+      // 3. Verificamos que tengamos los datos correctos
+      if (!year || !month || !day) return "Hoy";
+      
+      // 4. Creamos la fecha forzando los números locales
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-ES', { 
+        weekday: 'short', day: 'numeric', month: 'short' 
+      });
+    } catch (error) {
+      console.error("Error procesando fecha:", error);
+      return "Hoy"; // Fallback para que la app nunca crashee
+    }
   };
+  
 
   return (
     <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden">
