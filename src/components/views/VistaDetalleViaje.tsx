@@ -10,9 +10,19 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
 
   const [verPerfil, setVerPerfil] = React.useState(false);
 
-  // Lógica para contar pasajeros reales (si no hay lista, es 0)
+  // Lógica para contar pasajeros reales
   const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
+
+  // Función para formatear hora a 12h (AM/PM)
+  const formatearHora12h = (hora24) => {
+    if (!hora24) return "00:00";
+    const [horas, minutos] = hora24.split(':');
+    const h = parseInt(horas);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutos} ${ampm}`;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative">
@@ -28,7 +38,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
 
         <div className="px-5 space-y-4">
           
-          {/* TARJETA DE PRECIO Y RUTA */}
+          {/* TARJETA DE PRECIO Y RUTA ACTUALIZADA */}
           <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-8">
             <div className="flex justify-between items-start">
               <div>
@@ -46,18 +56,22 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
 
-            {/* RUTA DINÁMICA */}
+            {/* RUTA DINÁMICA SIN ETIQUETAS ORIGEN/DESTINO */}
             <div className="flex items-center justify-between px-2">
               <div className="flex flex-col items-center flex-1 text-center">
                 <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600">
                   <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                 </div>
-                <p className="text-[10px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cO || "Origen"}</p>
+                <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cO || "Ciudad"}</p>
+                <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">Carabobo</p>
               </div>
 
               <div className="flex-1 flex flex-col items-center px-2">
                 <div className="w-full h-[2px] bg-slate-100 rounded-full relative flex items-center">
                   <div className="absolute left-0 h-full bg-blue-600 rounded-full w-[100%]" />
+                </div>
+                <div className="mt-2 bg-slate-50 px-3 py-0.5 rounded-md border border-slate-100">
+                  <span className="text-[7px] font-black text-slate-400 uppercase italic tracking-widest">Ruta</span>
                 </div>
               </div>
 
@@ -65,17 +79,20 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
                 <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center border-2 border-slate-200">
                   <MapPin size={16} className="text-slate-300" />
                 </div>
-                <p className="text-[10px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cD || "Destino"}</p>
+                <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cD || "Ciudad"}</p>
+                <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">Distrito Cap.</p>
               </div>
             </div>
 
-            {/* INFO DE RETORNO (Dinámica) */}
-            {viaje.publicarRegreso && (
-              <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100">
+            {/* INFO DE RETORNO: SOLO SI ES EL VIAJE DE IDA (esRetorno === false) */}
+            {(viaje.publicarRegreso && !viaje.esRetorno) && (
+              <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
                 <Repeat size={16} className="text-green-600" />
                 <div>
                   <p className="text-[8px] font-black text-green-700 uppercase italic">Con Retorno Programado</p>
-                  <p className="text-[10px] font-bold text-green-600">Regresa el {viaje.fechaRegreso} a las {viaje.horaRegreso}</p>
+                  <p className="text-[10px] font-bold text-green-600">
+                    Regresa el {viaje.fechaRegreso} a las {formatearHora12h(viaje.horaRegreso)}
+                  </p>
                 </div>
               </div>
             )}
@@ -96,21 +113,17 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
             <ChevronRight size={16} className="text-slate-300" />
           </div>
 
-          {/* PASAJEROS REALES (0/X) */}
+          {/* PASAJEROS REALES */}
           <div className="bg-white p-6 rounded-[30px] shadow-sm border border-slate-100 space-y-4">
             <p className="text-[9px] font-black italic text-slate-400 uppercase tracking-widest text-center">
               Puestos Confirmados ({pasajerosCount}/{puestosTotales})
             </p>
-            
-            {/* Lista de pasajeros que ya están (Si los hay) */}
             {viaje.pasajerosConfirmados?.map((pasajero, i) => (
               <div key={i} className="flex items-center gap-3 p-3 bg-blue-50 rounded-2xl border border-blue-100">
                 <img src={pasajero.foto} className="w-8 h-8 rounded-full border border-white" />
                 <p className="text-[10px] font-black text-blue-800 uppercase italic">{pasajero.nombre}</p>
               </div>
             ))}
-
-            {/* Espacio disponible si sobran puestos */}
             {pasajerosCount < puestosTotales && (
               <div className="border border-dashed border-slate-200 rounded-2xl p-4 flex items-center gap-3 bg-slate-50/50">
                 <div className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-200">
@@ -121,7 +134,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
             )}
           </div>
 
-          {/* PREFERENCIAS DINÁMICAS Y EQUIPAJE */}
+          {/* PREFERENCIAS Y EQUIPAJE DINÁMICO */}
           <div className="bg-white p-6 rounded-[30px] shadow-sm border border-slate-100 space-y-4">
             <p className="text-[9px] font-black italic text-slate-800 uppercase tracking-widest leading-none">Preferencias del viaje</p>
             <div className="grid grid-cols-2 gap-2">
@@ -145,7 +158,6 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               )}
             </div>
 
-            {/* EQUIPAJE CON EMOJI */}
             <div className="mt-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
                <span className="text-3xl">
                  {viaje.equipaje === 'ligero' ? '🎒' : viaje.equipaje === 'medio' ? '🧳' : '📦'}
@@ -162,7 +174,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
         </div>
       </div>
 
-      {/* BOTONES FIJOS ACTUALIZADOS */}
+      {/* BOTONES FIJOS */}
       <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-3 h-14">
           <button className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
