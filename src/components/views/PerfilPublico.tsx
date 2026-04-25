@@ -73,8 +73,7 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
           <p className="text-[9px] font-black text-blue-500 uppercase tracking-[3px] ml-4 mb-2 italic">Sobre el conductor</p>
           <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm">
             <p className="text-slate-600 leading-relaxed font-bold italic text-[11px]">
-              "{conductor.bio || "Este conductor aún no ha escrito su biografía."}"
-            </p>
+  "{conductor.bio || conductor.datosConductor?.bio || "Este conductor aún no ha escrito su biografía."}"</p>
           </div>
         </div>
 
