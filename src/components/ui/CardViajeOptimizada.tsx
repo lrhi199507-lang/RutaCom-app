@@ -14,6 +14,15 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
     return partes[index] ? partes[index].trim() : "";
   };
 
+  // FORZAR FECHA LOCAL PARA EVITAR DESFASE UTC (-1 DÍA)
+  const formatearFechaLocal = (fechaString) => {
+    if (!fechaString) return "Hoy";
+    const [year, month, day] = fechaString.split('-');
+    return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
+      weekday: 'short', day: 'numeric', month: 'short' 
+    });
+  };
+
   return (
     <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden">
       
@@ -58,14 +67,11 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   {/* INDICADOR LINEAL Y DELICADO */}
   {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
     <div className="mt-1 flex justify-end">
-      {/* Eliminamos el padding excesivo y forzamos el texto en una línea */}
       <span className="animate-pulse bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap">
-        {/* Puntito animado más pequeño y delicado */}
         <span className="relative flex h-1 w-1">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
           <span className="relative inline-flex rounded-full h-1 w-1 bg-white"></span>
         </span>
-        {/* Texto lineal */}
         {(viaje.asientos === 1 || viaje.puestos === 1) ? 'Último Puesto!' : 'Últimos Puestos'}
       </span>
     </div>
@@ -73,7 +79,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
 </div>
       </div>
 
-      {/* RUTA SEGURA (Aquí evitamos el crash) */}
+      {/* RUTA SEGURA */}
       <div className="flex items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <div className="w-7 h-7 rounded-full border border-blue-200 flex items-center justify-center bg-white shrink-0">
@@ -119,7 +125,6 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         hour12: true 
       }) : "--:--"}
     </span>
-    {/* ICONO DINÁMICO SOL/LUNA */}
     <span className="text-[12px]">
       {viaje.hora && (parseInt(viaje.hora.split(':')[0]) >= 6 && parseInt(viaje.hora.split(':')[0]) < 18 ? '☀️' : '🌙')}
     </span>
@@ -133,7 +138,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
         
         <div className="flex items-center gap-2 text-slate-500 col-span-2 border-t border-slate-50 pt-2">
-  <Clock size={14} className="text-blue-400" /> <p className="text-[10px] font-bold"> Fecha: <span className='font-black'>{viaje.fecha ? new Date(viaje.fecha).toLocaleDateString('es-ES', {  weekday: 'short',   day: 'numeric',   month: 'short'   }) : "Hoy"}</span></p>
+  <Clock size={14} className="text-blue-400" /> <p className="text-[10px] font-bold"> Fecha: <span className='font-black'>{viaje.fecha ? formatearFechaLocal(viaje.fecha) : "Hoy"}</span></p>
 </div>  
       </div>
 
