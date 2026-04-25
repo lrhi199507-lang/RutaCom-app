@@ -104,9 +104,8 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
         
         <div className="flex items-center gap-2 text-slate-500 col-span-2 border-t border-slate-50 pt-2">
-          <Clock size={14} className="text-blue-400" />
-          <p className="text-[10px] font-bold">Fecha: <span className='font-black'>{viaje.fecha || "Próximamente"}</span></p>
-        </div>
+  <Clock size={14} className="text-blue-400" /> <p className="text-[10px] font-bold"> Fecha: <span className='font-black'>{viaje.fecha ? new Date(viaje.fecha).toLocaleDateString('es-ES', {  weekday: 'short',   day: 'numeric',   month: 'short'   }) : "Hoy"}</span></p>
+</div>  
       </div>
 
       {/* BOTONES */}
