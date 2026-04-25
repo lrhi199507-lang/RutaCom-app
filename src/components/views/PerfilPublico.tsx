@@ -10,29 +10,31 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
       
-      {/* 1. EL ÚNICO ENCABEZADO BLANCO */}
-      <div className="bg-white px-6 pt-12 pb-5 flex items-center justify-between flex-shrink-0 border-b border-slate-50">
+      {/* 1. ENCABEZADO OPTIMIZADO (Más arriba y compacto) */}
+      <div className="bg-white px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b border-slate-50">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-600 rounded-[18px] flex items-center justify-center shadow-lg shadow-blue-100">
-            <span className="text-white font-black italic text-xl">D</span>
+          {/* Logo "D" más compacto */}
+          <div className="w-10 h-10 bg-blue-600 rounded-[14px] flex items-center justify-center shadow-lg shadow-blue-100">
+            <span className="text-white font-black italic text-lg">D</span>
           </div>
           <div>
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 italic">Modo Pasajero</p>
-            <p className="text-sm font-black text-slate-800 leading-none">{conductor.nombre}</p>
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 italic">Modo Pasajero</p>
+            <p className="text-xs font-black text-slate-800 leading-none">{conductor.nombre}</p>
           </div>
         </div>
 
-        <div className="bg-slate-900 text-white px-4 py-2.5 rounded-[20px] flex items-center gap-3 shadow-xl">
-          <Wallet size={16} className="text-blue-400" />
-          <span className="text-sm font-black italic">$80.00</span>
+        {/* Wallet compacta y alineada arriba */}
+        <div className="bg-slate-900 text-white px-3.5 py-2 rounded-[18px] flex items-center gap-2.5 shadow-xl">
+          <Wallet size={14} className="text-blue-400" />
+          <span className="text-xs font-black italic">$80.00</span>
         </div>
       </div>
 
-      {/* 2. CONTENIDO SCROLLEABLE CON FONDO GRIS (Todo lo demás) */}
+      {/* 2. CONTENIDO SCROLLEABLE CON FONDO GRIS */}
       <div className="flex-1 overflow-y-auto bg-slate-50 px-6">
         
-        {/* BOTÓN VOLVER - Flotando sobre el gris, sin franja blanca */}
-        <div className="py-6">
+        {/* BOTÓN VOLVER - Reducido el py-6 a py-4 para que todo suba */}
+        <div className="py-4">
           <button 
             onClick={onClose} 
             className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all"
@@ -136,3 +138,4 @@ const PerfilPublico = ({ conductor, onClose }: any) => {
 };
 
 export default PerfilPublico;
+              
