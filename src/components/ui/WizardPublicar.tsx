@@ -196,44 +196,57 @@ export const WizardPublicar = ({
         </button>
       </div>
 
-      <button 
-        onClick={async () => {
-          if (!userData?.id) return alert("Inicia sesión");
-          
-          const publicarViaje = async (obj) => { try { await publicarRuta(obj); } catch(e) { console.error(e); } };
+<button 
+  onClick={async () => {
+    if (!userData?.id) return alert("Inicia sesión");
+    
+    const publicarViaje = async (obj) => { 
+      try { await publicarRuta(obj); } catch(e) { console.error(e); } 
+    };
 
-          const base = {
-            ...viajeForm,
-            idCreador: userData.id,
-            uidConductor: userData.id,
-            fotoPerfil: userData?.fotoPerfil || "",
-            conductor: userData?.nombre || "Usuario",
-            estado: "disponible",
-            fecha: viajeForm.fechaSalida,
-            hora: viajeForm.horaSalida,
-            tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
-          };
+    // --- NUEVA LÓGICA DE LIMPIEZA ---
+    // Separamos "Valencia, Carabobo" en ["Valencia", "Carabobo"]
+    const [ciudadOri] = viajeForm.origen.split(', ');
+    const [ciudadDest] = viajeForm.destino.split(', ');
 
-          await publicarViaje(base);
+    const base = {
+      ...viajeForm,
+      idCreador: userData.id,
+      uidConductor: userData.id,
+      fotoPerfil: userData?.fotoPerfil || "",
+      conductor: userData?.nombre || "Usuario",
+      estado: "disponible",
+      // Guardamos la ciudad limpia para que la Vista de Detalle la reconozca
+      cO: ciudadOri || viajeForm.origen, 
+      cD: ciudadDest || viajeForm.destino,
+      fecha: viajeForm.fechaSalida,
+      hora: viajeForm.horaSalida,
+      tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
+    };
+    // --------------------------------
 
-          if (viajeForm.publicarRegreso) {
-            await publicarViaje({
-              ...base,
-              origen: viajeForm.destino,
-              destino: viajeForm.origen,
-              fecha: viajeForm.fechaRegreso,
-              hora: viajeForm.horaRegreso,
-              tipoRuta: "vuelta_de_ruta"
-            });
-          }
-          alert("✅ ¡Listo!");
-          setVista("inicio");
-        }}
-        className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
-      >
-        <ShieldCheck size={20} /> ¡Publicar Ahora!
-      </button>
+    await publicarViaje(base);
 
+    if (viajeForm.publicarRegreso) {
+      await publicarViaje({
+        ...base,
+        cO: ciudadDest || viajeForm.destino, // Invertimos para la vuelta
+        cD: ciudadOri || viajeForm.origen,
+        origen: viajeForm.destino,
+        destino: viajeForm.origen,
+        fecha: viajeForm.fechaRegreso,
+        hora: viajeForm.horaRegreso,
+        tipoRuta: "vuelta_de_ruta"
+      });
+    }
+    alert("✅ ¡Listo!");
+    setVista("inicio");
+  }}
+  className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
+>
+  <ShieldCheck size={20} /> ¡Publicar Ahora!
+</button>
+      
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
     </div>
   );
