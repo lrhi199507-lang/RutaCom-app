@@ -8,12 +8,12 @@ import {
 // IMPORTACIÓN DESDE TU ARCHIVO DE CONSTANTES
 import { UBICACIONES } from "../../constants/ubicaciones";
 
-
 // FUNCIÓN PARA DETECTAR EL ESTADO AUTOMÁTICAMENTE
 const obtenerEstado = (ciudadNombre) => {
   if (!ciudadNombre) return "Estado";
+  const [soloCiudad] = ciudadNombre.split(',');
   const estadoEncontrado = Object.keys(UBICACIONES).find(estado => 
-    UBICACIONES[estado].includes(ciudadNombre)
+    UBICACIONES[estado].includes(soloCiudad.trim())
   );
   return estadoEncontrado || "Venezuela";
 };
@@ -37,10 +37,14 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
     return `${h12}:${minutos} ${ampm}`;
   };
 
-  // Función para formatear fecha (Vie, 24 Abr)
+  // ✅ CORRECCIÓN DE FECHA: Evita el error de "un día antes" por zona horaria
   const formatearFechaLimpia = (fechaString) => {
     if (!fechaString) return "";
-    const fecha = new Date(fechaString);
+    // Dividimos el string YYYY-MM-DD para evitar problemas de UTC
+    const partes = fechaString.split('-');
+    if (partes.length !== 3) return fechaString;
+    
+    const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
     return fecha.toLocaleDateString('es-ES', {
       weekday: 'short',
       day: 'numeric',
@@ -62,7 +66,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
 
         <div className="px-5 space-y-4">
           
-          {/* TARJETA DE PRECIO Y RUTA ACTUALIZADA */}
+          {/* TARJETA DE PRECIO Y RUTA */}
           <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-8">
             <div className="flex justify-between items-start">
               <div>
@@ -80,8 +84,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
             
-
-            {/* RUTA DINÁMICA CON DETECCIÓN AUTOMÁTICA */}
+            {/* RUTA DINÁMICA */}
             <div className="flex items-center justify-between px-2">
               <div className="flex flex-col items-center flex-1 text-center">
                 <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600">
@@ -117,37 +120,37 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
 
-               {/* PUNTO DE ENCUENTRO / REFERENCIA */}
-{viaje.referencia && (
-  <div className="bg-blue-50/50 p-5 rounded-[30px] border border-blue-100/50">
-    <div className="flex items-center gap-3 mb-2">
-      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
-        <MapPin size={14} className="text-blue-600" />
-      </div>
-      <p className="text-[9px] font-black text-blue-900 uppercase tracking-widest italic">
-        Punto de encuentro
-      </p>
-    </div>
-    <p className="text-[11px] font-bold text-slate-600 leading-relaxed pl-1">
-      "{viaje.referencia}"
-    </p>
-  </div>
-)}
+            {/* PUNTO DE ENCUENTRO / REFERENCIA */}
+            {viaje.referencia && (
+              <div className="bg-blue-50/50 p-5 rounded-[30px] border border-blue-100/50">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                    <MapPin size={14} className="text-blue-600" />
+                  </div>
+                  <p className="text-[9px] font-black text-blue-900 uppercase tracking-widest italic">
+                    Punto de encuentro
+                  </p>
+                </div>
+                <p className="text-[11px] font-bold text-slate-600 leading-relaxed pl-1">
+                  "{viaje.referencia}"
+                </p>
+              </div>
+            )}
 
-            {/* INFO DE RETORNO: SOLO SI ES EL VIAJE DE IDA Y TIENE REGRESO */}
-{(viaje.publicarRegreso && viaje.tipoRuta === "ida_y_vuelta") && (
-  <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
-    <Repeat size={16} className="text-green-600" />
-    <div>
-      <p className="text-[8px] font-black text-green-700 uppercase italic">
-        Con Retorno Programado
-      </p>
-      <p className="text-[10px] font-bold text-green-600">
-        Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
-      </p>
-    </div>
-  </div>
-)}
+            {/* INFO DE RETORNO: CORREGIDA PARA MOSTRAR FECHA Y HORA CORRECTA */}
+            {((viaje.publicarRegreso && viaje.tipoRuta === "ida_y_vuelta") || viaje.fechaRegreso) && (
+              <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
+                <Repeat size={16} className="text-green-600" />
+                <div>
+                  <p className="text-[8px] font-black text-green-700 uppercase italic">
+                    Con Retorno Programado
+                  </p>
+                  <p className="text-[10px] font-bold text-green-600">
+                    Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* CONDUCTOR */}
@@ -239,20 +242,18 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
       </div>
 
       {verPerfil && (
-  <PerfilPublico 
-    conductor={{
-      // 🔥 Buscamos en todos los lugares donde podría estar guardada la bio
-      bio: viaje.bio || viaje.datosConductor?.bio || viaje.bioConductor, 
-      nombre: viaje.cN || viaje.conductor,
-      fotoPerfil: viaje.fotoPerfil,
-      hablador: viaje.prefHablador,
-      musica: viaje.prefMusica
-    }} 
-    onClose={() => setVerPerfil(false)} 
-  />
-)}
+        <PerfilPublico 
+          conductor={{
+            bio: viaje.bio || viaje.datosConductor?.bio || "", 
+            nombre: viaje.cN || viaje.conductor,
+            fotoPerfil: viaje.fotoPerfil,
+            hablador: viaje.prefHablador,
+            musica: viaje.prefMusica
+          }} 
+          onClose={() => setVerPerfil(false)} 
+        />
+      )}
       
     </div>
   );
 };
-            
