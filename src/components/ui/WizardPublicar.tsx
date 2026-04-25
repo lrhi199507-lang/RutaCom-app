@@ -232,8 +232,8 @@ export const WizardPublicar = ({
             estado: "disponible",
             cO: ciudadOri || viajeForm.origen, 
             cD: ciudadDest || viajeForm.destino,
-            fecha: viajeForm.fecha, // Tomado del input de ida
-            hora: viajeForm.hora,   // Tomado del input de ida
+            fecha: viajeForm.fecha, 
+            hora: viajeForm.hora,   
             tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
           };
 
@@ -248,9 +248,9 @@ export const WizardPublicar = ({
               destino: viajeForm.origen,
               cO: ciudadDest || viajeForm.destino, 
               cD: ciudadOri || viajeForm.origen,    
-              // DATOS ESPECÍFICOS DE VUELTA
-              fecha: viajeForm.fechaRegreso, 
-              hora: viajeForm.horaRegreso,
+              // DATOS ESPECÍFICOS DE VUELTA CON FALLBACK DE SEGURIDAD
+              fecha: viajeForm.fechaRegreso || viajeForm.fecha, 
+              hora: viajeForm.horaRegreso || viajeForm.hora,
               tipoRuta: "vuelta_de_ruta" 
             });
           }
