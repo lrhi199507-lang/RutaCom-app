@@ -22,14 +22,19 @@ export default function NavegacionPrincipal({ user }) {
   const [pestañaPerfil, setPestañaPerfil] = useState("publico");
     // --- ESTADOS PARA EL WIZARD DE PUBLICACIÓN ---
   const [pasoWizard, setPasoWizard] = useState(1);
-  const [viajeForm, setViajeForm] = useState({
-    origen: "",
-    destino: "",
-    precio: "",
-    asientos: "4",
-    horaSalida: "",
-    preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
-  });
+const [viajeForm, setViajeForm] = useState({
+  origen: "", 
+  destino: "", 
+  precio: "", 
+  asientos: "4", 
+  fechaSalida: "", // Nuevo
+  horaSalida: "", 
+  publicarRegreso: false, // Nuevo
+  fechaRegreso: "", // Nuevo
+  horaRegreso: "", // Nuevo
+  preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
+});
+  
 
   // Base de datos de ubicaciones para el autocompletado
   const UBICACIONES = {
