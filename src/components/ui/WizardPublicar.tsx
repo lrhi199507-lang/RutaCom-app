@@ -180,16 +180,26 @@ if (pasoWizard === 2) {
       </div>
 
       <button 
-  onClick={() => {
-    // Verificación de seguridad en el código
+  onClick={async () => {
+    // 1. Verificación de seguridad
     if (!userData?.id) {
       alert("Error: Inicia sesión para publicar");
       return;
     }
 
-    const datosParaEnviar = {
+    // Función auxiliar para no repetir código al publicar
+    const enviarAFirebase = async (objetoViaje) => {
+      try {
+        await publicarRuta(objetoViaje);
+      } catch (error) {
+        console.error("Error publicando:", error);
+      }
+    };
+
+    // 2. PREPARAR VIAJE DE IDA
+    const viajeIda = {
       ...viajeForm,
-      idCreador: userData.id, // <--- ESTO ES LO QUE PIDE TU REGLA
+      idCreador: userData.id,
       uidConductor: userData.id,
       fotoPerfil: userData?.fotoPerfil || "", 
       conductor: userData?.nombre || "Luis Raúl",
@@ -197,17 +207,43 @@ if (pasoWizard === 2) {
       prefHablador: userData?.prefHablador ?? true,
       prefMusica: userData?.prefMusica ?? true,
       estado: "disponible",
-      fecha: new Date().toISOString()
+      // Datos específicos de la IDA
+      fecha: viajeForm.fechaSalida, 
+      hora: viajeForm.horaSalida,
+      tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
     };
-    
-    publicarRuta(datosParaEnviar);
+
+    // PUBLICAMOS LA IDA
+    await enviarAFirebase(viajeIda);
+
+    // 3. PREPARAR VIAJE DE VUELTA (Si activó el switch)
+    if (viajeForm.publicarRegreso && viajeForm.fechaRegreso && viajeForm.horaRegreso) {
+      const viajeVuelta = {
+        ...viajeIda, // Copiamos preferencias, fotos y conductor
+        origen: viajeForm.destino, // INVERTIMOS: El destino ahora es el origen
+        destino: viajeForm.origen, // INVERTIMOS: El origen ahora es el destino
+        fecha: viajeForm.fechaRegreso, // Fecha de vuelta
+        hora: viajeForm.horaRegreso,   // Hora de vuelta
+        tipoRuta: "vuelta_de_ruta"
+      };
+
+      // PUBLICAMOS LA VUELTA
+      await enviarAFirebase(viajeVuelta);
+    }
+
+    // 4. FEEDBACK FINAL
+    alert(viajeForm.publicarRegreso 
+      ? "✅ ¡Se han publicado tus rutas de ida y vuelta con éxito!" 
+      : "✅ ¡Ruta de ida publicada con éxito!"
+    );
   }}
-  disabled={!viajeForm.origen || !viajeForm.destino}
+  disabled={!viajeForm.origen || !viajeForm.destino || !viajeForm.fechaSalida}
   className="w-full mt-6 py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl shadow-green-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
 >
   <ShieldCheck size={20} />
   ¡Publicar Ruta Ahora!
 </button>
+        
       
 
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">
