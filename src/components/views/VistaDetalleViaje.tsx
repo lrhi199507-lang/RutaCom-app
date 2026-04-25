@@ -137,20 +137,20 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             )}
 
-            {/* INFO DE RETORNO: CORREGIDA PARA MOSTRAR FECHA Y HORA CORRECTA */}
-            {((viaje.publicarRegreso && viaje.tipoRuta === "ida_y_vuelta") || viaje.fechaRegreso) && (
-              <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
-                <Repeat size={16} className="text-green-600" />
-                <div>
-                  <p className="text-[8px] font-black text-green-700 uppercase italic">
-                    Con Retorno Programado
-                  </p>
-                  <p className="text-[10px] font-bold text-green-600">
-                    Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
-                  </p>
-                </div>
-              </div>
-            )}
+          {/* INFO DE RETORNO: SOLO SE MUESTRA EN LA PUBLICACIÓN DE IDA */}
+{(viaje.tipoRuta === "ida_y_vuelta" && viaje.fechaRegreso) && (
+  <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
+    <Repeat size={16} className="text-green-600" />
+    <div>
+      <p className="text-[8px] font-black text-green-700 uppercase italic">
+        Con Retorno Programado
+      </p>
+      <p className="text-[10px] font-bold text-green-600">
+        Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
+      </p>
+    </div>
+  </div>
+)}
           </div>
 
           {/* CONDUCTOR */}
