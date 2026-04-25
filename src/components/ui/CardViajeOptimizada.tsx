@@ -50,13 +50,25 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           </div>
         </div>
         <div className={`text-right ${esRutaCompleta ? 'mt-6' : ''}`}>
-          <p className="text-2xl font-black italic text-blue-600 leading-none">${viaje.precio || "0"}</p>
-          {esUltimoPuesto && (
-            <span className="text-[8px] font-black uppercase italic text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-              ¡Último puesto!
-            </span>
-          )}
-        </div>
+  {/* PRECIO */}
+  <p className="text-2xl font-black italic text-blue-600 leading-none">
+    ${viaje.precio || "0"}
+  </p>
+  
+  {/* INDICADOR DE PUESTOS MEJORADO (TITILANTE) */}
+  {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
+    <div className="mt-1 flex justify-end">
+      <span className="animate-pulse bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+        {/* El puntito que late */}
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+        </span>
+        { (viaje.asientos === 1 || viaje.puestos === 1) ? '¡Último Puesto!' : 'Últimos Puestos' }
+      </span>
+    </div>
+  )}
+</div>
       </div>
 
       {/* RUTA SEGURA (Aquí evitamos el crash) */}
