@@ -14,6 +14,16 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
   const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
 
+  const obtenerEstado = (ciudadNombre) => {
+  if (!ciudadNombre) return "Estado";
+
+  const estadoEncontrado = Object.keys(UBICACIONES).find(estado => 
+    UBICACIONES[estado].includes(ciudadNombre)
+  );
+
+  return estadoEncontrado || "Venezuela";
+};
+
   // Función para formatear hora a 12h (AM/PM)
   const formatearHora12h = (hora24) => {
     if (!hora24) return "00:00";
