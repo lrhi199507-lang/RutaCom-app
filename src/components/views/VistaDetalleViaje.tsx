@@ -116,18 +116,20 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
 
-            {/* INFO DE RETORNO: SOLO SI ES EL VIAJE DE IDA */}
-            {(viaje.publicarRegreso && !viaje.esRetorno) && (
-              <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
-                <Repeat size={16} className="text-green-600" />
-                <div>
-                  <p className="text-[8px] font-black text-green-700 uppercase italic">Con Retorno Programado</p>
-                  <p className="text-[10px] font-bold text-green-600">
-                    Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
-                  </p>
-                </div>
-              </div>
-            )}
+            {/* INFO DE RETORNO: SOLO SI ES EL VIAJE DE IDA Y TIENE REGRESO */}
+{(viaje.publicarRegreso && viaje.tipoRuta === "ida_y_vuelta") && (
+  <div className="bg-green-50 p-3 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in">
+    <Repeat size={16} className="text-green-600" />
+    <div>
+      <p className="text-[8px] font-black text-green-700 uppercase italic">
+        Con Retorno Programado
+      </p>
+      <p className="text-[10px] font-bold text-green-600">
+        Regresa el <span className="capitalize">{formatearFechaLimpia(viaje.fechaRegreso)}</span> a las {formatearHora12h(viaje.horaRegreso)}
+      </p>
+    </div>
+  </div>
+)}
           </div>
 
           {/* CONDUCTOR */}
