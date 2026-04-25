@@ -52,18 +52,18 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 2: FECHA (CON BLOQUEO DE PASADO)
-  if (pasoWizard === 2) {
+    if (pasoWizard === 2) {
     return (
-      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
+      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
         <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del<br/>Viaje</h2>
         
+        {/* SECCIÓN FECHA Y HORA */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100">
             <p className="text-[8px] font-black uppercase text-slate-400 mb-2">📅 Fecha Ida</p>
             <input 
               type="date" 
-              min={hoy} // <--- BLOQUEA EL PASADO
+              min={hoy} 
               className="bg-transparent w-full text-[11px] font-black outline-none" 
               value={viajeForm.fechaSalida} 
               onChange={(e) => setViajeForm({...viajeForm, fechaSalida: e.target.value})} 
@@ -75,6 +75,7 @@ export const WizardPublicar = ({
           </div>
         </div>
 
+        {/* SECCIÓN PRECIO Y ASIENTOS */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100">
             <p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p>
@@ -86,6 +87,34 @@ export const WizardPublicar = ({
           </div>
         </div>
 
+        {/* PREFERENCIAS RÁPIDAS (Solo lo necesario) */}
+        <div className="space-y-2">
+          <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'ac', icon: '❄️', label: 'Aire A.' },
+              { id: 'noFumar', icon: '🚭', label: 'Sin Humo' },
+              { id: 'mascotas', icon: '🐾', label: 'Mascotas' },
+            ].map((pref) => (
+              <button 
+                key={pref.id}
+                onClick={() => setViajeForm({
+                  ...viajeForm, 
+                  preferencias: {
+                    ...viajeForm.preferencias, 
+                    [pref.id]: !viajeForm.preferencias?.[pref.id]
+                  }
+                })}
+                className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${viajeForm.preferencias?.[pref.id] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-50 opacity-60 text-slate-500'}`}
+              >
+                <span className="text-xl">{pref.icon}</span>
+                <span className="text-[8px] font-black uppercase text-center leading-tight">{pref.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* INTERRUPTOR DE REGRESO */}
         <button 
           onClick={() => setViajeForm({...viajeForm, publicarRegreso: !viajeForm.publicarRegreso})}
           className={`w-full p-4 rounded-[25px] border-2 transition-all flex items-center justify-between ${viajeForm.publicarRegreso ? 'border-green-500 bg-green-50' : 'border-slate-100'}`}
@@ -113,11 +142,12 @@ export const WizardPublicar = ({
 
         <div className="flex gap-3">
           <button onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px]">Atrás</button>
-          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.fechaSalida} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg">Siguiente</button>
+          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.fechaSalida} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95">Siguiente</button>
         </div>
       </div>
     );
-  }
+    }
+  
 
   // PASO 3: PREFERENCIAS, EQUIPAJE Y REFERENCIA
   return (
