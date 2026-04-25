@@ -9,7 +9,7 @@ export const WizardPublicar = ({
   // FECHA MÍNIMA (Hoy)
   const hoy = new Date().toISOString().split('T')[0];
 
-  // PASO 1: UBICACIONES (Se mantiene igual)
+  // PASO 1: UBICACIONES
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
@@ -52,36 +52,34 @@ export const WizardPublicar = ({
     );
   }
 
-    if (pasoWizard === 2) {
+  // PASO 2: DETALLES
+  if (pasoWizard === 2) {
     return (
       <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
         <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del<br/>Viaje</h2>
         
-        {/* SECCIÓN FECHA Y HORA IDA */}
-<div className="grid grid-cols-2 gap-4">
-  <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100">
-    <p className="text-[8px] font-black uppercase text-slate-400 mb-2">📅 Fecha Ida</p>
-    <input 
-      type="date" 
-      min={hoy} 
-      className="bg-transparent w-full text-[11px] font-black outline-none" 
-      value={viajeForm.fecha} // 👈 Cambiado de fechaSalida a fecha
-      onChange={(e) => setViajeForm({...viajeForm, fecha: e.target.value})} 
-    />
-  </div>
-  <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100">
-    <p className="text-[8px] font-black uppercase text-slate-400 mb-2">⏰ Hora Ida</p>
-    <input 
-      type="time" 
-      className="bg-transparent w-full text-[11px] font-black outline-none" 
-      value={viajeForm.hora} // 👈 Cambiado de horaSalida a hora
-      onChange={(e) => setViajeForm({...viajeForm, hora: e.target.value})} 
-    />
-  </div>
-</div>
-        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100">
+            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">📅 Fecha Ida</p>
+            <input 
+              type="date" 
+              min={hoy} 
+              className="bg-transparent w-full text-[11px] font-black outline-none" 
+              value={viajeForm.fecha || ""} 
+              onChange={(e) => setViajeForm({...viajeForm, fecha: e.target.value})} 
+            />
+          </div>
+          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100">
+            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">⏰ Hora Ida</p>
+            <input 
+              type="time" 
+              className="bg-transparent w-full text-[11px] font-black outline-none" 
+              value={viajeForm.hora || ""} 
+              onChange={(e) => setViajeForm({...viajeForm, hora: e.target.value})} 
+            />
+          </div>
+        </div>
 
-        {/* SECCIÓN PRECIO Y ASIENTOS */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100">
             <p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p>
@@ -93,7 +91,6 @@ export const WizardPublicar = ({
           </div>
         </div>
 
-        {/* PREFERENCIAS RÁPIDAS (Solo lo necesario) */}
         <div className="space-y-2">
           <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
           <div className="grid grid-cols-3 gap-2">
@@ -120,7 +117,6 @@ export const WizardPublicar = ({
           </div>
         </div>
 
-        {/* INTERRUPTOR DE REGRESO */}
         <button 
           onClick={() => setViajeForm({...viajeForm, publicarRegreso: !viajeForm.publicarRegreso})}
           className={`w-full p-4 rounded-[25px] border-2 transition-all flex items-center justify-between ${viajeForm.publicarRegreso ? 'border-green-500 bg-green-50' : 'border-slate-100'}`}
@@ -131,49 +127,45 @@ export const WizardPublicar = ({
           </div>
         </button>
 
-       {viajeForm.publicarRegreso && (
-  <div className="p-5 bg-blue-600 rounded-[30px] space-y-3 animate-in slide-in-from-top">
-    <div className="grid grid-cols-2 gap-3">
-      <div className="bg-white/10 p-3 rounded-2xl border border-white/20 text-white">
-        <p className="text-[7px] font-black uppercase mb-1">Fecha Regreso</p>
-        <input 
-          type="date" 
-          // 🔥 Cambiado de fechaSalida a fecha para que coincida con tu estado
-          min={viajeForm.fecha || hoy} 
-          className="bg-transparent w-full text-[10px] font-bold outline-none" 
-          value={viajeForm.fechaRegreso} 
-          onChange={(e) => setViajeForm({...viajeForm, fechaRegreso: e.target.value})} 
-        />
-      </div>
-      <div className="bg-white/10 p-3 rounded-2xl border border-white/20 text-white">
-        <p className="text-[7px] font-black uppercase mb-1">Hora Regreso</p>
-        <input 
-          type="time" 
-          className="bg-transparent w-full text-[10px] font-bold outline-none" 
-          value={viajeForm.horaRegreso} 
-          onChange={(e) => setViajeForm({...viajeForm, horaRegreso: e.target.value})} 
-        />
-      </div>
-    </div>
-  </div>
-)}
-        
+        {viajeForm.publicarRegreso && (
+          <div className="p-5 bg-blue-600 rounded-[30px] space-y-3 animate-in slide-in-from-top">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/10 p-3 rounded-2xl border border-white/20 text-white">
+                <p className="text-[7px] font-black uppercase mb-1">Fecha Regreso</p>
+                <input 
+                  type="date" 
+                  min={viajeForm.fecha || hoy} 
+                  className="bg-transparent w-full text-[10px] font-bold outline-none" 
+                  value={viajeForm.fechaRegreso || ""} 
+                  onChange={(e) => setViajeForm({...viajeForm, fechaRegreso: e.target.value})} 
+                />
+              </div>
+              <div className="bg-white/10 p-3 rounded-2xl border border-white/20 text-white">
+                <p className="text-[7px] font-black uppercase mb-1">Hora Regreso</p>
+                <input 
+                  type="time" 
+                  className="bg-transparent w-full text-[10px] font-bold outline-none" 
+                  value={viajeForm.horaRegreso || ""} 
+                  onChange={(e) => setViajeForm({...viajeForm, horaRegreso: e.target.value})} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="flex gap-3">
           <button onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px]">Atrás</button>
-          <button  onClick={() => setPasoWizard(3)}  disabled={!viajeForm.precio || !viajeForm.fecha} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95">  Siguiente</button>    
+          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.fecha} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95">Siguiente</button>    
         </div>
       </div>
     );
-    }
-  
+  }
 
-  // PASO 3: PREFERENCIAS, EQUIPAJE Y REFERENCIA
+  // PASO 3: AJUSTES FINALES Y PUBLICACIÓN
   return (
     <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
       <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
       
-      {/* REFERENCIA */}
       <div className="space-y-1">
         <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro / Referencia</p>
         <textarea 
@@ -185,7 +177,6 @@ export const WizardPublicar = ({
         />
       </div>
 
-      {/* EQUIPAJE */}
       <div className="space-y-1">
         <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Equipaje permitido</p>
         <div className="grid grid-cols-3 gap-2">
@@ -201,7 +192,6 @@ export const WizardPublicar = ({
         </div>
       </div>
 
-      {/* AUTO ACEPTAR */}
       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-[25px] border border-slate-100">
         <div>
           <p className="text-[10px] font-black uppercase text-slate-700">Reserva Automática</p>
@@ -215,72 +205,63 @@ export const WizardPublicar = ({
         </button>
       </div>
 
-<button 
-  onClick={async () => {
-    if (!userData?.id) return alert("Inicia sesión");
-    
-    const publicarViaje = async (obj) => { 
-      try { await publicarRuta(obj); } catch(e) { console.error(e); } 
-    };
+      <button 
+        onClick={async () => {
+          if (!userData?.id) return alert("Inicia sesión");
+          
+          const ejecutarPublicacion = async (obj) => { 
+            try { await publicarRuta(obj); } catch(e) { console.error(e); } 
+          };
 
-    const [ciudadOri] = viajeForm.origen.split(', ');
-    const [ciudadDest] = viajeForm.destino.split(', ');
+          const [ciudadOri] = viajeForm.origen.split(', ');
+          const [ciudadDest] = viajeForm.destino.split(', ');
 
-    const base = {
-      ...viajeForm,
-      idCreador: userData.id,
-      uidConductor: userData.id,
-      fotoPerfil: userData?.fotoPerfil || "",
-      conductor: userData?.nombre || "Usuario", 
-      bio: userData?.bio || "", 
-      datosConductor: {
-        nombre: userData?.nombre || "Usuario",
-        foto: userData?.fotoPerfil || "",
-        bio: userData?.bio || ""
-      },
-      estado: "disponible",
-      cO: ciudadOri || viajeForm.origen, 
-      cD: ciudadDest || viajeForm.destino,
-      fecha: viajeForm.fechaSalida,
-      hora: viajeForm.horaSalida,
-      // 🔥 Esto asegura que la IDA tenga la etiqueta azul
-      tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
-    };
+          // 1. OBJETO PARA LA IDA
+          const baseIda = {
+            ...viajeForm,
+            idCreador: userData.id,
+            uidConductor: userData.id,
+            fotoPerfil: userData?.fotoPerfil || "",
+            conductor: userData?.nombre || "Usuario", 
+            bio: userData?.bio || "", 
+            datosConductor: {
+              nombre: userData?.nombre || "Usuario",
+              foto: userData?.fotoPerfil || "",
+              bio: userData?.bio || ""
+            },
+            estado: "disponible",
+            cO: ciudadOri || viajeForm.origen, 
+            cD: ciudadDest || viajeForm.destino,
+            fecha: viajeForm.fecha, // Tomado del input de ida
+            hora: viajeForm.hora,   // Tomado del input de ida
+            tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
+          };
 
-    // 🔥 ¡ESTA ES LA LÍNEA QUE FALTABA! (Publica la IDA siempre)
-    await publicarViaje(base);
-    
-    // 4. Si el usuario marcó regreso, publicamos el segundo viaje (Vuelta)
-if (viajeForm.publicarRegreso) {
-  await publicarViaje({
-    ...base, // Aquí viene la fechaSalida (Ida)
-    cO: ciudadDest || viajeForm.destino, 
-    cD: ciudadOri || viajeForm.origen,    
-    fecha: viajeForm.fecha,
-    hora: viajeForm.hora,
-    
-    
-    // 🔥 SOBREESCRIBIMOS PARA LA VUELTA:
-    // Aquí usamos los valores específicos que capturaste en el cuadro azul del Paso 2
-    fecha: viajeForm.fechaRegreso, 
-    hora: viajeForm.horaRegreso,
-    
-    // Marcamos como vuelta para que no salga el aviso verde en esta tarjeta
-    tipoRuta: "vuelta_de_ruta" 
-  });
-}
-    
-    
-    
-    alert("✅ ¡Viaje publicado con éxito!");
-    setVista("inicio");
-  }}
-  className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
->
-  <ShieldCheck size={20} /> ¡Publicar Ahora!
-</button>
-      
-      
+          await ejecutarPublicacion(baseIda);
+          
+          // 2. OBJETO PARA LA VUELTA (Si aplica)
+          if (viajeForm.publicarRegreso) {
+            await ejecutarPublicacion({
+              ...baseIda,
+              // INVERSIÓN DE RUTA
+              origen: viajeForm.destino,
+              destino: viajeForm.origen,
+              cO: ciudadDest || viajeForm.destino, 
+              cD: ciudadOri || viajeForm.origen,    
+              // DATOS ESPECÍFICOS DE VUELTA
+              fecha: viajeForm.fechaRegreso, 
+              hora: viajeForm.horaRegreso,
+              tipoRuta: "vuelta_de_ruta" 
+            });
+          }
+          
+          alert("✅ ¡Viaje publicado con éxito!");
+          setVista("inicio");
+        }}
+        className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
+      >
+        <ShieldCheck size={20} /> ¡Publicar Ahora!
+      </button>
       
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
     </div>
