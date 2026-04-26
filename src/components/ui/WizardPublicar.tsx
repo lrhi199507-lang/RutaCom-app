@@ -239,23 +239,31 @@ export const WizardPublicar = ({
 
           await ejecutarPublicacion(baseIda);
           
-          // 2. OBJETO PARA LA VUELTA
+          // 2. OBJETO PARA LA VUELTA (Si aplica)
 if (viajeForm.publicarRegreso) {
-  // LOG DE SEGURIDAD (Míralo en tu consola de VS Code/Terminal)
-  console.log("Fecha Regreso capturada:", viajeForm.fechaRegreso);
+  // LOG DE SEGURIDAD: Revisa esto en tu consola de VS Code para confirmar qué llega
+  console.log("DEBUG - Fecha Ida:", viajeForm.fecha);
+  console.log("DEBUG - Fecha Regreso:", viajeForm.fechaRegreso);
 
   await ejecutarPublicacion({
-    ...baseIda,
+    ...baseIda, // Copia los datos base (conductor, fotos, etc.)
+    
+    // INVERSIÓN DE RUTA (Lógica de negocio)
     origen: viajeForm.destino,
     destino: viajeForm.origen,
     cO: ciudadDest || viajeForm.destino, 
     cD: ciudadOri || viajeForm.origen,    
-    // CAMBIO AQUÍ: Prioriza el string limpio
-    fecha: viajeForm.fechaRegreso ? viajeForm.fechaRegreso : viajeForm.fecha, 
+    
+    // ASIGNACIÓN ESPECÍFICA DE VUELTA
+    // Si fechaRegreso es undefined, esto te avisará usando la de la ida
+    fecha: viajeForm.fechaRegreso || viajeForm.fecha, 
     hora: viajeForm.horaRegreso || viajeForm.hora,
+    
+    // IMPORTANTE: Sobreescribimos el tipo para que la DB sepa que es el retorno
     tipoRuta: "vuelta_de_ruta" 
   });
 }
+          
           
           
           alert("✅ ¡Viaje publicado con éxito!");
