@@ -23,6 +23,9 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
 
   const [verPerfil, setVerPerfil] = React.useState(false);
 
+  const [showToast, setShowToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+
   // Lógica para contar pasajeros reales
   const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
@@ -240,34 +243,35 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
           </button>
         </div>
       </div>
+      
+        {/* 1. COMPONENTE PERFIL PÚBLICO */}
+      {verPerfil && (
+        <PerfilPublico 
+          conductor={{
+            bio: viaje.bio || viaje.datosConductor?.bio || "¡Hola! Soy un conductor verificado en Dame la cola.", 
+            nombre: viaje.cN || viaje.conductor,
+            fotoPerfil: viaje.fotoPerfil,
+            viajesRealizados: viaje.datosConductor?.viajesRealizados || 0,
+            rating: viaje.datosConductor?.rating || "5.0",
+            totalOpiniones: viaje.datosConductor?.totalOpiniones || 0,
+            opiniones: viaje.datosConductor?.opiniones || [], 
+            hablador: viaje.prefHablador || "tranquilo",
+            musica: viaje.prefMusica || "sin_musica",
+            identidadVerificada: true
+          }} 
+          onClose={() => setVerPerfil(false)} 
+          setToastMessage={setToastMessage}
+          setShowToast={setShowToast}
+        /> 
+      )}
 
-  {verPerfil && (
-  <PerfilPublico 
-    conductor={{
-      // Datos básicos
-      bio: viaje.bio || viaje.datosConductor?.bio || "¡Hola! Soy un conductor verificado en Dame la cola.", 
-      nombre: viaje.cN || viaje.conductor,
-      fotoPerfil: viaje.fotoPerfil,
+      {/* 2. COMPONENTE TOAST (FUERA DEL PERFIL) */}
+      <Toast 
+        show={showToast} 
+        message={toastMessage} 
+        onClose={() => setShowToast(false)} 
+      />
       
-      // DATOS REALES DE TU FIREBASE
-      viajesRealizados: viaje.datosConductor?.viajesRealizados || 0,
-      rating: viaje.datosConductor?.rating || "5.0",
-      
-      // Manejo de opiniones
-      totalOpiniones: viaje.datosConductor?.totalOpiniones || 0,
-      opiniones: viaje.datosConductor?.opiniones || [], 
-      
-      // Preferencias de estilo
-      hablador: viaje.prefHablador || "tranquilo",
-      musica: viaje.prefMusica || "sin_musica",
-      identidadVerificada: true
-    }} 
-    onClose={() => setVerPerfil(false)} 
-    // PROPS PARA LAS NOTIFICACIONES
-    setToastMessage={setToastMessage}
-    setShowToast={setShowToast}
-  />
-)}
-   </div>
+    </div> // Este cierra el div principal de VistaDetalleViaje
   );
 };
