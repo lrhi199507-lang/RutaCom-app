@@ -8,7 +8,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   
   // Lógica de tipos de ruta para la UI
   const esRutaIdaConRetorno = viaje.tipoRuta === "ida_y_vuelta";
-  const esRutaSoloVuelta = viaje.tipoRuta === "vuelta_de_ruta";
+  // const esRutaSoloVuelta = viaje.tipoRuta === "vuelta_de_ruta"; // <-- Ya no la usamos para UI
 
   // FUNCIÓN AUXILIAR PARA EVITAR EL ERROR DEL SPLIT
   const formatearLugar = (texto, index) => {
@@ -19,6 +19,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
 
   // FORZAR FECHA LOCAL BLINDADA
   const formatearFechaLocal = (fechaValor) => {
+    // Si no hay fecha (o llega null del wizard corregido), avisamos visualmente
     if (!fechaValor) return "Fecha no disp."; 
     
     try {
@@ -48,7 +49,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   return (
     <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden">
       
-      {/* ETIQUETA DINÁMICA SEGÚN EL TIPO DE RUTA */}
+      {/* ETIQUETA SOLO PARA LA IDA CON RETORNO (Badge Azul) */}
       {esRutaIdaConRetorno && (
         <div className="absolute top-0 right-0 bg-blue-600 text-white px-4 py-1 rounded-bl-2xl flex items-center gap-1.5 shadow-sm">
           <Repeat size={10} className="animate-pulse" />
@@ -56,14 +57,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
       )}
 
-      {esRutaSoloVuelta && (
-        <div className="absolute top-0 right-0 bg-slate-500 text-white px-4 py-1 rounded-bl-2xl flex items-center gap-1.5 shadow-sm">
-          <Repeat size={10} className="rotate-180" />
-          <span className="text-[8px] font-black uppercase italic tracking-wider">Viaje de Vuelta</span>
-        </div>
-      )}
-
-      {/* HEADER */}
+      {/* HEADER - RESTAURADO ESTILO CORRIDO (Como image_2.png) */}
       <div className="flex justify-between items-start gap-3">
         <div className="flex items-center gap-2">
           <div className="w-12 h-12 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden flex items-center justify-center text-slate-300">
@@ -72,7 +66,8 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
             ) : ( <User size={20} /> )}
           </div>
           <div>
-            <h3 className="text-sm font-black italic uppercase text-slate-800 flex items-center gap-1.5 tracking-tight">
+            {/* AQUÍ ESTÁ EL ARREGLO: Flex y gap ajustados para que nombre y check corran juntos */}
+            <h3 className="text-sm font-black italic uppercase text-slate-800 flex items-center gap-1 leading-tight tracking-tight">
               {viaje.conductor || "Conductor"} 
               <ShieldCheck size={14} className="text-green-500"/>
             </h3>
@@ -88,7 +83,8 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           </div>
         </div>
 
-        <div className={`text-right ${(esRutaIdaConRetorno || esRutaSoloVuelta) ? 'mt-6' : ''}`}>
+        {/* PRECIO Y PUESTOS (Ajustado margen para el banner azul de la ida) */}
+        <div className={`text-right ${esRutaIdaConRetorno ? 'mt-6' : ''}`}>
           <p className="text-2xl font-black italic text-blue-600 leading-none">
             ${viaje.precio || "0"}
           </p>
@@ -186,3 +182,4 @@ const obtenerNivel = (viajes) => {
   if (viajes < 100) return "Plata";
   return "Oro";
 };
+        
