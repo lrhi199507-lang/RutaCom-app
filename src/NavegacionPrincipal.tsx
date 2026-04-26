@@ -145,9 +145,7 @@ const [viajeForm, setViajeForm] = useState({
           timestamp: Date.now()
         });
 
-        // 3. Feedback visual: Esto es lo que faltaba para que "diga algo"
-        alert("✅ ¡Ruta publicada con éxito en Dame la cola!");
-
+        
         // 4. Limpiamos y regresamos
         setViajeForm({
           origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
