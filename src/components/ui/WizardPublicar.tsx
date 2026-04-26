@@ -288,13 +288,13 @@ setShowToast(true);
 // 2. PRIMER TIMEOUT: Para cerrar el mensaje (a los 3 segundos)
 setTimeout(() => {
   setShowToast(false);
-}, 5000);
+}, 4000);
 
 // 3. SEGUNDO TIMEOUT: Para cambiar de pantalla (medio segundo después, a los 3.5s)
 setTimeout(() => {
   setVista("inicio");
   setModo("conductor"); // Te sugiero poner esto para que el usuario caiga viendo su propia publicación
-}, 5000);
+}, 4500);
               
             }}
             className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
