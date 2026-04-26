@@ -36,19 +36,30 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   };
 
   const viajesFiltrados = useMemo(() => {
-    const lista = Array.isArray(viajes) ? viajes : [];
-    return lista.filter(v => {
-      const nomO = `${v.cO || ""} ${v.eO || ""}`.toLowerCase();
-      const nomD = `${v.cD || ""} ${v.eD || ""}`.toLowerCase();
-      
-      // Filtro por fecha (opcional si quieres que sea estricto)
-      const fechaViaje = v.fecha ? v.fecha.split('T')[0] : "";
-      const fechaBusqueda = fechaSeleccionada.toISOString().split('T')[0];
-      
-      // Por ahora filtramos solo por texto, puedes activar la fecha luego
-      return nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
-    });
-  }, [viajes, origen, destino, fechaSeleccionada]);
+  const lista = Array.isArray(viajes) ? viajes : [];
+  
+  // 1. Obtenemos la fecha del calendario en formato YYYY-MM-DD local
+  const anioB = fechaSeleccionada.getFullYear();
+  const mesB = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
+  const diaB = String(fechaSeleccionada.getDate()).padStart(2, '0');
+  const fechaBusquedaStr = `${anioB}-${mesB}-${diaB}`;
+
+  return lista.filter(v => {
+    // FILTRO DE TEXTO
+    const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
+    const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
+    const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
+
+    // FILTRO DE FECHA (Comparando solo YYYY-MM-DD)
+    // Como en tu Firebase está como "2026-04-26T...", el split('T')[0] saca "2026-04-26"
+    const fechaViajeStr = v.fecha ? String(v.fecha).split('T')[0] : "";
+    
+    const coincideFecha = fechaViajeStr === fechaBusquedaStr;
+
+    return coincideTexto && coincideFecha;
+  });
+}, [viajes, origen, destino, fechaSeleccionada]);
+  
 
   const formatearFechaBusqueda = (date) => {
     return date.toLocaleDateString('es-ES', { 
