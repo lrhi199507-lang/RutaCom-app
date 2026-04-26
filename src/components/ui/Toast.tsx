@@ -12,11 +12,15 @@ const Toast = ({ show, message, onClose }: ToastProps) => {
   return (
     <AnimatePresence>
       {show && (
-        <motion.div  initial={{ opacity: 0, y: -100 }} animate={{ opacity: 1, y: 0 }}  exit={{ opacity: 0, y: -100 }}
+        <motion.div
+  initial={{ opacity: 0, y: -100 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -100 }}
   // Forzamos fixed, un z-index altísimo y top para que baje del header
-  className="fixed top-24 left-0 right-0 z-[9999] flex justify-center px-6 pointer-events-none">
+  className="fixed top-24 left-0 right-0 z-[9999] flex justify-center px-6 pointer-events-none"
+>
   <div className="bg-slate-900 border border-slate-700 shadow-2xl rounded-3xl p-5 flex items-center gap-4 w-full max-w-xs pointer-events-auto">
-            <div className="bg-green-500/20 p-2 rounded-full">
+    <div className="bg-green-500/20 p-2 rounded-full">
               <CheckCircle2 className="text-green-400" size={28} />
             </div>
             
