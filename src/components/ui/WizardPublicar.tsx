@@ -170,12 +170,7 @@ export const WizardPublicar = ({
       if (pasoWizard === 3) {
     return (
       <> {/* <--- CRÍTICO: El fragmento envuelve ambos componentes */}
-        <Toast 
-          show={showToast} 
-          message={toastMessage} 
-          onClose={() => setShowToast(false)} 
-        />
-
+      
         <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
           <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
           
@@ -300,6 +295,11 @@ if (viajeForm.publicarRegreso) {
           
           <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
         </div>
+        <Toast 
+          show={showToast} 
+          message={toastMessage} 
+          onClose={() => setShowToast(false)} 
+        />
       </>
     );
   }
