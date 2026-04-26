@@ -253,6 +253,8 @@ const baseIda = {
   datosConductor: {
     nombre: userData?.nombre || "Usuario",
     foto: userData?.fotoPerfil || "",
+    rating: userData?.rating || "5.0",
+    viajesRealizados: userData?.viajesRealizados || 0,
     bio: userData?.bio || ""
   },
   estado: "disponible",
