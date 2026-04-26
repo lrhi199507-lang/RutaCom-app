@@ -241,7 +241,6 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
         </div>
       </div>
 
-      {verPerfil && (
   {verPerfil && (
   <PerfilPublico 
     conductor={{
@@ -254,7 +253,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
       viajesRealizados: viaje.datosConductor?.viajesRealizados || 0,
       rating: viaje.datosConductor?.rating || "5.0",
       
-      // Estos los manejaremos como opcionales por ahora
+      // Manejo de opiniones
       totalOpiniones: viaje.datosConductor?.totalOpiniones || 0,
       opiniones: viaje.datosConductor?.opiniones || [], 
       
@@ -264,10 +263,11 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
       identidadVerificada: true
     }} 
     onClose={() => setVerPerfil(false)} 
+    // PROPS PARA LAS NOTIFICACIONES
+    setToastMessage={setToastMessage}
+    setShowToast={setShowToast}
   />
 )}
-      
-         
-    </div>
+   </div>
   );
 };
