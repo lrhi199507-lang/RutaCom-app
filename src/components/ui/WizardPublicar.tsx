@@ -216,67 +216,42 @@ export const WizardPublicar = ({
           const [ciudadOri] = viajeForm.origen.split(', ');
           const [ciudadDest] = viajeForm.destino.split(', ');
 
-          // 1. OBJETO PARA LA IDA (Se mantiene igual, definimos el tipo base)
+        // ... dentro de tu función de publicar en el Wizard ...
+
+// 1. OBJETO BASE PARA LA IDA
 const baseIda = {
   ...viajeForm,
   idCreador: userData.id,
   uidConductor: userData.id,
   fotoPerfil: userData?.fotoPerfil || "",
-  conductor: userData?.nombre || "Usuario", 
-  bio: userData?.bio || "", 
-  datosConductor: {
-    nombre: userData?.nombre || "Usuario",
-    foto: userData?.fotoPerfil || "",
-    bio: userData?.bio || ""
-  },
+  conductor: userData?.nombre || "Usuario",
+  puestos: parseInt(viajeForm.puestos || viajeForm.asientos || 0), // Aseguramos que sea número
+  precio: viajeForm.precio || "0",
   estado: "disponible",
-  cO: ciudadOri || viajeForm.origen, 
+  cO: ciudadOri || viajeForm.origen,
   cD: ciudadDest || viajeForm.destino,
   fecha: viajeForm.fecha, 
-  hora: viajeForm.hora,   
-  // Tipo para la publicación madre/ida
+  hora: viajeForm.hora,
   tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
 };
 
 await ejecutarPublicacion(baseIda);
 
-// 2. OBJETO PARA LA VUELTA (Corregido)
+// 2. OBJETO PARA LA VUELTA
 if (viajeForm.publicarRegreso) {
-  // LOG DE SEGURIDAD (Revisa tu consola de VS Code para confirmar qué llega)
-  console.log("DEBUG - Datos de Formulario recibidos:", { 
-    fechaIda: viajeForm.fecha, 
-    fechaVuelta: viajeForm.fechaRegreso // <--- ESTE ES EL DATO CRÍTICO
-  });
-
   await ejecutarPublicacion({
-    // CAMBIO DE ESTRATEGIA: Esparcimos lo común, pero sobreescribimos TODO lo de ida
-    idCreador: baseIda.idCreador,
-    uidConductor: baseIda.uidConductor,
-    fotoPerfil: baseIda.fotoPerfil,
-    conductor: baseIda.conductor,
-    bio: baseIda.bio,
-    datosConductor: baseIda.datosConductor,
-    estado: baseIda.estado,
-    puestos: baseIda.puestos, // O asientos, usa tu campo real
-    precio: baseIda.precio,
-
-    // INVERSIÓN DE RUTA
+    ...baseIda, // Copiamos todo lo anterior (incluyendo puestos y precio)
     origen: viajeForm.destino,
     destino: viajeForm.origen,
     cO: ciudadDest || viajeForm.destino, 
     cD: ciudadOri || viajeForm.origen,    
-    
-    // DATOS ESPECÍFICOS DE VUELTA (Blindaje final)
-    // Usamos el dato de formulario. Si llega vacío, forzamos null para que la card avise.
-    fecha: viajeForm.fechaRegreso ? viajeForm.fechaRegreso : null, 
+    // IMPORTANTE: Usamos la fecha de regreso específica
+    fecha: viajeForm.fechaRegreso || viajeForm.fecha, 
     hora: viajeForm.horaRegreso || viajeForm.hora,
-    
-    // DEFINIMOS TIPO COMO VUELTA INDEPENDIENTE
     tipoRuta: "vuelta_de_ruta" 
   });
 }
-          
-          
+       
           
           alert("✅ ¡Viaje publicado con éxito!");
           setVista("inicio");
