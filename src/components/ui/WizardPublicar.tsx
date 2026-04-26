@@ -294,7 +294,7 @@ setTimeout(() => {
 setTimeout(() => {
   setVista("inicio");
   setModo("conductor"); // Te sugiero poner esto para que el usuario caiga viendo su propia publicación
-}, 3100);
+}, 2800);
               
             }}
             className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
