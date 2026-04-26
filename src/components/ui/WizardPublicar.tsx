@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react'; // <--- Añadimos useState
 import { MapPin, Navigation, Users, DollarSign, Clock, ShieldCheck, Check, Briefcase, Zap } from 'lucide-react';
+import Toast from './Toast'; // <--- Asegúrate de que la ruta del archivo sea correcta
 
 export const WizardPublicar = ({ 
   pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
   viajeEditando, userData 
 }) => {
-  
+
+    // ESTADO PARA EL TOAST
+  const [showToast, setShowToast] = useState(false); // <--- Controla la visibilidad
+  const [toastMessage, setToastMessage] = useState(""); // <--- Por si quieres variar el mensaje
   // FECHA MÍNIMA (Hoy)
   const hoy = new Date().toISOString().split('T')[0];
 
@@ -162,7 +166,14 @@ export const WizardPublicar = ({
   }
 
   // PASO 3: AJUSTES FINALES Y PUBLICACIÓN
+    if (pasoWizard === 3)
   return (
+     {/* INVOCAMOS EL COMPONENTE TOAST */}
+        <Toast 
+          show={showToast} 
+          message={toastMessage} 
+          onClose={() => setShowToast(false)} 
+        />
     <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
       <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
       
@@ -272,15 +283,25 @@ if (viajeForm.publicarRegreso) {
           
        
           
-          alert("✅ ¡Viaje publicado con éxito!");
-          setVista("inicio");
-        }}
-        className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
-      >
-        <ShieldCheck size={20} /> ¡Publicar Ahora!
-      </button>
+           // LÓGICA DEL TOAST REEMPLAZANDO AL ALERT
+              setToastMessage("¡Ruta publicada con éxito! Ya pueden solicitarte cola.");
+              setShowToast(true);
+
+              // Esperamos 2 segundos para que el usuario vea el Toast antes de cambiar de vista
+              setTimeout(() => {
+                setShowToast(false);
+                setVista("inicio");
+              }, 2500);
+            }}
+            className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
+          >
+            <ShieldCheck size={20} /> ¡Publicar Ahora!
+          </button>
       
       <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
     </div>
   );
+};
+
+return null; // Por si acaso no entra en ningún paso
 };
