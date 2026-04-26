@@ -1,5 +1,6 @@
 import React from 'react';
 import PerfilPublico from './PerfilPublico';
+import { Toast } from './Toast'; 
 import { 
   ArrowLeft, MapPin, User, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight 
