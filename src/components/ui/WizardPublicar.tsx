@@ -282,7 +282,7 @@ if (viajeForm.publicarRegreso) {
 }
 
           // 1. DISPARAMOS EL TOAST
-setToastMessage("¡Ruta publicada con éxito! Ya pueden solicitarte cola.");
+setToastMessage("¡Ruta publicada con éxito!");
 setShowToast(true);
 
 // 2. PRIMER TIMEOUT: Para cerrar el mensaje (a los 3 segundos)
@@ -294,7 +294,7 @@ setTimeout(() => {
 setTimeout(() => {
   setVista("inicio");
   setModo("conductor"); // Te sugiero poner esto para que el usuario caiga viendo su propia publicación
-}, 5500);
+}, 5000);
               
             }}
             className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
