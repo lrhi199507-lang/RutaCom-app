@@ -216,6 +216,9 @@ export const WizardPublicar = ({
       <button 
         onClick={async () => {
           if (!userData?.id) return alert("Inicia sesión");
+
+          setToastMessage("¡Ruta publicada con éxito!");
+    setShowToast(true);
           
           const ejecutarPublicacion = async (obj) => { 
             try { await publicarRuta(obj); } catch(e) { console.error(e); } 
@@ -277,10 +280,7 @@ if (viajeForm.publicarRegreso) {
     tipoRuta: "vuelta_de_ruta" 
   });
 }
-          
-          // EJECUCIÓN DEL TOAST
-              setToastMessage("¡Ruta publicada con éxito! Ya pueden solicitarte cola.");
-              setShowToast(true);
+    
 
               // Delay para que de tiempo de ver la animación
               setTimeout(() => {
