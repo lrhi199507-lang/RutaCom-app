@@ -247,25 +247,30 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
       
         {/* 1. COMPONENTE PERFIL PÚBLICO */}
       {verPerfil && (
-        <PerfilPublico 
-          conductor={{
-            bio: viaje.bio || viaje.datosConductor?.bio || "¡Hola! Soy un conductor verificado en Dame la cola.", 
-            nombre: viaje.cN || viaje.conductor,
-            fotoPerfil: viaje.fotoPerfil,
-            viajesRealizados: viaje.datosConductor?.viajesRealizados || 0,
-            rating: viaje.datosConductor?.rating || "5.0",
-            totalOpiniones: viaje.datosConductor?.totalOpiniones || 0,
-            opiniones: viaje.datosConductor?.opiniones || [], 
-            hablador: viaje.prefHablador || "tranquilo",
-            musica: viaje.prefMusica || "sin_musica",
-            identidadVerificada: true
-          }} 
-          onClose={() => setVerPerfil(false)} 
-          setToastMessage={setToastMessage}
-          setShowToast={setShowToast}
-        /> 
-      )}
-
+  <PerfilPublico 
+    conductor={{
+      // Datos de identidad
+      bio: viaje.bio || viaje.datosConductor?.bio || "¡Hola! Soy un conductor verificado.", 
+      nombre: viaje.cN || viaje.conductor || viaje.datosConductor?.nombre,
+      fotoPerfil: viaje.fotoPerfil || viaje.datosConductor?.fotoPerfil,
+      
+      // 🚨 AQUÍ ESTÁ EL TRUCO: Buscamos en ambos lugares
+      viajesRealizados: viaje.viajesRealizados ?? viaje.datosConductor?.viajesRealizados ?? 0,
+      rating: viaje.rating ?? viaje.datosConductor?.rating ?? "5.0",
+      
+      // Otros datos
+      totalOpiniones: viaje.totalOpiniones ?? viaje.datosConductor?.totalOpiniones ?? 0,
+      opiniones: viaje.opiniones || viaje.datosConductor?.opiniones || [], 
+      hablador: viaje.prefHablador || viaje.datosConductor?.hablador || "tranquilo",
+      musica: viaje.prefMusica || viaje.datosConductor?.musica || "sin_musica",
+      identidadVerificada: true
+    }} 
+    onClose={() => setVerPerfil(false)} 
+    setToastMessage={setToastMessage}
+    setShowToast={setShowToast}
+  />
+)}
+      
       {/* 2. COMPONENTE TOAST (FUERA DEL PERFIL) */}
       <Toast 
         show={showToast} 
