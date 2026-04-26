@@ -1,7 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, X } from 'lucide-react';
 
-const Toast = ({ show, message, onClose }) => {
+// Definimos qué espera recibir el componente
+interface ToastProps {
+  show: boolean;
+  message: string;
+  onClose: () => void;
+}
+
+const Toast = ({ show, message, onClose }: ToastProps) => {
   return (
     <AnimatePresence>
       {show && (
