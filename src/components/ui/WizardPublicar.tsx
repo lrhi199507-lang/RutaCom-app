@@ -219,6 +219,20 @@ export const WizardPublicar = ({
 
           setToastMessage("¡Ruta publicada con éxito!");
     setShowToast(true);
+
+        // 1. DISPARAMOS LOS CRONÓMETROS PRIMERO (Corren en segundo plano)
+setToastMessage("¡Ruta publicada con éxito!");
+setShowToast(true);
+
+// Este apaga el mensaje a los 3 segundos
+setTimeout(() => {
+  setShowToast(false);
+}, 4000);
+
+// Este cambia la pantalla a los 3.2 segundos (Cuentan desde este mismo instante)
+setTimeout(() => {
+  setVista("inicio");
+}, 4200);
           
           const ejecutarPublicacion = async (obj) => { 
             try { await publicarRuta(obj); } catch(e) { console.error(e); } 
@@ -280,21 +294,6 @@ if (viajeForm.publicarRegreso) {
     tipoRuta: "vuelta_de_ruta" 
   });
 }
-
-          // 1. DISPARAMOS EL TOAST
-setToastMessage("¡Ruta publicada con éxito!");
-setShowToast(true);
-
-// 2. PRIMER TIMEOUT: Para cerrar el mensaje (a los 3 segundos)
-setTimeout(() => {
-  setShowToast(false);
-}, 3000);
-
-// 3. SEGUNDO TIMEOUT: Para cambiar de pantalla (medio segundo después, a los 3.5s)
-setTimeout(() => {
-  setVista("inicio");
-  setModo("conductor"); // Te sugiero poner esto para que el usuario caiga viendo su propia publicación
-}, 2800);
               
             }}
             className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
