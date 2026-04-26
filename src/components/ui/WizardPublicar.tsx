@@ -216,50 +216,62 @@ export const WizardPublicar = ({
           const [ciudadOri] = viajeForm.origen.split(', ');
           const [ciudadDest] = viajeForm.destino.split(', ');
 
-          // 1. OBJETO PARA LA IDA
-          const baseIda = {
-            ...viajeForm,
-            idCreador: userData.id,
-            uidConductor: userData.id,
-            fotoPerfil: userData?.fotoPerfil || "",
-            conductor: userData?.nombre || "Usuario", 
-            bio: userData?.bio || "", 
-            datosConductor: {
-              nombre: userData?.nombre || "Usuario",
-              foto: userData?.fotoPerfil || "",
-              bio: userData?.bio || ""
-            },
-            estado: "disponible",
-            cO: ciudadOri || viajeForm.origen, 
-            cD: ciudadDest || viajeForm.destino,
-            fecha: viajeForm.fecha, 
-            hora: viajeForm.hora,   
-            tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
-          };
+          // 1. OBJETO PARA LA IDA (Se mantiene igual, definimos el tipo base)
+const baseIda = {
+  ...viajeForm,
+  idCreador: userData.id,
+  uidConductor: userData.id,
+  fotoPerfil: userData?.fotoPerfil || "",
+  conductor: userData?.nombre || "Usuario", 
+  bio: userData?.bio || "", 
+  datosConductor: {
+    nombre: userData?.nombre || "Usuario",
+    foto: userData?.fotoPerfil || "",
+    bio: userData?.bio || ""
+  },
+  estado: "disponible",
+  cO: ciudadOri || viajeForm.origen, 
+  cD: ciudadDest || viajeForm.destino,
+  fecha: viajeForm.fecha, 
+  hora: viajeForm.hora,   
+  // Tipo para la publicación madre/ida
+  tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
+};
 
-          await ejecutarPublicacion(baseIda);
-          
-          // 2. OBJETO PARA LA VUELTA (Si aplica)
+await ejecutarPublicacion(baseIda);
+
+// 2. OBJETO PARA LA VUELTA (Corregido)
 if (viajeForm.publicarRegreso) {
-  // LOG DE SEGURIDAD: Revisa esto en tu consola de VS Code para confirmar qué llega
-  console.log("DEBUG - Fecha Ida:", viajeForm.fecha);
-  console.log("DEBUG - Fecha Regreso:", viajeForm.fechaRegreso);
+  // LOG DE SEGURIDAD (Revisa tu consola de VS Code para confirmar qué llega)
+  console.log("DEBUG - Datos de Formulario recibidos:", { 
+    fechaIda: viajeForm.fecha, 
+    fechaVuelta: viajeForm.fechaRegreso // <--- ESTE ES EL DATO CRÍTICO
+  });
 
   await ejecutarPublicacion({
-    ...baseIda, // Copia los datos base (conductor, fotos, etc.)
-    
-    // INVERSIÓN DE RUTA (Lógica de negocio)
+    // CAMBIO DE ESTRATEGIA: Esparcimos lo común, pero sobreescribimos TODO lo de ida
+    idCreador: baseIda.idCreador,
+    uidConductor: baseIda.uidConductor,
+    fotoPerfil: baseIda.fotoPerfil,
+    conductor: baseIda.conductor,
+    bio: baseIda.bio,
+    datosConductor: baseIda.datosConductor,
+    estado: baseIda.estado,
+    puestos: baseIda.puestos, // O asientos, usa tu campo real
+    precio: baseIda.precio,
+
+    // INVERSIÓN DE RUTA
     origen: viajeForm.destino,
     destino: viajeForm.origen,
     cO: ciudadDest || viajeForm.destino, 
     cD: ciudadOri || viajeForm.origen,    
     
-    // ASIGNACIÓN ESPECÍFICA DE VUELTA
-    // Si fechaRegreso es undefined, esto te avisará usando la de la ida
-    fecha: viajeForm.fechaRegreso || viajeForm.fecha, 
+    // DATOS ESPECÍFICOS DE VUELTA (Blindaje final)
+    // Usamos el dato de formulario. Si llega vacío, forzamos null para que la card avise.
+    fecha: viajeForm.fechaRegreso ? viajeForm.fechaRegreso : null, 
     hora: viajeForm.horaRegreso || viajeForm.hora,
     
-    // IMPORTANTE: Sobreescribimos el tipo para que la DB sepa que es el retorno
+    // DEFINIMOS TIPO COMO VUELTA INDEPENDIENTE
     tipoRuta: "vuelta_de_ruta" 
   });
 }
