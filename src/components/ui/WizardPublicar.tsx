@@ -216,41 +216,60 @@ export const WizardPublicar = ({
           const [ciudadOri] = viajeForm.origen.split(', ');
           const [ciudadDest] = viajeForm.destino.split(', ');
 
-        // ... dentro de tu función de publicar en el Wizard ...
 
-// 1. OBJETO BASE PARA LA IDA
+// 1. OBJETO BASE PARA LA IDA (Se mantiene igual)
 const baseIda = {
   ...viajeForm,
   idCreador: userData.id,
   uidConductor: userData.id,
   fotoPerfil: userData?.fotoPerfil || "",
-  conductor: userData?.nombre || "Usuario",
-  puestos: parseInt(viajeForm.puestos || viajeForm.asientos || 0), // Aseguramos que sea número
-  precio: viajeForm.precio || "0",
+  conductor: userData?.nombre || "Usuario", 
+  bio: userData?.bio || "", 
+  datosConductor: {
+    nombre: userData?.nombre || "Usuario",
+    foto: userData?.fotoPerfil || "",
+    bio: userData?.bio || ""
+  },
   estado: "disponible",
-  cO: ciudadOri || viajeForm.origen,
+  cO: ciudadOri || viajeForm.origen, 
   cD: ciudadDest || viajeForm.destino,
   fecha: viajeForm.fecha, 
-  hora: viajeForm.hora,
+  hora: viajeForm.hora,   
   tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
 };
 
+// Guardar Ida
 await ejecutarPublicacion(baseIda);
 
-// 2. OBJETO PARA LA VUELTA
+// 2. OBJETO PARA LA VUELTA (Corregido con blindaje de fecha)
 if (viajeForm.publicarRegreso) {
+  // LOG DE SEGURIDAD (Míralo en tu consola de VS Code/Terminal)
+  // CRITICAL DEBUG: Si esto sale "undefined", tu selector de fecha en el paso 3 no está guardando el estado.
+  console.log("DEBUG - Comprobando Estado: viajeForm.fechaRegreso es:", viajeForm.fechaRegreso);
+
+  // ASIGNACIÓN ESPECÍFICA DE VUELTA
+  // Si la fecha de vuelta falta, forzamos un valor null para que la Card nos avise visualmente ("Fecha n/d")
+  // en lugar de usar la fecha de la ida por accidente.
+  const fechaFinalVuelta = viajeForm.fechaRegreso ? viajeForm.fechaRegreso : null;
+
   await ejecutarPublicacion({
-    ...baseIda, // Copiamos todo lo anterior (incluyendo puestos y precio)
+    ...baseIda, // Copiamos los campos comunes (conductor, puestos, precio, etc.)
+    
+    // INVERSIÓN DE RUTA
     origen: viajeForm.destino,
     destino: viajeForm.origen,
     cO: ciudadDest || viajeForm.destino, 
     cD: ciudadOri || viajeForm.origen,    
-    // IMPORTANTE: Usamos la fecha de regreso específica
-    fecha: viajeForm.fechaRegreso || viajeForm.fecha, 
+    
+    // DATOS ESPECÍFICOS DE VUELTA
+    fecha: fechaFinalVuelta, 
     hora: viajeForm.horaRegreso || viajeForm.hora,
+    
+    // DEFINIMOS TIPO COMO VUELTA INDEPENDIENTE
     tipoRuta: "vuelta_de_ruta" 
   });
 }
+          
        
           
           alert("✅ ¡Viaje publicado con éxito!");
