@@ -165,38 +165,49 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         </div>
       </div>
 
-      {/* MODAL CALENDARIO (ESTILO BOTTOM SHEET) */}
-      {showCalendar && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in slide-in-from-bottom duration-300">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black italic uppercase text-slate-800">Selecciona Fecha</h3>
-              <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full">
-                <X size={18} />
-              </button>
-            </div>
-            
-            {/* AQUÍ IRÍA EL CALENDARIO REAL, POR AHORA OPCIONES RÁPIDAS */}
-            <div className="space-y-3">
-              {[0, 1, 2].map((offset) => {
-                const d = new Date();
-                d.setDate(d.getDate() + offset);
-                const label = offset === 0 ? "Hoy" : offset === 1 ? "Mañana" : formatearFechaBusqueda(d);
-                return (
-                  <button 
-                    key={offset}
-                    onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
-                    className="w-full p-5 bg-slate-50 rounded-3xl flex items-center justify-between hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all"
-                  >
-                    <span className="font-black text-slate-700 italic uppercase text-sm">{label}</span>
-                    <ChevronRight size={18} className="text-blue-600" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL CALENDARIO (LÓGICA AUTOMÁTICA) */}
+{showCalendar && (
+  <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2">
+        <h3 className="text-lg font-black italic uppercase text-slate-800">¿Cuándo sales?</h3>
+        <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full">
+          <X size={18} />
+        </button>
+      </div>
+      
+      <div className="space-y-2">
+        {/* GENERAMOS 14 DÍAS AUTOMÁTICAMENTE */}
+        {[...Array(14)].map((_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() + i); // Sumamos días a la fecha actual
+          
+          return (
+            <button 
+              key={i}
+              onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
+              className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
+                fechaSeleccionada.toDateString() === d.toDateString() 
+                ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
+                : 'bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <div className="text-left">
+                <p className={`text-[10px] font-black uppercase ${fechaSeleccionada.toDateString() === d.toDateString() ? 'text-blue-100' : 'text-slate-400'}`}>
+                  {i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
+                </p>
+                <p className="text-sm font-black italic uppercase">
+                  {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                </p>
+              </div>
+              <ChevronRight size={18} className={fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white' : 'text-blue-600'} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
