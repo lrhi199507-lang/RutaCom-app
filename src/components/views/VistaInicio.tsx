@@ -1,105 +1,145 @@
 import React, { useState, useMemo } from 'react';
-import { Search, MapPin, Navigation, Calendar, Clock } from 'lucide-react';
-
-// Importamos la tarjeta detallada (asegúrate que el nombre del archivo sea exacto)
+import { Search, MapPin, Navigation, Calendar, X, ChevronRight } from 'lucide-react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { UBICACIONES } from '../../constants/ubicaciones';
+
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
- 
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
   const [sugerencias, setSugerencias] = useState([]);
-const [campoActivo, setCampoActivo] = useState(null); // 'origen' o 'destino'
+  const [campoActivo, setCampoActivo] = useState(null);
+  
+  // Estados para el Calendario
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
 
-const manejarBusqueda = (texto, tipo) => {
-  if (tipo === 'origen') setOrigen(texto);
-  else setDestino(texto);
+  // Convertimos UBICACIONES (objeto) en un array plano para el buscador
+  const locationsArray = useMemo(() => {
+    return Object.entries(UBICACIONES).flatMap(([estado, ciudades]) =>
+      ciudades.map(ciudad => ({ ciudad, estado }))
+    );
+  }, []);
 
-  if (texto.length > 0) {
-    const filtradas = UBICACIONES.filter(u => 
-      u.ciudad.toLowerCase().includes(texto.toLowerCase())
-    ).slice(0, 4); // Solo mostrar 4 sugerencias
-    setSugerencias(filtradas);
-    setCampoActivo(tipo);
-  } else {
-    setSugerencias([]);
-  }
-};
+  const manejarBusqueda = (texto, tipo) => {
+    if (tipo === 'origen') setOrigen(texto);
+    else setDestino(texto);
+
+    if (texto.length > 0) {
+      const filtradas = locationsArray.filter(u => 
+        u.ciudad.toLowerCase().includes(texto.toLowerCase())
+      ).slice(0, 4);
+      setSugerencias(filtradas);
+      setCampoActivo(tipo);
+    } else {
+      setSugerencias([]);
+    }
+  };
 
   const viajesFiltrados = useMemo(() => {
     const lista = Array.isArray(viajes) ? viajes : [];
     return lista.filter(v => {
       const nomO = `${v.cO || ""} ${v.eO || ""}`.toLowerCase();
       const nomD = `${v.cD || ""} ${v.eD || ""}`.toLowerCase();
+      
+      // Filtro por fecha (opcional si quieres que sea estricto)
+      const fechaViaje = v.fecha ? v.fecha.split('T')[0] : "";
+      const fechaBusqueda = fechaSeleccionada.toISOString().split('T')[0];
+      
+      // Por ahora filtramos solo por texto, puedes activar la fecha luego
       return nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
     });
-  }, [viajes, origen, destino]);
+  }, [viajes, origen, destino, fechaSeleccionada]);
+
+  const formatearFechaBusqueda = (date) => {
+    return date.toLocaleDateString('es-ES', { 
+      weekday: 'short', day: 'numeric', month: 'short' 
+    }).replace('.', '');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
-      {/* YA NO HAY HEADER AQUÍ. 
-         Ahora el Header vive en NavegacionPrincipal.tsx 
-      */}
-
       <div className="p-4 space-y-6">
-  {/* BUSCADOR - Le añadimos 'relative' para que las sugerencias se peguen a él */}
-  <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 relative">
-    <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-1">
-      <Search size={14} className="text-blue-600" />
-      Buscar Cola
-    </h2>
-    
-    <div className="space-y-3">
-      {/* INPUT ORIGEN */}
-      <div className="flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-        <MapPin size={16} className="text-blue-600 mr-3" />
-        <input 
-          placeholder="¿De dónde sales?" 
-          className="bg-transparent border-none outline-none w-full text-xs font-bold text-slate-700"
-          value={origen} 
-          onChange={(e) => manejarBusqueda(e.target.value, 'origen')} 
-        />
-      </div>
-
-      {/* INPUT DESTINO */}
-      <div className="flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-        <Navigation size={16} className="text-green-600 mr-3" />
-        <input 
-          placeholder="¿A dónde vas?" 
-          className="bg-transparent border-none outline-none w-full text-xs font-bold text-slate-700"
-          value={destino} 
-          onChange={(e) => manejarBusqueda(e.target.value, 'destino')} 
-        />
-      </div>
-    </div>
-
-    {/* SUGERENCIAS: Ahora están dentro del div relativo del buscador */}
-    {sugerencias.length > 0 && (
-      <div className="absolute left-5 right-5 top-[85%] bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] max-h-48 overflow-y-auto">
-        {sugerencias.map((s, i) => (
-          <div 
-            key={i} 
-            className="p-4 border-b border-slate-50 last:border-0 active:bg-slate-50 flex items-center gap-3"
-            onClick={() => {
-              if (campoActivo === 'origen') setOrigen(s.ciudad);
-              else setDestino(s.ciudad);
-              setSugerencias([]);
-            }}
-          >
-            <MapPin size={12} className="text-slate-300" />
-            <div>
-              <p className="text-xs font-black text-slate-700 leading-none">{s.ciudad}</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">{s.estado}</p>
+        
+        {/* BUSCADOR ESTILO BLABLACAR */}
+        <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
+          
+          {/* INPUT ORIGEN */}
+          <div className="relative">
+            <div className="flex items-center gap-3 p-4 bg-slate-50/50 rounded-t-[28px]">
+              <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+              <input 
+                value={origen}
+                onChange={(e) => manejarBusqueda(e.target.value, 'origen')}
+                placeholder="¿Desde dónde sales?" 
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
+              />
+              {origen && <X size={14} className="text-slate-300" onClick={() => setOrigen("")} />}
             </div>
           </div>
-        ))}
-      </div>
-    )}
-  </div>
 
-  {/* LISTADO DE VIAJES... */}
-        
-        {/* LISTADO DE VIAJES UTILIZANDO TU TARJETA OPTIMIZADA */}
+          <div className="h-[1px] bg-slate-100 mx-4" />
+
+          {/* INPUT DESTINO */}
+          <div className="relative">
+            <div className="flex items-center gap-3 p-4 bg-slate-50/50">
+              <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+              <input 
+                value={destino}
+                onChange={(e) => manejarBusqueda(e.target.value, 'destino')}
+                placeholder="¿A dónde vas?" 
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
+              />
+              {destino && <X size={14} className="text-slate-300" onClick={() => setDestino("")} />}
+            </div>
+          </div>
+
+          <div className="h-[1px] bg-slate-100 mx-4" />
+
+          {/* BOTÓN CALENDARIO Y ACCIÓN */}
+          <div className="flex items-center gap-2 p-2">
+            <button 
+              onClick={() => setShowCalendar(true)}
+              className="flex-1 flex items-center gap-3 p-3 bg-slate-50/50 rounded-2xl border border-transparent active:scale-95 transition-all"
+            >
+              <Calendar size={18} className="text-blue-600" />
+              <div className="text-left">
+                <p className="text-[7px] font-black uppercase text-slate-400 leading-none mb-1">Cuándo</p>
+                <p className="text-xs font-black text-slate-700 leading-none italic capitalize">
+                  {formatearFechaBusqueda(fechaSeleccionada)}
+                </p>
+              </div>
+            </button>
+
+            <button className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 active:scale-95 transition-all">
+              <Search size={22} strokeWidth={3} />
+            </button>
+          </div>
+
+          {/* SUGERENCIAS FLOTANTES */}
+          {sugerencias.length > 0 && (
+            <div className="absolute left-4 right-4 top-[40%] bg-white shadow-2xl rounded-2xl border border-slate-100 z-[110] overflow-hidden">
+              {sugerencias.map((s, i) => (
+                <button 
+                  key={i}
+                  onClick={() => {
+                    if (campoActivo === 'origen') setOrigen(s.ciudad);
+                    else setDestino(s.ciudad);
+                    setSugerencias([]);
+                  }}
+                  className="w-full p-4 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-50 last:border-none"
+                >
+                  <MapPin size={14} className="text-slate-300" />
+                  <div>
+                    <p className="text-xs font-black text-slate-700">{s.ciudad}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">{s.estado}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* LISTADO DE VIAJES */}
         <div className="space-y-4 px-1">
           <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center">
             Viajes Disponibles
@@ -124,6 +164,39 @@ const manejarBusqueda = (texto, tipo) => {
           )}
         </div>
       </div>
+
+      {/* MODAL CALENDARIO (ESTILO BOTTOM SHEET) */}
+      {showCalendar && (
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black italic uppercase text-slate-800">Selecciona Fecha</h3>
+              <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+            
+            {/* AQUÍ IRÍA EL CALENDARIO REAL, POR AHORA OPCIONES RÁPIDAS */}
+            <div className="space-y-3">
+              {[0, 1, 2].map((offset) => {
+                const d = new Date();
+                d.setDate(d.getDate() + offset);
+                const label = offset === 0 ? "Hoy" : offset === 1 ? "Mañana" : formatearFechaBusqueda(d);
+                return (
+                  <button 
+                    key={offset}
+                    onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
+                    className="w-full p-5 bg-slate-50 rounded-3xl flex items-center justify-between hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all"
+                  >
+                    <span className="font-black text-slate-700 italic uppercase text-sm">{label}</span>
+                    <ChevronRight size={18} className="text-blue-600" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
