@@ -242,27 +242,31 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
       </div>
 
       {verPerfil && (
+  {verPerfil && (
   <PerfilPublico 
     conductor={{
-      // Datos básicos que ya tenías
+      // Datos básicos
       bio: viaje.bio || viaje.datosConductor?.bio || "¡Hola! Soy un conductor verificado en Dame la cola.", 
       nombre: viaje.cN || viaje.conductor,
       fotoPerfil: viaje.fotoPerfil,
       
-      // NUEVOS DATOS REALES (Si no existen, ponemos los valores iniciales)
-      viajesExitosos: viaje.datosConductor?.viajesExitosos || 0,
+      // DATOS REALES DE TU FIREBASE
+      viajesRealizados: viaje.datosConductor?.viajesRealizados || 0,
       rating: viaje.datosConductor?.rating || "5.0",
+      
+      // Estos los manejaremos como opcionales por ahora
       totalOpiniones: viaje.datosConductor?.totalOpiniones || 0,
-      opiniones: viaje.datosConductor?.opiniones || [], // Array vacío si no hay
+      opiniones: viaje.datosConductor?.opiniones || [], 
       
       // Preferencias de estilo
       hablador: viaje.prefHablador || "tranquilo",
       musica: viaje.prefMusica || "sin_musica",
-      identidadVerificada: true // Asumimos true por el badge de arriba
+      identidadVerificada: true
     }} 
     onClose={() => setVerPerfil(false)} 
   />
 )}
+      
          
     </div>
   );
