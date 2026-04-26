@@ -163,16 +163,13 @@ const [viajeForm, setViajeForm] = useState({
           timestamp: Date.now()
         });
 
+         // LIMPIAMOS LOS DATOS, PERO NO CAMBIAMOS LA VISTA AQUÍ
+    setViajeForm({
+      origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
+      preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
+    });
+    setPasoWizard(1);
         
-        // 4. Limpiamos y regresamos
-        setViajeForm({
-          origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
-          preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
-        });
-        setPasoWizard(1);
-        setVista("inicio");
-        setModo("conductor");
-
       } catch (error) {
         console.error("Error en Firebase:", error);
         alert("❌ Error al publicar: " + error.message);
