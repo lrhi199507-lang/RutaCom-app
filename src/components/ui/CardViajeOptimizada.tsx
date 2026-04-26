@@ -18,33 +18,21 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   };
 
   // FORZAR FECHA LOCAL BLINDADA
-  const formatearFechaLocal = (fechaValor) => {
-    // Si no hay fecha (o llega null del wizard corregido), avisamos visualmente
-    if (!fechaValor) return "Fecha no disp."; 
+const formatearFechaLocal = (fechaValor) => {
+  if (!fechaValor) return "Fecha n/d";
+  try {
+    // Si la fecha viene como "2026-04-25T21:30...", cortamos en la T
+    // Si viene como "2026-04-25", el split igual funciona
+    const limpio = String(fechaValor).split('T')[0];
+    const [y, m, d] = limpio.split('-');
     
-    try {
-      // 1. Limpiamos el string por si viene con hora (T00:00:00...)
-      const soloFecha = String(fechaValor).split('T')[0]; 
-      const partes = soloFecha.split('-');
-      
-      // 2. Si no tiene el formato YYYY-MM-DD avisamos visualmente
-      if (partes.length !== 3) return "Formato error";
-      
-      const [year, month, day] = partes;
-      
-      // 3. Creamos el objeto fecha local (mes es 0-indexed)
-      const fechaObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      
-      return fechaObj.toLocaleDateString('es-ES', { 
-        weekday: 'short', 
-        day: 'numeric', 
-        month: 'short' 
-      });
-    } catch (error) {
-      console.error("Error procesando fecha:", error);
-      return "Error fecha";
-    }
-  };
+    const f = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    return f.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+  } catch (e) {
+    return "Error fecha";
+  }
+};
+  
   
   return (
     <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden">
