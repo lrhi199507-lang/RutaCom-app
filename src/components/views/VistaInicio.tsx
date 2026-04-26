@@ -150,30 +150,51 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
           )}
         </div>
 
-        {/* LISTADO DE VIAJES */}
-        <div className="space-y-4 px-1">
-          <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center">
-            Viajes Disponibles
-            <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
-              {viajesFiltrados.length}
-            </span>
-          </h2>
-          
-          {viajesFiltrados.length > 0 ? (
-            viajesFiltrados.map((viaje) => (
-              <CardViajeOptimizada
-                key={viaje.id}
-                viaje={viaje}
-                onClickDetalle={() => setViajeSeleccionado(viaje)}
-                onClickPedir={() => setViajeSeleccionado(viaje)}
-              />
-            ))
-          ) : (
-            <div className="text-center py-12 bg-white rounded-[30px] border border-dashed border-slate-200">
-              <p className="text-slate-400 font-bold italic uppercase text-[10px]">No hay colas disponibles</p>
-            </div>
-          )}
-        </div>
+        {/* LISTADO DE VIAJES CON MENSAJES DINÁMICOS */}
+<div className="space-y-4 px-1">
+  <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center">
+    {/* Título dinámico según la fecha */}
+    {fechaSeleccionada.toDateString() === new Date().toDateString() 
+      ? "Viajes para Hoy" 
+      : `Viajes para el ${formatearFechaBusqueda(fechaSeleccionada)}`}
+    
+    <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
+      {viajesFiltrados.length}
+    </span>
+  </h2>
+  
+  {viajesFiltrados.length > 0 ? (
+    viajesFiltrados.map((viaje) => (
+      <CardViajeOptimizada
+        key={viaje.id}
+        viaje={viaje}
+        onClickDetalle={() => setViajeSeleccionado(viaje)}
+        onClickPedir={() => setViajeSeleccionado(viaje)}
+      />
+    ))
+  ) : (
+    /* ESTADO VACÍO PERSONALIZADO */
+    <div className="text-center py-16 bg-white rounded-[40px] border border-dashed border-slate-200 px-6">
+      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Calendar size={24} className="text-slate-300" />
+      </div>
+      <p className="text-slate-800 font-black italic uppercase text-xs mb-1">
+        No hay colas disponibles
+      </p>
+      <p className="text-slate-400 font-bold text-[10px] uppercase leading-tight">
+        Para el {formatearFechaBusqueda(fechaSeleccionada)} aún no hay rutas publicadas.
+      </p>
+      
+      {/* Botón para resetear fecha rápidamente */}
+      <button 
+        onClick={() => setFechaSeleccionada(new Date())}
+        className="mt-6 text-[9px] font-black uppercase tracking-widest text-blue-600 border-b-2 border-blue-600 pb-1"
+      >
+        Ver viajes de hoy
+      </button>
+    </div>
+  )}
+</div>
       </div>
 
       {/* MODAL CALENDARIO (LÓGICA AUTOMÁTICA) */}
