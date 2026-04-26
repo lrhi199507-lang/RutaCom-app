@@ -1,6 +1,7 @@
-import React, { useState } from 'react'; // <--- Añadimos useState
+import React, { useState } from 'react';
 import { MapPin, Navigation, Users, DollarSign, Clock, ShieldCheck, Check, Briefcase, Zap } from 'lucide-react';
-import Toast from './Toast'; // <--- Asegúrate de que la ruta del archivo sea correcta
+// Corregido: Importamos desde la misma carpeta ui
+import Toast from './Toast'; 
 
 export const WizardPublicar = ({ 
   pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
@@ -166,27 +167,28 @@ export const WizardPublicar = ({
   }
 
   // PASO 3: AJUSTES FINALES Y PUBLICACIÓN
-    if (pasoWizard === 3)
-  return (
-     {/* INVOCAMOS EL COMPONENTE TOAST */}
+      if (pasoWizard === 3) {
+    return (
+      <> {/* <--- CRÍTICO: El fragmento envuelve ambos componentes */}
         <Toast 
           show={showToast} 
           message={toastMessage} 
           onClose={() => setShowToast(false)} 
         />
-    <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
-      <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
-      
-      <div className="space-y-1">
-        <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro / Referencia</p>
-        <textarea 
-          rows={2}
-          placeholder="Ej: Frente al Farmatodo de la redoma..." 
-          className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none"
-          value={viajeForm.referencia} 
-          onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} 
-        />
-      </div>
+
+        <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
+          <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
+          
+          <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro / Referencia</p>
+            <textarea 
+              rows={2}
+              placeholder="Ej: Frente al Farmatodo de la redoma..." 
+              className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none"
+              value={viajeForm.referencia} 
+              onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} 
+            />
+          </div>
 
       <div className="space-y-1">
         <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Equipaje permitido</p>
@@ -281,13 +283,11 @@ if (viajeForm.publicarRegreso) {
   });
 }
           
-       
-          
-           // LÓGICA DEL TOAST REEMPLAZANDO AL ALERT
+          // EJECUCIÓN DEL TOAST
               setToastMessage("¡Ruta publicada con éxito! Ya pueden solicitarte cola.");
               setShowToast(true);
 
-              // Esperamos 2 segundos para que el usuario vea el Toast antes de cambiar de vista
+              // Delay para que de tiempo de ver la animación
               setTimeout(() => {
                 setShowToast(false);
                 setVista("inicio");
@@ -297,11 +297,12 @@ if (viajeForm.publicarRegreso) {
           >
             <ShieldCheck size={20} /> ¡Publicar Ahora!
           </button>
-      
-      <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
-    </div>
-  );
-};
+          
+          <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
+        </div>
+      </>
+    );
+  }
 
-return null; // Por si acaso no entra en ningún paso
+  return null;
 };
