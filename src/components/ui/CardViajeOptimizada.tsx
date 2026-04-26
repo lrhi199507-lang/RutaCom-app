@@ -6,7 +6,11 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
 
   const esUltimoPuesto = (viaje.asientos || viaje.puestos) === 1;
   const esRutaCompleta = viaje.tipoRuta === "ida_y_vuelta";
+const esRutaSoloVuelta = viaje.tipoRuta === "vuelta_de_ruta"; // <-- Asegúrate de tener esta
 
+  // Agrega esto antes del return
+const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegreso : viaje.fecha;
+  
   // FUNCIÓN AUXILIAR PARA EVITAR EL ERROR DEL SPLIT
   const formatearLugar = (texto, index) => {
     if (!texto || typeof texto !== 'string') return index === 0 ? "No especificado" : "";
@@ -172,11 +176,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
         
         <div className="flex items-center gap-2 text-slate-500 col-span-2 border-t border-slate-50 pt-2">
-          <Clock size={14} className="text-blue-400" /> 
-          <p className="text-[10px] font-bold"> 
-            {/* *** SOLUCIÓN 3: LLAMADA A LA FUNCIÓN DE FECHA CORREGIDA *** */}
-            Fecha: <span className='font-black'>{formatearFechaManual(viaje.fecha)}</span>
-          </p>
+          <Clock size={14} className="text-blue-400" /> <p className="text-[10px] font-bold">  Fecha: <span className='font-black'>{formatearFechaManual(fechaCorrecta)}</span></p>
         </div>  
       </div>
 
