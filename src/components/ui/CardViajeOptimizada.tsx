@@ -5,10 +5,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   if (!viaje) return null;
 
   const esUltimoPuesto = (viaje.asientos || viaje.puestos) === 1;
-  
-  // Lógica de tipos de ruta para la UI
-  const esRutaIdaConRetorno = viaje.tipoRuta === "ida_y_vuelta";
-  // const esRutaSoloVuelta = viaje.tipoRuta === "vuelta_de_ruta"; // <-- Ya no la usamos para UI
+  const esRutaCompleta = viaje.tipoRuta === "ida_y_vuelta";
 
   // FUNCIÓN AUXILIAR PARA EVITAR EL ERROR DEL SPLIT
   const formatearLugar = (texto, index) => {
@@ -17,78 +14,102 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
     return partes[index] ? partes[index].trim() : "";
   };
 
-  // FORZAR FECHA LOCAL BLINDADA
-const formatearFechaLocal = (fechaValor) => {
-  if (!fechaValor) return "Fecha n/d";
-  try {
-    // Si la fecha viene como "2026-04-25T21:30...", cortamos en la T
-    // Si viene como "2026-04-25", el split igual funciona
-    const limpio = String(fechaValor).split('T')[0];
-    const [y, m, d] = limpio.split('-');
+  // *** SOLUCIÓN 1: FORMATEO DE FECHA MANUAL A PRUEBA DE ERRORES ***
+  const formatearFechaManual = (fechaValor) => {
+    // Si el dato falta de la base de datos, debemos mostrarlo claramente.
+    if (!fechaValor) return "Fecha n/d"; 
     
-    const f = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    return f.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-  } catch (e) {
-    return "Error fecha";
-  }
-};
-  
+    try {
+      // 1. Limpiamos la cadena por si viene un T... de ISO (como en tu Firebase)
+      const limpio = String(fechaValor).split('T')[0];
+      const partes = limpio.split('-');
+      
+      if (partes.length !== 3) return "Error Formato";
+      
+      // 2. Extraemos partes pieza por pieza
+      const year = parseInt(partes[0]);
+      const month = parseInt(partes[1]);
+      const day = parseInt(partes[2]);
+      
+      // 3. Definimos los nombres de los días manualmente, sin dejar que JavaScript adivine
+      const dias = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+      
+      // Debemos construir la fecha JS precisamente como "Local" (mes es 0-indexed)
+      // para que el método getDay() funcione correctamente en hora local.
+      const fechaObj = new Date(year, month - 1, day);
+      const diaSemanaIndex = fechaObj.getDay(); // Esto funciona en Hora Local
+      
+      // Si JavaScript devolvió NaN para el día de la semana, el formato estaba roto.
+      if (isNaN(diaSemanaIndex)) return "Error Fecha";
+
+      // 4. Construimos la cadena de salida cuidadosamente
+      return `${dias[diaSemanaIndex]}, ${day} ${obtenerMesCorto(month)}`;
+
+    } catch (error) {
+      console.error("Error formateando fecha:", error);
+      return "Error";
+    }
+  };
+
+  // Función auxiliar para meses cortos
+  const obtenerMesCorto = (month) => {
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return meses[month - 1] || "";
+  };
   
   return (
     <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden">
       
-      {/* ETIQUETA SOLO PARA LA IDA CON RETORNO (Badge Azul) */}
-      {esRutaIdaConRetorno && (
+      {/* ETIQUETA DE RUTA CON RETORNO */}
+      {esRutaCompleta && (
         <div className="absolute top-0 right-0 bg-blue-600 text-white px-4 py-1 rounded-bl-2xl flex items-center gap-1.5 shadow-sm">
           <Repeat size={10} className="animate-pulse" />
           <span className="text-[8px] font-black uppercase italic tracking-wider">Ruta con Retorno</span>
         </div>
       )}
 
-      {/* HEADER - NOMBRE Y VERIFICADO EN UNA LÍNEA */}
-<div className="flex justify-between items-start gap-2">
-  <div className="flex items-center gap-2 flex-1 min-w-0">
-    <div className="w-12 h-12 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center text-slate-300">
-      {viaje.fotoPerfil ? ( 
-        <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" /> 
-      ) : ( <User size={20} /> )}
-    </div>
-    
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-1.5">
-        <h3 className="text-[15px] font-black italic uppercase text-slate-800 truncate tracking-tight leading-tight">
-          {viaje.conductor || "Conductor"}
-        </h3>
-        <ShieldCheck size={16} className="text-green-500 shrink-0" />
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-0.5 text-amber-500">
-          <Star size={12} fill="currentColor"/>
-          <span className="text-[10px] font-black italic">{viaje.rating || "5.0"}</span>
+      {/* HEADER - TEXTO CORREGIDO PARA UNA SOLA LÍNEA (flex-1 min-w-0 truncate shrink-0) */}
+      <div className="flex justify-between items-start gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="w-12 h-12 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center text-slate-300">
+            {viaje.fotoPerfil ? ( 
+              <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" /> 
+            ) : ( <User size={20} /> )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <h3 className="text-sm font-black italic uppercase text-slate-800 truncate tracking-tight leading-none">
+                {viaje.conductor || "Conductor"}
+              </h3>
+              <ShieldCheck size={14} className="text-green-500 shrink-0" />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5 text-amber-500">
+                <Star size={12} fill="currentColor"/>
+                <span className="text-[10px] font-black italic">{viaje.rating || "5.0"}</span>
+              </div>
+              <span className="text-[9px] font-bold uppercase italic text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                {obtenerNivel(viaje.viajesTotales)}
+              </span>
+            </div>
+          </div>
         </div>
-        <span className="text-[8px] font-bold uppercase italic text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-          {obtenerNivel(viaje.viajesTotales)}
-        </span>
-      </div>
-    </div>
-  </div>
 
-  <div className={`text-right shrink-0 ${esRutaIdaConRetorno ? 'mt-6' : ''}`}>
-    <p className="text-2xl font-black italic text-blue-600 leading-none">
-      ${viaje.precio || "0"}
-    </p>
-    
-    {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
-      <div className="mt-1 flex justify-end">
-        <span className="bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
-          ● {(viaje.asientos === 1 || viaje.puestos === 1) ? 'Último Puesto!' : 'Últimos Puestos'}
-        </span>
+        <div className={`text-right shrink-0 ${esRutaCompleta ? 'mt-6' : ''}`}>
+          <p className="text-2xl font-black italic text-blue-600 leading-none">
+            ${viaje.precio || "0"}
+          </p>
+          {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
+            <div className="mt-1 flex justify-end">
+              <span className="bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
+                ● {(viaje.asientos === 1 || viaje.puestos === 1) ? 'Último Puesto!' : 'Últimos Puestos'}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
-    )}
-  </div>
-</div>
-      
+
       {/* RUTA SEGURA */}
       <div className="flex items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
         <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -135,8 +156,12 @@ const formatearFechaLocal = (fechaValor) => {
                 hour12: true 
               }) : "--:--"}
             </span>
+            {/* *** SOLUCIÓN 2: LÓGICA DEL ICONO AM/PM INVERTIDA *** */}
             <span className="text-[12px]">
-              {viaje.hora && (parseInt(viaje.hora.split(':')[0]) >= 6 && parseInt(viaje.hora.split(':')[0]) < 18 ? '☀️' : '🌙')}
+              {viaje.hora && (
+                // Invertí la condición: si la hora es >= 6 y < 18, es sol; de lo contrario, es luna.
+                parseInt(viaje.hora.split(':')[0]) >= 6 && parseInt(viaje.hora.split(':')[0]) < 18 ? '☀️' : '🌙'
+              )}
             </span>
           </p>
         </div>
@@ -148,7 +173,10 @@ const formatearFechaLocal = (fechaValor) => {
         
         <div className="flex items-center gap-2 text-slate-500 col-span-2 border-t border-slate-50 pt-2">
           <Clock size={14} className="text-blue-400" /> 
-          <p className="text-[10px] font-bold"> Fecha: <span className='font-black'>{formatearFechaLocal(viaje.fecha)}</span></p>
+          <p className="text-[10px] font-bold"> 
+            {/* *** SOLUCIÓN 3: LLAMADA A LA FUNCIÓN DE FECHA CORREGIDA *** */}
+            Fecha: <span className='font-black'>{formatearFechaManual(viaje.fecha)}</span>
+          </p>
         </div>  
       </div>
 
@@ -171,4 +199,4 @@ const obtenerNivel = (viajes) => {
   if (viajes < 100) return "Plata";
   return "Oro";
 };
-        
+      
