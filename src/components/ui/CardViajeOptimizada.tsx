@@ -91,10 +91,14 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-0.5 text-amber-500">
                 <Star size={12} fill="currentColor"/>
-                <span className="text-[10px] font-black italic">{viaje.rating || "5.0"}</span>
+                <span className="text-[10px] font-black italic">
+                  {/* BUSQUEDA DOBLE PARA EL RATING */}
+                  {viaje.datosConductor?.rating || viaje.rating || "5.0"}
+                </span>
               </div>
               <span className="text-[9px] font-bold uppercase italic text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                {obtenerNivel(viaje.viajesTotales)}
+                {/* BUSQUEDA DOBLE PARA EL NIVEL */}
+                {obtenerNivel(viaje.datosConductor?.viajesRealizados || viaje.viajesRealizados)}
               </span>
             </div>
           </div>
@@ -194,9 +198,11 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
 };
 
 const obtenerNivel = (viajes) => {
-  if (!viajes || viajes < 10) return "Novato";
-  if (viajes < 50) return "Bronce";
-  if (viajes < 100) return "Plata";
+  const num = parseInt(viajes) || 0;
+  if (num === 0) return "Nuevo";
+  if (num < 10) return "Novato";
+  if (num < 50) return "Bronce";
+  if (num < 100) return "Plata";
   return "Oro";
 };
       
