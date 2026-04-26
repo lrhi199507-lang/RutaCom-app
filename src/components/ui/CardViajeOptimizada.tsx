@@ -57,49 +57,50 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
       )}
 
-      {/* HEADER - RESTAURADO ESTILO CORRIDO (Como image_2.png) */}
-      <div className="flex justify-between items-start gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-12 h-12 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden flex items-center justify-center text-slate-300">
-            {viaje.fotoPerfil ? ( 
-              <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" /> 
-            ) : ( <User size={20} /> )}
-          </div>
-          <div>
-            {/* AQUÍ ESTÁ EL ARREGLO: Flex y gap ajustados para que nombre y check corran juntos */}
-            <h3 className="text-sm font-black italic uppercase text-slate-800 flex items-center gap-1 leading-tight tracking-tight">
-              {viaje.conductor || "Conductor"} 
-              <ShieldCheck size={14} className="text-green-500"/>
-            </h3>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5 text-amber-500">
-                <Star size={12} fill="currentColor"/>
-                <span className="text-[10px] font-black italic">{viaje.rating || "5.0"}</span>
-              </div>
-              <span className="text-[9px] font-bold uppercase italic text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                {obtenerNivel(viaje.viajesTotales)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* PRECIO Y PUESTOS (Ajustado margen para el banner azul de la ida) */}
-        <div className={`text-right ${esRutaIdaConRetorno ? 'mt-6' : ''}`}>
-          <p className="text-2xl font-black italic text-blue-600 leading-none">
-            ${viaje.precio || "0"}
-          </p>
-          
-          {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
-            <div className="mt-1 flex justify-end">
-              <span className="animate-pulse bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap">
-                <span className="relative flex h-1 w-1 text-white">●</span>
-                {(viaje.asientos === 1 || viaje.puestos === 1) ? 'Último Puesto!' : 'Últimos Puestos'}
-              </span>
-            </div>
-          )}
-        </div>
+      {/* HEADER - NOMBRE Y VERIFICADO EN UNA LÍNEA */}
+<div className="flex justify-between items-start gap-2">
+  <div className="flex items-center gap-2 flex-1 min-w-0">
+    <div className="w-12 h-12 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center text-slate-300">
+      {viaje.fotoPerfil ? ( 
+        <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" /> 
+      ) : ( <User size={20} /> )}
+    </div>
+    
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-1.5">
+        <h3 className="text-[15px] font-black italic uppercase text-slate-800 truncate tracking-tight leading-tight">
+          {viaje.conductor || "Conductor"}
+        </h3>
+        <ShieldCheck size={16} className="text-green-500 shrink-0" />
       </div>
+      
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-0.5 text-amber-500">
+          <Star size={12} fill="currentColor"/>
+          <span className="text-[10px] font-black italic">{viaje.rating || "5.0"}</span>
+        </div>
+        <span className="text-[8px] font-bold uppercase italic text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+          {obtenerNivel(viaje.viajesTotales)}
+        </span>
+      </div>
+    </div>
+  </div>
 
+  <div className={`text-right shrink-0 ${esRutaIdaConRetorno ? 'mt-6' : ''}`}>
+    <p className="text-2xl font-black italic text-blue-600 leading-none">
+      ${viaje.precio || "0"}
+    </p>
+    
+    {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
+      <div className="mt-1 flex justify-end">
+        <span className="bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
+          ● {(viaje.asientos === 1 || viaje.puestos === 1) ? 'Último Puesto!' : 'Últimos Puestos'}
+        </span>
+      </div>
+    )}
+  </div>
+</div>
+      
       {/* RUTA SEGURA */}
       <div className="flex items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
         <div className="flex-1 min-w-0 flex items-center gap-2">
