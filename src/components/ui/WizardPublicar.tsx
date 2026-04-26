@@ -227,7 +227,7 @@ setShowToast(true);
 // Este apaga el mensaje a los 3 segundos
 setTimeout(() => {
   setShowToast(false);
-}, 4000);
+}, 4500);
 
 // Este cambia la pantalla a los 3.2 segundos (Cuentan desde este mismo instante)
 setTimeout(() => {
