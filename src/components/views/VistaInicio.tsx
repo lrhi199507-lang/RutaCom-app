@@ -171,28 +171,38 @@ const viajesFiltrados = useMemo(() => {
 
         {/* LISTADO DE VIAJES */}
         <div className="space-y-4 px-1">
-          <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center">
+         <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center px-1">
   <div className="flex items-center gap-2">
-    {fechaSeleccionada.toDateString() === new Date().toDateString() ? "Colas para Hoy" : `Colas: ${formatearFechaBusqueda(fechaSeleccionada)}`}
+    {fechaSeleccionada.toDateString() === new Date().toDateString() 
+      ? "Colas para Hoy" 
+      : `Colas: ${formatearFechaBusqueda(fechaSeleccionada)}`}
     <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
       {viajesFiltrados.length}
     </span>
   </div>
 
-  {/* BOTÓN DE ORDENAR POR PRECIO */}
+  {/* BOTÓN DE ORDEN DINÁMICO */}
   <button 
     onClick={() => setOrdenPrecio(ordenPrecio === 'asc' ? 'desc' : 'asc')}
-    className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all"
+    className={`flex items-center gap-2 px-3 py-2 rounded-2xl transition-all active:scale-95 border ${
+      ordenPrecio === 'asc' 
+        ? 'bg-blue-50 border-blue-100 shadow-sm' 
+        : 'bg-white border-slate-200 shadow-sm'
+    }`}
   >
-    <span className="text-[9px] font-black uppercase text-slate-500 italic">
-      {ordenPrecio === 'asc' ? 'Precio ↓' : 'Precio ↑'}
+    <span className={`text-[9px] font-black uppercase italic ${
+      ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-500'
+    }`}>
+      {ordenPrecio === 'asc' ? 'Más baratos' : 'Precio alto'}
     </span>
-    {/* Usamos flechas de Lucide para que se vea pro */}
-    <div className="text-blue-600">
+    
+    <div className={ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-400'}>
       {ordenPrecio === 'asc' ? (
-        <svg size={12} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="M12 9V20"/></svg>
+        // Flecha hacia arriba (Indica que el precio va subiendo)
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
       ) : (
-        <svg size={12} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
+        // Flecha hacia abajo (Indica que el precio va bajando)
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="M12 9V20"/></svg>
       )}
     </div>
   </button>
