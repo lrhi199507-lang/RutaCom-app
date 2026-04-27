@@ -293,17 +293,17 @@ try {
       ...datosBase,
       conRetornoProgramado: viajeForm.publicarRegreso // Por si decide activar retorno al editar
     });
-  } else {
-    // 1. CREAMOS LA IDA
-    const objetoIda = {
-      ...datosBase,
-      // 🚨 LA CLAVE: Aquí activamos la etiqueta azul
-      conRetornoProgramado: viajeForm.publicarRegreso ? true : false,
-      tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
-      timestamp: Date.now()
-    };
-    await publicarRuta(objetoIda);
-
+  // 1. CREAMOS LA IDA
+  const objetoIda = {
+    ...datosBase,
+    conRetornoProgramado: viajeForm.publicarRegreso ? true : false,
+    tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
+    // 🚨 ESTO ES LO QUE NECESITA TU VISTADETALLEVIAJE:
+    fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
+    horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
+    timestamp: Date.now()
+  };
+  await publicarRuta(objetoIda);
     // 2. CREAMOS LA VUELTA (si aplica)
     if (viajeForm.publicarRegreso) {
       const fechaFinalVuelta = viajeForm.fechaRegreso || null;
