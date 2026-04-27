@@ -253,97 +253,94 @@ export const WizardPublicar = ({
             </button>
           </div>
 
-          <button 
-  onClick={async () => {
-    // 1. VALIDACIÓN DE SESIÓN (Fundamental)
-    if (!userData?.id) return alert("Error: No se detecta tu ID de usuario. Reintenta iniciar sesión.");
+                  <button 
+          onClick={async () => {
+            // 1. VALIDACIÓN DE SESIÓN
+            if (!userData?.id) return alert("Error: No se detecta tu ID de usuario. Reintenta iniciar sesión.");
 
-    // 2. PROCESAMIENTO DE CIUDADES
-    const [ciudadOri] = (viajeForm.origen || "").split(', ');
-    const [ciudadDest] = (viajeForm.destino || "").split(', ');
+            // 2. PROCESAMIENTO DE CIUDADES
+            const [ciudadOri] = (viajeForm.origen || "").split(', ');
+            const [ciudadDest] = (viajeForm.destino || "").split(', ');
 
-    // 3. OBJETO BASE (Datos comunes)
-    const datosBase = {
-      ...viajeForm,
-      idCreador: userData.id,
-      uidConductor: userData.id, // <--- Esto asegura que salga en "Mis Trayectos"
-      fotoPerfil: userData?.fotoPerfil || "",
-      conductor: userData?.nombre || "Usuario",
-      datosConductor: {
-        nombre: userData?.nombre || "Usuario",
-        foto: userData?.fotoPerfil || "",
-        rating: userData?.rating || "5.0",
-        viajesRealizados: userData?.viajesRealizados || 0,
-        bio: userData?.bio || ""
-      },
-      cO: ciudadOri || "S/N", 
-      cD: ciudadDest || "S/N",
-      estado: "disponible",
-      timestamp: Date.now()
-    };
+            // 3. OBJETO BASE
+            const datosBase = {
+              ...viajeForm,
+              idCreador: userData.id,
+              uidConductor: userData.id,
+              fotoPerfil: userData?.fotoPerfil || "",
+              conductor: userData?.nombre || "Usuario",
+              datosConductor: {
+                nombre: userData?.nombre || "Usuario",
+                foto: userData?.fotoPerfil || "",
+                rating: userData?.rating || "5.0",
+                viajesRealizados: userData?.viajesRealizados || 0,
+                bio: userData?.bio || ""
+              },
+              cO: ciudadOri || "S/N", 
+              cD: ciudadDest || "S/N",
+              estado: "disponible",
+              timestamp: Date.now()
+            };
 
-    try {
-      if (viajeAEditar) {
-        // MODO EDICIÓN
-        await publicarRuta(datosBase);
-        setToastMessage("¡Ruta actualizada!");
-      } else {
-        // MODO NUEVA PUBLICACIÓN
-        // Primero la IDA
-        const objetoIda = {
-          ...datosBase,
-          conRetornoProgramado: !!viajeForm.publicarRegreso,
-          tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
-          fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
-          horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
-        };
-        
-        await publicarRuta(objetoIda);
+            try {
+              if (viajeAEditar) {
+                await publicarRuta(datosBase);
+                setToastMessage("¡Ruta actualizada!");
+              } else {
+                const objetoIda = {
+                  ...datosBase,
+                  conRetornoProgramado: !!viajeForm.publicarRegreso,
+                  tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
+                  fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
+                  horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
+                };
+                
+                await publicarRuta(objetoIda);
 
-        // Luego la VUELTA (si aplica)
-        if (viajeForm.publicarRegreso) {
-          await publicarRuta({
-            ...objetoIda,
-            origen: viajeForm.destino,
-            destino: viajeForm.origen,
-            cO: ciudadDest || "S/N",
-            cD: ciudadOri || "S/N",
-            fecha: viajeForm.fechaRegreso,
-            hora: viajeForm.horaRegreso || viajeForm.hora,
-            tipoRuta: "vuelta_de_ruta",
-            conRetornoProgramado: false // Para que no se auto-referencie
-          });
-        }
-        setToastMessage("¡Ruta publicada con éxito!");
-      }
+                if (viajeForm.publicarRegreso) {
+                  await publicarRuta({
+                    ...objetoIda,
+                    origen: viajeForm.destino,
+                    destino: viajeForm.origen,
+                    cO: ciudadDest || "S/N",
+                    cD: ciudadOri || "S/N",
+                    fecha: viajeForm.fechaRegreso,
+                    hora: viajeForm.horaRegreso || viajeForm.hora,
+                    tipoRuta: "vuelta_de_ruta",
+                    conRetornoProgramado: false
+                  });
+                }
+                setToastMessage("¡Ruta publicada con éxito!");
+              }
 
-      // 4. GESTIÓN VISUAL (Solo si los 'await' terminaron bien)
-      setShowToast(true);
-      setTimeout(() => { setShowToast(false); }, 3000);
-      setTimeout(() => { setVista("inicio"); }, 3200);
+              setShowToast(true);
+              setTimeout(() => { setShowToast(false); }, 3000);
+              setTimeout(() => { setVista("inicio"); }, 3200);
 
-    } catch (e) {
-      console.error("ERROR CRÍTICO AL PUBLICAR:", e);
-      alert("Error técnico al guardar en Firebase. Revisa la consola.");
-    }
-  }}
-
-
-
-  onClick={handlePublish}
-  className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-colors"
->
-  <ShieldCheck size={24} /> 
-  <span className="text-lg">
-    {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
-  </span>
-</button>
+            } catch (e) {
+              console.error("ERROR CRÍTICO AL PUBLICAR:", e);
+              alert("Error técnico al guardar en Firebase. Revisa la consola.");
+            }
+          }}
+          className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-colors mt-6"
+        >
+          <ShieldCheck size={24} /> 
+          <span className="text-lg">
+            {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
+          </span>
+        </button>
               
-          <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
-        </div>
-        <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
-      </>
-    );
+        <button 
+          onClick={() => setPasoWizard(2)} 
+          className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4"
+        >
+          Atrás
+        </button>
+      </div>
+      <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
+    </>
+  );
+} // <--- Esta cierra el if del paso 3
 
   return null;
-};
+}; // <--- Esta cierra el componente final
