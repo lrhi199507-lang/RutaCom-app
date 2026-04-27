@@ -46,28 +46,34 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }).replace('.', '');
   };
 
-  const viajesFiltrados = useMemo(() => {
+const viajesFiltrados = useMemo(() => {
   const lista = Array.isArray(viajes) ? viajes : [];
   
-  // 1. Normalizamos la fecha del CALENDARIO (Buscador)
-  // Construimos el string YYYY-MM-DD local para que coincida con Venezuela
+  // 1. Normalizamos la fecha que el usuario eligió en el calendario (YYYY-MM-DD)
   const anioB = fechaSeleccionada.getFullYear();
   const mesB = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
   const diaB = String(fechaSeleccionada.getDate()).padStart(2, '0');
-  const fechaBusquedaNormalizada = `${anioB}-${mesB}-${diaB}`;
+  const fechaBusquedaStr = `${anioB}-${mesB}-${diaB}`;
 
   return lista.filter(v => {
-    // FILTRO DE TEXTO (Origen/Destino)
+    // FILTRO DE TEXTO (Origen y Destino)
     const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
     const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
     const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
 
-    // FILTRO DE FECHA (Extracción segura de los primeros 10 caracteres)
-    // Buscamos en fechaSalida (ida) o fecha (genérico/retorno)
-    const fechaFirebaseRaw = v.fechaSalida || v.fecha || ""; 
-    const fechaViajeNormalizada = fechaFirebaseRaw.toString().substring(0, 10);
-    
-    const coincideFecha = fechaViajeNormalizada === fechaBusquedaNormalizada;
+    // 🚨 LÓGICA DE FECHA ESTRICTA
+    // Extraemos solo el YYYY-MM-DD de la ida y de la vuelta
+    const fechaIda = v.fecha ? String(v.fecha).split('T')[0] : "";
+    const fechaVuelta = v.fechaRegreso ? String(v.fechaRegreso).split('T')[0] : "";
+
+    // Si el viaje es un "retorno" (vuelta_de_ruta), comparamos contra fechaRegreso
+    // Si es un viaje normal, comparamos contra fecha de ida.
+    let coincideFecha = false;
+    if (v.tipoRuta === "vuelta_de_ruta") {
+      coincideFecha = fechaVuelta === fechaBusquedaStr;
+    } else {
+      coincideFecha = fechaIda === fechaBusquedaStr;
+    }
 
     // FILTRO DE ASIENTOS
     const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
