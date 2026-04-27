@@ -48,44 +48,44 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }).replace('.', '');
   };
 
+
 const viajesFiltrados = useMemo(() => {
   const lista = Array.isArray(viajes) ? viajes : [];
   
-  // Normalización de fecha para el filtro
-  const dBusqueda = new Date(fechaSeleccionada);
-  const fechaBusquedaStr = dBusqueda.toISOString().split('T')[0];
+  // 1. FECHA DEL BUSCADOR: La forzamos a medianoche local para comparar solo día/mes/año
+  const fechaBusquedaBase = new Date(fechaSeleccionada);
+  const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
   const filtrados = lista.filter(v => {
-    // FILTROS DE TEXTO, FECHA Y ASIENTOS (Mantenemos tu lógica que ya funciona)
+    // FILTRO DE TEXTO (Origen/Destino)
     const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
     const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
     const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
 
+    // 🚨 FILTRO DE FECHA ULTRA-ESTRICTO
     const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
-    const fechaACompararRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
-    const fechaViajeNormalizada = fechaACompararRaw ? String(fechaACompararRaw).split('T')[0] : "";
-    const coincideFecha = fechaViajeNormalizada === fechaBusquedaStr;
+    const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
+    
+    // Extraemos el YYYY-MM-DD del viaje de Firebase
+    const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
+    
+    // Solo si son idénticos (ej: "2026-04-29" === "2026-04-29")
+    const coincideFecha = fechaViajeStr === fechaBusquedaStr;
 
+    // FILTRO DE ASIENTOS
     const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
     const cabenTodos = asientosDisponibles >= (pasajeros.adultos + pasajeros.niños);
 
     return coincideTexto && coincideFecha && cabenTodos;
   });
 
-  // 🚨 LÓGICA DE ORDENAMIENTO CORREGIDA
+  // 2. ORDENAMIENTO POR PRECIO (Mantenemos la lógica numérica que arreglamos)
   return [...filtrados].sort((a, b) => {
-    // Forzamos a que el precio sea un número puro
-    const precioA = parseFloat(String(a.precio).replace('$', '')) || 0;
-    const precioB = parseFloat(String(b.precio).replace('$', '')) || 0;
-
-    if (ordenPrecio === 'asc') {
-      return precioA - precioB; // Menor a Mayor
-    } else {
-      return precioB - precioA; // Mayor a Menor
-    }
+    const precioA = parseFloat(String(a.precio).replace(/[^0-9.]/g, '')) || 0;
+    const precioB = parseFloat(String(b.precio).replace(/[^0-9.]/g, '')) || 0;
+    return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
   });
 }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio]);
-  
   
   
   
