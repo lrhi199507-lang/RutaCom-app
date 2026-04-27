@@ -47,24 +47,37 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   };
 
   const viajesFiltrados = useMemo(() => {
-    const lista = Array.isArray(viajes) ? viajes : [];
-    const fechaBusquedaStr = fechaSeleccionada.toISOString().split('T')[0];
+  const lista = Array.isArray(viajes) ? viajes : [];
+  
+  // 1. Normalizamos la fecha del CALENDARIO (Buscador)
+  // Construimos el string YYYY-MM-DD local para que coincida con Venezuela
+  const anioB = fechaSeleccionada.getFullYear();
+  const mesB = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
+  const diaB = String(fechaSeleccionada.getDate()).padStart(2, '0');
+  const fechaBusquedaNormalizada = `${anioB}-${mesB}-${diaB}`;
 
-    return lista.filter(v => {
-      const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
-      const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
-      const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
-      
-      const fechaViajeStr = v.fecha ? String(v.fecha).split('T')[0] : "";
-      const coincideFecha = fechaViajeStr === fechaBusquedaStr;
+  return lista.filter(v => {
+    // FILTRO DE TEXTO (Origen/Destino)
+    const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
+    const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
+    const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
 
-      // FILTRO DE ASIENTOS: Solo mostrar viajes donde quepan TODOS los pasajeros
-      const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
-      const cabenTodos = asientosDisponibles >= totalPasajeros;
+    // FILTRO DE FECHA (Extracción segura de los primeros 10 caracteres)
+    // Buscamos en fechaSalida (ida) o fecha (genérico/retorno)
+    const fechaFirebaseRaw = v.fechaSalida || v.fecha || ""; 
+    const fechaViajeNormalizada = fechaFirebaseRaw.toString().substring(0, 10);
+    
+    const coincideFecha = fechaViajeNormalizada === fechaBusquedaNormalizada;
 
-      return coincideTexto && coincideFecha && cabenTodos;
-    });
-  }, [viajes, origen, destino, fechaSeleccionada, totalPasajeros]);
+    // FILTRO DE ASIENTOS
+    const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
+    const cabenTodos = asientosDisponibles >= totalPasajeros;
+
+    return coincideTexto && coincideFecha && cabenTodos;
+  });
+}, [viajes, origen, destino, fechaSeleccionada, totalPasajeros]);
+  
+  
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
