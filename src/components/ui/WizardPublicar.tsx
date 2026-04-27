@@ -329,11 +329,16 @@ export const WizardPublicar = ({
   }}
   className="..."
 >
-  <ShieldCheck size={20} /> 
-  {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
+  <button 
+  onClick={handlePublish}
+  className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-colors"
+>
+  <ShieldCheck size={24} /> 
+  <span className="text-lg">
+    {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
+  </span>
 </button>
-          
-          
+              
           <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
         </div>
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
