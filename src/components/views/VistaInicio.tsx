@@ -49,31 +49,26 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
 const viajesFiltrados = useMemo(() => {
   const lista = Array.isArray(viajes) ? viajes : [];
   
-  // 1. Normalizamos la fecha que el usuario eligió en el calendario (YYYY-MM-DD)
+  // 1. Normalizamos la fecha del BUSCADOR (Calendario)
   const anioB = fechaSeleccionada.getFullYear();
   const mesB = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
   const diaB = String(fechaSeleccionada.getDate()).padStart(2, '0');
   const fechaBusquedaStr = `${anioB}-${mesB}-${diaB}`;
 
   return lista.filter(v => {
-    // FILTRO DE TEXTO (Origen y Destino)
+    // FILTRO DE TEXTO
     const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
     const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
     const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
 
-    // 🚨 LÓGICA DE FECHA ESTRICTA
-    // Extraemos solo el YYYY-MM-DD de la ida y de la vuelta
-    const fechaIda = v.fecha ? String(v.fecha).split('T')[0] : "";
-    const fechaVuelta = v.fechaRegreso ? String(v.fechaRegreso).split('T')[0] : "";
-
-    // Si el viaje es un "retorno" (vuelta_de_ruta), comparamos contra fechaRegreso
-    // Si es un viaje normal, comparamos contra fecha de ida.
-    let coincideFecha = false;
-    if (v.tipoRuta === "vuelta_de_ruta") {
-      coincideFecha = fechaVuelta === fechaBusquedaStr;
-    } else {
-      coincideFecha = fechaIda === fechaBusquedaStr;
-    }
+    // 🚨 LÓGICA DE FECHA QUIRÚRGICA (Igual que en tu Card)
+    const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
+    
+    // Si es vuelta, usamos fechaRegreso. Si no, usamos fecha (ida).
+    const fechaACompararRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
+    const fechaViajeNormalizada = fechaACompararRaw ? String(fechaACompararRaw).split('T')[0] : "";
+    
+    const coincideFecha = fechaViajeNormalizada === fechaBusquedaStr;
 
     // FILTRO DE ASIENTOS
     const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
@@ -82,6 +77,7 @@ const viajesFiltrados = useMemo(() => {
     return coincideTexto && coincideFecha && cabenTodos;
   });
 }, [viajes, origen, destino, fechaSeleccionada, totalPasajeros]);
+  
   
   
 
