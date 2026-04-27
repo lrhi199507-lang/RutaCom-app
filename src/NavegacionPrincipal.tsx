@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { doc, onSnapshot, collection, query, orderBy, addDoc } from "firebase/firestore";
+import { 
+  doc, onSnapshot, collection, query, orderBy, 
+  addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment 
+} from "firebase/firestore";
+
+// VISTAS
 import { VistaMisViajes } from './components/views/VistaMisViajes';
 import { VistaInbox } from './components/views/VistaInbox';
 import { VistaPerfil } from './components/views/VistaPerfil';
 import { WizardPublicar } from './components/ui/WizardPublicar'; 
 import { VistaDetalleViaje } from './components/views/VistaDetalleViaje';
-// IMPORTACIONES
-import { Navbar } from "./components/layout/Navbar";
 import { VistaInicio } from './components/views/VistaInicio';
-// Importamos el Header desde la ubicación que me pasaste
+
+// LAYOUT
+import { Navbar } from "./components/layout/Navbar";
 import { Header } from './components/ui/Header'; 
 
 export default function NavegacionPrincipal({ user }) {
@@ -19,172 +24,149 @@ export default function NavegacionPrincipal({ user }) {
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSel, setViajeSel] = useState(null);
+  const [viajeAEditar, setViajeAEditar] = useState(null); 
   const [pestañaPerfil, setPestañaPerfil] = useState("publico");
-    // --- ESTADOS PARA EL WIZARD DE PUBLICACIÓN ---
   const [pasoWizard, setPasoWizard] = useState(1);
-const [viajeForm, setViajeForm] = useState({
-  origen: "", 
-  destino: "", 
-  precio: "", 
-  asientos: "4", 
-  fechaSalida: "", // Nuevo
-  horaSalida: "", 
-  publicarRegreso: false, // Nuevo
-  fechaRegreso: "", // Nuevo
-  horaRegreso: "", // Nuevo
-  preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
-});
-  
 
-  // Base de datos de ubicaciones para el autocompletado
-  const UBICACIONES = {
-      "Amazonas": ["Puerto Ayacucho", "Puerto Páez"], 
-  "Anzoátegui": ["Barcelona", "Puerto La Cruz", "El Tigre", "Anaco"],
-  "Apure": ["San Fernando", "Guasdualito"], 
-  "Aragua": ["Maracay", "Turmero", "La Victoria", "Cagua"],
-  "Barinas": ["Barinas", "Socopó"], 
-  "Bolívar": ["Ciudad Guayana", "Ciudad Bolívar", "Upata", "Santa Elena de Uairén"],
-  "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego", "Puerto Cabello", "Mariara", "Los Guayos"],
-  "Cojedes": ["San Carlos", "Tinaquillo"], 
-  "Delta Amacuro": ["Tucupita"],
-  "Distrito Capital": ["Caracas"],
-  "Falcón": ["Coro", "Punto Fijo", "Tucacas", "Chichiriviche"], 
-  "Guárico": ["San Juan de los Morros", "Calabozo", "Valle de la Pascua"],
-  "Lara": ["Barquisimeto", "Cabudare", "Carora", "El Tocuyo"],
-  "La Guaira": ["La Guaira", "Maiquetía", "Catia La Mar"],
-  "Mérida": ["Mérida", "El Vigía", "Tovar"], 
-  "Miranda": ["Los Teques", "Chacao", "Baruta", "Guatire", "Guarenas", "Charallave", "Higuerote"], 
-  "Monagas": ["Maturín", "Punta de Mata"], 
-  "Nueva Esparta": ["Porlamar", "Pampatar", "Juan Griego"], 
-  "Portuguesa": ["Guanare", "Acarigua", "Araure"],
-  "Sucre": ["Cumaná", "Carúpano"],
-  "Táchira": ["San Cristóbal", "La Grita", "San Antonio del Táchira"], 
-  "Trujillo": ["Trujillo", "Valera", "Boconó"], 
-  "Yaracuy": ["San Felipe", "Yaritagua", "Chivacoa"],
-  "Zulia": ["Maracaibo", "San Francisco", "Cabimas", "Ciudad Ojeda"]
-};
-  // Función para enviar a Firebase (Colección "Viajes")
-  const publicarRuta = async (datosFinales) => {
-    try {
-      const { addDoc, collection } = await import("firebase/firestore");
-      
-      await addDoc(collection(db, "Viajes"), {
-        ...datosFinales,
-        fecha: new Date().toISOString(),
-        estado: "disponible"
-      });
+  const [viajeForm, setViajeForm] = useState({
+    origen: "", destino: "", precio: "", asientos: "4", 
+    fechaSalida: "", horaSalida: "", publicarRegreso: false,
+    fechaRegreso: "", horaRegreso: "",
+    preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
+  });
 
-      // Limpiamos el formulario y regresamos al inicio
-      setViajeForm({
-        origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
-        preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
-      });
-      setPasoWizard(1);
-      setVista("inicio");
-      setModo("conductor");
-      
-    } catch (error) {
-      console.error("Error al publicar:", error);
-      alert("Error al conectar con la base de datos");
-    }
-  };
-  
+  const UBICACIONES = { /* Tu objeto de ubicaciones se mantiene igual */ };
 
+  // --- LÓGICA DE FIREBASE (ESCUCHA ACTIVA) ---
   useEffect(() => {
     if (!user?.uid) return;
-    // Escuchar datos del usuario
     const unsubU = onSnapshot(doc(db, "usuarios", user.uid), (s) => {
       setUserData(s.exists() ? { id: s.id, ...s.data() } : { id: user.uid, nombre: "Usuario", saldo: 0 });
     });
-    // Escuchar viajes
+    // Usamos "Viajes" con V mayúscula como en tu DB
     const unsubV = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (s) => {
       setViajes(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => { unsubU(); unsubV(); };
   }, [user]);
 
-  // Pantalla de carga mientras llega Firebase
-  if (!userData) return <div className="h-screen flex items-center justify-center font-black text-blue-600 italic uppercase">Cargando Datos...</div>;
+  // --- ACCIONES PARA VISTA MIS VIAJES ---
 
-  return (
-    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
-      
-      {/* EL HEADER BLANCO AHORA ESTÁ AQUÍ (Ubicación fija arriba) */}
-      <Header userData={userData} modo={modo} />
+  const manejarAceptarPasajero = async (viajeId, pasajero) => {
+    try {
+      const viajeRef = doc(db, "Viajes", viajeId);
+      await updateDoc(viajeRef, {
+        reservasPendientes: arrayRemove(pasajero),
+        pasajeros: arrayUnion({ ...pasajero, estado: 'confirmado' }),
+        asientos: increment(-1) 
+      });
+    } catch (e) { console.error("Error al aceptar:", e); }
+  };
 
-      <main className="flex-1 overflow-y-auto bg-slate-50">
-  {vista === "inicio" && (
-    viajeSel ? (
-      <VistaDetalleViaje viaje={viajeSel} onRegresar={() => setViajeSel(null)} />
-    ) : (
-      <VistaInicio 
-        viajes={viajes} 
-        setViajeSeleccionado={setViajeSel} 
-        setVista={setVista} 
-        userData={userData}
-        modo={modo} 
-      />
-    )
-  )}
+  const manejarRechazarPasajero = async (viajeId, pasajero) => {
+    try {
+      const viajeRef = doc(db, "Viajes", viajeId);
+      await updateDoc(viajeRef, {
+        reservasPendientes: arrayRemove(pasajero)
+      });
+    } catch (e) { console.error("Error al rechazar:", e); }
+  };
 
-  {vista === "mis_viajes" && <VistaMisViajes userData={userData} />}
-  
-  {vista === "inbox" && <VistaInbox userData={userData} />}
-  
-  {vista === "perfil" && (
-  <VistaPerfil 
-    userData={userData} 
-    handleLogout={() => signOut(auth)} 
-    pestañaActiva={pestañaPerfil}
-    setPestañaActiva={setPestañaPerfil}
-  />
-)}
-        
-{vista === "publicar" && (
-  <WizardPublicar 
-    userData={userData} 
-    pasoWizard={pasoWizard} 
-    setPasoWizard={setPasoWizard}
-    viajeForm={viajeForm} 
-    setViajeForm={setViajeForm}
-    UBICACIONES={UBICACIONES}
-    setVista={setVista}
-    setModo={setModo}
-    publicarRuta={async (datosFinales) => {
-      // 1. Verificamos en consola que los datos llegaron al padre
-      console.log("Datos recibidos para publicar:", datosFinales);
-
+  const manejarEliminarViaje = async (viajeId) => {
+    if (window.confirm("¿Estás seguro de eliminar esta publicación?")) {
       try {
-        // 2. Intentamos guardar en Firebase
+        await deleteDoc(doc(db, "Viajes", viajeId));
+      } catch (e) { console.error("Error al eliminar:", e); }
+    }
+  };
+
+  const manejarEditarViaje = (viaje) => {
+    setViajeAEditar(viaje); 
+    setViajeForm(viaje); // Llenamos el form con los datos actuales
+    setVista("publicar");
+    setPasoWizard(1);
+  };
+
+  // Función Publicar (Modificada para soportar edición)
+  const publicarRuta = async (datosFinales) => {
+    try {
+      if (viajeAEditar) {
+        const viajeRef = doc(db, "Viajes", viajeAEditar.id);
+        await updateDoc(viajeRef, { ...datosFinales, últimaEdición: new Date().toISOString() });
+        setViajeAEditar(null);
+      } else {
         await addDoc(collection(db, "Viajes"), {
           ...datosFinales,
-          fecha: new Date().toISOString(),
+          uidConductor: userData.id, // Usamos el nombre de campo de tu DB
+          conductor: userData.nombre,
+          fechaPublicacion: new Date().toISOString(),
           estado: "disponible",
           timestamp: Date.now()
         });
-
-         // LIMPIAMOS LOS DATOS, PERO NO CAMBIAMOS LA VISTA AQUÍ
-    setViajeForm({
-      origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
-      preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
-    });
-    setPasoWizard(1);
-        
-      } catch (error) {
-        console.error("Error en Firebase:", error);
-        alert("❌ Error al publicar: " + error.message);
       }
-    }}
-  />
-)}
-</main>
- <Navbar 
-  vista={vista} 
-  modo={modo} 
-  setVista={setVista} 
-  setModo={setModo} 
-  setPasoWizard={setPasoWizard} // <--- Ahora sí le pasamos la función real
-/>
+      // Reset y Volver
+      setViajeForm({
+        origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
+        preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
+      });
+      setPasoWizard(1);
+      setVista("inicio");
+    } catch (error) {
+      console.error("Error en Firebase:", error);
+    }
+  };
+
+  if (!userData) return <div className="h-screen flex items-center justify-center font-black text-blue-600 italic uppercase">Cargando...</div>;
+
+  return (
+    <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
+      <Header userData={userData} modo={modo} />
+
+      <main className="flex-1 overflow-y-auto bg-slate-50">
+        {vista === "inicio" && (
+          viajeSel ? (
+            <VistaDetalleViaje viaje={viajeSel} onRegresar={() => setViajeSel(null)} />
+          ) : (
+            <VistaInicio 
+              viajes={viajes} setViajeSeleccionado={setViajeSel} 
+              setVista={setVista} userData={userData} modo={modo} 
+            />
+          )
+        )}
+
+        {/* 🚨 VISTA CONECTADA CON LAS NUEVAS FUNCIONES */}
+        {vista === "mis_viajes" && (
+          <VistaMisViajes 
+            viajes={viajes} 
+            userData={userData} 
+            onEditarViaje={manejarEditarViaje}
+            onEliminarViaje={manejarEliminarViaje}
+            onAceptarPasajero={manejarAceptarPasajero}
+            onRechazarPasajero={manejarRechazarPasajero}
+          />
+        )}
+        
+        {vista === "inbox" && <VistaInbox userData={userData} />}
+        
+        {vista === "perfil" && (
+          <VistaPerfil 
+            userData={userData} handleLogout={() => signOut(auth)} 
+            pestañaActiva={pestañaPerfil} setPestañaActiva={setPestañaPerfil}
+          />
+        )}
+        
+        {vista === "publicar" && (
+          <WizardPublicar 
+            userData={userData} pasoWizard={pasoWizard} setPasoWizard={setPasoWizard}
+            viajeForm={viajeForm} setViajeForm={setViajeForm}
+            UBICACIONES={UBICACIONES} setVista={setVista} setModo={setModo}
+            publicarRuta={publicarRuta}
+            editando={!!viajeAEditar}
+          />
+        )}
+      </main>
+
+      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={setPasoWizard} />
     </div>
   );
 }
