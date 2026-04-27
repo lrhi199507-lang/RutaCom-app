@@ -327,9 +327,9 @@ export const WizardPublicar = ({
       alert("Error técnico al guardar en Firebase. Revisa la consola.");
     }
   }}
-  className="..."
->
-  <button 
+
+
+
   onClick={handlePublish}
   className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-colors"
 >
