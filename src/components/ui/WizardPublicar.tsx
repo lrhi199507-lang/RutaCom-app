@@ -263,54 +263,68 @@ export const WizardPublicar = ({
               setTimeout(() => { setShowToast(false); }, 4500);
               setTimeout(() => { setVista("inicio"); }, 4200);
 
-              const [ciudadOri] = viajeForm.origen.split(', ');
-              const [ciudadDest] = viajeForm.destino.split(', ');
+      
 
-              const datosBase = {
-                ...viajeForm,
-                idCreador: userData.id,
-                uidConductor: userData.id,
-                fotoPerfil: userData?.fotoPerfil || "",
-                conductor: userData?.nombre || "Usuario",
-                datosConductor: {
-                  nombre: userData?.nombre || "Usuario",
-                  foto: userData?.fotoPerfil || "",
-                  rating: userData?.rating || "5.0",
-                  viajesRealizados: userData?.viajesRealizados || 0,
-                  bio: userData?.bio || ""
-                },
-                cO: ciudadOri || viajeForm.origen, 
-                cD: ciudadDest || viajeForm.destino,
-                estado: "disponible"
-              };
+const [ciudadOri] = viajeForm.origen.split(', ');
+const [ciudadDest] = viajeForm.destino.split(', ');
 
-              try {
-                if (viajeAEditar) {
-                  await publicarRuta(datosBase);
-                } else {
-                  const objetoIda = {
-                    ...datosBase,
-                    tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
-                    timestamp: Date.now()
-                  };
-                  await publicarRuta(objetoIda);
+const datosBase = {
+  ...viajeForm,
+  idCreador: userData.id,
+  uidConductor: userData.id,
+  fotoPerfil: userData?.fotoPerfil || "",
+  conductor: userData?.nombre || "Usuario",
+  datosConductor: {
+    nombre: userData?.nombre || "Usuario",
+    foto: userData?.fotoPerfil || "",
+    rating: userData?.rating || "5.0",
+    viajesRealizados: userData?.viajesRealizados || 0,
+    bio: userData?.bio || ""
+  },
+  cO: ciudadOri || viajeForm.origen, 
+  cD: ciudadDest || viajeForm.destino,
+  estado: "disponible"
+};
 
-                  if (viajeForm.publicarRegreso) {
-                    await publicarRuta({
-                      ...objetoIda,
-                      origen: viajeForm.destino,
-                      destino: viajeForm.origen,
-                      cO: ciudadDest || viajeForm.destino,
-                      cD: ciudadOri || viajeForm.origen,
-                      fecha: viajeForm.fechaRegreso || null,
-                      hora: viajeForm.horaRegreso || viajeForm.hora,
-                      tipoRuta: "vuelta_de_ruta"
-                    });
-                  }
-                }
-              } catch (e) {
-                console.error("Error:", e);
-              }
+try {
+  if (viajeAEditar) {
+    // Si editamos, mantenemos la marca que ya tenía o la actualizamos
+    await publicarRuta({
+      ...datosBase,
+      conRetornoProgramado: viajeForm.publicarRegreso // Por si decide activar retorno al editar
+    });
+  } else {
+    // 1. CREAMOS LA IDA
+    const objetoIda = {
+      ...datosBase,
+      // 🚨 LA CLAVE: Aquí activamos la etiqueta azul
+      conRetornoProgramado: viajeForm.publicarRegreso ? true : false,
+      tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
+      timestamp: Date.now()
+    };
+    await publicarRuta(objetoIda);
+
+    // 2. CREAMOS LA VUELTA (si aplica)
+    if (viajeForm.publicarRegreso) {
+      const fechaFinalVuelta = viajeForm.fechaRegreso || null;
+      await publicarRuta({
+        ...objetoIda,
+        origen: viajeForm.destino,
+        destino: viajeForm.origen,
+        cO: ciudadDest || viajeForm.destino,
+        cD: ciudadOri || viajeForm.origen,
+        fecha: fechaFinalVuelta,
+        hora: viajeForm.horaRegreso || viajeForm.hora,
+        // Al de vuelta le ponemos false o lo quitamos para que no salga doble etiqueta
+        conRetornoProgramado: false, 
+        tipoRuta: "vuelta_de_ruta"
+      });
+    }
+  }
+} catch (e) {
+  console.error("Error:", e);
+}
+              
             }}
             className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
           >
