@@ -14,6 +14,26 @@ export const VistaMisViajes = ({
   onRechazarPasajero 
 }) => {
   const [subVista, setSubVista] = useState("pasajero");
+const [viajeAEditarRapido, setViajeAEditarRapido] = useState(null);
+const [showModalEdicion, setShowModalEdicion] = useState(false);
+
+  const actualizarDetallesViaje = async (idViaje, nuevosDatos) => {
+  try {
+    const viajeRef = doc(db, "rutas", idViaje); // Ajusta según tu colección
+    await updateDoc(viajeRef, {
+      precio: nuevosDatos.precio,
+      fecha: nuevosDatos.fecha,
+      hora: nuevosDatos.hora,
+      puestos: nuevosDatos.puestos,
+      // No incluimos ni origen ni destino aquí para proteger la ruta
+    });
+    setToastMessage("¡Cambios guardados!");
+    setShowModalEdicion(false);
+  } catch (error) {
+    console.error("Error actualizando:", error);
+  }
+};
+  
 
   // 1. FILTRADO CON NOMBRES EXACTOS DE TU FIREBASE
   // Como pasajero: Buscamos tu ID en los arrays de pasajeros o reservas
@@ -84,6 +104,49 @@ export const VistaMisViajes = ({
           )}
         </div>
 
+        {showModalEdicion && (
+  <div className="fixed inset-0 bg-black/50 flex items-end z-50">
+    <div className="bg-white w-full rounded-t-3xl p-6 animate-slide-up">
+      <h3 className="text-xl font-bold mb-4">Editar Detalles</h3>
+      
+      <p className="text-sm text-slate-500 mb-4">
+        Editando: {viajeAEditarRapido.origen} → {viajeAEditarRapido.destino}
+      </p>
+
+      <div className="space-y-4">
+        {/* Input de Precio */}
+        <div>
+          <label className="text-xs font-bold text-slate-400">PRECIO ($)</label>
+          <input 
+            type="number" 
+            className="w-full border-b-2 py-2 text-lg outline-none"
+            defaultValue={viajeAEditarRapido.precio}
+            onChange={(e) => setViajeAEditarRapido({...viajeAEditarRapido, precio: e.target.value})}
+          />
+        </div>
+
+        {/* Inputs de Fecha y Hora (puedes reusar tus DatePickers) */}
+        {/* ... */}
+
+        <button 
+          onClick={() => actualizarDetallesViaje(viajeAEditarRapido.id, viajeAEditarRapido)}
+          className="w-full bg-green-500 text-white font-bold py-4 rounded-2xl shadow-lg mt-4"
+        >
+          Guardar Cambios
+        </button>
+        
+        <button 
+          onClick={() => setShowModalEdicion(false)}
+          className="w-full text-slate-400 font-bold py-2 mt-2"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+        
+
         {/* SECCIÓN DE HISTORIAL */}
         {historial.length > 0 && (
           <div className="pt-4 border-t border-slate-200">
@@ -111,6 +174,7 @@ export const VistaMisViajes = ({
   );
 };
 
+
 // --- CARDS INTERNAS ---
 
 const CardChofer = ({ viaje, onEdit, onDelete, onAceptar, onRechazar }) => (
@@ -131,7 +195,7 @@ const CardChofer = ({ viaje, onEdit, onDelete, onAceptar, onRechazar }) => (
         </div>
       </div>
       <div className="flex gap-2">
-        <button onClick={() => onEdit(viaje)} className="p-3 bg-slate-50 text-slate-400 rounded-2xl active:text-blue-600 active:bg-blue-50 transition-all"><Edit3 size={16}/></button>
+        <button onClick={() => { setViajeAEditarRapido(viaje); setShowModalEdicion(true); }}
         <button onClick={() => onDelete(viaje.id)} className="p-3 bg-slate-50 text-slate-400 rounded-2xl active:text-red-600 active:bg-red-50 transition-all"><Trash2 size={16}/></button>
       </div>
     </div>
