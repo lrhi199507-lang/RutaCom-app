@@ -254,83 +254,85 @@ export const WizardPublicar = ({
           </div>
 
           <button 
-            onClick={async () => {
-              if (!userData?.id) return alert("Inicia sesión");
+  onClick={async () => {
+    // 1. VALIDACIÓN DE SESIÓN (Fundamental)
+    if (!userData?.id) return alert("Error: No se detecta tu ID de usuario. Reintenta iniciar sesión.");
 
-              setToastMessage(viajeAEditar ? "¡Ruta actualizada!" : "¡Ruta publicada con éxito!");
-              setShowToast(true);
+    // 2. PROCESAMIENTO DE CIUDADES
+    const [ciudadOri] = (viajeForm.origen || "").split(', ');
+    const [ciudadDest] = (viajeForm.destino || "").split(', ');
 
-              setTimeout(() => { setShowToast(false); }, 4500);
-              setTimeout(() => { setVista("inicio"); }, 4200);
+    // 3. OBJETO BASE (Datos comunes)
+    const datosBase = {
+      ...viajeForm,
+      idCreador: userData.id,
+      uidConductor: userData.id, // <--- Esto asegura que salga en "Mis Trayectos"
+      fotoPerfil: userData?.fotoPerfil || "",
+      conductor: userData?.nombre || "Usuario",
+      datosConductor: {
+        nombre: userData?.nombre || "Usuario",
+        foto: userData?.fotoPerfil || "",
+        rating: userData?.rating || "5.0",
+        viajesRealizados: userData?.viajesRealizados || 0,
+        bio: userData?.bio || ""
+      },
+      cO: ciudadOri || "S/N", 
+      cD: ciudadDest || "S/N",
+      estado: "disponible",
+      timestamp: Date.now()
+    };
 
-      
+    try {
+      if (viajeAEditar) {
+        // MODO EDICIÓN
+        await publicarRuta(datosBase);
+        setToastMessage("¡Ruta actualizada!");
+      } else {
+        // MODO NUEVA PUBLICACIÓN
+        // Primero la IDA
+        const objetoIda = {
+          ...datosBase,
+          conRetornoProgramado: !!viajeForm.publicarRegreso,
+          tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
+          fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
+          horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
+        };
+        
+        await publicarRuta(objetoIda);
 
-const [ciudadOri] = viajeForm.origen.split(', ');
-const [ciudadDest] = viajeForm.destino.split(', ');
+        // Luego la VUELTA (si aplica)
+        if (viajeForm.publicarRegreso) {
+          await publicarRuta({
+            ...objetoIda,
+            origen: viajeForm.destino,
+            destino: viajeForm.origen,
+            cO: ciudadDest || "S/N",
+            cD: ciudadOri || "S/N",
+            fecha: viajeForm.fechaRegreso,
+            hora: viajeForm.horaRegreso || viajeForm.hora,
+            tipoRuta: "vuelta_de_ruta",
+            conRetornoProgramado: false // Para que no se auto-referencie
+          });
+        }
+        setToastMessage("¡Ruta publicada con éxito!");
+      }
 
-const datosBase = {
-  ...viajeForm,
-  idCreador: userData.id,
-  uidConductor: userData.id,
-  fotoPerfil: userData?.fotoPerfil || "",
-  conductor: userData?.nombre || "Usuario",
-  datosConductor: {
-    nombre: userData?.nombre || "Usuario",
-    foto: userData?.fotoPerfil || "",
-    rating: userData?.rating || "5.0",
-    viajesRealizados: userData?.viajesRealizados || 0,
-    bio: userData?.bio || ""
-  },
-  cO: ciudadOri || viajeForm.origen, 
-  cD: ciudadDest || viajeForm.destino,
-  estado: "disponible"
-};
+      // 4. GESTIÓN VISUAL (Solo si los 'await' terminaron bien)
+      setShowToast(true);
+      setTimeout(() => { setShowToast(false); }, 3000);
+      setTimeout(() => { setVista("inicio"); }, 3200);
 
-try {
-  if (viajeAEditar) {
-    // Si editamos, mantenemos la marca que ya tenía o la actualizamos
-    await publicarRuta({
-      ...datosBase,
-      conRetornoProgramado: viajeForm.publicarRegreso // Por si decide activar retorno al editar
-    });
-  // 1. CREAMOS LA IDA
-  const objetoIda = {
-    ...datosBase,
-    conRetornoProgramado: viajeForm.publicarRegreso ? true : false,
-    tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
-    // 🚨 ESTO ES LO QUE NECESITA TU VISTADETALLEVIAJE:
-    fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
-    horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
-    timestamp: Date.now()
-  };
-  await publicarRuta(objetoIda);
-    // 2. CREAMOS LA VUELTA (si aplica)
-    if (viajeForm.publicarRegreso) {
-      const fechaFinalVuelta = viajeForm.fechaRegreso || null;
-      await publicarRuta({
-        ...objetoIda,
-        origen: viajeForm.destino,
-        destino: viajeForm.origen,
-        cO: ciudadDest || viajeForm.destino,
-        cD: ciudadOri || viajeForm.origen,
-        fecha: fechaFinalVuelta,
-        hora: viajeForm.horaRegreso || viajeForm.hora,
-        // Al de vuelta le ponemos false o lo quitamos para que no salga doble etiqueta
-        conRetornoProgramado: false, 
-        tipoRuta: "vuelta_de_ruta"
-      });
+    } catch (e) {
+      console.error("ERROR CRÍTICO AL PUBLICAR:", e);
+      alert("Error técnico al guardar en Firebase. Revisa la consola.");
     }
-  }
-} catch (e) {
-  console.error("Error:", e);
-}
-              
-            }}
-            className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
-          >
-            <ShieldCheck size={20} /> 
-            {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
-          </button>
+  }}
+  className="..."
+>
+  <ShieldCheck size={20} /> 
+  {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
+</button>
+          
           
           <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
         </div>
