@@ -344,7 +344,6 @@ export const WizardPublicar = ({
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </>
     );
-  }
 
   return null;
 };
