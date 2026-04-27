@@ -8,6 +8,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const [destino, setDestino] = useState("");
   const [sugerencias, setSugerencias] = useState([]);
   const [campoActivo, setCampoActivo] = useState(null);
+  const [ordenPrecio, setOrdenPrecio] = useState('asc'); // 'asc' para menor a mayor, 'desc' para mayor a menor
+  
   
   // Estados para Filtros
   const [showCalendar, setShowCalendar] = useState(false);
@@ -75,6 +77,11 @@ const viajesFiltrados = useMemo(() => {
     const cabenTodos = asientosDisponibles >= totalPasajeros;
 
     return coincideTexto && coincideFecha && cabenTodos;
+  });
+  return filtrados.sort((a, b) => {
+    const precioA = parseFloat(a.precio) || 0;
+    const precioB = parseFloat(b.precio) || 0;
+    return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
   });
 }, [viajes, origen, destino, fechaSeleccionada, totalPasajeros]);
   
@@ -163,11 +170,31 @@ const viajesFiltrados = useMemo(() => {
         {/* LISTADO DE VIAJES */}
         <div className="space-y-4 px-1">
           <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center">
-            {fechaSeleccionada.toDateString() === new Date().toDateString() ? "Colas para Hoy" : `Colas: ${formatearFechaBusqueda(fechaSeleccionada)}`}
-            <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
-              {viajesFiltrados.length}
-            </span>
-          </h2>
+  <div className="flex items-center gap-2">
+    {fechaSeleccionada.toDateString() === new Date().toDateString() ? "Colas para Hoy" : `Colas: ${formatearFechaBusqueda(fechaSeleccionada)}`}
+    <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
+      {viajesFiltrados.length}
+    </span>
+  </div>
+
+  {/* BOTÓN DE ORDENAR POR PRECIO */}
+  <button 
+    onClick={() => setOrdenPrecio(ordenPrecio === 'asc' ? 'desc' : 'asc')}
+    className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all"
+  >
+    <span className="text-[9px] font-black uppercase text-slate-500 italic">
+      {ordenPrecio === 'asc' ? 'Precio ↓' : 'Precio ↑'}
+    </span>
+    {/* Usamos flechas de Lucide para que se vea pro */}
+    <div className="text-blue-600">
+      {ordenPrecio === 'asc' ? (
+        <svg size={12} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="M12 9V20"/></svg>
+      ) : (
+        <svg size={12} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
+      )}
+    </div>
+  </button>
+</h2>
           
           {viajesFiltrados.length > 0 ? (
             viajesFiltrados.map((viaje) => (
