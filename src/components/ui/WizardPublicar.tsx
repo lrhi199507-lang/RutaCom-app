@@ -214,94 +214,77 @@ export const WizardPublicar = ({
       </div>
 
       <button 
-        onClick={async () => {
-          if (!userData?.id) return alert("Inicia sesión");
+  onClick={async () => {
+    if (!userData?.id) return alert("Inicia sesión");
 
-          setToastMessage("¡Ruta publicada con éxito!");
+    // 1. GESTIÓN VISUAL (Toast y Redirección)
+    setToastMessage(viajeAEditar ? "¡Ruta actualizada!" : "¡Ruta publicada con éxito!");
     setShowToast(true);
 
-        // 1. DISPARAMOS LOS CRONÓMETROS PRIMERO (Corren en segundo plano)
-setToastMessage("¡Ruta publicada con éxito!");
-setShowToast(true);
+    setTimeout(() => { setShowToast(false); }, 4500);
+    setTimeout(() => { setVista("inicio"); }, 4200);
 
-// Este apaga el mensaje a los 3 segundos
-setTimeout(() => {
-  setShowToast(false);
-}, 4500);
+    // 2. PROCESAMIENTO DE DATOS
+    const [ciudadOri] = viajeForm.origen.split(', ');
+    const [ciudadDest] = viajeForm.destino.split(', ');
 
-// Este cambia la pantalla a los 3.2 segundos (Cuentan desde este mismo instante)
-setTimeout(() => {
-  setVista("inicio");
-}, 4200);
+    // Objeto base que sirve para ambos casos
+    const datosBase = {
+      ...viajeForm,
+      idCreador: userData.id,
+      uidConductor: userData.id,
+      fotoPerfil: userData?.fotoPerfil || "",
+      conductor: userData?.nombre || "Usuario",
+      datosConductor: {
+        nombre: userData?.nombre || "Usuario",
+        foto: userData?.fotoPerfil || "",
+        rating: userData?.rating || "5.0",
+        viajesRealizados: userData?.viajesRealizados || 0,
+        bio: userData?.bio || ""
+      },
+      cO: ciudadOri || viajeForm.origen, 
+      cD: ciudadDest || viajeForm.destino,
+      estado: "disponible"
+    };
+
+    try {
+      // 3. EJECUCIÓN QUIRÚRGICA
+      if (viajeAEditar) {
+        // MODO EDICIÓN: Solo actualizamos el viaje actual
+        await publicarRuta(datosBase);
+      } else {
+        // MODO NUEVA PUBLICACIÓN: Creamos la Ida
+        const objetoIda = {
+          ...datosBase,
+          tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
+        };
+        await publicarRuta(objetoIda);
+
+        // Si pidió regreso, creamos la Vuelta
+        if (viajeForm.publicarRegreso) {
+          const fechaFinalVuelta = viajeForm.fechaRegreso || null;
+          await publicarRuta({
+            ...objetoIda,
+            origen: viajeForm.destino,
+            destino: viajeForm.origen,
+            cO: ciudadDest || viajeForm.destino,
+            cD: ciudadOri || viajeForm.origen,
+            fecha: fechaFinalVuelta,
+            hora: viajeForm.horaRegreso || viajeForm.hora,
+            tipoRuta: "vuelta_de_ruta"
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error en la operación:", e);
+    }
+  }}
+  className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
+>
+  <ShieldCheck size={20} /> 
+  {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
+</button>
           
-          const ejecutarPublicacion = async (obj) => { 
-            try { await publicarRuta(obj); } catch(e) { console.error(e); } 
-          };
-
-          const [ciudadOri] = viajeForm.origen.split(', ');
-          const [ciudadDest] = viajeForm.destino.split(', ');
-
-
-// 1. OBJETO BASE PARA LA IDA (Se mantiene igual)
-const baseIda = {
-  ...viajeForm,
-  idCreador: userData.id,
-  uidConductor: userData.id,
-  fotoPerfil: userData?.fotoPerfil || "",
-  conductor: userData?.nombre || "Usuario", 
-  bio: userData?.bio || "", 
-  datosConductor: {
-    nombre: userData?.nombre || "Usuario",
-    foto: userData?.fotoPerfil || "",
-    rating: userData?.rating || "5.0",
-    viajesRealizados: userData?.viajesRealizados || 0,
-    bio: userData?.bio || ""
-  },
-  estado: "disponible",
-  cO: ciudadOri || viajeForm.origen, 
-  cD: ciudadDest || viajeForm.destino,
-  fecha: viajeForm.fecha, 
-  hora: viajeForm.hora,   
-  tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida"
-};
-
-// Guardar Ida
-await ejecutarPublicacion(baseIda);
-
-// 2. OBJETO PARA LA VUELTA (Corregido con blindaje de fecha)
-if (viajeForm.publicarRegreso) {
-  // LOG DE SEGURIDAD (Míralo en tu consola de VS Code/Terminal)
-  // CRITICAL DEBUG: Si esto sale "undefined", tu selector de fecha en el paso 3 no está guardando el estado.
-  console.log("DEBUG - Comprobando Estado: viajeForm.fechaRegreso es:", viajeForm.fechaRegreso);
-
-  // ASIGNACIÓN ESPECÍFICA DE VUELTA
-  // Si la fecha de vuelta falta, forzamos un valor null para que la Card nos avise visualmente ("Fecha n/d")
-  // en lugar de usar la fecha de la ida por accidente.
-  const fechaFinalVuelta = viajeForm.fechaRegreso ? viajeForm.fechaRegreso : null;
-
-  await ejecutarPublicacion({
-    ...baseIda, // Copiamos los campos comunes (conductor, puestos, precio, etc.)
-    
-    // INVERSIÓN DE RUTA
-    origen: viajeForm.destino,
-    destino: viajeForm.origen,
-    cO: ciudadDest || viajeForm.destino, 
-    cD: ciudadOri || viajeForm.origen,    
-    
-    // DATOS ESPECÍFICOS DE VUELTA
-    fecha: fechaFinalVuelta, 
-    hora: viajeForm.horaRegreso || viajeForm.hora,
-    
-    // DEFINIMOS TIPO COMO VUELTA INDEPENDIENTE
-    tipoRuta: "vuelta_de_ruta" 
-  });
-}
-              
-            }}
-            className="w-full py-5 bg-green-500 text-white rounded-[25px] font-black uppercase italic text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95"
-          >
-            <ShieldCheck size={20} /> ¡Publicar Ahora!
-          </button>
           
           <button onClick={() => setPasoWizard(2)} className="w-full text-[9px] font-black uppercase text-slate-400 italic">Atrás</button>
         </div>
