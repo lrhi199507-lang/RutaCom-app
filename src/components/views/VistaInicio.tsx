@@ -51,39 +51,41 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
 const viajesFiltrados = useMemo(() => {
   const lista = Array.isArray(viajes) ? viajes : [];
   
-  // 1. Normalizamos la fecha del BUSCADOR (Calendario)
-  const anioB = fechaSeleccionada.getFullYear();
-  const mesB = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
-  const diaB = String(fechaSeleccionada.getDate()).padStart(2, '0');
-  const fechaBusquedaStr = `${anioB}-${mesB}-${diaB}`;
+  // Normalización de fecha para el filtro
+  const dBusqueda = new Date(fechaSeleccionada);
+  const fechaBusquedaStr = dBusqueda.toISOString().split('T')[0];
 
-  return lista.filter(v => {
-    // FILTRO DE TEXTO
+  const filtrados = lista.filter(v => {
+    // FILTROS DE TEXTO, FECHA Y ASIENTOS (Mantenemos tu lógica que ya funciona)
     const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
     const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
     const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
 
-    // 🚨 LÓGICA DE FECHA QUIRÚRGICA (Igual que en tu Card)
     const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
-    
-    // Si es vuelta, usamos fechaRegreso. Si no, usamos fecha (ida).
     const fechaACompararRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
     const fechaViajeNormalizada = fechaACompararRaw ? String(fechaACompararRaw).split('T')[0] : "";
-    
     const coincideFecha = fechaViajeNormalizada === fechaBusquedaStr;
 
-    // FILTRO DE ASIENTOS
     const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
-    const cabenTodos = asientosDisponibles >= totalPasajeros;
+    const cabenTodos = asientosDisponibles >= (pasajeros.adultos + pasajeros.niños);
 
     return coincideTexto && coincideFecha && cabenTodos;
   });
-  return filtrados.sort((a, b) => {
-    const precioA = parseFloat(a.precio) || 0;
-    const precioB = parseFloat(b.precio) || 0;
-    return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
+
+  // 🚨 LÓGICA DE ORDENAMIENTO CORREGIDA
+  return [...filtrados].sort((a, b) => {
+    // Forzamos a que el precio sea un número puro
+    const precioA = parseFloat(String(a.precio).replace('$', '')) || 0;
+    const precioB = parseFloat(String(b.precio).replace('$', '')) || 0;
+
+    if (ordenPrecio === 'asc') {
+      return precioA - precioB; // Menor a Mayor
+    } else {
+      return precioB - precioA; // Mayor a Menor
+    }
   });
-}, [viajes, origen, destino, fechaSeleccionada, totalPasajeros]);
+}, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio]);
+  
   
   
   
