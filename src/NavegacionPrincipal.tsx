@@ -96,13 +96,7 @@ export default function NavegacionPrincipal({ user }) {
     } catch (e) { console.error("Error al rechazar:", e); }
   };
 
-  const manejarEliminarViaje = async (viajeId) => {
-    if (window.confirm("¿Estás seguro de eliminar esta publicación?")) {
-      try {
-        await deleteDoc(doc(db, "Viajes", viajeId));
-      } catch (e) { console.error("Error al eliminar:", e); }
-    }
-  };
+  
 
       const manejarActualizarViajeDirecto = async (datosEditados) => {
     try {
@@ -142,6 +136,13 @@ export default function NavegacionPrincipal({ user }) {
     setPasoWizard(1);
   };
 
+    const manejarEliminarViaje = async (viajeId) => {
+    try {
+      await deleteDoc(doc(db, "Viajes", viajeId));
+    } catch (e) { 
+      console.error("Error al eliminar:", e); 
+    }
+  };
   // Función Publicar (Modificada para soportar edición)
   const publicarRuta = async (datosFinales) => {
     try {
