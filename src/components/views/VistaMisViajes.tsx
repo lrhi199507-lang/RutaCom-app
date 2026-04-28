@@ -25,15 +25,35 @@ const ToastNotification = ({ message, show, onClose }) => {
   );
 };
 
-// COMPONENTE: Modal para Editar Viaje (Mantiene el estilo oscuro que pediste)
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
-  const [editedViaje, setEditedViaje] = useState(viaje);
+  // Extraemos la fecha/hora real según tu lógica cruzada en BD
+  const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
+  const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
+
+  const [formData, setFormData] = useState({
+    fechaForm: fechaActual || '',
+    horaForm: horaActual || '',
+    precio: viaje.precio || '',
+    asientos: viaje.asientos || viaje.puestos || ''
+  });
 
   if (!isOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditedViaje(prev => ({ ...prev, [name]: name === 'precio' || name === 'asientos' || name === 'puestos' ? parseInt(value) : value }));
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: name === 'precio' || name === 'asientos' ? parseInt(value) || '' : value 
+    }));
+  };
+
+  const handleGuardar = () => {
+    // Solo enviamos los datos nuevos combinados con el ID y tipo para que la navegación sepa qué hacer
+    onSave({
+      id: viaje.id,
+      tipoRuta: viaje.tipoRuta,
+      ...formData
+    });
   };
 
   return (
@@ -49,26 +69,26 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Fecha</label>
-              <input type="date" name="fechaSalida" value={editedViaje.fechaSalida || editedViaje.fecha || ''} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
+              <input type="date" name="fechaForm" value={formData.fechaForm} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Hora</label>
-              <input type="time" name="horaSalida" value={editedViaje.horaSalida || editedViaje.hora || ''} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
+              <input type="time" name="horaForm" value={formData.horaForm} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Costo ($)</label>
-              <input type="number" name="precio" value={editedViaje.precio || ''} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
+              <input type="number" name="precio" value={formData.precio} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Puestos Libres</label>
-              <input type="number" name="asientos" value={editedViaje.asientos || editedViaje.puestos || ''} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
+              <input type="number" name="asientos" value={formData.asientos} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
             </div>
           </div>
           
-          <button onClick={() => onSave(editedViaje)} className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-[3px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all mt-4">
+          <button onClick={handleGuardar} className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-[3px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all mt-4">
             Guardar Cambios
           </button>
         </div>
@@ -76,6 +96,7 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
     </div>
   );
 };
+
 
 // COMPONENTE: Tarjeta de Viaje - Chofer
 const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
