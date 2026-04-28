@@ -209,12 +209,15 @@ export const VistaMisViajes = ({
     <div className="min-h-screen bg-white flex flex-col font-sans">
       <ToastNotification show={toastData.show} message={toastData.message} onClose={() => setToastData({ show: false, message: '' })} />
       
-      <ModalEditarViaje 
-        viaje={editingViaje} 
-        isOpen={!!editingViaje} 
-        onClose={() => setEditingViaje(null)} 
-        onSave={handleEditSave}
-      />
+      {/* SOLUCIÓN AL CRASHEO: Renderizado condicional estricto */}
+      {editingViaje && (
+        <ModalEditarViaje 
+          viaje={editingViaje} 
+          isOpen={true} 
+          onClose={() => setEditingViaje(null)} 
+          onSave={handleEditSave}
+        />
+      )}
 
       {/* Header Fijo */}
       <div className="p-4 pt-8 bg-white">
@@ -226,7 +229,7 @@ export const VistaMisViajes = ({
 
       <div className="px-5 space-y-6 flex-1 overflow-y-auto pb-32 bg-white">
         
-        {/* 1. SELECTOR ARRIBA */}
+        {/* SELECTOR ARRIBA */}
         <div className="bg-slate-100 rounded-full p-1.5 flex relative">
           <div className={`absolute top-1.5 bottom-1.5 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-1.5 w-[calc(50%-6px)]' : 'left-[calc(50%+3px)] w-[calc(50%-6px)]'}`} />
           <button onClick={() => setActiveTab('pasajero')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors duration-300 ${activeTab === 'pasajero' ? 'text-white' : 'text-slate-500'}`}>
@@ -237,20 +240,14 @@ export const VistaMisViajes = ({
           </button>
         </div>
 
-        {/* 2. TÍTULO ABAJO (Actualizado para coincidir con Perfil) */}
-        <div className="text-left pt-6 pb-2 px-1">
-          {/* Encabezado gris igual a "MI CUENTA" */}
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2">MIS RUTAS</p>
-          {/* Título grande igual a "Mi Perfil" (Sin itálica, normal case) */}
-          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tighter">Mis Viajes</h2>
-        </div>
-
-        {/* 3. CONTENIDO PRINCIPAL */}
-        <div className="space-y-10 pt-2">
+        {/* TÍTULOS PRINCIPALES ELIMINADOS - Pasamos directo al contenido */}
+        
+        {/* CONTENIDO PRINCIPAL */}
+        <div className="space-y-10 pt-4">
           {activeTab === 'pasajero' ? (
             <div className="space-y-10">
                 <div className="space-y-6">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Viajes Activos</p>
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Viajes Activos</p>
                     
                     {viajesPasajeroActivos.length === 0 ? (
                         <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
@@ -265,7 +262,7 @@ export const VistaMisViajes = ({
 
                 {viajesPasajeroHistorial.length > 0 && (
                   <div className="space-y-6">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Historial de Rutas</p>
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Rutas</p>
                       {viajesPasajeroHistorial.map(viaje => (
                           <ViajeCardPasajero key={viaje.id} viaje={viaje} tipo="finalizado" />
                       ))}
@@ -274,7 +271,7 @@ export const VistaMisViajes = ({
             </div>
           ) : (
             <div className="space-y-6">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Mis Publicaciones</p>
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Mis Publicaciones</p>
                 
                 {viajesChofer.length === 0 ? (
                     <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
@@ -297,4 +294,3 @@ export const VistaMisViajes = ({
     </div>
   );
 };
-                          
