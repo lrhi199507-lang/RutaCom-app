@@ -191,7 +191,7 @@ export default function NavegacionPrincipal({ user }) {
             )}
 
             userData={userData} 
-            onActualizarViajeFBD={manejarEditarViaje}
+            onActualizarViajeFBD={manejarActualizarViajeDirecto}
             onEliminarViajeFBD={manejarEliminarViaje}
             onRegresar={() => setVista("inicio")}
           />
