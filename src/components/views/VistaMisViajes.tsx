@@ -4,6 +4,29 @@ import {
   X, CheckCircle, Repeat, ArrowLeftRight 
 } from 'lucide-react';
 
+// --- FUNCIONES FORMATEADORAS VISUALES ---
+const formatearHora12h = (hora24) => {
+  if (!hora24) return "";
+  const [horas, minutos] = hora24.split(':');
+  const h = parseInt(horas, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutos} ${ampm}`;
+};
+
+const formatearFechaCorta = (fechaString) => {
+  if (!fechaString) return "";
+  const partes = fechaString.split('-');
+  if (partes.length !== 3) return fechaString;
+  const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+  return fecha.toLocaleDateString('es-ES', { 
+    weekday: 'short', 
+    day: 'numeric', 
+    month: 'short' 
+  }).replace('.', ''); // Ejemplo: "mié, 29 abr"
+};
+// ----------------------------------------
+
 // COMPONENTE: Notificación Toast
 const ToastNotification = ({ message, show, onClose }) => {
   React.useEffect(() => {
@@ -25,8 +48,8 @@ const ToastNotification = ({ message, show, onClose }) => {
   );
 };
 
+// COMPONENTE: Modal para Editar Viaje
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
-  // Extraemos la fecha/hora real según tu lógica cruzada en BD
   const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
   const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
 
@@ -48,7 +71,6 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   };
 
   const handleGuardar = () => {
-    // Solo enviamos los datos nuevos combinados con el ID y tipo para que la navegación sepa qué hacer
     onSave({
       id: viaje.id,
       tipoRuta: viaje.tipoRuta,
@@ -97,7 +119,6 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   );
 };
 
-
 // COMPONENTE: Tarjeta de Viaje - Chofer
 const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
   const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
@@ -143,11 +164,13 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 grid grid-cols-2 gap-4">
         <div className="flex items-center gap-2.5">
           <Calendar size={16} className="text-blue-500"/>
-          <p className="text-xs font-bold text-slate-700">{viaje.fechaSalida || viaje.fecha}</p>
+          {/* Aquí aplicamos el formateo de fecha */}
+          <p className="text-xs font-bold text-slate-700 capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p>
         </div>
         <div className="flex items-center gap-2.5">
           <Clock size={16} className="text-blue-500"/>
-          <p className="text-xs font-bold text-slate-700">{viaje.horaSalida || viaje.hora}</p>
+          {/* Aquí aplicamos el formateo de hora */}
+          <p className="text-xs font-bold text-slate-700">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p>
         </div>
         <div className="flex items-center gap-2.5 col-span-2">
           <Users size={16} className="text-blue-500"/>
@@ -190,11 +213,13 @@ const ViajeCardPasajero = ({ viaje, tipo }) => (
     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-between gap-4">
       <div className="flex items-center gap-2">
         <Calendar size={16} className="text-blue-500"/>
-        <p className="text-xs font-bold text-slate-700">{viaje.fechaSalida || viaje.fecha}</p>
+        {/* Aquí aplicamos el formateo de fecha */}
+        <p className="text-xs font-bold text-slate-700 capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p>
       </div>
       <div className="flex items-center gap-2">
         <Clock size={16} className="text-blue-500"/>
-        <p className="text-xs font-bold text-slate-700">{viaje.horaSalida || viaje.hora}</p>
+        {/* Aquí aplicamos el formateo de hora */}
+        <p className="text-xs font-bold text-slate-700">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p>
       </div>
     </div>
   </div>
@@ -213,7 +238,6 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-  // Guarda en la BD y muestra la notificación
   const handleEditSave = async (updatedViaje) => {
     try {
       if(onActualizarViajeFBD) {
@@ -230,7 +254,6 @@ export const VistaMisViajes = ({
     <div className="min-h-screen bg-white flex flex-col font-sans">
       <ToastNotification show={toastData.show} message={toastData.message} onClose={() => setToastData({ show: false, message: '' })} />
       
-      {/* SOLUCIÓN AL CRASHEO: Renderizado condicional estricto */}
       {editingViaje && (
         <ModalEditarViaje 
           viaje={editingViaje} 
@@ -240,7 +263,6 @@ export const VistaMisViajes = ({
         />
       )}
 
-      {/* Header Fijo */}
       <div className="p-4 pt-8 bg-white">
         <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
           <ArrowLeft size={16} strokeWidth={3} />
@@ -250,7 +272,6 @@ export const VistaMisViajes = ({
 
       <div className="px-5 space-y-6 flex-1 overflow-y-auto pb-32 bg-white">
         
-        {/* SELECTOR ARRIBA */}
         <div className="bg-slate-100 rounded-full p-1.5 flex relative">
           <div className={`absolute top-1.5 bottom-1.5 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-1.5 w-[calc(50%-6px)]' : 'left-[calc(50%+3px)] w-[calc(50%-6px)]'}`} />
           <button onClick={() => setActiveTab('pasajero')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors duration-300 ${activeTab === 'pasajero' ? 'text-white' : 'text-slate-500'}`}>
@@ -261,9 +282,6 @@ export const VistaMisViajes = ({
           </button>
         </div>
 
-        {/* TÍTULOS PRINCIPALES ELIMINADOS - Pasamos directo al contenido */}
-        
-        {/* CONTENIDO PRINCIPAL */}
         <div className="space-y-10 pt-4">
           {activeTab === 'pasajero' ? (
             <div className="space-y-10">
