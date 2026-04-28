@@ -40,7 +40,8 @@ const ToastNotification = ({ message, show, onClose }) => {
 
   return (
     <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] transition-transform duration-300 transform ${show ? 'translate-y-0' : '-translate-y-full'}`}>
-      <div className="bg-slate-900 text-white p-4 rounded-full shadow-2xl flex items-center gap-3 border border-slate-800">
+      {/* Se agregó whitespace-nowrap y se ajustó el padding (px-5 py-3) para que sea lineal y elegante */}
+      <div className="bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-slate-800 whitespace-nowrap">
         <CheckCircle className="text-blue-500" size={20} />
         <span className="text-sm font-bold uppercase tracking-wider">{message}</span>
       </div>
@@ -238,17 +239,19 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-  const handleEditSave = async (updatedViaje) => {
+    const handleEditSave = async (updatedViaje) => {
     try {
       if(onActualizarViajeFBD) {
         await onActualizarViajeFBD(updatedViaje);
       }
       setEditingViaje(null);
-      setToastData({ show: true, message: 'Cambios guardados con éxito' });
+      // Texto conciso como pediste
+      setToastData({ show: true, message: 'Guardado con éxito' }); 
     } catch (error) {
       setToastData({ show: true, message: 'Error al guardar' });
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
