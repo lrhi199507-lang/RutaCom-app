@@ -25,7 +25,7 @@ const ToastNotification = ({ message, show, onClose }) => {
   );
 };
 
-// COMPONENTE: Modal para Editar Viaje (ESTILO OSCURO)
+// COMPONENTE: Modal para Editar Viaje (Mantiene el estilo oscuro que pediste)
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   const [editedViaje, setEditedViaje] = useState(viaje);
 
@@ -33,10 +33,7 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditedViaje(prev => ({ 
-      ...prev, 
-      [name]: name === 'precio' || name === 'asientos' || name === 'puestos' ? parseInt(value) : value 
-    }));
+    setEditedViaje(prev => ({ ...prev, [name]: name === 'precio' || name === 'asientos' || name === 'puestos' ? parseInt(value) : value }));
   };
 
   return (
@@ -80,14 +77,14 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   );
 };
 
-// COMPONENTE: Tarjeta de Viaje - Chofer (ESTILO BLANCO/CLARO)
+// COMPONENTE: Tarjeta de Viaje - Chofer
 const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
   const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
 
   return (
-    <div className={`bg-white p-6 rounded-[30px] shadow-sm border ${esRetorno ? 'border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
+    <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
       {esRetorno && (
         <div className="absolute top-6 left-6 text-emerald-600 flex items-center gap-1.5">
             <Repeat size={14} className='-rotate-90'/>
@@ -140,7 +137,7 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
   );
 };
 
-// COMPONENTE: Tarjeta de Viaje - Pasajero (ESTILO BLANCO/CLARO)
+// COMPONENTE: Tarjeta de Viaje - Pasajero
 const ViajeCardPasajero = ({ viaje, tipo }) => (
   <div className="bg-white p-6 rounded-[30px] shadow-sm border border-slate-100 space-y-4 relative">
     <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
@@ -191,7 +188,7 @@ export const VistaMisViajes = ({
   onActualizarViajeFBD,
   onEliminarViajeFBD
 }) => {
-  const [activeTab, setActiveTab] = useState('pasajero'); 
+  const [activeTab, setActiveTab] = useState('chofer'); 
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
@@ -209,7 +206,7 @@ export const VistaMisViajes = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-white flex flex-col font-sans">
       <ToastNotification show={toastData.show} message={toastData.message} onClose={() => setToastData({ show: false, message: '' })} />
       
       <ModalEditarViaje 
@@ -220,30 +217,32 @@ export const VistaMisViajes = ({
       />
 
       {/* Header Fijo */}
-      <div className="p-4 pt-8">
+      <div className="p-4 pt-8 bg-white">
         <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
           <ArrowLeft size={16} strokeWidth={3} />
           <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
         </button>
       </div>
 
-      <div className="px-5 space-y-6 flex-1 overflow-y-auto pb-32">
+      <div className="px-5 space-y-6 flex-1 overflow-y-auto pb-32 bg-white">
         
         {/* 1. SELECTOR ARRIBA */}
-        <div className="bg-slate-200/50 rounded-full p-1 flex relative">
-          <div className={`absolute top-1 bottom-1 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-1 w-[calc(50%-4px)]' : 'left-[calc(50%+2px)] w-[calc(50%-4px)]'}`} />
-          <button onClick={() => setActiveTab('pasajero')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors ${activeTab === 'pasajero' ? 'text-white' : 'text-slate-500'}`}>
+        <div className="bg-slate-100 rounded-full p-1.5 flex relative">
+          <div className={`absolute top-1.5 bottom-1.5 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-1.5 w-[calc(50%-6px)]' : 'left-[calc(50%+3px)] w-[calc(50%-6px)]'}`} />
+          <button onClick={() => setActiveTab('pasajero')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors duration-300 ${activeTab === 'pasajero' ? 'text-white' : 'text-slate-500'}`}>
             Como Pasajero
           </button>
-          <button onClick={() => setActiveTab('chofer')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors ${activeTab === 'chofer' ? 'text-white' : 'text-slate-500'}`}>
+          <button onClick={() => setActiveTab('chofer')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors duration-300 ${activeTab === 'chofer' ? 'text-white' : 'text-slate-500'}`}>
             Como Chofer
           </button>
         </div>
 
-        {/* 2. TÍTULO ABAJO */}
-        <div className="text-center pt-4 pb-2">
-          <h2 className="text-4xl font-black italic text-slate-800 uppercase tracking-wider">Mis Trayectos</h2>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px] mt-2">Gestiona tus rutas</p>
+        {/* 2. TÍTULO ABAJO (Actualizado para coincidir con Perfil) */}
+        <div className="text-left pt-6 pb-2 px-1">
+          {/* Encabezado gris igual a "MI CUENTA" */}
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-2">MIS RUTAS</p>
+          {/* Título grande igual a "Mi Perfil" (Sin itálica, normal case) */}
+          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tighter">Mis Viajes</h2>
         </div>
 
         {/* 3. CONTENIDO PRINCIPAL */}
@@ -253,10 +252,9 @@ export const VistaMisViajes = ({
                 <div className="space-y-6">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Viajes Activos</p>
                     
-                    {/* Mensaje de vacío para Pasajero */}
                     {viajesPasajeroActivos.length === 0 ? (
-                        <div className='border-2 border-dashed border-slate-200 rounded-[30px] p-10 text-center bg-white/50'>
-                            <p className='text-xs font-bold text-slate-400 uppercase tracking-widest'>Aún no tienes colas reservadas</p>
+                        <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
+                            <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>Aún no tienes colas reservadas</p>
                         </div>
                     ) : (
                       viajesPasajeroActivos.map(viaje => (
@@ -278,10 +276,9 @@ export const VistaMisViajes = ({
             <div className="space-y-6">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Mis Publicaciones</p>
                 
-                {/* Mensaje de vacío para Chofer */}
                 {viajesChofer.length === 0 ? (
-                    <div className='border-2 border-dashed border-slate-200 rounded-[30px] p-10 text-center bg-white/50'>
-                        <p className='text-xs font-bold text-slate-400 uppercase tracking-widest'>Aún no has publicado viajes</p>
+                    <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
+                        <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>Aún no has publicado viajes.<br/>Tus publicaciones reales aparecerán aquí.</p>
                     </div>
                 ) : (
                   viajesChofer.map(viaje => (
@@ -300,4 +297,4 @@ export const VistaMisViajes = ({
     </div>
   );
 };
-                  
+                          
