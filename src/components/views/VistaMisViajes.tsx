@@ -48,13 +48,7 @@ const ToastNotification = ({ message, show, onClose }) => {
     </div>
   );
 };
-
-// COMPONENTE: Modal para Editar Viaje
-const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
-  const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
-  const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
-
-  // COMPONENTE: Modal para Confirmar Eliminación (Estilo Oscuro)
+// COMPONENTE: Modal para Confirmar Eliminación (Estilo Oscuro)
 const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
@@ -76,7 +70,12 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
     </div>
   );
 };
-  
+
+// COMPONENTE: Modal para Editar Viaje
+const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
+  const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
+  const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
+
   const [formData, setFormData] = useState({
     fechaForm: fechaActual || '',
     horaForm: horaActual || '',
@@ -142,6 +141,8 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
     </div>
   );
 };
+
+
 
 // COMPONENTE: Tarjeta de Viaje - Chofer
 const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
