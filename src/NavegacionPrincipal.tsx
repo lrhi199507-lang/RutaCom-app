@@ -158,27 +158,28 @@ export default function NavegacionPrincipal({ user }) {
           )
         )}
 
-        {/* ✅ VISTA ACTUALIZADA CON FILTROS REALES */}
-{vista === "mis_viajes" && (
-  <VistaMisViajes 
-    // Filtramos los viajes donde el usuario es el chofer (usando uidConductor)
-    viajesChofer={viajes.filter(v => v.uidConductor === userData?.uid)} 
-    
-    // Filtramos donde el usuario es pasajero (asumiendo que están en pasajerosConfirmados)
-    viajesPasajeroActivos={viajes.filter(v => 
-      v.pasajerosConfirmados?.some(p => p.uid === userData?.uid) && v.estado !== 'finalizado'
-    )} 
-    
-    viajesPasajeroHistorial={viajes.filter(v => 
-      v.pasajerosConfirmados?.some(p => p.uid === userData?.uid) && v.estado === 'finalizado'
-    )}
+                {/* ✅ VISTA CONECTADA CON FILTROS CORREGIDOS */}
+        {vista === "mis_viajes" && (
+          <VistaMisViajes 
+            // 1. FILTRO CHOFER: Usamos userData.id (no userData.uid)
+            viajesChofer={viajes.filter(v => v.uidConductor === userData?.id)} 
+            
+            // 2. FILTRO PASAJERO: Usamos el array "pasajeros" según tu lógica de BD
+            viajesPasajeroActivos={viajes.filter(v => 
+              v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado !== 'finalizado'
+            )} 
+            
+            viajesPasajeroHistorial={viajes.filter(v => 
+              v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado === 'finalizado'
+            )}
 
-    userData={userData} 
-    onActualizarViajeFBD={manejarEditarViaje}
-    onEliminarViajeFBD={manejarEliminarViaje}
-    onRegresar={() => setVista("inicio")}
-  />
-)}
+            userData={userData} 
+            onActualizarViajeFBD={manejarEditarViaje}
+            onEliminarViajeFBD={manejarEliminarViaje}
+            onRegresar={() => setVista("inicio")}
+          />
+        )}
+        
         
         
         {vista === "inbox" && <VistaInbox userData={userData} />}
