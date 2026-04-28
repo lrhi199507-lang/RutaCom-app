@@ -54,6 +54,29 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
   const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
 
+  // COMPONENTE: Modal para Confirmar Eliminación (Estilo Oscuro)
+const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center">
+      <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
+        <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">¿Eliminar Viaje?</h3>
+        <p className="text-xs font-bold text-slate-400 mb-8">Esta acción no se puede deshacer. Si tienes pasajeros, perderán su reserva.</p>
+        
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">
+            Cancelar
+          </button>
+          <button onClick={onConfirm} className="flex-1 bg-rose-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-rose-900/50 active:scale-95 transition-all">
+            Sí, Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+  
   const [formData, setFormData] = useState({
     fechaForm: fechaActual || '',
     horaForm: horaActual || '',
@@ -237,21 +260,28 @@ export const VistaMisViajes = ({
 }) => {
   const [activeTab, setActiveTab] = useState('chofer'); 
   const [editingViaje, setEditingViaje] = useState(null);
+  const [viajeAEliminar, setViajeAEliminar] = useState(null); // Nuevo estado
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-    const handleEditSave = async (updatedViaje) => {
+  const handleEditSave = async (updatedViaje) => {
     try {
       if(onActualizarViajeFBD) {
         await onActualizarViajeFBD(updatedViaje);
       }
       setEditingViaje(null);
-      // Texto conciso como pediste
-      setToastData({ show: true, message: 'Guardado con éxito' }); 
+      setToastData({ show: true, message: 'Guardado con éxito' });
     } catch (error) {
       setToastData({ show: true, message: 'Error al guardar' });
     }
   };
-  
+
+  const handleConfirmarEliminar = async () => {
+    if(onEliminarViajeFBD && viajeAEliminar) {
+      await onEliminarViajeFBD(viajeAEliminar);
+      setViajeAEliminar(null);
+      setToastData({ show: true, message: 'Viaje eliminado' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -266,12 +296,21 @@ export const VistaMisViajes = ({
         />
       )}
 
+      {/* NUEVO MODAL DE ELIMINACIÓN */}
+      <ModalConfirmarEliminar 
+        isOpen={!!viajeAEliminar}
+        onClose={() => setViajeAEliminar(null)}
+        onConfirm={handleConfirmarEliminar}
+      />
+
       <div className="p-4 pt-8 bg-white">
         <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
           <ArrowLeft size={16} strokeWidth={3} />
           <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
         </button>
       </div>
+
+      
 
       <div className="px-5 space-y-6 flex-1 overflow-y-auto pb-32 bg-white">
         
@@ -320,12 +359,12 @@ export const VistaMisViajes = ({
                         <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>Aún no has publicado viajes.<br/>Tus publicaciones reales aparecerán aquí.</p>
                     </div>
                 ) : (
-                  viajesChofer.map(viaje => (
+                 viajesChofer.map(viaje => (
                     <ViajeCardChofer 
                         key={viaje.id} 
                         viaje={viaje} 
                         onEdit={() => setEditingViaje(viaje)}
-                        onDelete={() => onEliminarViajeFBD && onEliminarViajeFBD(viaje.id)}
+                        onDelete={() => setViajeAEliminar(viaje.id)} /* ACTUALIZADO */
                     />
                   ))
                 )}
