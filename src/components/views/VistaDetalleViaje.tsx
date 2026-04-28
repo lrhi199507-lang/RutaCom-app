@@ -3,11 +3,10 @@ import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { 
   ArrowLeft, MapPin, User, ShieldCheck, 
-  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Briefcase 
+  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog 
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
-// Función auxiliar para obtener el estado desde el nombre de la ciudad
 const obtenerEstado = (ciudadNombre) => {
   if (!ciudadNombre) return "Estado";
   const [soloCiudad] = ciudadNombre.split(',');
@@ -17,7 +16,6 @@ const obtenerEstado = (ciudadNombre) => {
   return estadoEncontrado || "Venezuela";
 };
 
-// Función auxiliar para formatear la fecha del retorno: "Jue, 30 Abr a las 6:48 PM"
 const formatearFechaHoraRetorno = (fechaString, horaString) => {
   if (!fechaString) return "";
   const partesFecha = fechaString.split('-');
@@ -35,9 +33,17 @@ const formatearFechaHoraRetorno = (fechaString, horaString) => {
   const h = parseInt(horas);
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
-  const horaFormateada = `${h12}:${minutos} ${ampm}`;
+  return `${fechaFormateada} a las ${h12}:${minutos} ${ampm}`;
+};
 
-  return `${fechaFormateada} a las ${horaFormateada}`;
+const obtenerIconoEquipaje = (tipo) => {
+  switch(tipo?.toLowerCase()) {
+    case 'maleta': return '🧳';
+    case 'caja': return '📦';
+    case 'bolso':
+    case 'bolso ligero':
+    default: return '🎒';
+  }
 };
 
 export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
@@ -49,9 +55,12 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
   const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
 
+  // Lógica estricta leyendo desde tu BD
+  const mostrarBannerRetorno = viaje.publicarRegreso && viaje.tipoRuta !== 'vuelta_de_ruta';
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative">
-      <div className="flex-1 overflow-y-auto pb-48"> {/* Reducido pb para la barra inferior */}
+    <div className="min-h-screen bg-slate-50 flex flex-col relative font-sans">
+      <div className="flex-1 overflow-y-auto pb-40">
         <div className="p-4 pt-6">
           <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
             <ArrowLeft size={16} strokeWidth={3} />
@@ -60,7 +69,8 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
         </div>
 
         <div className="px-5 space-y-4">
-          {/* BLOQUE PRINCIPAL DEL VIAJE */}
+          
+          {/* TARJETA PRINCIPAL */}
           <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-8">
             <div className="flex justify-between items-start">
               <div>
@@ -76,7 +86,6 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
             
-            {/* RUTA */}
             <div className="flex items-center justify-between px-2">
               <div className="flex flex-col items-center flex-1 text-center">
                 <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600">
@@ -95,7 +104,6 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
 
-            {/* PUNTO DE ENCUENTRO */}
             {viaje.referencia && (
               <div className="bg-blue-50/50 p-5 rounded-[30px] border border-blue-100/50">
                 <p className="text-[9px] font-black text-blue-900 uppercase tracking-widest italic mb-1">Punto de encuentro</p>
@@ -104,8 +112,8 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
             )}
           </div>
 
-          {/* BANNER RETORNO PROGRAMADO (ESTILO IMAGEN 3) */}
-          {viaje.esRetorno && (
+          {/* BANNER RETORNO PROGRAMADO */}
+          {mostrarBannerRetorno && (
             <div className="bg-emerald-50 p-5 rounded-[30px] border border-emerald-100 flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
                 <Repeat size={18} className="text-emerald-600" />
@@ -113,7 +121,7 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               <div>
                 <p className="text-[10px] font-black text-emerald-800 uppercase tracking-wider">CON RETORNO PROGRAMADO</p>
                 <p className="text-sm font-bold text-emerald-900 mt-1">
-                  REGRESA EL {formatearFechaHoraRetorno(viaje.fechaRetorno, viaje.horaRetorno)}
+                  Regresa el {formatearFechaHoraRetorno(viaje.fechaRegreso || viaje.fechaRetorno, viaje.horaRegreso || viaje.horaRetorno)}
                 </p>
               </div>
             </div>
@@ -131,26 +139,24 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
             <ChevronRight size={16} className="text-slate-300" />
           </div>
 
-          {/* PUESTOS CONFIRMADOS (ESTILO IMAGEN 1 Y 2) */}
+          {/* PUESTOS CONFIRMADOS */}
           <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
             <p className="text-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
               PUESTOS CONFIRMADOS ({pasajerosCount}/{puestosTotales})
             </p>
             
             <div className="space-y-3">
-              {/* Aquí se renderizarían los pasajeros reales. Por ahora usamos placeholders */}
               {viaje.pasajerosConfirmados && viaje.pasajerosConfirmados.map((pasajero, index) => (
                   <div key={index} className="border border-slate-100 p-4 rounded-[25px] flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center">
                           {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
                       </div>
-                      <p className="text-xs font-bold text-slate-700 uppercase">{pasajero.nombre || 'Pasajero Confimado'}</p>
+                      <p className="text-xs font-bold text-slate-700 uppercase">{pasajero.nombre || 'Pasajero Confirmado'}</p>
                   </div>
               ))}
               
-              {/* Asientos disponibles (placeholders de la imagen) */}
-              {[...Array(puestosTotales - pasajerosCount)].map((_, index) => (
-                <div key={index + pasajerosCount} className="border border-slate-100 p-4 rounded-[25px] flex items-center gap-4 bg-slate-50/50">
+              {[...Array(Math.max(0, puestosTotales - pasajerosCount))].map((_, index) => (
+                <div key={`empty-${index}`} className="border border-slate-100 p-4 rounded-[25px] flex items-center gap-4 bg-slate-50/50">
                   <div className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center">
                     <User size={18} className="text-slate-300" />
                   </div>
@@ -160,31 +166,32 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
             </div>
           </div>
 
-          {/* PREFERENCIAS DEL VIAJE (ESTILO IMAGEN 2) */}
+          {/* PREFERENCIAS DEL VIAJE */}
           <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5">
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
             
             <div className="grid grid-cols-2 gap-3">
-              {viaje.conAire && (
+              {viaje.preferencias?.ac && (
                 <div className="bg-blue-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-blue-100/50">
                   <Snowflake size={18} className="text-blue-500" />
-                  <p className="text-[9px] font-black text-blue-700 uppercase tracking-wide">Aire acondicionado</p>
+                  <p className="text-[9px] font-black text-blue-700 uppercase tracking-wide">Aire a.</p>
                 </div>
               )}
-              {viaje.sinHumo && (
+              {viaje.preferencias?.noFumar && (
                 <div className="bg-rose-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-rose-100/50">
                   <CigaretteOff size={18} className="text-rose-500" />
-                  <p className="text-[9px] font-black text-rose-700 uppercase tracking-wide">Ambiente sin humo</p>
+                  <p className="text-[9px] font-black text-rose-700 uppercase tracking-wide">Sin humo</p>
                 </div>
               )}
-              {viaje.conMascotas && (
+              {viaje.preferencias?.mascotas && (
                 <div className="bg-amber-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-amber-100/50">
                   <Dog size={18} className="text-amber-600" />
-                  <p className="text-[9px] font-black text-amber-800 uppercase tracking-wide">Acepta mascotas</p>
+                  <p className="text-[9px] font-black text-amber-800 uppercase tracking-wide">Mascotas</p>
                 </div>
               )}
-              <div className="bg-slate-100/70 p-4 rounded-[20px] flex items-center gap-3 border border-slate-200/50">
-                <Briefcase size={18} className="text-slate-500" />
+              
+              <div className="bg-slate-50 p-4 rounded-[20px] flex items-center gap-3 border border-slate-100">
+                <span className="text-xl">{obtenerIconoEquipaje(viaje.tipoEquipaje)}</span>
                 <div>
                     <p className="text-[8px] font-bold text-slate-400 uppercase">Equipaje permitido</p>
                     <p className="text-[10px] font-black text-slate-700 uppercase mt-0.5">{viaje.tipoEquipaje || "Bolso Ligero"}</p>
@@ -192,12 +199,13 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
               </div>
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* BARRA BOTONES INFERIOR */}
-      <div className="fixed bottom-20 left-0 right-0 p-4 pb-3 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
-        <div className="flex gap-3 h-12"> {/* Altura h-14 reducida a h-12 */}
+      {/* BARRA INFERIOR */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
+        <div className="flex gap-3 h-14">
           <button className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
             <MessageCircle size={16} /> Chat
           </button>
@@ -207,7 +215,6 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
         </div>
       </div>
 
-      {/* MODAL PERFIL PUBLICO Y TOAST */}
       {verPerfil && (
         <PerfilPublico 
           conductor={{ ...viaje, identidadVerificada: true }} 
@@ -220,4 +227,4 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
     </div>
   );
 };
-          
+                
