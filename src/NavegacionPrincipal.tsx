@@ -104,6 +104,23 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
+    const manejarActualizarViajeDirecto = async (viajeEditado) => {
+    try {
+      const viajeRef = doc(db, "Viajes", viajeEditado.id);
+      await updateDoc(viajeRef, {
+        fechaSalida: viajeEditado.fechaSalida || viajeEditado.fecha,
+        horaSalida: viajeEditado.horaSalida || viajeEditado.hora,
+        precio: viajeEditado.precio,
+        asientos: viajeEditado.asientos || viajeEditado.puestos,
+        últimaEdición: new Date().toISOString()
+      });
+    } catch (e) { 
+      console.error("Error al guardar edición rápida:", e); 
+      throw e; // Lanza el error para que el modal sepa si falló
+    }
+  };
+  
+
   const manejarEditarViaje = (viaje) => {
     setViajeAEditar(viaje); 
     setViajeForm(viaje); // Llenamos el form con los datos actuales
