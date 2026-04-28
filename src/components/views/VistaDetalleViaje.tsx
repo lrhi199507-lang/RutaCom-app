@@ -1,189 +1,131 @@
-import React, { useState } from 'react';
-import { 
-  Trash2, Edit3, Calendar, Clock, 
-  DollarSign, Users, X, CheckCircle2 
-} from 'lucide-react';
-import { doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../../firebaseConfig"; // Ajusta tu ruta
+import React from 'react';
+import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
+import { 
+  ArrowLeft, MapPin, User, ShieldCheck, 
+  MessageCircle, Repeat, ChevronRight 
+} from 'lucide-react';
+import { UBICACIONES } from "../../constants/ubicaciones";
 
-export const VistaMisViajes = ({ misViajes, setVista, setViajeAEditar, refrescarViajes }) => {
-  const [viajeAEditarRapido, setViajeAEditarRapido] = useState(null);
-  const [showModalEdicion, setShowModalEdicion] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
+const obtenerEstado = (ciudadNombre) => {
+  if (!ciudadNombre) return "Estado";
+  const [soloCiudad] = ciudadNombre.split(',');
+  const estadoEncontrado = Object.keys(UBICACIONES).find(estado => 
+    UBICACIONES[estado].includes(soloCiudad.trim())
+  );
+  return estadoEncontrado || "Venezuela";
+};
 
-  // --- LÓGICA DE FIREBASE ---
-  const handleUpdateRapido = async () => {
-    if (!viajeAEditarRapido) return;
+export const VistaDetalleViaje = ({ viaje, onRegresar, userData }) => {
+  if (!viaje) return null;
+  const [verPerfil, setVerPerfil] = React.useState(false);
+  const [showToast, setShowToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
 
-    try {
-      const viajeRef = doc(db, "rutas", viajeAEditarRapido.id);
-      await updateDoc(viajeRef, {
-        precio: viajeAEditarRapido.precio,
-        fecha: viajeAEditarRapido.fecha,
-        hora: viajeAEditarRapido.hora,
-        asientos: Number(viajeAEditarRapido.asientos) || 4,
-      });
+  const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
+  const puestosTotales = viaje.asientos || viaje.puestos || 1;
 
-      setToastMessage("¡Cambios guardados con éxito!");
-      setShowToast(true);
-      setShowModalEdicion(false);
-      if (refrescarViajes) refrescarViajes(); // Para recargar la lista
-    } catch (error) {
-      console.error("Error al actualizar:", error);
-      alert("No se pudo actualizar el viaje.");
-    }
+  const formatearHora12h = (hora24) => {
+    if (!hora24) return "00:00";
+    const [horas, minutos] = hora24.split(':');
+    const h = parseInt(horas);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutos} ${ampm}`;
   };
 
-  const onDelete = async (id) => {
-    if (window.confirm("¿Estás seguro de eliminar este viaje?")) {
-      try {
-        await deleteDoc(doc(db, "rutas", id));
-        setToastMessage("Viaje eliminado");
-        setShowToast(true);
-        if (refrescarViajes) refrescarViajes();
-      } catch (e) { console.error(e); }
-    }
+  const formatearFechaLimpia = (fechaString) => {
+    if (!fechaString) return "";
+    const partes = fechaString.split('-');
+    if (partes.length !== 3) return fechaString;
+    const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+    return fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', ''); 
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      {/* HEADER */}
-      <div className="p-6 bg-white border-b border-slate-100">
-        <h2 className="text-2xl font-black italic text-slate-800 uppercase">Mis Trayectos</h2>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gestiona tus rutas publicadas</p>
-      </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col relative">
+      <div className="flex-1 overflow-y-auto pb-60">
+        <div className="p-4 pt-6">
+          <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
+            <ArrowLeft size={16} strokeWidth={3} />
+            <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
+          </button>
+        </div>
 
-      <div className="p-4 space-y-4">
-        {misViajes.length === 0 ? (
-          <div className="text-center py-20 opacity-40 italic font-bold text-slate-400 uppercase text-xs">
-            No tienes viajes activos
-          </div>
-        ) : (
-          misViajes.map((viaje) => (
-            <div key={viaje.id} className="bg-white rounded-[30px] p-5 shadow-sm border border-slate-100">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-black text-blue-600 uppercase italic">
-                      {viaje.cO} → {viaje.cD}
-                    </span>
-                  </div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase">
-                    {viaje.fecha} • {viaje.hora}
-                  </p>
+        <div className="px-5 space-y-4">
+          <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-8">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo Total</p>
+                <div className="flex items-start text-blue-600">
+                  <span className="text-xl font-black italic mt-1">$</span>
+                  <span className="text-5xl font-black italic leading-none">{viaje.precio || "0"}</span>
                 </div>
-                <span className="text-xl font-black text-blue-600">${viaje.precio}</span>
               </div>
-
-              <div className="flex gap-2">
-                {/* BOTÓN EDITAR RÁPIDO */}
-                <button 
-                  onClick={() => {
-                    setViajeAEditarRapido(viaje);
-                    setShowModalEdicion(true);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-50 text-blue-600 rounded-2xl font-black uppercase text-[10px] active:scale-95 transition-all"
-                >
-                  <Edit3 size={14} /> Editar
-                </button>
-                
-                <button 
-                  onClick={() => onDelete(viaje.id)}
-                  className="p-3 bg-red-50 text-red-500 rounded-2xl active:bg-red-100 transition-all"
-                >
-                  <Trash2 size={16} />
-                </button>
+              <div className="bg-blue-50 px-3 py-1 rounded-full border border-blue-100 flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-[8px] font-black uppercase italic text-blue-600">Verificado</span>
               </div>
             </div>
-          ))
-        )}
-      </div>
-
-      {/* MODAL DE EDICIÓN RÁPIDA (MODO OSCURO PREMIUM) */}
-      {showModalEdicion && viajeAEditarRapido && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-end z-[100] transition-all">
-          <div className="bg-[#0f172a] w-full rounded-t-[40px] p-8 shadow-2xl border-t border-blue-500/30 max-w-md mx-auto">
-            <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" onClick={() => setShowModalEdicion(false)} />
             
-            <h3 className="text-2xl font-black text-white mb-1 uppercase italic italic">Edición Rápida</h3>
-            <p className="text-blue-400 text-[10px] font-bold uppercase tracking-widest mb-8 leading-none">
-              {viajeAEditarRapido.cO} a {viajeAEditarRapido.cD}
-            </p>
-
-            <div className="space-y-5">
-              {/* PRECIO */}
-              <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700">
-                <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-2">Precio por puesto ($)</label>
-                <div className="flex items-center gap-3">
-                  <DollarSign size={20} className="text-white opacity-50" />
-                  <input 
-                    type="number" 
-                    value={viajeAEditarRapido.precio}
-                    onChange={(e) => setViajeAEditarRapido({...viajeAEditarRapido, precio: e.target.value})}
-                    className="bg-transparent w-full text-2xl font-black text-white outline-none"
-                  />
+            <div className="flex items-center justify-between px-2">
+              <div className="flex flex-col items-center flex-1 text-center">
+                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                 </div>
+                <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cO}</p>
+                <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje.cO)}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* FECHA */}
-                <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700">
-                  <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-2">Fecha</label>
-                  <input 
-                    type="date" 
-                    value={viajeAEditarRapido.fecha}
-                    onChange={(e) => setViajeAEditarRapido({...viajeAEditarRapido, fecha: e.target.value})}
-                    className="bg-transparent w-full text-sm font-bold text-white outline-none"
-                  />
+              <div className="flex-1 px-2"><div className="w-full h-[2px] bg-blue-600 rounded-full" /></div>
+              <div className="flex flex-col items-center flex-1 text-center">
+                <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center border-2 border-slate-200">
+                  <MapPin size={16} className="text-slate-300" />
                 </div>
-                {/* HORA */}
-                <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700">
-                  <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-2">Hora</label>
-                  <input 
-                    type="time" 
-                    value={viajeAEditarRapido.hora}
-                    onChange={(e) => setViajeAEditarRapido({...viajeAEditarRapido, hora: e.target.value})}
-                    className="bg-transparent w-full text-sm font-bold text-white outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* PUESTOS */}
-              <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700">
-                <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-2">Asientos Totales</label>
-                <div className="flex items-center gap-4">
-                  <Users size={18} className="text-white opacity-50" />
-                  <select 
-                    value={viajeAEditarRapido.asientos}
-                    onChange={(e) => setViajeAEditarRapido({...viajeAEditarRapido, asientos: e.target.value})}
-                    className="bg-transparent w-full text-sm font-bold text-white outline-none appearance-none"
-                  >
-                    {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n} className="bg-slate-900 text-white">{n} puestos</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button 
-                  onClick={() => setShowModalEdicion(false)}
-                  className="flex-1 py-4 text-slate-400 font-black uppercase text-[10px] italic"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleUpdateRapido}
-                  className="flex-[2] bg-blue-600 text-white font-black uppercase text-[11px] italic rounded-[20px] shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
-                >
-                  Guardar Cambios
-                </button>
+                <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cD}</p>
+                <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje.cD)}</p>
               </div>
             </div>
+
+            {viaje.referencia && (
+              <div className="bg-blue-50/50 p-5 rounded-[30px] border border-blue-100/50">
+                <p className="text-[9px] font-black text-blue-900 uppercase tracking-widest italic mb-1">Punto de encuentro</p>
+                <p className="text-[11px] font-bold text-slate-600 leading-relaxed italic">"{viaje.referencia}"</p>
+              </div>
+            )}
+          </div>
+
+          <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-4 active:scale-95 transition-all">
+            <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm">
+              {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <User size={20} className="m-auto mt-3 text-slate-300"/>}
+            </div>
+            <div className="flex-1">
+              <p className="text-base font-black italic text-slate-700 uppercase">{viaje.cN || viaje.conductor}</p>
+              <p className="text-[8px] font-black text-blue-600 uppercase">Perfil Verificado</p>
+            </div>
+            <ChevronRight size={16} className="text-slate-300" />
           </div>
         </div>
-      )}
+      </div>
 
+      <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
+        <div className="flex gap-3 h-14">
+          <button className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg">
+            <MessageCircle size={16} /> Chat
+          </button>
+          <button className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg">
+            Reservar Cola
+          </button>
+        </div>
+      </div>
+
+      {verPerfil && (
+        <PerfilPublico 
+          conductor={{ ...viaje, identidadVerificada: true }} 
+          onClose={() => setVerPerfil(false)} 
+          setToastMessage={setToastMessage}
+          setShowToast={setShowToast}
+        />
+      )}
       <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
     </div>
   );
