@@ -158,7 +158,7 @@ export default function NavegacionPrincipal({ user }) {
           )
         )}
 
-                {/* ✅ VISTA CONECTADA CON FILTROS CORREGIDOS */}
+                    {/* ✅ VISTA CONECTADA CON FILTROS CORREGIDOS */}
         {vista === "mis_viajes" && (
           <VistaMisViajes 
             // 1. FILTRO CHOFER: Usamos userData.id (no userData.uid)
@@ -179,6 +179,7 @@ export default function NavegacionPrincipal({ user }) {
             onRegresar={() => setVista("inicio")}
           />
         )}
+    
         
         
         
