@@ -104,21 +104,35 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-    const manejarActualizarViajeDirecto = async (viajeEditado) => {
+      const manejarActualizarViajeDirecto = async (datosEditados) => {
     try {
-      const viajeRef = doc(db, "Viajes", viajeEditado.id);
-      await updateDoc(viajeRef, {
-        fechaSalida: viajeEditado.fechaSalida || viajeEditado.fecha,
-        horaSalida: viajeEditado.horaSalida || viajeEditado.hora,
-        precio: viajeEditado.precio,
-        asientos: viajeEditado.asientos || viajeEditado.puestos,
-        últimaEdición: new Date().toISOString()
-      });
-    } catch (e) { 
-      console.error("Error al guardar edición rápida:", e); 
-      throw e; // Lanza el error para que el modal sepa si falló
+      const viajeRef = doc(db, "Viajes", datosEditados.id);
+      
+      // ACTUALIZACIÓN ESTRICTA: Solo tocamos lo que se edita en el modal.
+      const actualizaciones = {
+          precio: Number(datosEditados.precio),
+          asientos: Number(datosEditados.asientos),
+          últimaEdición: new Date().toISOString()
+      };
+
+      // Controlamos la redundancia de tu BD dependiendo del tipo de ruta
+      if (datosEditados.tipoRuta === 'vuelta_de_ruta') {
+          actualizaciones.fechaSalida = datosEditados.fechaForm;
+          actualizaciones.horaSalida = datosEditados.horaForm;
+      } else {
+          actualizaciones.fecha = datosEditados.fechaForm;
+          actualizaciones.hora = datosEditados.horaForm;
+          actualizaciones.fechaSalida = datosEditados.fechaForm; // Sincronizamos por seguridad
+          actualizaciones.horaSalida = datosEditados.horaForm;   // Sincronizamos por seguridad
+      }
+
+      await updateDoc(viajeRef, actualizaciones);
+    } catch (e) {
+      console.error("Error al actualizar:", e);
+      throw e;
     }
   };
+  
   
 
   const manejarEditarViaje = (viaje) => {
