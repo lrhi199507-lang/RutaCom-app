@@ -46,7 +46,7 @@ const obtenerIconoEquipaje = (tipo) => {
   }
 };
 
-export const VistaDetalleViaje = ({ viaje, onRegresar, userData,onIniciarChat }) => {
+export const VistaDetalleViaje = ({ viaje, onRegresar, userData, onIniciarChat }) => {
   if (!viaje) return null;
   const [verPerfil, setVerPerfil] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
@@ -203,23 +203,25 @@ export const VistaDetalleViaje = ({ viaje, onRegresar, userData,onIniciarChat })
         </div>
       </div>
 
-            {/* BARRA INFERIOR */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
-        <div className="flex gap-3 h-14">
-          
-          {/* BOTÓN DE CHAT CONECTADO */}
-          <button 
-            onClick={() => onIniciarChat(viaje)} 
-            className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
-          >
-            <MessageCircle size={16} /> Chat
-          </button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
+  <div className="flex gap-3 h-14">
+    
+    {/* ✅ BOTÓN DE CHAT CONECTADO CORRECTAMENTE */}
+    <button 
+      onClick={() => {
+        console.log("Intentando iniciar chat con viaje:", viaje.id); // Agrega este log para probar
+        onIniciarChat(viaje);
+      }}
+      className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+    >
+      <MessageCircle size={16} /> Chat
+    </button>
 
-          <button className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">
-            Reservar Cola
-          </button>
-        </div>
-      </div>
+    <button className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">
+      Reservar Cola
+    </button>
+  </div>
+</div>
       
 
       {verPerfil && (
