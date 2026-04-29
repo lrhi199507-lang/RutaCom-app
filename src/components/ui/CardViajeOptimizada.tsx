@@ -6,47 +6,36 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
 
   const esUltimoPuesto = (viaje.asientos || viaje.puestos) === 1;
   const esRutaCompleta = viaje.tipoRuta === "ida_y_vuelta";
-const esRutaSoloVuelta = viaje.tipoRuta === "vuelta_de_ruta"; // <-- Asegúrate de tener esta
+  const esRutaSoloVuelta = viaje.tipoRuta === "vuelta_de_ruta";
 
-  // Agrega esto antes del return
-const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegreso : viaje.fecha;
+  const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegreso : viaje.fecha;
   
-  // FUNCIÓN AUXILIAR PARA EVITAR EL ERROR DEL SPLIT
   const formatearLugar = (texto, index) => {
     if (!texto || typeof texto !== 'string') return index === 0 ? "No especificado" : "";
     const partes = texto.split(',');
     return partes[index] ? partes[index].trim() : "";
   };
 
-  // *** SOLUCIÓN 1: FORMATEO DE FECHA MANUAL A PRUEBA DE ERRORES ***
   const formatearFechaManual = (fechaValor) => {
-    // Si el dato falta de la base de datos, debemos mostrarlo claramente.
     if (!fechaValor) return "Fecha n/d"; 
     
     try {
-      // 1. Limpiamos la cadena por si viene un T... de ISO (como en tu Firebase)
       const limpio = String(fechaValor).split('T')[0];
       const partes = limpio.split('-');
       
       if (partes.length !== 3) return "Error Formato";
       
-      // 2. Extraemos partes pieza por pieza
       const year = parseInt(partes[0]);
       const month = parseInt(partes[1]);
       const day = parseInt(partes[2]);
       
-      // 3. Definimos los nombres de los días manualmente, sin dejar que JavaScript adivine
       const dias = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
       
-      // Debemos construir la fecha JS precisamente como "Local" (mes es 0-indexed)
-      // para que el método getDay() funcione correctamente en hora local.
       const fechaObj = new Date(year, month - 1, day);
-      const diaSemanaIndex = fechaObj.getDay(); // Esto funciona en Hora Local
+      const diaSemanaIndex = fechaObj.getDay();
       
-      // Si JavaScript devolvió NaN para el día de la semana, el formato estaba roto.
       if (isNaN(diaSemanaIndex)) return "Error Fecha";
 
-      // 4. Construimos la cadena de salida cuidadosamente
       return `${dias[diaSemanaIndex]}, ${day} ${obtenerMesCorto(month)}`;
 
     } catch (error) {
@@ -55,7 +44,6 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
     }
   };
 
-  // Función auxiliar para meses cortos
   const obtenerMesCorto = (month) => {
     const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
     return meses[month - 1] || "";
@@ -63,8 +51,9 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
   
   return (
     <div
-    onClick={onClickDetalle}
-    className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden cursor-pointer active:scale-[0.98]"
+      onClick={onClickDetalle}
+      className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden cursor-pointer active:scale-[0.98]"
+    >
       
       {/* ETIQUETA DE RUTA CON RETORNO */}
       {esRutaCompleta && (
@@ -198,4 +187,3 @@ const obtenerNivel = (viajes) => {
   if (num < 100) return "Plata";
   return "Oro";
 };
-      
