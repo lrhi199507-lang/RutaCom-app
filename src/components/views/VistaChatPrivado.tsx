@@ -41,9 +41,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
 
-    // Limpiar notificaciones (mensajes sin leer) al entrar
+        // Limpiar notificaciones (mensajes sin leer) al entrar
     const limpiarNotificaciones = async () => {
-      await updateDoc(doc(db, "Chats", chat.id), { mensajesSinLeer: 0 });
+      if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
+        await updateDoc(doc(db, "Chats", chat.id), { mensajesSinLeer: 0 });
+      }
     };
     limpiarNotificaciones();
 
@@ -68,9 +70,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
 
       // 2. Actualizar el último mensaje en la tarjeta de afuera
       await updateDoc(doc(db, "Chats", chat.id), {
+        await updateDoc(doc(db, "Chats", chat.id), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        mensajesSinLeer: 1
+        mensajesSinLeer: 1, // Aquí puedes cambiar el 1 por increment(1) si importas increment de firestore
+        remitenteUltimoMensaje: userData.id // <--- ESTA LÍNEA ES LA CLAVE
       });
 
     } catch (error) {
