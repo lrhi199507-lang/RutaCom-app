@@ -294,17 +294,20 @@ export default function NavegacionPrincipal({ user }) {
           />
         )}
     
-        {vista === "inbox" && (
+                {vista === "inbox" && (
           <VistaInbox 
-            // Usamos filtros seguros esperando la colección Chats
             chatsChofer={chats.filter(c => c.uidConductor === userData?.id)} 
             chatsPasajero={chats.filter(c => c.uidPasajero === userData?.id || c.pasajeros?.some(p => p.id === userData?.id))}
+            
+            userData={userData} // <--- ¡ESTA ES LA LÍNEA QUE FALTABA!
+            
             onAbrirChat={(chatSeleccionado) => {
               console.log("Abriendo chat individual:", chatSeleccionado);
               // Aquí iría la lógica para abrir la pantalla de mensajes individual
             }}
           />
         )}
+        
         
         {vista === "perfil" && (
           <VistaPerfil 
