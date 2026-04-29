@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, ChevronRight, User, Search, Car, MapPin } from 'lucide-react';
+import { MessageCircle, ChevronRight, User, Search, Car, MapPin, ShieldCheck } from 'lucide-react';
 
 // --- COMPONENTE: Tarjeta de Chat Unificada (DÍNAMICA) ---
 const ChatCard = ({ chat, currentUserId, onClick }) => {
@@ -119,10 +119,58 @@ export const VistaInbox = ({
           />
         </div>
 
-        {/* LISTA DE CHATS */}
+                {/* LISTA DE CHATS */}
         <div className="space-y-3 pt-2">
+          
+          {/* TARJETA FIJA DE SOPORTE TÉCNICO */}
+          <div 
+            onClick={() => onAbrirChat && onAbrirChat({
+              id: "soporte_oficial",
+              esSoporte: true, // <--- Etiqueta clave para saber que es soporte
+              nombreContacto: "Soporte Dame la cola",
+              ultimoMensaje: "¿En qué podemos ayudarte hoy?",
+              ruta: "Atención 24/7",
+              mensajesSinLeer: 0
+            })}
+            className="bg-slate-900 p-4 rounded-[25px] border border-slate-800 shadow-lg transition-all active:scale-95 flex items-center gap-4 cursor-pointer relative overflow-hidden"
+          >
+            {/* Efecto de brillo de fondo */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="relative flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-blue-600 border-2 border-slate-700 shadow-sm flex items-center justify-center text-white">
+                <MessageCircle size={24} fill="currentColor" className="text-blue-100" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-slate-900 rounded-full" />
+            </div>
+
+            <div className="flex-1 min-w-0 z-10">
+              <div className="flex justify-between items-start mb-1">
+                <h4 className="text-sm truncate pr-2 font-black text-white uppercase italic tracking-wide">
+                  Soporte Oficial
+                </h4>
+              </div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <ShieldCheck size={12} className="text-blue-400" />
+                <span className="text-[9px] font-bold text-blue-300 uppercase tracking-widest">En línea</span>
+              </div>
+              <p className="text-xs truncate font-medium text-slate-400">
+                ¿Tienes un problema con tu viaje?
+              </p>
+            </div>
+            <ChevronRight size={18} className="text-slate-600 flex-shrink-0 z-10" />
+          </div>
+
+          {/* DIVISOR */}
+          <div className="flex items-center gap-3 py-2">
+            <div className="h-[1px] flex-1 bg-slate-100"></div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Tus Conversaciones</span>
+            <div className="h-[1px] flex-1 bg-slate-100"></div>
+          </div>
+
+          {/* CHATS REALES DE LOS USUARIOS */}
           {todosLosChats.length === 0 ? (
-            <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50 mt-8'>
+            <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50 mt-4'>
                 <MessageCircle size={32} className="mx-auto text-slate-300 mb-3" />
                 <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>No tienes mensajes activos</p>
             </div>
@@ -131,12 +179,13 @@ export const VistaInbox = ({
               <ChatCard 
                 key={chat.id || index} 
                 chat={chat} 
-                currentUserId={userData.id} // <--- Pasamos el ID del usuario actual
+                currentUserId={userData.id} 
                 onClick={() => onAbrirChat && onAbrirChat(chat)} 
               />
             ))
           )}
         </div>
+        
 
       </div>
     </div>
