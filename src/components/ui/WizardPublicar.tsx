@@ -253,16 +253,13 @@ export const WizardPublicar = ({
             </button>
           </div>
 
-                  <button 
+                          <button 
           onClick={async () => {
-            // 1. VALIDACIÓN DE SESIÓN
             if (!userData?.id) return alert("Error: No se detecta tu ID de usuario. Reintenta iniciar sesión.");
 
-            // 2. PROCESAMIENTO DE CIUDADES
             const [ciudadOri] = (viajeForm.origen || "").split(', ');
             const [ciudadDest] = (viajeForm.destino || "").split(', ');
 
-            // 3. OBJETO BASE
             const datosBase = {
               ...viajeForm,
               idCreador: userData.id,
@@ -284,8 +281,10 @@ export const WizardPublicar = ({
 
             try {
               if (viajeAEditar) {
-                await publicarRuta(datosBase);
-                setToastMessage("¡Ruta actualizada!");
+                // Quitamos el await si publicarRuta ya maneja la navegación, 
+                // pero si queremos ver el toast, publicarRuta NO debe hacer setVista("inicio")
+                await publicarRuta(datosBase, true); // true = no navegar automáticamente
+                setToastMessage("Guardado con éxito");
               } else {
                 const objetoIda = {
                   ...datosBase,
@@ -295,7 +294,7 @@ export const WizardPublicar = ({
                   horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
                 };
                 
-                await publicarRuta(objetoIda);
+                await publicarRuta(objetoIda, true); 
 
                 if (viajeForm.publicarRegreso) {
                   await publicarRuta({
@@ -308,27 +307,34 @@ export const WizardPublicar = ({
                     hora: viajeForm.horaRegreso || viajeForm.hora,
                     tipoRuta: "vuelta_de_ruta",
                     conRetornoProgramado: false
-                  });
+                  }, true);
                 }
-                setToastMessage("¡Ruta publicada con éxito!");
+                setToastMessage("Publicado con éxito");
               }
 
+              // Mostrar el toast
               setShowToast(true);
-              setTimeout(() => { setShowToast(false); }, 3000);
-              setTimeout(() => { setVista("inicio"); }, 3200);
+              
+              // Retrasar la navegación a Inicio hasta que el usuario lea el mensaje
+              setTimeout(() => { 
+                  setShowToast(false); 
+                  setVista("inicio"); // Ahora sí navegamos
+                  setPasoWizard(1);
+              }, 2000); // 2 segundos es ideal
 
             } catch (e) {
               console.error("ERROR CRÍTICO AL PUBLICAR:", e);
-              alert("Error técnico al guardar en Firebase. Revisa la consola.");
+              alert("Error técnico al guardar en Firebase.");
             }
           }}
-          className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-colors mt-6"
+          className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
         >
-          <ShieldCheck size={24} /> 
-          <span className="text-lg">
+          <ShieldCheck size={20} /> 
+          <span className="text-sm">
             {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
           </span>
         </button>
+          
               
         <button 
           onClick={() => setPasoWizard(2)} 
