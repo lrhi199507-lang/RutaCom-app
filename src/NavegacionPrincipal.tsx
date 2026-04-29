@@ -245,6 +245,11 @@ export default function NavegacionPrincipal({ user }) {
         origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
         preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
       });
+
+        // LÓGICA PARA EL INDICADOR DE MENSAJES (Burbuja Roja)
+  const misChatsUnificados = chats.filter(c => c.uidConductor === userData?.id || c.uidPasajero === userData?.id);
+  const tieneMensajesNuevos = misChatsUnificados.some(c => c.mensajesSinLeer > 0);
+      
       
       // Si estamos esperando el Toast en el wizard, NO navegamos automáticamente
       if (!esperarToast) {
@@ -347,7 +352,14 @@ export default function NavegacionPrincipal({ user }) {
         )}
       </main>
 
-      <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={setPasoWizard} />
+            <Navbar 
+        vista={vista} 
+        modo={modo} 
+        setVista={setVista} 
+        setModo={setModo} 
+        setPasoWizard={setPasoWizard} 
+        tieneMensajesNuevos={tieneMensajesNuevos} // <--- ESTO ES LO NUEVO
+      />
     </div>
   );
  }
