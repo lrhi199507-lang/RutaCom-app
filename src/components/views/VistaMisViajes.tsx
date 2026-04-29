@@ -257,7 +257,8 @@ export const VistaMisViajes = ({
   viajesPasajeroHistorial = [], 
   onRegresar, 
   onActualizarViajeFBD,
-  onEliminarViajeFBD
+  onEliminarViajeFBD,
+  onIniciarChat
 }) => {
   const [activeTab, setActiveTab] = useState('chofer'); 
   const [editingViaje, setEditingViaje] = useState(null);
