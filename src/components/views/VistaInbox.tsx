@@ -3,7 +3,8 @@ import { MessageCircle, ChevronRight, User, Search, Car, MapPin } from 'lucide-r
 
 // --- COMPONENTE: Tarjeta de Chat Unificada (DÍNAMICA) ---
 const ChatCard = ({ chat, currentUserId, onClick }) => {
-  const isUnread = chat.mensajesSinLeer > 0;
+  // Ahora solo es "no leído" si tiene mensajes pendientes Y no los enviaste tú
+  const isUnread = chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== currentUserId;
   
   // 🧠 LÓGICA INTELIGENTE: ¿Quién es el "otro" usuario?
   const soyConductor = chat.uidConductor === currentUserId;
