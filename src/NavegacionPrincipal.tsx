@@ -236,8 +236,9 @@ export default function NavegacionPrincipal({ user }) {
 
   // LÓGICA PARA EL INDICADOR DE MENSAJES (CORREGIDO: FUERA DE LAS FUNCIONES)
   const misChatsUnificados = chats.filter(c => c.uidConductor === userData?.id || c.uidPasajero === userData?.id);
-  const tieneMensajesNuevos = misChatsUnificados.some(c => c.mensajesSinLeer > 0);
-
+  const tieneMensajesNuevos = misChatsUnificados.some(c => 
+    c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData?.id // <--- LA NUEVA REGLA
+  );
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
       <Header userData={userData} modo={modo} />
