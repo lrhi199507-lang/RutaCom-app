@@ -1,10 +1,14 @@
 import React from 'react';
 import { MessageCircle, ChevronRight, User, Search, Car, MapPin } from 'lucide-react';
 
-// --- COMPONENTE: Tarjeta de Chat Unificada ---
-const ChatCard = ({ chat, onClick }) => {
+// --- COMPONENTE: Tarjeta de Chat Unificada (DÍNAMICA) ---
+const ChatCard = ({ chat, currentUserId, onClick }) => {
   const isUnread = chat.mensajesSinLeer > 0;
-  const esChofer = chat.rol === 'chofer';
+  
+  // 🧠 LÓGICA INTELIGENTE: ¿Quién es el "otro" usuario?
+  const soyConductor = chat.uidConductor === currentUserId;
+  const nombreContacto = soyConductor ? chat.nombrePasajero : chat.nombreConductor;
+  const fotoContacto = soyConductor ? chat.fotoPasajero : chat.fotoConductor;
 
   return (
     <div 
@@ -15,8 +19,8 @@ const ChatCard = ({ chat, onClick }) => {
       {/* Avatar con Indicador de No Leído */}
       <div className="relative flex-shrink-0">
         <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-          {chat.fotoPerfil ? (
-            <img src={chat.fotoPerfil} alt="Avatar" className="w-full h-full object-cover" />
+          {fotoContacto ? (
+            <img src={fotoContacto} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
             <User size={20} className="text-slate-400" />
           )}
@@ -29,8 +33,9 @@ const ChatCard = ({ chat, onClick }) => {
       {/* Contenido Central */}
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start mb-1">
+          {/* ✅ NOmbre de Contacto Dinámico Corregido */}
           <h4 className={`text-sm truncate pr-2 uppercase ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
-            {chat.nombreContacto || 'Usuario'}
+            {nombreContacto || 'Usuario Dame la cola'}
           </h4>
           <span className={`text-[9px] font-bold whitespace-nowrap mt-0.5 ${isUnread ? 'text-blue-600' : 'text-slate-400'}`}>
             {chat.ultimaHora || '00:00'}
@@ -39,7 +44,8 @@ const ChatCard = ({ chat, onClick }) => {
         
         {/* Etiquetas Distintivas de Rol y Ruta */}
         <div className="flex items-center gap-2 mb-1.5 overflow-hidden">
-          {esChofer ? (
+          {/* ✅ Etiqueta de Rol Dinámica Corregida */}
+          {soyConductor ? (
             <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full flex-shrink-0">
               <Car size={10} className="text-emerald-600" />
               <span className="text-[8px] font-black text-emerald-700 uppercase tracking-wider">Tú conduces</span>
@@ -53,7 +59,7 @@ const ChatCard = ({ chat, onClick }) => {
           
           <div className="flex items-center gap-1 text-slate-400 truncate">
             <MapPin size={10} className="flex-shrink-0" />
-            <span className="text-[9px] font-bold uppercase truncate">{chat.ruta || 'Ruta pendiente'}</span>
+            <span className="text-[9px] font-bold uppercase truncate">{chat.ruta || 'Ruta'}</span>
           </div>
         </div>
 
@@ -68,18 +74,27 @@ const ChatCard = ({ chat, onClick }) => {
   );
 };
 
-// --- COMPONENTE PRINCIPAL INBOX ---
+// --- COMPONENTE PRINCIPAL INBOX (BLINDADO) ---
 export const VistaInbox = ({ 
   chatsChofer = [], 
   chatsPasajero = [], 
+  userData, // <--- REQUERIDO: Para saber quién soy yo
   onAbrirChat 
 }) => {
-  // Aseguramos que no sean null y les inyectamos el rol para distinguirlos visualmente
-  const safeChatsChofer = (chatsChofer || []).map(chat => ({ ...chat, rol: 'chofer' }));
-  const safeChatsPasajero = (chatsPasajero || []).map(chat => ({ ...chat, rol: 'pasajero' }));
+  
+  // VALIDACIÓN DE SEGURIDAD: Evitar crasheos si userData no ha cargado
+  if (!userData?.id) return (
+    <div className="h-screen flex flex-col items-center justify-center font-black text-blue-600 italic uppercase bg-white">
+      <MessageCircle size={40} className='mb-2 animate-pulse'/>
+      <p>Cargando Mensajes...</p>
+    </div>
+  );
 
-  // Unimos ambos arrays en una sola bandeja
-  // Opcional: Si tus chats tienen un timestamp, puedes agregar .sort((a,b) => b.timestamp - a.timestamp) al final.
+  // Aseguramos que no sean null
+  const safeChatsChofer = chatsChofer || [];
+  const safeChatsPasajero = chatsPasajero || [];
+
+  // Unimos ambos arrays en una sola bandeja unificada
   const todosLosChats = [...safeChatsChofer, ...safeChatsPasajero];
 
   return (
@@ -115,6 +130,7 @@ export const VistaInbox = ({
               <ChatCard 
                 key={chat.id || index} 
                 chat={chat} 
+                currentUserId={userData.id} // <--- Pasamos el ID del usuario actual
                 onClick={() => onAbrirChat && onAbrirChat(chat)} 
               />
             ))
