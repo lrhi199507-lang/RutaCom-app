@@ -3,7 +3,7 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { 
   doc, onSnapshot, collection, query, orderBy, 
-  addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, getDocs, where
+  addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, where, getDocs 
 } from "firebase/firestore";
 
 // VISTAS
@@ -21,10 +21,7 @@ import { Header } from './components/ui/Header';
 export default function NavegacionPrincipal({ user }) {
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
-  
-  // SOLUCIÓN AL ERROR 1: Agregamos el estado de 'chats' temporalmente vacío
-  const [chats, setChats] = useState([]); 
-  
+  const [chats, setChats] = useState([]); // Estado temporal vacío para evitar crasheos
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSel, setViajeSel] = useState(null);
@@ -72,19 +69,79 @@ export default function NavegacionPrincipal({ user }) {
     const unsubU = onSnapshot(doc(db, "usuarios", user.uid), (s) => {
       setUserData(s.exists() ? { id: s.id, ...s.data() } : { id: user.uid, nombre: "Usuario", saldo: 0 });
     });
-    
+    // Usamos "Viajes" con V mayúscula como en tu DB
     const unsubV = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (s) => {
       setViajes(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
     // AVISO: Aquí faltaría agregar el listener para los chats cuando crees la colección en Firebase
-    // Ejemplo: const unsubC = onSnapshot(collection(db, "Chats"), ...);
-
     return () => { unsubU(); unsubV(); };
   }, [user]);
 
-  // --- ACCIONES PARA VISTA MIS VIAJES ---
+  // --- LÓGICA DE CHAT UNIFICADA ---
+  const iniciarChat = async (viaje) => {
+    if (!userData?.id || !viaje?.id) return;
+    console.log("Función iniciarChat ejecutándose para viaje:", viaje.id);
+    
+    try {
+      // 1. Verificar si el usuario actual es el conductor o el pasajero
+      const soyConductor = viaje.uidConductor === userData.id;
 
+      // Si el conductor presiona el botón general de la ruta, lo ideal es llevarlo al Inbox.
+      if (soyConductor) {
+         setVista("inbox");
+         return;
+      }
+
+      // 2. Buscar si YA existe un chat entre este pasajero y este conductor para este viaje específico
+      const chatsRef = collection(db, "Chats");
+      const q = query(
+        chatsRef, 
+        where("idViaje", "==", viaje.id),
+        where("uidPasajero", "==", userData.id),
+        where("uidConductor", "==", viaje.uidConductor)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      let chatId = null;
+
+      if (!querySnapshot.empty) {
+        // El chat ya existe, obtenemos su ID
+        chatId = querySnapshot.docs[0].id;
+        console.log("Chat existente encontrado con ID:", chatId);
+      } else {
+        // 3. El chat no existe, lo creamos con los datos completos
+        console.log("Creando nuevo chat en Firebase...");
+        const nuevoChatRef = await addDoc(collection(db, "Chats"), {
+          idViaje: viaje.id,
+          ruta: `${viaje.cO || viaje.origen?.split(',')[0]} - ${viaje.cD || viaje.destino?.split(',')[0]}`,
+          uidConductor: viaje.uidConductor,
+          nombreConductor: viaje.conductor,
+          fotoConductor: viaje.fotoPerfil || "",
+          uidPasajero: userData.id,
+          nombrePasajero: userData.nombre,
+          fotoPasajero: userData.fotoPerfil || "",
+          ultimoMensaje: "Chat iniciado",
+          ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: Date.now(),
+          mensajesSinLeer: 0,
+          estadoViaje: viaje.estado || "disponible" // Guardamos el estado para la lógica de WhatsApp luego
+        });
+        chatId = nuevoChatRef.id;
+        console.log("Nuevo chat creado con ID:", chatId);
+      }
+
+      // 4. Navegar a la vista de Inbox temporalmente
+      setVista("inbox"); 
+      console.log("Redirigiendo a Inbox. ChatID:", chatId);
+      
+    } catch (error) {
+      console.error("Error al iniciar chat:", error);
+      alert("Hubo un error al intentar abrir el chat. Revisa la consola.");
+    }
+  };
+
+  // --- ACCIONES PARA VISTA MIS VIAJES ---
   const manejarAceptarPasajero = async (viajeId, pasajero) => {
     try {
       const viajeRef = doc(db, "Viajes", viajeId);
@@ -103,27 +160,28 @@ export default function NavegacionPrincipal({ user }) {
         reservasPendientes: arrayRemove(pasajero)
       });
     } catch (e) { console.error("Error al rechazar:", e); }
-  }; 
-  // SOLUCIÓN AL ERROR 2: La llave de cierre estaba perdida
+  };
 
   const manejarActualizarViajeDirecto = async (datosEditados) => {
     try {
       const viajeRef = doc(db, "Viajes", datosEditados.id);
       
+      // ACTUALIZACIÓN ESTRICTA: Solo tocamos lo que se edita en el modal.
       const actualizaciones = {
           precio: Number(datosEditados.precio),
           asientos: Number(datosEditados.asientos),
           últimaEdición: new Date().toISOString()
       };
 
+      // Controlamos la redundancia de tu BD dependiendo del tipo de ruta
       if (datosEditados.tipoRuta === 'vuelta_de_ruta') {
           actualizaciones.fechaSalida = datosEditados.fechaForm;
           actualizaciones.horaSalida = datosEditados.horaForm;
       } else {
           actualizaciones.fecha = datosEditados.fechaForm;
           actualizaciones.hora = datosEditados.horaForm;
-          actualizaciones.fechaSalida = datosEditados.fechaForm; 
-          actualizaciones.horaSalida = datosEditados.horaForm;   
+          actualizaciones.fechaSalida = datosEditados.fechaForm; // Sincronizamos por seguridad
+          actualizaciones.horaSalida = datosEditados.horaForm;   // Sincronizamos por seguridad
       }
 
       await updateDoc(viajeRef, actualizaciones);
@@ -133,79 +191,9 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-    // --- LÓGICA DE CHAT ---
-  const iniciarChat = async (viaje) => {
-    if (!userData?.id || !viaje?.id) return;
-    
-    try {
-      // 1. Verificar si el usuario actual es el conductor o el pasajero
-      const soyConductor = viaje.uidConductor === userData.id;
-      const idOtroUsuario = soyConductor 
-        ? null // Si el conductor le da al botón, necesitamos saber a qué pasajero le habla (se manejará desde la lista de pasajeros)
-        : viaje.uidConductor;
-        
-      const nombreOtroUsuario = soyConductor ? "Pasajero" : viaje.conductor;
-
-      // Si el conductor presiona el botón general de la ruta, lo ideal es llevarlo al Inbox, 
-      // porque un viaje puede tener muchos pasajeros y no sabemos a quién quiere hablarle.
-      if (soyConductor) {
-         setVista("inbox");
-         return;
-      }
-
-      // 2. Buscar si YA existe un chat entre este pasajero y este conductor para este viaje específico
-      // Nota: Necesitarás importar 'where' y 'getDocs' de firebase/firestore al inicio de tu archivo
-      const { getDocs, where } = require("firebase/firestore"); // Importar si no lo tienes arriba
-      
-      const chatsRef = collection(db, "Chats");
-      const q = query(
-        chatsRef, 
-        where("idViaje", "==", viaje.id),
-        where("uidPasajero", "==", userData.id),
-        where("uidConductor", "==", viaje.uidConductor)
-      );
-      
-      const querySnapshot = await getDocs(q);
-      
-      let chatId = null;
-
-      if (!querySnapshot.empty) {
-        // El chat ya existe, obtenemos su ID
-        chatId = querySnapshot.docs[0].id;
-      } else {
-        // 3. El chat no existe, lo creamos
-        const nuevoChatRef = await addDoc(collection(db, "Chats"), {
-          idViaje: viaje.id,
-          ruta: `${viaje.cO || viaje.origen} - ${viaje.cD || viaje.destino}`,
-          uidConductor: viaje.uidConductor,
-          nombreConductor: viaje.conductor,
-          fotoConductor: viaje.fotoPerfil || "",
-          uidPasajero: userData.id,
-          nombrePasajero: userData.nombre,
-          fotoPasajero: userData.fotoPerfil || "",
-          ultimoMensaje: "Chat iniciado",
-          ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          timestamp: Date.now(),
-          mensajesSinLeer: 0
-        });
-        chatId = nuevoChatRef.id;
-      }
-
-      // 4. Navegar a la vista de mensajes individuales (asumiendo que crearás una 'VistaMensajes')
-      // Por ahora, lo mandaremos al Inbox y puedes ver si se creó en Firebase
-      console.log("Chat listo con ID:", chatId);
-      setVista("inbox"); // Temporalmente lo mandamos al inbox hasta que tengas la vista individual
-      
-    } catch (error) {
-      console.error("Error al iniciar chat:", error);
-      alert("Hubo un error al intentar abrir el chat.");
-    }
-  };
-  
-  
   const manejarEditarViaje = (viaje) => {
     setViajeAEditar(viaje); 
-    setViajeForm(viaje);
+    setViajeForm(viaje); // Llenamos el form con los datos actuales
     setVista("publicar");
     setPasoWizard(1);
   };
@@ -213,12 +201,10 @@ export default function NavegacionPrincipal({ user }) {
   const manejarEliminarViaje = async (viajeId) => {
     try {
       await deleteDoc(doc(db, "Viajes", viajeId));
-    } catch (e) { 
-      console.error("Error al eliminar:", e); 
-    }
+    } catch (e) { console.error("Error al eliminar:", e); }
   };
 
-  // En NavegacionPrincipal.jsx
+  // Función Publicar (Modificada para soportar edición)
   const publicarRuta = async (datosFinales, esperarToast = false) => {
     try {
       if (viajeAEditar) {
@@ -228,7 +214,7 @@ export default function NavegacionPrincipal({ user }) {
       } else {
         await addDoc(collection(db, "Viajes"), {
           ...datosFinales,
-          uidConductor: userData.id, 
+          uidConductor: userData.id, // Usamos el nombre de campo de tu DB
           conductor: userData.nombre,
           fechaPublicacion: new Date().toISOString(),
           estado: "disponible",
@@ -236,19 +222,20 @@ export default function NavegacionPrincipal({ user }) {
         });
       }
       
+      // Reset
       setViajeForm({
         origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
         preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
       });
       
-      // Si estamos esperando el Toast, NO navegamos aquí. El Wizard se encarga.
+      // Si estamos esperando el Toast en el wizard, NO navegamos automáticamente
       if (!esperarToast) {
          setPasoWizard(1);
          setVista("inicio");
       }
     } catch (error) {
       console.error("Error en Firebase:", error);
-      throw error; // Propagar el error para que el Wizard lo atrape
+      throw error; // Propagar el error para que el wizard lo atrape
     }
   };
 
@@ -261,7 +248,12 @@ export default function NavegacionPrincipal({ user }) {
       <main className="flex-1 overflow-y-auto bg-slate-50">
         {vista === "inicio" && (
           viajeSel ? (
-            <VistaDetalleViaje viaje={viajeSel} onRegresar={() => setViajeSel(null)} />
+            <VistaDetalleViaje 
+              viaje={viajeSel} 
+              onRegresar={() => setViajeSel(null)} 
+              userData={userData} 
+              onIniciarChat={iniciarChat} // ✅ Pasamos la función a detalles
+            />
           ) : (
             <VistaInicio 
               viajes={viajes} setViajeSeleccionado={setViajeSel} 
@@ -272,27 +264,34 @@ export default function NavegacionPrincipal({ user }) {
 
         {vista === "mis_viajes" && (
           <VistaMisViajes 
+            // 1. FILTRO CHOFER: Usamos userData.id (no userData.uid)
             viajesChofer={viajes.filter(v => v.uidConductor === userData?.id)} 
+            
+            // 2. FILTRO PASAJERO: Usamos el array "pasajeros" según tu lógica de BD
             viajesPasajeroActivos={viajes.filter(v => 
               v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado !== 'finalizado'
             )} 
+            
             viajesPasajeroHistorial={viajes.filter(v => 
               v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado === 'finalizado'
             )}
+
             userData={userData} 
             onActualizarViajeFBD={manejarActualizarViajeDirecto}
             onEliminarViajeFBD={manejarEliminarViaje}
-            onIniciarChat={iniciarChat} // <--- NUEVA LÍNEA
+            onIniciarChat={iniciarChat} // ✅ También lo pasamos aquí por si acaso
             onRegresar={() => setVista("inicio")}
           />
         )}
     
         {vista === "inbox" && (
           <VistaInbox 
+            // Usamos filtros seguros esperando la colección Chats
             chatsChofer={chats.filter(c => c.uidConductor === userData?.id)} 
             chatsPasajero={chats.filter(c => c.uidPasajero === userData?.id || c.pasajeros?.some(p => p.id === userData?.id))}
             onAbrirChat={(chatSeleccionado) => {
-              console.log("Abriendo chat:", chatSeleccionado);
+              console.log("Abriendo chat individual:", chatSeleccionado);
+              // Aquí iría la lógica para abrir la pantalla de mensajes individual
             }}
           />
         )}
@@ -318,4 +317,5 @@ export default function NavegacionPrincipal({ user }) {
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={setPasoWizard} />
     </div>
   );
-                                                                                                 }
+ }
+              
