@@ -66,16 +66,26 @@ export default function NavegacionPrincipal({ user }) {
   // --- LÓGICA DE FIREBASE (ESCUCHA ACTIVA) ---
   useEffect(() => {
     if (!user?.uid) return;
+    
+    // 1. Escuchar Usuario
     const unsubU = onSnapshot(doc(db, "usuarios", user.uid), (s) => {
       setUserData(s.exists() ? { id: s.id, ...s.data() } : { id: user.uid, nombre: "Usuario", saldo: 0 });
     });
-    // Usamos "Viajes" con V mayúscula como en tu DB
+    
+    // 2. Escuchar Viajes
     const unsubV = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (s) => {
       setViajes(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    // AVISO: Aquí faltaría agregar el listener para los chats cuando crees la colección en Firebase
-    return () => { unsubU(); unsubV(); };
+
+    // 3. NUEVO: Escuchar Chats en tiempo real
+    const unsubC = onSnapshot(query(collection(db, "Chats"), orderBy("timestamp", "desc")), (s) => {
+      setChats(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // Limpiar los 3 listeners al desmontar
+    return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
+  
 
   // --- LÓGICA DE CHAT UNIFICADA ---
   const iniciarChat = async (viaje) => {
