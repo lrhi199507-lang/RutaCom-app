@@ -1,7 +1,7 @@
 import React from "react";
 import { Search, PlusCircle, MessageSquare, User, Map } from "lucide-react";
 
-export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard }) => {
+export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMensajesNuevos }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-3 pb-8 flex justify-between items-center z-50 rounded-t-[35px] shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.05)]">
       
@@ -23,29 +23,34 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard }) => {
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Viajes</span>
       </button>
 
-      {/* BOTÓN 3: PUBLICAR (CORREGIDO Y CON COLOR DORADO) */}
+      {/* BOTÓN 3: PUBLICAR */}
       <button 
         onClick={() => {
-          setVista("publicar"); // <--- CAMBIADO: Ahora sí abre el Wizard
-          setModo("conductor");  // Cambiamos a modo conductor
-          setPasoWizard(1);     // Reiniciamos al paso 1
+          setVista("publicar"); 
+          setModo("conductor");  
+          setPasoWizard(1);     
         }} 
         className={`flex flex-col items-center gap-1 flex-1 transition-all active:scale-90 ${
           vista === "publicar" 
-            ? "text-blue-600 scale-110" // Azul cuando estás publicando
-            : "text-amber-500 hover:text-amber-600" // DORADO cuando estás en otra pestaña
+            ? "text-blue-600 scale-110" 
+            : "text-amber-500 hover:text-amber-600" 
         }`}
       >
-        <PlusCircle size={26} strokeWidth={3} /> {/* Un poco más grande para que destaque */}
+        <PlusCircle size={26} strokeWidth={3} /> 
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Publicar</span>
       </button>
 
-      {/* BOTÓN 4: MENSAJES */}
+      {/* BOTÓN 4: MENSAJES (MODIFICADO CON EL PUNTO ROJO) */}
       <button 
         onClick={() => setVista("inbox")} 
         className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "inbox" ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`}
       >
-        <MessageSquare size={20} strokeWidth={3} />
+        <div className="relative">
+          <MessageSquare size={20} strokeWidth={3} />
+          {tieneMensajesNuevos && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-bounce" />
+          )}
+        </div>
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Mensajes</span>
       </button>
 
