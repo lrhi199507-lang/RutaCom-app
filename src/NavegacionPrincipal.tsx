@@ -21,6 +21,10 @@ import { Header } from './components/ui/Header';
 export default function NavegacionPrincipal({ user }) {
   const [userData, setUserData] = useState(null);
   const [viajes, setViajes] = useState([]);
+  
+  // SOLUCIÓN AL ERROR 1: Agregamos el estado de 'chats' temporalmente vacío
+  const [chats, setChats] = useState([]); 
+  
   const [vista, setVista] = useState("inicio");
   const [modo, setModo] = useState("pasajero");
   const [viajeSel, setViajeSel] = useState(null);
@@ -61,16 +65,21 @@ export default function NavegacionPrincipal({ user }) {
   "Yaracuy": ["San Felipe", "Yaritagua", "Chivacoa"],
   "Zulia": ["Maracaibo", "San Francisco", "Cabimas", "Ciudad Ojeda"]
 };
+
   // --- LÓGICA DE FIREBASE (ESCUCHA ACTIVA) ---
   useEffect(() => {
     if (!user?.uid) return;
     const unsubU = onSnapshot(doc(db, "usuarios", user.uid), (s) => {
       setUserData(s.exists() ? { id: s.id, ...s.data() } : { id: user.uid, nombre: "Usuario", saldo: 0 });
     });
-    // Usamos "Viajes" con V mayúscula como en tu DB
+    
     const unsubV = onSnapshot(query(collection(db, "Viajes"), orderBy("fecha", "desc")), (s) => {
       setViajes(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+
+    // AVISO: Aquí faltaría agregar el listener para los chats cuando crees la colección en Firebase
+    // Ejemplo: const unsubC = onSnapshot(collection(db, "Chats"), ...);
+
     return () => { unsubU(); unsubV(); };
   }, [user]);
 
@@ -94,30 +103,27 @@ export default function NavegacionPrincipal({ user }) {
         reservasPendientes: arrayRemove(pasajero)
       });
     } catch (e) { console.error("Error al rechazar:", e); }
-  };
+  }; 
+  // SOLUCIÓN AL ERROR 2: La llave de cierre estaba perdida
 
-  
-
-      const manejarActualizarViajeDirecto = async (datosEditados) => {
+  const manejarActualizarViajeDirecto = async (datosEditados) => {
     try {
       const viajeRef = doc(db, "Viajes", datosEditados.id);
       
-      // ACTUALIZACIÓN ESTRICTA: Solo tocamos lo que se edita en el modal.
       const actualizaciones = {
           precio: Number(datosEditados.precio),
           asientos: Number(datosEditados.asientos),
           últimaEdición: new Date().toISOString()
       };
 
-      // Controlamos la redundancia de tu BD dependiendo del tipo de ruta
       if (datosEditados.tipoRuta === 'vuelta_de_ruta') {
           actualizaciones.fechaSalida = datosEditados.fechaForm;
           actualizaciones.horaSalida = datosEditados.horaForm;
       } else {
           actualizaciones.fecha = datosEditados.fechaForm;
           actualizaciones.hora = datosEditados.horaForm;
-          actualizaciones.fechaSalida = datosEditados.fechaForm; // Sincronizamos por seguridad
-          actualizaciones.horaSalida = datosEditados.horaForm;   // Sincronizamos por seguridad
+          actualizaciones.fechaSalida = datosEditados.fechaForm; 
+          actualizaciones.horaSalida = datosEditados.horaForm;   
       }
 
       await updateDoc(viajeRef, actualizaciones);
@@ -127,23 +133,21 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
   
-  
-
   const manejarEditarViaje = (viaje) => {
     setViajeAEditar(viaje); 
-    setViajeForm(viaje); // Llenamos el form con los datos actuales
+    setViajeForm(viaje);
     setVista("publicar");
     setPasoWizard(1);
   };
 
-    const manejarEliminarViaje = async (viajeId) => {
+  const manejarEliminarViaje = async (viajeId) => {
     try {
       await deleteDoc(doc(db, "Viajes", viajeId));
     } catch (e) { 
       console.error("Error al eliminar:", e); 
     }
   };
-  // Función Publicar (Modificada para soportar edición)
+
   const publicarRuta = async (datosFinales) => {
     try {
       if (viajeAEditar) {
@@ -153,14 +157,14 @@ export default function NavegacionPrincipal({ user }) {
       } else {
         await addDoc(collection(db, "Viajes"), {
           ...datosFinales,
-          uidConductor: userData.id, // Usamos el nombre de campo de tu DB
+          uidConductor: userData.id, 
           conductor: userData.nombre,
           fechaPublicacion: new Date().toISOString(),
           estado: "disponible",
           timestamp: Date.now()
         });
       }
-      // Reset y Volver
+      
       setViajeForm({
         origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
         preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
@@ -190,21 +194,15 @@ export default function NavegacionPrincipal({ user }) {
           )
         )}
 
-                    {/* ✅ VISTA CONECTADA CON FILTROS CORREGIDOS */}
         {vista === "mis_viajes" && (
           <VistaMisViajes 
-            // 1. FILTRO CHOFER: Usamos userData.id (no userData.uid)
             viajesChofer={viajes.filter(v => v.uidConductor === userData?.id)} 
-            
-            // 2. FILTRO PASAJERO: Usamos el array "pasajeros" según tu lógica de BD
             viajesPasajeroActivos={viajes.filter(v => 
               v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado !== 'finalizado'
             )} 
-            
             viajesPasajeroHistorial={viajes.filter(v => 
               v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado === 'finalizado'
             )}
-
             userData={userData} 
             onActualizarViajeFBD={manejarActualizarViajeDirecto}
             onEliminarViajeFBD={manejarEliminarViaje}
@@ -212,10 +210,15 @@ export default function NavegacionPrincipal({ user }) {
           />
         )}
     
-        
-        
-        
-        {vista === "inbox" && <VistaInbox userData={userData} />}
+        {vista === "inbox" && (
+          <VistaInbox 
+            chatsChofer={chats.filter(c => c.uidConductor === userData?.id)} 
+            chatsPasajero={chats.filter(c => c.uidPasajero === userData?.id || c.pasajeros?.some(p => p.id === userData?.id))}
+            onAbrirChat={(chatSeleccionado) => {
+              console.log("Abriendo chat:", chatSeleccionado);
+            }}
+          />
+        )}
         
         {vista === "perfil" && (
           <VistaPerfil 
@@ -238,4 +241,4 @@ export default function NavegacionPrincipal({ user }) {
       <Navbar vista={vista} modo={modo} setVista={setVista} setModo={setModo} setPasoWizard={setPasoWizard} />
     </div>
   );
-}
+                                                                                                 }
