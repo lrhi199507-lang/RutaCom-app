@@ -13,6 +13,8 @@ import { VistaPerfil } from './components/views/VistaPerfil';
 import { WizardPublicar } from './components/ui/WizardPublicar'; 
 import { VistaDetalleViaje } from './components/views/VistaDetalleViaje';
 import { VistaInicio } from './components/views/VistaInicio';
+import { VistaChatPrivado } from './components/views/VistaChatPrivado'; // Verifica que la ruta coincida con tu carpeta
+
 
 // LAYOUT
 import { Navbar } from "./components/layout/Navbar";
@@ -28,7 +30,9 @@ export default function NavegacionPrincipal({ user }) {
   const [viajeAEditar, setViajeAEditar] = useState(null); 
   const [pestañaPerfil, setPestañaPerfil] = useState("publico");
   const [pasoWizard, setPasoWizard] = useState(1);
-
+  const [chatActivo, setChatActivo] = useState(null);
+  
+  
   const [viajeForm, setViajeForm] = useState({
     origen: "", destino: "", precio: "", asientos: "4", 
     fechaSalida: "", horaSalida: "", publicarRegreso: false,
@@ -293,18 +297,28 @@ export default function NavegacionPrincipal({ user }) {
             onRegresar={() => setVista("inicio")}
           />
         )}
-    
-                {vista === "inbox" && (
+
+        {vista === "inbox" && (
           <VistaInbox 
             chatsChofer={chats.filter(c => c.uidConductor === userData?.id)} 
             chatsPasajero={chats.filter(c => c.uidPasajero === userData?.id || c.pasajeros?.some(p => p.id === userData?.id))}
-            
-            userData={userData} // <--- ¡ESTA ES LA LÍNEA QUE FALTABA!
-            
+            userData={userData} 
             onAbrirChat={(chatSeleccionado) => {
-              console.log("Abriendo chat individual:", chatSeleccionado);
-              // Aquí iría la lógica para abrir la pantalla de mensajes individual
+              // ESTO CONECTA EL CLIC CON LA PANTALLA DEL CHAT
+              setChatActivo(chatSeleccionado);
+              setVista("chat_individual");
             }}
+          />
+        )}   
+
+                {vista === "chat_individual" && chatActivo && (
+          <VistaChatPrivado 
+            chat={chatActivo} 
+            userData={userData} 
+            onRegresar={() => {
+              setChatActivo(null);
+              setVista("inbox");
+            }} 
           />
         )}
         
@@ -315,6 +329,8 @@ export default function NavegacionPrincipal({ user }) {
             pestañaActiva={pestañaPerfil} setPestañaActiva={setPestañaPerfil}
           />
         )}
+
+        
         
         {vista === "publicar" && (
           <WizardPublicar 
