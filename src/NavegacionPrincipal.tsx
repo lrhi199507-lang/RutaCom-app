@@ -117,7 +117,6 @@ export default function NavegacionPrincipal({ user }) {
       
       const querySnapshot = await getDocs(q);
       
-            // --- REEMPLAZA DESDE AQUÍ ---
       let chatDataCompleto = null;
 
       if (!querySnapshot.empty) {
@@ -131,7 +130,7 @@ export default function NavegacionPrincipal({ user }) {
         const nuevosDatos = {
           idViaje: viaje.id,
           ruta: `${viaje.cO || viaje.origen?.split(',')[0] || "Ruta"} - ${viaje.cD || viaje.destino?.split(',')[0] || "Ruta"}`,
-          uidConductor: conductorId,
+          uidConductor: viaje.uidConductor, // Usamos la variable directa
           nombreConductor: viaje.conductor || "Conductor",
           fotoConductor: viaje.fotoPerfil || "",
           uidPasajero: userData.id,
@@ -152,19 +151,13 @@ export default function NavegacionPrincipal({ user }) {
       // REDIRECCIÓN DIRECTA: Esto es lo que hace que se abra solo
       setChatActivo(chatDataCompleto);
       setVista("chat_individual");
-      // --- HASTA AQUÍ ---
-      
-      }
-
-      // 4. Navegar a la vista de Inbox temporalmente
-      setVista("inbox"); 
-      console.log("Redirigiendo a Inbox. ChatID:", chatId);
       
     } catch (error) {
       console.error("Error al iniciar chat:", error);
       alert("Hubo un error al intentar abrir el chat. Revisa la consola.");
     }
   };
+  
 
   // --- ACCIONES PARA VISTA MIS VIAJES ---
   const manejarAceptarPasajero = async (viajeId, pasajero) => {
