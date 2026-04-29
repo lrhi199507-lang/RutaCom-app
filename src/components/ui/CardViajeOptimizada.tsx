@@ -62,7 +62,8 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
   };
   
   return (
-    <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden">
+    onClick={onClickDetalle}
+    className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden cursor-pointer active:scale-[0.98]"
       
       {/* ETIQUETA DE RUTA CON RETORNO */}
       {esRutaCompleta && (
@@ -182,16 +183,6 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
         <div className="flex items-center gap-2 text-slate-500 col-span-2 border-t border-slate-50 pt-2">
           <Clock size={14} className="text-blue-400" /> <p className="text-[10px] font-bold">  Fecha: <span className='font-black'>{formatearFechaManual(fechaCorrecta)}</span></p>
         </div>  
-      </div>
-
-      {/* BOTONES */}
-      <div className="flex gap-3 pt-2">
-        <button onClick={onClickDetalle} className="flex-1 py-3.5 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg active:scale-95 transition-all">
-          Ver Detalles
-        </button>
-        <button onClick={onClickPedir} disabled={esUltimoPuesto} className="flex-1 py-3.5 bg-blue-600 disabled:bg-slate-300 text-white rounded-2xl font-black uppercase italic text-xs shadow-lg active:scale-95 transition-all">
-          Pedir Cola
-        </button>
       </div>
     </div>
   );
