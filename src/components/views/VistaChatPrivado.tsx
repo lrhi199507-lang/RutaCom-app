@@ -1,38 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, doc } from "firebase/firestore";
-import { ChevronLeft, Send, User, Car, ShieldCheck, Info } from 'lucide-react';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
+import { ChevronLeft, Send, User, ShieldCheck, Info, Headset } from 'lucide-react';
 
 export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMsg, setNuevoMsg] = useState("");
   const scrollRef = useRef(null);
 
-  // Sugerencias profesionales predeterminadas
-  const sugerenciasPasajero = [
-    "¡Hola! ¿Aún tienes cupo disponible?",
-    "¿Cuál es el punto exacto de salida?",
-    "Llevo equipaje, ¿hay problema?"
-  ];
+  // 1. IDENTIFICAMOS SI ES SOPORTE O CHAT NORMAL
+  const isSoporte = chat.esSoporte;
+  // Si es soporte, creamos un ID único para este usuario. Si no, usamos el ID del viaje.
+  const chatIdReal = isSoporte ? `soporte_${userData.id}` : chat.id;
 
-  const sugerenciasChofer = [
-    "¡Hola! Sí, aún tengo cupo.",
-    "Estoy confirmando los pasajeros.",
-    "El punto de encuentro es el de la app."
-  ];
+  // 2. SUGERENCIAS DINÁMICAS
+  const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
+  const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
+  const sugerenciasSoporte = ["Tengo un problema con un viaje", "Falla en la aplicación", "Tengo una sugerencia"];
 
-  // Identificamos quién es quién en este chat
-  const soyConductor = chat.uidConductor === userData.id;
-  const sugerencias = soyConductor ? sugerenciasChofer : sugerenciasPasajero;
-  const nombreContacto = soyConductor ? chat.nombrePasajero : chat.nombreConductor;
-  const fotoContacto = soyConductor ? chat.fotoPasajero : chat.fotoConductor;
+  const soyConductor = !isSoporte && chat.uidConductor === userData.id;
+  
+  const sugerencias = isSoporte ? sugerenciasSoporte : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
+  const nombreContacto = isSoporte ? "Soporte Dame la cola" : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
+  const fotoContacto = isSoporte ? null : (soyConductor ? chat.fotoPasajero : chat.fotoConductor);
+
+  // 3. MENSAJE AUTOMÁTICO DE SOPORTE (Visual, no gasta base de datos)
+  const mensajeBienvenidaSoporte = {
+    id: 'msg-bienvenida-bot',
+    texto: `¡Hola ${userData.nombre}! Soy el asistente virtual de Dame la cola. Elige una opción abajo o escribe tu duda, y un asesor humano te responderá pronto.`,
+    uidRemitente: 'admin',
+    timestamp: new Date()
+  };
 
   useEffect(() => {
-    if (!chat.id) return;
+    if (!chatIdReal) return;
     
-    // Conectamos a la subcolección correcta: Chats -> [id] -> Mensajes
     const q = query(
-      collection(db, `Chats/${chat.id}/Mensajes`),
+      collection(db, `Chats/${chatIdReal}/Mensajes`),
       orderBy("timestamp", "asc")
     );
 
@@ -41,16 +45,16 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
 
-    // Limpiar notificaciones (mensajes sin leer) al entrar
     const limpiarNotificaciones = async () => {
+      // Usamos setDoc con merge por si el documento de soporte aún no existe
       if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
-        await updateDoc(doc(db, "Chats", chat.id), { mensajesSinLeer: 0 });
+        await setDoc(doc(db, "Chats", chatIdReal), { mensajesSinLeer: 0 }, { merge: true });
       }
     };
     limpiarNotificaciones();
 
     return () => unsub();
-  }, [chat.id]);
+  }, [chatIdReal]);
 
   const enviar = async (e, textoSugerido = null) => {
     if (e) e.preventDefault();
@@ -59,45 +63,54 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     if (!texto) return;
 
     try {
-      setNuevoMsg(""); // Limpiar input visualmente de inmediato
+      setNuevoMsg(""); 
       
-      // 1. Guardar mensaje
-      await addDoc(collection(db, `Chats/${chat.id}/Mensajes`), {
+      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: texto,
         uidRemitente: userData.id,
         timestamp: serverTimestamp()
       });
 
-      // 2. Actualizar el último mensaje en la tarjeta de afuera
-      await updateDoc(doc(db, "Chats", chat.id), {
+      // Usamos setDoc con {merge: true} en lugar de updateDoc. 
+      // Así, si el usuario nunca ha hablado con soporte, Firebase crea el chat base automáticamente.
+      await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mensajesSinLeer: 1, 
-        remitenteUltimoMensaje: userData.id // <--- CLAVE PARA EL PUNTO ROJO
-      });
+        remitenteUltimoMensaje: userData.id,
+        ...(isSoporte && { // Si es soporte, guardamos estos datos extra para tu panel de Admin
+            esSoporte: true,
+            uidPasajero: userData.id,
+            nombrePasajero: userData.nombre,
+            ruta: "Soporte Técnico"
+        })
+      }, { merge: true });
 
     } catch (error) {
       console.error("Error al enviar:", error);
     }
   };
 
+  // Preparamos la lista final de mensajes a mostrar en pantalla
+  const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
+
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       
       {/* HEADER */}
-      <div className="p-4 border-b flex items-center gap-3 bg-white shadow-sm pt-8">
-        <button onClick={onRegresar} className="p-2 -ml-2 hover:bg-slate-100 rounded-full transition-colors text-blue-600">
+      <div className={`p-4 border-b flex items-center gap-3 shadow-sm pt-8 ${isSoporte ? 'bg-slate-900 text-white' : 'bg-white'}`}>
+        <button onClick={onRegresar} className={`p-2 -ml-2 rounded-full transition-colors ${isSoporte ? 'text-white hover:bg-slate-800' : 'text-blue-600 hover:bg-slate-100'}`}>
           <ChevronLeft size={28} />
         </button>
-        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 border border-slate-200 overflow-hidden shrink-0">
-          {fotoContacto ? <img src={fotoContacto} className="w-full h-full object-cover"/> : <User size={20} />}
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${isSoporte ? 'bg-blue-600 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
+          {fotoContacto ? <img src={fotoContacto} className="w-full h-full object-cover"/> : (isSoporte ? <Headset size={20} /> : <User size={20} />)}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-black italic uppercase text-sm text-slate-800 tracking-tighter truncate flex items-center gap-1">
-            {nombreContacto} <ShieldCheck size={14} className="text-green-500" />
+          <h3 className={`font-black italic uppercase text-sm tracking-tighter truncate flex items-center gap-1 ${isSoporte ? 'text-white' : 'text-slate-800'}`}>
+            {nombreContacto} {isSoporte ? <ShieldCheck size={14} className="text-blue-400" /> : <ShieldCheck size={14} className="text-green-500" />}
           </h3>
-          <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest">
-            {chat.ruta}
+          <p className={`text-[10px] font-bold truncate uppercase tracking-widest ${isSoporte ? 'text-blue-300' : 'text-slate-400'}`}>
+            {isSoporte ? 'Atención 24/7' : chat.ruta}
           </p>
         </div>
       </div>
@@ -106,18 +119,22 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         <div className="flex justify-center mb-6 mt-2">
           <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-2xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
-            <Info size={12} /> Inicio del chat seguro
+            <Info size={12} /> {isSoporte ? 'Conexión Segura con Soporte' : 'Inicio del chat seguro'}
           </div>
         </div>
 
-        {mensajes.map((m) => {
+        {mensajesAMostrar.map((m) => {
           const soyYo = m.uidRemitente === userData.id;
+          const esBot = m.uidRemitente === 'admin';
+          
           return (
             <div key={m.id} className={`flex ${soyYo ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] p-3 px-4 shadow-sm text-sm font-bold ${
+              <div className={`max-w-[80%] p-3 px-4 shadow-sm text-sm font-bold ${
                 soyYo 
                 ? 'bg-blue-600 text-white rounded-[20px] rounded-tr-none' 
-                : 'bg-white text-slate-700 border border-slate-200 rounded-[20px] rounded-tl-none'
+                : esBot 
+                  ? 'bg-slate-800 text-white border border-slate-700 rounded-[20px] rounded-tl-none' // Estilo oscuro para el bot
+                  : 'bg-white text-slate-700 border border-slate-200 rounded-[20px] rounded-tl-none'
               }`}>
                 {m.texto}
               </div>
@@ -127,11 +144,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         <div ref={scrollRef} />
       </div>
 
-      {/* ZONA INFERIOR: SUGERENCIAS Y TECLADO */}
+      {/* ZONA INFERIOR */}
       <div className="bg-white border-t border-slate-100 pb-safe">
         
-        {/* Botones de Sugerencias (Se ocultan si ya hay mucha charla) */}
-        {mensajes.length < 4 && (
+        {/* Botones de Sugerencias */}
+        {mensajes.length < (isSoporte ? 5 : 4) && (
           <div className="flex overflow-x-auto gap-2 px-4 py-3 no-scrollbar border-b border-slate-50">
             {sugerencias.map((sug, idx) => (
               <button 
@@ -167,4 +184,3 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     </div>
   );
 };
-            
