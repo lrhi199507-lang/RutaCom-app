@@ -62,6 +62,7 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
   };
   
   return (
+    <div
     onClick={onClickDetalle}
     className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden cursor-pointer active:scale-[0.98]"
       
@@ -184,6 +185,7 @@ const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegr
           <Clock size={14} className="text-blue-400" /> <p className="text-[10px] font-bold">  Fecha: <span className='font-black'>{formatearFechaManual(fechaCorrecta)}</span></p>
         </div>  
       </div>
+     
     </div>
   );
 };
