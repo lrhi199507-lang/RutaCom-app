@@ -3,7 +3,7 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { 
   doc, onSnapshot, collection, query, orderBy, 
-  addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment 
+  addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, getDocs, where
 } from "firebase/firestore";
 
 // VISTAS
@@ -132,6 +132,76 @@ export default function NavegacionPrincipal({ user }) {
       throw e;
     }
   };
+
+    // --- LÓGICA DE CHAT ---
+  const iniciarChat = async (viaje) => {
+    if (!userData?.id || !viaje?.id) return;
+    
+    try {
+      // 1. Verificar si el usuario actual es el conductor o el pasajero
+      const soyConductor = viaje.uidConductor === userData.id;
+      const idOtroUsuario = soyConductor 
+        ? null // Si el conductor le da al botón, necesitamos saber a qué pasajero le habla (se manejará desde la lista de pasajeros)
+        : viaje.uidConductor;
+        
+      const nombreOtroUsuario = soyConductor ? "Pasajero" : viaje.conductor;
+
+      // Si el conductor presiona el botón general de la ruta, lo ideal es llevarlo al Inbox, 
+      // porque un viaje puede tener muchos pasajeros y no sabemos a quién quiere hablarle.
+      if (soyConductor) {
+         setVista("inbox");
+         return;
+      }
+
+      // 2. Buscar si YA existe un chat entre este pasajero y este conductor para este viaje específico
+      // Nota: Necesitarás importar 'where' y 'getDocs' de firebase/firestore al inicio de tu archivo
+      const { getDocs, where } = require("firebase/firestore"); // Importar si no lo tienes arriba
+      
+      const chatsRef = collection(db, "Chats");
+      const q = query(
+        chatsRef, 
+        where("idViaje", "==", viaje.id),
+        where("uidPasajero", "==", userData.id),
+        where("uidConductor", "==", viaje.uidConductor)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      let chatId = null;
+
+      if (!querySnapshot.empty) {
+        // El chat ya existe, obtenemos su ID
+        chatId = querySnapshot.docs[0].id;
+      } else {
+        // 3. El chat no existe, lo creamos
+        const nuevoChatRef = await addDoc(collection(db, "Chats"), {
+          idViaje: viaje.id,
+          ruta: `${viaje.cO || viaje.origen} - ${viaje.cD || viaje.destino}`,
+          uidConductor: viaje.uidConductor,
+          nombreConductor: viaje.conductor,
+          fotoConductor: viaje.fotoPerfil || "",
+          uidPasajero: userData.id,
+          nombrePasajero: userData.nombre,
+          fotoPasajero: userData.fotoPerfil || "",
+          ultimoMensaje: "Chat iniciado",
+          ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: Date.now(),
+          mensajesSinLeer: 0
+        });
+        chatId = nuevoChatRef.id;
+      }
+
+      // 4. Navegar a la vista de mensajes individuales (asumiendo que crearás una 'VistaMensajes')
+      // Por ahora, lo mandaremos al Inbox y puedes ver si se creó en Firebase
+      console.log("Chat listo con ID:", chatId);
+      setVista("inbox"); // Temporalmente lo mandamos al inbox hasta que tengas la vista individual
+      
+    } catch (error) {
+      console.error("Error al iniciar chat:", error);
+      alert("Hubo un error al intentar abrir el chat.");
+    }
+  };
+  
   
   const manejarEditarViaje = (viaje) => {
     setViajeAEditar(viaje); 
@@ -212,6 +282,7 @@ export default function NavegacionPrincipal({ user }) {
             userData={userData} 
             onActualizarViajeFBD={manejarActualizarViajeDirecto}
             onEliminarViajeFBD={manejarEliminarViaje}
+            onIniciarChat={iniciarChat} // <--- NUEVA LÍNEA
             onRegresar={() => setVista("inicio")}
           />
         )}
