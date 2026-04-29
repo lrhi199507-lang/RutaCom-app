@@ -148,7 +148,8 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-  const publicarRuta = async (datosFinales) => {
+  // En NavegacionPrincipal.jsx
+  const publicarRuta = async (datosFinales, esperarToast = false) => {
     try {
       if (viajeAEditar) {
         const viajeRef = doc(db, "Viajes", viajeAEditar.id);
@@ -169,10 +170,15 @@ export default function NavegacionPrincipal({ user }) {
         origen: "", destino: "", precio: "", asientos: "4", horaSalida: "",
         preferencias: { ac: true, noFumar: true, mascotas: false, maxDosAtras: true }
       });
-      setPasoWizard(1);
-      setVista("inicio");
+      
+      // Si estamos esperando el Toast, NO navegamos aquí. El Wizard se encarga.
+      if (!esperarToast) {
+         setPasoWizard(1);
+         setVista("inicio");
+      }
     } catch (error) {
       console.error("Error en Firebase:", error);
+      throw error; // Propagar el error para que el Wizard lo atrape
     }
   };
 
