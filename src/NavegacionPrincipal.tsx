@@ -117,32 +117,43 @@ export default function NavegacionPrincipal({ user }) {
       
       const querySnapshot = await getDocs(q);
       
-      let chatId = null;
+            // --- REEMPLAZA DESDE AQUÍ ---
+      let chatDataCompleto = null;
 
       if (!querySnapshot.empty) {
-        // El chat ya existe, obtenemos su ID
-        chatId = querySnapshot.docs[0].id;
-        console.log("Chat existente encontrado con ID:", chatId);
+        // El chat ya existe, recuperamos los datos
+        const docSnap = querySnapshot.docs[0];
+        chatDataCompleto = { id: docSnap.id, ...docSnap.data() };
+        console.log("Chat existente encontrado:", chatDataCompleto.id);
       } else {
-        // 3. El chat no existe, lo creamos con los datos completos
+        // El chat no existe, lo creamos
         console.log("Creando nuevo chat en Firebase...");
-        const nuevoChatRef = await addDoc(collection(db, "Chats"), {
+        const nuevosDatos = {
           idViaje: viaje.id,
-          ruta: `${viaje.cO || viaje.origen?.split(',')[0]} - ${viaje.cD || viaje.destino?.split(',')[0]}`,
-          uidConductor: viaje.uidConductor,
-          nombreConductor: viaje.conductor,
+          ruta: `${viaje.cO || viaje.origen?.split(',')[0] || "Ruta"} - ${viaje.cD || viaje.destino?.split(',')[0] || "Ruta"}`,
+          uidConductor: conductorId,
+          nombreConductor: viaje.conductor || "Conductor",
           fotoConductor: viaje.fotoPerfil || "",
           uidPasajero: userData.id,
-          nombrePasajero: userData.nombre,
+          nombrePasajero: userData.nombre || "Pasajero",
           fotoPasajero: userData.fotoPerfil || "",
           ultimoMensaje: "Chat iniciado",
           ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           timestamp: Date.now(),
           mensajesSinLeer: 0,
-          estadoViaje: viaje.estado || "disponible" // Guardamos el estado para la lógica de WhatsApp luego
-        });
-        chatId = nuevoChatRef.id;
-        console.log("Nuevo chat creado con ID:", chatId);
+          estadoViaje: viaje.estado || "disponible"
+        };
+        
+        const nuevoChatRef = await addDoc(collection(db, "Chats"), nuevosDatos);
+        chatDataCompleto = { id: nuevoChatRef.id, ...nuevosDatos };
+        console.log("Nuevo chat creado:", chatDataCompleto.id);
+      }
+
+      // REDIRECCIÓN DIRECTA: Esto es lo que hace que se abra solo
+      setChatActivo(chatDataCompleto);
+      setVista("chat_individual");
+      // --- HASTA AQUÍ ---
+      
       }
 
       // 4. Navegar a la vista de Inbox temporalmente
