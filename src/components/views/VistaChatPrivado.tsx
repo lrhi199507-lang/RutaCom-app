@@ -15,8 +15,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   const [viajeActual, setViajeActual] = useState(null); 
   const scrollRef = useRef(null);
 
-    const [toast, setToast] = useState(null); // Guardará { texto: "", tipo: "exito" | "error" }
-  
+  const [toast, setToast] = useState(null); // Guardará { texto: "", tipo: "exito" | "error" }
 
   // ESTADOS DEL MODAL DE REPORTE
   const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
@@ -114,13 +113,15 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
 
   const abrirWhatsApp = () => {
     if (!pasajeroConfirmado) {
-      alert("🔒 Por políticas de privacidad, el número de WhatsApp solo se habilita cuando el pasajero es aceptado en el viaje.");
+      setToast({ texto: "🔒 El número se habilita al confirmar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
       return;
     }
 
     const numeroDestino = soyConductor ? chat.telefonoPasajero : chat.telefonoConductor;
     if (!numeroDestino) {
-      alert("Este usuario aún no ha registrado su número en su perfil.");
+      setToast({ texto: "El usuario no registró su número", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
       return;
     }
 
@@ -136,7 +137,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     window.open(url, '_blank');
   };
 
-    const manejarReporte = async () => {
+  const manejarReporte = async () => {
     if (!motivoReporte.trim()) return;
     setEnviandoReporte(true);
     try {
@@ -165,8 +166,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
       setEnviandoReporte(false);
     }
   };
-  
-  
   
   const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
 
@@ -275,7 +274,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         </form>
       </div>
 
-                  {/* TOAST FLOTANTE LÍNEAL Y ESTÉTICO */}
+      {/* TOAST FLOTANTE LÍNEAL Y ESTÉTICO */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -288,8 +287,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
           </div>
         </div>
       )}
-      
-      
 
       {/* MODAL DE REPORTE */}
       {mostrarModalReporte && (
@@ -332,3 +329,4 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     </div>
   );
 };
+        
