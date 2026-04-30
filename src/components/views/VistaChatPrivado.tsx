@@ -133,33 +133,35 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     window.open(url, '_blank');
   };
 
-  // LÓGICA PARA ENVIAR EL REPORTE A FIREBASE
+  // LÓGICA PARA ENVIAR EL REPORTE A FIREBASE (BLINDADA)
   const manejarReporte = async () => {
     if (!motivoReporte.trim()) return;
     setEnviandoReporte(true);
     try {
       await addDoc(collection(db, "Reportes"), {
-        idReportado: idOtroUsuario,
-        nombreReportado: nombreContacto,
-        idReportador: userData.id,
-        nombreReportador: userData.nombre,
-        idChat: chatIdReal,
+        idReportado: idOtroUsuario || "Desconocido", // <-- Si está vacío, pone Desconocido en vez de fallar
+        nombreReportado: nombreContacto || "Usuario",
+        idReportador: userData?.id || "Desconocido",
+        nombreReportador: userData?.nombre || "Usuario",
+        idChat: chatIdReal || "N/A",
         idViaje: chat.idViaje || "N/A",
         motivo: motivoReporte,
         fecha: new Date().toISOString(),
-        estado: "pendiente" // Para tu futuro panel admin
+        estado: "pendiente" 
       });
       alert("Reporte enviado exitosamente. Revisaremos el caso.");
       setMostrarModalReporte(false);
       setMotivoReporte("");
     } catch (error) {
-      console.error("Error al reportar:", error);
-      alert("Hubo un error al enviar el reporte.");
+      // ESTO TE DIRÁ EL ERROR EXACTO EN LA CONSOLA
+      console.error("Error DETALLADO de Firebase al reportar:", error);
+      alert("Hubo un error al enviar el reporte. Revisa la consola (F12) para ver el motivo.");
     } finally {
       setEnviandoReporte(false);
     }
   };
-
+  
+  
   const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
 
   return (
