@@ -29,7 +29,40 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [bio, setBio] = useState(userData.bio || "");
   const [hablador, setHablador] = useState(userData.hablador || false);
   const [musica, setMusica] = useState(userData.musica || false);
+  const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
+  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes'>('pendientes');
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
+
+// 2. Actualiza la función para cargar ambos datos
+const cargarDatosAdmin = async () => {
+  setCargando(true);
+  try {
+    // Cargar Usuarios
+    const snapUsers = await getDocs(collection(db, "usuarios"));
+    setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
+    
+    // Cargar Reportes
+    const snapReports = await getDocs(collection(db, "Reportes"));
+    setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
+  } catch (e) { 
+    console.error(e); 
+  } finally { 
+    setCargando(false); 
+  }
+};
+
+// 3. Función para gestionar (borrar o resolver) reportes
+const resolverReporte = async (reporteId: string) => {
+  if(!window.confirm("¿Marcar este reporte como revisado? Se eliminará de la lista.")) return;
+  try {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, "Reportes", reporteId));
+    setReportesAdmin(reportesAdmin.filter(r => r.id !== reporteId));
+  } catch (e) {
+    alert("Error al eliminar reporte");
+  }
+};
+  
   
   // VARIABLE DE VISTA (Corregida para usar pestañaActiva)
   const view = pestañaActiva || 'publico';
@@ -556,92 +589,88 @@ const verificarCuentaCorreo = async () => {
         )}
         
 
-                {/* PANEL ADMINISTRATIVO */}
-        {view === 'admin' && (
-          <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
-            <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
-              <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl">
-                <ChevronRight size={20} className="rotate-180" />
-              </button>
-              <div className="text-center">
-                <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
-                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
-              </div>
-              <button onClick={cargarUsuariosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl">
-                <RefreshCw size={20} />
-              </button>
-            </div>
-
-            <div className="flex bg-slate-900 p-1 border-b border-white/5">
-              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>
-                Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
-              </button>
-              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>
-                Aprobados ({usuariosAdmin.filter(u => u.kycVerificado).length})
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
-              {cargando ? (
-                <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
-              ) : (
-                usuariosAdmin
-                  .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
-                  .map(u => {
-                    const estaExpandido = usuarioExpandidoAdmin === u.id;
-                    return (
-                      <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden">
-                        <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-xs">{u.nombre?.charAt(0).toUpperCase()}</div>
-                            <div className="text-left">
-                              <p className="font-black text-xs uppercase italic">{u.nombre}</p>
-                              <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
-                            </div>
-                          </div>
-                          <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
-                        </button>
-                        {estaExpandido && (
-  <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
-    <div className="grid grid-cols-3 gap-2">
-      {[
-        { img: u.kycFoto, label: 'Cédula' }, 
-        { img: u.selfieFoto, label: 'Selfie' }, 
-        { img: u.fotoFrontal, label: 'Auto' } // <--- Aquí faltaba cerrar el objeto y la lista
-      ].map((item, idx) => (
-        <div key={idx} className="flex flex-col gap-1">
-          {/* Título de la foto */}
-          <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
-          
-          <div 
-            onClick={() => item.img && setFotoZoom(item.img)} 
-            className="bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center"
-          > 
-            {item.img ? (
-              <img src={item.img} className="w-full h-full object-cover" />
-            ) : (
-              <Camera size={14} className="text-slate-700" />
-            )}
-          </div>
-        </div>
-      ))}
+      {/* PANEL ADMINISTRATIVO ACTUALIZADO */}
+{view === 'admin' && (
+  <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+    <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
+      <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl">
+        <ChevronRight size={20} className="rotate-180" />
+      </button>
+      <div className="text-center">
+        <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
+        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Gobernanza de Datos</p>
+      </div>
+      <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl">
+        <RefreshCw size={20} />
+      </button>
     </div>
-    {/* No olvides que aquí abajo deben seguir tus botones de Aprobar/Rechazar */}
-    <div className="flex gap-2">
-      {subPestañaAdmin === 'pendientes' && (
-        <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+
+    {/* SELECTOR DE SUB-PESTAÑAS (3 OPCIONES) */}
+    <div className="flex bg-slate-900 p-1 border-b border-white/5">
+      <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 py-3 text-[8px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>
+        Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
+      </button>
+      <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 py-3 text-[8px] font-black uppercase ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>
+        Reportes ({reportesAdmin.length})
+      </button>
+      <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 py-3 text-[8px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>
+        Aprobados
+      </button>
+    </div>
+    
+    <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
+      {cargando ? (
+        <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
+      ) : subPestañaAdmin === 'reportes' ? (
+        /* VISTA LÍNEAL DE REPORTES */
+        reportesAdmin.length === 0 ? (
+          <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay reportes activos</p>
+        ) : (
+          reportesAdmin.map(r => (
+            <div key={r.id} className="bg-slate-900 border border-red-500/20 rounded-[25px] p-5 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-red-500/10 rounded-full flex items-center justify-center text-red-500">
+                    <AlertCircle size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">
+                      Denunciado: {r.nombreReportado}
+                    </p>
+                    <p className="text-[8px] text-slate-500 font-bold uppercase">
+                      Por: {r.nombreReportador}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => resolverReporte(r.id)} className="bg-slate-800 p-2 rounded-lg text-slate-400">
+                  <ShieldCheck size={16} />
+                </button>
+              </div>
+              
+              <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-400 italic leading-relaxed">
+                  "{r.motivo}"
+                </p>
+              </div>
+              
+              <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-widest text-slate-600 px-1">
+                <span>ID VIAJE: {r.idViaje?.slice(-6)}</span>
+                <span>{new Date(r.fecha).toLocaleDateString()}</span>
+              </div>
+            </div>
+          ))
+        )
+      ) : (
+        /* AQUÍ VA TU LÓGICA DE USUARIOS (PENDIENTES/APROBADOS) */
+        usuariosAdmin
+          .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
+          .map(u => (
+            // ... Aquí mantienes el código del card de usuario que ya tienes ...
+          ))
       )}
-      <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
     </div>
   </div>
-)}     
-                     </div>
-                    );
-                  })
-              )}
-            </div>
-          </div>
-        )}
+)}
       </div>
 
       {/* MODALES DE EDICIÓN Y CÁMARA */}
