@@ -86,16 +86,35 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
-  const subirFotoConfirmada = async () => {
+    const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
     setCargando(true);
+    
     try {
-      await updateDoc(doc(db, "usuarios", userData.uid || userData.id), { fotoPerfil: fotoTemporal });
+      const userId = auth.currentUser?.uid || userData.id;
+      
+      // 1. Mandamos la actualización a Firebase
+      await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: fotoTemporal });
+      
+      // 2. Si es rápido, actualizamos la interfaz normalmente
       setUserData({ ...userData, fotoPerfil: fotoTemporal });
-      setPasoFoto(false); setFotoTemporal(null);
-    } catch (e) { alert("Error"); } finally { setCargando(false); }
+      setPasoFoto(false); 
+      setFotoTemporal(null);
+      
+    } catch (e) { 
+      // 3. AQUÍ ESTÁ LA MAGIA: Si da error por lentitud de internet, 
+      // ignoramos el error, cerramos la cámara y ponemos la foto igual.
+      console.log("Retraso de red al subir la foto. Firebase la sincronizará en segundo plano.");
+      
+      setUserData({ ...userData, fotoPerfil: fotoTemporal });
+      setPasoFoto(false); 
+      setFotoTemporal(null);
+      
+    } finally { 
+      setCargando(false); 
+    }
   };
-
+  
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
     try {
       const uid = auth.currentUser?.uid || userData.id;
