@@ -252,12 +252,17 @@ export default function NavegacionPrincipal({ user }) {
         <p className="text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest">
           Tu acceso a <span className="text-blue-500">Dame la cola</span> ha sido restringido.
         </p>
-        <button 
+                <button 
           onClick={() => signOut(auth)}
           className="mt-12 text-slate-500 font-black uppercase text-[10px] border-b border-slate-800 pb-1 hover:text-white transition-colors"
         >
           Cerrar Sesión
         </button>
+        
+        {/* BOTÓN DE CONTACTO EXTERNO */}
+        <a 
+          href="mailto:tucorreo@gmail.com?subject=Apelación de Cuenta Suspendida"
+          className="mt-6 text-blue-500 font-black uppercase text-[10px] tracking-widest hover:text-blue-400" >  Apelar Decisión (Soporte)  </a>
       </div>
     );
   }
