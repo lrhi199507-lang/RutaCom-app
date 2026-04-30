@@ -275,15 +275,20 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         </form>
       </div>
 
-            {/* TOAST FLOTANTE ESTÉTICO */}
+                  {/* TOAST FLOTANTE LÍNEAL Y ESTÉTICO */}
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] animate-in slide-in-from-top fade-in duration-300">
-          <div className={`px-4 py-3 rounded-full shadow-lg flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
-            {toast.tipo === 'exito' ? <ShieldCheck size={16} className="text-green-400" /> : <AlertTriangle size={16} />}
-            {toast.texto}
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
+          <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
+            {toast.tipo === 'exito' ? (
+              <ShieldCheck size={18} className="text-green-400 shrink-0" />
+            ) : (
+              <AlertTriangle size={18} className="shrink-0" />
+            )}
+            <span className="truncate whitespace-nowrap">{toast.texto}</span>
           </div>
         </div>
       )}
+      
       
 
       {/* MODAL DE REPORTE */}
