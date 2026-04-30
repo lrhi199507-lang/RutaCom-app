@@ -46,7 +46,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     });
 
     const limpiarNotificaciones = async () => {
-      // Usamos setDoc con merge por si el documento de soporte aún no existe
       if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
         await setDoc(doc(db, "Chats", chatIdReal), { mensajesSinLeer: 0 }, { merge: true });
       }
@@ -71,14 +70,12 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         timestamp: serverTimestamp()
       });
 
-      // Usamos setDoc con {merge: true} en lugar de updateDoc. 
-      // Así, si el usuario nunca ha hablado con soporte, Firebase crea el chat base automáticamente.
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mensajesSinLeer: 1, 
         remitenteUltimoMensaje: userData.id,
-        ...(isSoporte && { // Si es soporte, guardamos estos datos extra para tu panel de Admin
+        ...(isSoporte && {
             esSoporte: true,
             uidPasajero: userData.id,
             nombrePasajero: userData.nombre,
@@ -91,10 +88,9 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     }
   };
 
-  // Preparamos la lista final de mensajes a mostrar en pantalla
   const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
 
-    return (
+  return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       
       {/* HEADER */}
@@ -134,10 +130,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         )}
       </div>
 
-      {/* CUERPO DE MENSAJES (Nota cómo va pegado sin cerrar el div principal) */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
-        
-
       {/* CUERPO DE MENSAJES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         <div className="flex justify-center mb-6 mt-2">
@@ -156,7 +148,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
                 soyYo 
                 ? 'bg-blue-600 text-white rounded-[20px] rounded-tr-none' 
                 : esBot 
-                  ? 'bg-slate-800 text-white border border-slate-700 rounded-[20px] rounded-tl-none' // Estilo oscuro para el bot
+                  ? 'bg-slate-800 text-white border border-slate-700 rounded-[20px] rounded-tl-none'
                   : 'bg-white text-slate-700 border border-slate-200 rounded-[20px] rounded-tl-none'
               }`}>
                 {m.texto}
