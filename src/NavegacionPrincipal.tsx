@@ -235,13 +235,37 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-  if (!userData) return <div className="h-screen flex items-center justify-center font-black text-blue-600 italic uppercase">Cargando...</div>;
+    if (!userData) return <div className="h-screen flex items-center justify-center font-black text-blue-600 italic uppercase">Cargando...</div>;
 
-  // LÓGICA PARA EL INDICADOR DE MENSAJES (CORREGIDO: FUERA DE LAS FUNCIONES)
+  // MURO DE BLOQUEO (SOFT BAN)
+  if (userData.cuentaSuspendida === true) {
+    return (
+      <div className="w-full max-w-md mx-auto h-screen bg-slate-950 flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-500">
+        <div className="bg-red-500/10 p-6 rounded-full mb-6 border border-red-500/20">
+          <AlertCircle size={60} className="text-red-500 animate-pulse" />
+        </div>
+        <h1 className="text-white font-black italic uppercase text-2xl tracking-tighter mb-4">
+          Cuenta Suspendida
+        </h1>
+        <p className="text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest">
+          Tu acceso a <span className="text-blue-500">Dame la cola</span> ha sido restringido.
+        </p>
+        <button 
+          onClick={() => signOut(auth)}
+          className="mt-12 text-slate-500 font-black uppercase text-[10px] border-b border-slate-800 pb-1 hover:text-white transition-colors"
+        >
+          Cerrar Sesión
+        </button>
+      </div>
+    );
+  }
+
+  // LÓGICA PARA EL INDICADOR DE MENSAJES
   const misChatsUnificados = chats.filter(c => c.uidConductor === userData?.id || c.uidPasajero === userData?.id);
   const tieneMensajesNuevos = misChatsUnificados.some(c => 
-    c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData?.id // <--- LA NUEVA REGLA
+    c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData?.id 
   );
+
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
       <Header userData={userData} modo={modo} />
