@@ -198,6 +198,29 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { alert("Error al rechazar"); }
   };
 
+    const suspenderUsuario = async (userId: string) => {
+    if (!window.confirm("¿Seguro que deseas SUSPENDER esta cuenta? El usuario no podrá usar la app.")) return;
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "usuarios", userId), {
+        cuentaSuspendida: true
+      });
+      await cargarDatosAdmin(); // Refresca la lista para ver el cambio
+    } catch (e) { alert("Error al suspender al usuario."); } finally { setCargando(false); }
+  };
+
+  const reactivarUsuario = async (userId: string) => {
+    if (!window.confirm("¿Deseas quitarle la suspensión a este usuario?")) return;
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "usuarios", userId), {
+        cuentaSuspendida: false
+      });
+      await cargarDatosAdmin();
+    } catch (e) { alert("Error al reactivar al usuario."); } finally { setCargando(false); }
+  };
+  
+
   const enviarResetContraseña = async () => {
     const email = auth.currentUser?.email;
     if (!email) return;
@@ -477,23 +500,35 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                   ))
                 )
               ) : (
-                /* VISTA DE USUARIOS PENDIENTES/APROBADOS */
+
+                            /* VISTA DE USUARIOS PENDIENTES/APROBADOS */
                 usuariosAdmin
                   .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
                   .map(u => {
                     const estaExpandido = usuarioExpandidoAdmin === u.id;
+                    const estaSuspendido = u.cuentaSuspendida === true;
+                    
                     return (
-                      <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden">
-                        <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white">
+                      <div key={u.id} className={`bg-slate-900 border ${estaSuspendido ? 'border-red-900' : 'border-white/5'} rounded-[25px] overflow-hidden transition-colors`}>
+                        <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white relative">
+                          
+                          {/* Etiqueta visual si está suspendido */}
+                          {estaSuspendido && (
+                            <div className="absolute top-0 right-0 bg-red-600 text-white text-[7px] font-black uppercase px-2 py-1 rounded-bl-xl">Suspendido</div>
+                          )}
+
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-xs">{u.nombre?.charAt(0).toUpperCase()}</div>
+                            <div className={`w-10 h-10 ${estaSuspendido ? 'bg-red-950/50 text-red-500' : 'bg-slate-800 text-white'} rounded-full flex items-center justify-center font-black text-xs`}>
+                              {u.nombre?.charAt(0).toUpperCase()}
+                            </div>
                             <div className="text-left">
-                              <p className="font-black text-xs uppercase italic">{u.nombre}</p>
+                              <p className={`font-black text-xs uppercase italic ${estaSuspendido ? 'text-slate-500 line-through' : 'text-white'}`}>{u.nombre}</p>
                               <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
                             </div>
                           </div>
                           <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
                         </button>
+                        
                         {estaExpandido && (
                           <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
                             <div className="grid grid-cols-3 gap-2">
@@ -504,17 +539,28 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                               ].map((item, idx) => (
                                 <div key={idx} className="flex flex-col gap-1">
                                   <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
-                                  <div onClick={() => item.img && setFotoZoom(item.img)} className="bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center"> 
+                                  <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
                                     {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
                                   </div>
                                 </div>
                               ))}
                             </div>
-                            <div className="flex gap-2">
-                              {subPestañaAdmin === 'pendientes' && (
-                                <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+                            
+                            <div className="flex flex-col gap-2">
+                              {/* Botones de Aprobación (Solo en pendientes) */}
+                              {subPestañaAdmin === 'pendientes' && !estaSuspendido && (
+                                <div className="flex gap-2">
+                                  <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+                                  <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
+                                </div>
                               )}
-                              <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
+                              
+                              {/* Botones de Suspensión (Disponibles siempre que el usuario esté expandido) */}
+                              {estaSuspendido ? (
+                                <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 hover:bg-slate-700 transition-all">Reactivar Cuenta</button>
+                              ) : (
+                                <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-900 hover:text-white transition-all">Suspender Usuario</button>
+                              )}
                             </div>
                           </div>
                         )}     
@@ -526,6 +572,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
       </div>
+      
 
       {/* MODALES DE EDICIÓN Y CÁMARA */}
       {modalVisible && (
