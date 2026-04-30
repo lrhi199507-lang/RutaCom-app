@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
+import { AlertCircle } from 'lucide-react';
+
 import { 
   doc, onSnapshot, collection, query, orderBy, 
   addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, where, getDocs 
