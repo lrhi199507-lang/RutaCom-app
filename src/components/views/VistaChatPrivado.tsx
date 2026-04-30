@@ -97,6 +97,34 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
 
   const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
 
+  const abrirWhatsApp = () => {
+    // Definimos a quién le vamos a escribir
+    const numeroDestino = soyConductor ? chat.telefonoPasajero : chat.telefonoConductor;
+    
+    if (!numeroDestino) {
+      alert("Este usuario aún no ha registrado su número de teléfono en su perfil.");
+      return;
+    }
+
+    // 1. Limpiamos cualquier espacio o guión que haya puesto el usuario
+    let numeroLimpio = numeroDestino.replace(/\D/g, ''); 
+    
+    // 2. Lógica inteligente para adaptar números de Venezuela (ej: de 0412 a 58412)
+    if (numeroLimpio.startsWith('0')) {
+      numeroLimpio = '58' + numeroLimpio.substring(1);
+    } else if (!numeroLimpio.startsWith('58')) {
+      numeroLimpio = '58' + numeroLimpio; // Por si escriben "412..." sin el cero
+    }
+    
+    // 3. Creamos el enlace con un mensaje predeterminado nivel Uber
+    const mensaje = `¡Hola! Te escribo desde Dame la cola por el viaje: ${chat.ruta}.`;
+    const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(mensaje)}`;
+    
+    // Abrimos WhatsApp
+    window.open(url, '_blank');
+  };
+
+  
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       
@@ -121,11 +149,13 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         {/* BOTONES DE ACCIÓN (Solo en chats entre usuarios) */}
         {!isSoporte && (
           <div className="flex items-center gap-1 pr-1">
-             <button 
-              onClick={() => alert("Aquí abriremos el WhatsApp del usuario")}
+              <button 
+              onClick={abrirWhatsApp} // <--- CONECTADO AQUÍ
+              type="button"
               className="p-2 text-slate-400 hover:text-green-500 hover:bg-green-50 rounded-full transition-all active:scale-90"   >
               <IconoWhatsApp size={22} className="text-green-500" />
             </button>
+            
         
             <button 
               onClick={() => alert("Aquí abriremos el modal para reportar")}
