@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
-import { ChevronLeft, Send, User, ShieldCheck, Info, Headset } from 'lucide-react';
+import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle } from 'lucide-react';
 
 export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   const [mensajes, setMensajes] = useState([]);
@@ -94,7 +94,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   // Preparamos la lista final de mensajes a mostrar en pantalla
   const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
 
-  return (
+    return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       
       {/* HEADER */}
@@ -105,6 +105,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         <div className={`w-10 h-10 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${isSoporte ? 'bg-blue-600 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
           {fotoContacto ? <img src={fotoContacto} className="w-full h-full object-cover"/> : (isSoporte ? <Headset size={20} /> : <User size={20} />)}
         </div>
+        
         <div className="flex-1 min-w-0">
           <h3 className={`font-black italic uppercase text-sm tracking-tighter truncate flex items-center gap-1 ${isSoporte ? 'text-white' : 'text-slate-800'}`}>
             {nombreContacto} {isSoporte ? <ShieldCheck size={14} className="text-blue-400" /> : <ShieldCheck size={14} className="text-green-500" />}
@@ -113,7 +114,29 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
             {isSoporte ? 'Atención 24/7' : chat.ruta}
           </p>
         </div>
+
+        {/* BOTONES DE ACCIÓN (Solo en chats entre usuarios) */}
+        {!isSoporte && (
+          <div className="flex items-center gap-1 pr-1">
+            <button 
+              onClick={() => alert("Aquí abriremos el WhatsApp del usuario")}
+              className="p-2 text-slate-400 hover:text-green-500 hover:bg-green-50 rounded-full transition-all active:scale-90"
+            >
+              <Phone size={18} strokeWidth={2.5} />
+            </button>
+            <button 
+              onClick={() => alert("Aquí abriremos el modal para reportar")}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90"
+            >
+              <AlertTriangle size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* CUERPO DE MENSAJES (Nota cómo va pegado sin cerrar el div principal) */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+        
 
       {/* CUERPO DE MENSAJES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
