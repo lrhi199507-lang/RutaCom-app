@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
-import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock } from 'lucide-react';
+
 // Icono SVG oficial de WhatsApp
 const IconoWhatsApp = ({ size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -9,18 +10,15 @@ const IconoWhatsApp = ({ size = 20, className = "" }) => (
   </svg>
 );
 
-
 export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMsg, setNuevoMsg] = useState("");
+  const [viajeActual, setViajeActual] = useState(null); // <-- Estado para el viaje
   const scrollRef = useRef(null);
 
-  // 1. IDENTIFICAMOS SI ES SOPORTE O CHAT NORMAL
   const isSoporte = chat.esSoporte;
-  // Si es soporte, creamos un ID único para este usuario. Si no, usamos el ID del viaje.
   const chatIdReal = isSoporte ? `soporte_${userData.id}` : chat.id;
 
-  // 2. SUGERENCIAS DINÁMICAS
   const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
   const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
   const sugerenciasSoporte = ["Tengo un problema con un viaje", "Falla en la aplicación", "Tengo una sugerencia"];
@@ -31,7 +29,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   const nombreContacto = isSoporte ? "Soporte Dame la cola" : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
   const fotoContacto = isSoporte ? null : (soyConductor ? chat.fotoPasajero : chat.fotoConductor);
 
-  // 3. MENSAJE AUTOMÁTICO DE SOPORTE (Visual, no gasta base de datos)
   const mensajeBienvenidaSoporte = {
     id: 'msg-bienvenida-bot',
     texto: `¡Hola ${userData.nombre}! Soy el asistente virtual de Dame la cola. Elige una opción abajo o escribe tu duda, y un asesor te responderá pronto.`,
@@ -39,6 +36,21 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     timestamp: new Date()
   };
 
+  // 1. ESCUCHAR EL ESTADO DEL VIAJE EN TIEMPO REAL
+  useEffect(() => {
+    if (isSoporte || !chat.idViaje) return;
+    const unsubViaje = onSnapshot(doc(db, "Viajes", chat.idViaje), (docSnap) => {
+      if (docSnap.exists()) setViajeActual(docSnap.data());
+    });
+    return () => unsubViaje();
+  }, [chat.idViaje, isSoporte]);
+
+  // 2. VERIFICAR SI HAY CONFIRMACIÓN MUTUA
+  const pasajeroConfirmado = viajeActual?.pasajeros?.some(p => 
+    (p.id === chat.uidPasajero || p.uid === chat.uidPasajero) && p.estado === 'confirmado'
+  );
+
+  // ESCUCHAR LOS MENSAJES
   useEffect(() => {
     if (!chatIdReal) return;
     
@@ -95,36 +107,35 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     }
   };
 
-  const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
-
   const abrirWhatsApp = () => {
-    // Definimos a quién le vamos a escribir
-    const numeroDestino = soyConductor ? chat.telefonoPasajero : chat.telefonoConductor;
-    
-    if (!numeroDestino) {
-      alert("Este usuario aún no ha registrado su número de teléfono en su perfil.");
+    if (!pasajeroConfirmado) {
+      alert("🔒 Por políticas de privacidad, el número de WhatsApp solo se habilita cuando el pasajero es aceptado en el viaje.");
       return;
     }
 
-    // 1. Limpiamos cualquier espacio o guión que haya puesto el usuario
+    const numeroDestino = soyConductor ? chat.telefonoPasajero : chat.telefonoConductor;
+    
+    if (!numeroDestino) {
+      alert("Este usuario aún no ha registrado su número en su perfil.");
+      return;
+    }
+
     let numeroLimpio = numeroDestino.replace(/\D/g, ''); 
     
-    // 2. Lógica inteligente para adaptar números de Venezuela (ej: de 0412 a 58412)
     if (numeroLimpio.startsWith('0')) {
       numeroLimpio = '58' + numeroLimpio.substring(1);
     } else if (!numeroLimpio.startsWith('58')) {
-      numeroLimpio = '58' + numeroLimpio; // Por si escriben "412..." sin el cero
+      numeroLimpio = '58' + numeroLimpio; 
     }
     
-    // 3. Creamos el enlace con un mensaje predeterminado nivel Uber
     const mensaje = `¡Hola! Te escribo desde Dame la cola por el viaje: ${chat.ruta}.`;
     const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(mensaje)}`;
     
-    // Abrimos WhatsApp
     window.open(url, '_blank');
   };
 
-  
+  const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
+
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       
@@ -149,14 +160,13 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         {/* BOTONES DE ACCIÓN (Solo en chats entre usuarios) */}
         {!isSoporte && (
           <div className="flex items-center gap-1 pr-1">
-              <button 
-              onClick={abrirWhatsApp} // <--- CONECTADO AQUÍ
+            <button 
+              onClick={abrirWhatsApp}
               type="button"
-              className="p-2 text-slate-400 hover:text-green-500 hover:bg-green-50 rounded-full transition-all active:scale-90"   >
-              <IconoWhatsApp size={22} className="text-green-500" />
+              className={`p-2 rounded-full transition-all active:scale-90 ${pasajeroConfirmado ? 'text-green-500 hover:bg-green-50' : 'text-slate-300 hover:bg-slate-50'}`}
+            >
+              {pasajeroConfirmado ? <IconoWhatsApp size={22} className="text-green-500" /> : <Lock size={20} className="text-slate-300" />}
             </button>
-            
-        
             <button 
               onClick={() => alert("Aquí abriremos el modal para reportar")}
               className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90"
@@ -236,3 +246,4 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     </div>
   );
 };
+                              
