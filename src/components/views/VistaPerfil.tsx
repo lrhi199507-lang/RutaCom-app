@@ -544,21 +544,27 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             </div>
                             
                             <div className="flex flex-col gap-2">
-                              {/* Botones de Aprobación (Solo en pendientes) */}
-                              {subPestañaAdmin === 'pendientes' && !estaSuspendido && (
-                                <div className="flex gap-2">
-                                  <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-                                  <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
-                                </div>
-                              )}
-                              
-                              {/* Botones de Suspensión (Disponibles siempre que el usuario esté expandido) */}
-                              {estaSuspendido ? (
-                                <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 hover:bg-slate-700 transition-all">Reactivar Cuenta</button>
-                              ) : (
-                                <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-900 hover:text-white transition-all">Suspender Usuario</button>
-                              )}
-                            </div>
+  {estaSuspendido ? (
+    // Si está suspendido, solo mostramos Reactivar
+    <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">
+      Reactivar Cuenta
+    </button>
+  ) : (
+    // Si NO está suspendido, mostramos las opciones normales
+    <>
+      {subPestañaAdmin === 'pendientes' && (
+        <div className="flex gap-2">
+          <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+          <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
+        </div>
+      )}
+      <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">
+        Suspender Usuario
+      </button>
+    </>
+  )}
+</div>
+                            
                           </div>
                         )}     
                       </div>
