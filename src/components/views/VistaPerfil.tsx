@@ -198,27 +198,24 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { alert("Error al rechazar"); }
   };
 
-    const suspenderUsuario = async (userId: string) => {
-    if (!window.confirm("¿Seguro que deseas SUSPENDER esta cuenta? El usuario no podrá usar la app.")) return;
+      const suspenderUsuario = async (userId: string) => {
+    if (!window.confirm("¿SUSPENDER esta cuenta? No podrá usar la app.")) return;
     setCargando(true);
     try {
-      await updateDoc(doc(db, "usuarios", userId), {
-        cuentaSuspendida: true
-      });
-      await cargarDatosAdmin(); // Refresca la lista para ver el cambio
-    } catch (e) { alert("Error al suspender al usuario."); } finally { setCargando(false); }
+      await updateDoc(doc(db, "usuarios", userId), { cuentaSuspendida: true });
+      await cargarDatosAdmin(); 
+    } catch (e) { alert("Error al suspender."); } finally { setCargando(false); }
   };
 
   const reactivarUsuario = async (userId: string) => {
-    if (!window.confirm("¿Deseas quitarle la suspensión a este usuario?")) return;
+    if (!window.confirm("¿Reactivar esta cuenta?")) return;
     setCargando(true);
     try {
-      await updateDoc(doc(db, "usuarios", userId), {
-        cuentaSuspendida: false
-      });
+      await updateDoc(doc(db, "usuarios", userId), { cuentaSuspendida: false });
       await cargarDatosAdmin();
-    } catch (e) { alert("Error al reactivar al usuario."); } finally { setCargando(false); }
+    } catch (e) { alert("Error al reactivar."); } finally { setCargando(false); }
   };
+  
   
 
   const enviarResetContraseña = async () => {
