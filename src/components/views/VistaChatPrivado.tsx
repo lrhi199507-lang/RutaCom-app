@@ -15,6 +15,9 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   const [viajeActual, setViajeActual] = useState(null); 
   const scrollRef = useRef(null);
 
+    const [toast, setToast] = useState(null); // Guardará { texto: "", tipo: "exito" | "error" }
+  
+
   // ESTADOS DEL MODAL DE REPORTE
   const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
   const [motivoReporte, setMotivoReporte] = useState("");
@@ -133,13 +136,12 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     window.open(url, '_blank');
   };
 
-  // LÓGICA PARA ENVIAR EL REPORTE A FIREBASE (BLINDADA)
-  const manejarReporte = async () => {
+    const manejarReporte = async () => {
     if (!motivoReporte.trim()) return;
     setEnviandoReporte(true);
     try {
       await addDoc(collection(db, "Reportes"), {
-        idReportado: idOtroUsuario || "Desconocido", // <-- Si está vacío, pone Desconocido en vez de fallar
+        idReportado: idOtroUsuario || "Desconocido",
         nombreReportado: nombreContacto || "Usuario",
         idReportador: userData?.id || "Desconocido",
         nombreReportador: userData?.nombre || "Usuario",
@@ -149,17 +151,21 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         fecha: new Date().toISOString(),
         estado: "pendiente" 
       });
-      alert("Reporte enviado exitosamente. Revisaremos el caso.");
+      
       setMostrarModalReporte(false);
       setMotivoReporte("");
+      setToast({ texto: "Reporte enviado. Revisaremos el caso.", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+      
     } catch (error) {
-      // ESTO TE DIRÁ EL ERROR EXACTO EN LA CONSOLA
-      console.error("Error DETALLADO de Firebase al reportar:", error);
-      alert("Hubo un error al enviar el reporte. Revisa la consola (F12) para ver el motivo.");
+      console.error("Error al reportar:", error);
+      setToast({ texto: "Hubo un error al enviar el reporte.", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setEnviandoReporte(false);
     }
   };
+  
   
   
   const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
@@ -268,6 +274,17 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
           </button>
         </form>
       </div>
+
+            {/* TOAST FLOTANTE ESTÉTICO */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] animate-in slide-in-from-top fade-in duration-300">
+          <div className={`px-4 py-3 rounded-full shadow-lg flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
+            {toast.tipo === 'exito' ? <ShieldCheck size={16} className="text-green-400" /> : <AlertTriangle size={16} />}
+            {toast.texto}
+          </div>
+        </div>
+      )}
+      
 
       {/* MODAL DE REPORTE */}
       {mostrarModalReporte && (
