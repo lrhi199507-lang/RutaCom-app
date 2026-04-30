@@ -22,8 +22,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [cargando, setCargando] = useState(false);
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
-  const [reportesAdmin, setReportesAdmin] = useState<any[]>([]); // NUEVO ESTADO DE REPORTES
-  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes'>('pendientes'); // CORREGIDO (Sin duplicados)
+  const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
+  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes'>('pendientes');
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   const [modalInstruccionesSelfie, setModalInstruccionesSelfie] = useState(false);
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
@@ -31,6 +31,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [hablador, setHablador] = useState(userData?.hablador || false);
   const [musica, setMusica] = useState(userData?.musica || false);
   
+  // ESTADO PARA EL TOAST
+  const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
+
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   const view = pestañaActiva || 'publico';
@@ -70,7 +73,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const proximoNivel = calcularSiguienteNivel();
   const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 100);
 
-  // --- LÓGICA DE SEGURIDAD ---
   const puntosSeguridad = [
     !!userData.kycVerificado, !!userData.licenciaVerificada, !!userData.circulacionVerificada,
     !!userData.rcvVerificado, !!userData.selfieVerificada, !!userData.fotoFrontalVerificada,
@@ -78,7 +80,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   ];
   const porcentajeConfianza = (puntosSeguridad.filter(Boolean).length / puntosSeguridad.length) * 100;
 
-  // --- FUNCIONES DE ACCIÓN ---
   const seleccionarImagen = async (source: CameraSource) => {
     try {
       const image = await CapacitorCamera.getPhoto({ quality: 25, width: 600, resultType: CameraResultType.DataUrl, source });
@@ -86,30 +87,22 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
-    const subirFotoConfirmada = async () => {
+  const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
     setCargando(true);
     
     try {
       const userId = auth.currentUser?.uid || userData.id;
-      
-      // 1. Mandamos la actualización a Firebase
       await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: fotoTemporal });
-      
-      // 2. Si es rápido, actualizamos la interfaz normalmente
       setUserData({ ...userData, fotoPerfil: fotoTemporal });
       setPasoFoto(false); 
       setFotoTemporal(null);
-      
     } catch (e) { 
-      // 3. AQUÍ ESTÁ LA MAGIA: Si da error por lentitud de internet, 
-      // ignoramos el error, cerramos la cámara y ponemos la foto igual.
-      console.log("Retraso de red al subir la foto. Firebase la sincronizará en segundo plano.");
-      
+      setToast({ texto: "Retraso de red. Se subirá en segundo plano.", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
       setUserData({ ...userData, fotoPerfil: fotoTemporal });
       setPasoFoto(false); 
       setFotoTemporal(null);
-      
     } finally { 
       setCargando(false); 
     }
@@ -164,12 +157,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
       setFotoDocTemporal(null); setPasoDocumento({ ...pasoDocumento, activa: false });
     } catch (e: any) {
-      console.log("Retraso de red detectado, cerrando...");
+      setToast({ texto: "Retraso de red. Se subirá en segundo plano.", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
       setFotoDocTemporal(null); setPasoDocumento({ ...pasoDocumento, activa: false });
     } finally { setCargando(false); }
   };
   
-  // --- LÓGICA DE ADMINISTRADOR UNIFICADA ---
   const cargarDatosAdmin = async () => {
     setCargando(true);
     try {
@@ -186,7 +179,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(doc(db, "Reportes", reporteId));
       setReportesAdmin(reportesAdmin.filter(r => r.id !== reporteId));
-    } catch (e) { alert("Error al eliminar reporte"); }
+    } catch (e) { 
+      setToast({ texto: "Error al eliminar reporte", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   const aprobarUsuario = async (userId: string) => {
@@ -198,9 +194,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         rcvVerificado: true, fotoFrontalVerificada: true, fotoTraseraVerificada: true,
         fotoLatIzqVerificada: true, fotoLatDerVerificada: true, selfieVerificada: true
       });
-      alert("¡Usuario Verificado!");
+      setToast({ texto: "¡Usuario Verificado!", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
       await cargarDatosAdmin();
-    } catch (e) { alert("Error de permisos"); } finally { setCargando(false); }
+    } catch (e) { 
+      setToast({ texto: "Error de permisos", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
   };
 
   const rechazarDocumentos = async (userId: string) => {
@@ -212,18 +212,25 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null,
         estadoRevision: "rechazado", mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, asegúrate de que sean legibles y vuelve a intentarlo."
       });
-      alert("Documentos eliminados. El usuario ha sido notificado.");
+      setToast({ texto: "Documentos eliminados", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
       await cargarDatosAdmin(); 
-    } catch (e) { alert("Error al rechazar"); }
+    } catch (e) { 
+      setToast({ texto: "Error al rechazar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
-      const suspenderUsuario = async (userId: string) => {
+  const suspenderUsuario = async (userId: string) => {
     if (!window.confirm("¿SUSPENDER esta cuenta? No podrá usar la app.")) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "usuarios", userId), { cuentaSuspendida: true });
       await cargarDatosAdmin(); 
-    } catch (e) { alert("Error al suspender."); } finally { setCargando(false); }
+    } catch (e) { 
+      setToast({ texto: "Error al suspender", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
   };
 
   const reactivarUsuario = async (userId: string) => {
@@ -232,10 +239,11 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     try {
       await updateDoc(doc(db, "usuarios", userId), { cuentaSuspendida: false });
       await cargarDatosAdmin();
-    } catch (e) { alert("Error al reactivar."); } finally { setCargando(false); }
+    } catch (e) { 
+      setToast({ texto: "Error al reactivar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
   };
-  
-  
 
   const enviarResetContraseña = async () => {
     const email = auth.currentUser?.email;
@@ -243,8 +251,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     try {
       const { sendPasswordResetEmail } = await import('firebase/auth');
       await sendPasswordResetEmail(auth, email);
-      alert("Te hemos enviado un correo a " + email + " para que cambies tu contraseña.");
-    } catch (error) { alert("Error al enviar el correo. Inténtalo más tarde."); }
+      setToast({ texto: `Correo enviado a ${email}`, tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) { 
+      setToast({ texto: "Error al enviar el correo", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   const verificarCuentaCorreo = async () => {
@@ -252,8 +264,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       try {
         const { sendEmailVerification } = await import('firebase/auth');
         await sendEmailVerification(auth.currentUser);
-        alert("Correo de verificación enviado. Por favor, revisa tu email.");
-      } catch (error) { alert("No pudimos enviar el correo de verificación en este momento."); }
+        setToast({ texto: "Correo de verificación enviado", tipo: "exito" });
+        setTimeout(() => setToast(null), 3000);
+      } catch (error) { 
+        setToast({ texto: "Error al enviar verificación", tipo: "error" });
+        setTimeout(() => setToast(null), 3000);
+      }
     }
   };
 
@@ -263,16 +279,32 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     try {
       await auth.currentUser.reload();
       if (auth.currentUser.emailVerified) {
-        alert("¡Excelente! Tu correo ha sido verificado con éxito.");
+        setToast({ texto: "¡Correo verificado!", tipo: "exito" });
+        setTimeout(() => setToast(null), 3000);
         setUserData({...userData}); 
       } else {
-        alert("Aún no detectamos la verificación. Asegúrate de hacer clic en el enlace que te enviamos.");
+        setToast({ texto: "Aún no verificado", tipo: "error" });
+        setTimeout(() => setToast(null), 3000);
       }
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
 
-    return (
-    <div className="bg-slate-50 min-h-screen flex flex-col font-sans">
+  return (
+    <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
+      {/* TOAST FLOTANTE LÍNEAL Y ESTÉTICO */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
+          <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
+            {toast.tipo === 'exito' ? (
+              <ShieldCheck size={18} className="text-green-400 shrink-0" />
+            ) : (
+              <AlertTriangle size={18} className="shrink-0" />
+            )}
+            <span className="truncate whitespace-nowrap">{toast.texto}</span>
+          </div>
+        </div>
+      )}
+
       {/* NAV SUPERIOR */}
       <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
         <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
@@ -454,7 +486,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
 
-                {/* PANEL ADMINISTRATIVO (CON REPORTES) */}
+        {/* PANEL ADMINISTRATIVO (CON REPORTES) */}
         {view === 'admin' && (
           <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
             <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
@@ -517,7 +549,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 )
               ) : (
 
-                            /* VISTA DE USUARIOS PENDIENTES/APROBADOS */
+                /* VISTA DE USUARIOS PENDIENTES/APROBADOS */
                 usuariosAdmin
                   .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
                   .map(u => {
@@ -563,26 +595,26 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             </div>
                             
                             <div className="flex flex-col gap-2">
-  {estaSuspendido ? (
-    // Si está suspendido, solo mostramos Reactivar
-    <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">
-      Reactivar Cuenta
-    </button>
-  ) : (
-    // Si NO está suspendido, mostramos las opciones normales
-    <>
-      {subPestañaAdmin === 'pendientes' && (
-        <div className="flex gap-2">
-          <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-          <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
-        </div>
-      )}
-      <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">
-        Suspender Usuario
-      </button>
-    </>
-  )}
-</div>
+                              {estaSuspendido ? (
+                                // Si está suspendido, solo mostramos Reactivar
+                                <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">
+                                  Reactivar Cuenta
+                                </button>
+                              ) : (
+                                // Si NO está suspendido, mostramos las opciones normales
+                                <>
+                                  {subPestañaAdmin === 'pendientes' && (
+                                    <div className="flex gap-2">
+                                      <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+                                      <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
+                                    </div>
+                                  )}
+                                  <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">
+                                    Suspender Usuario
+                                  </button>
+                                </>
+                              )}
+                            </div>
                             
                           </div>
                         )}     
@@ -595,7 +627,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         )}
       </div>
       
-
       {/* MODALES DE EDICIÓN Y CÁMARA */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
@@ -693,4 +724,3 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
     </button>
   );
 };
-                                
