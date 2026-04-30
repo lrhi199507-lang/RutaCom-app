@@ -27,7 +27,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
   // 3. MENSAJE AUTOMÁTICO DE SOPORTE (Visual, no gasta base de datos)
   const mensajeBienvenidaSoporte = {
     id: 'msg-bienvenida-bot',
-    texto: `¡Hola ${userData.nombre}! Soy el asistente virtual de Dame la cola. Elige una opción abajo o escribe tu duda, y un asesor humano te responderá pronto.`,
+    texto: `¡Hola ${userData.nombre}! Soy el asistente virtual de Dame la cola. Elige una opción abajo o escribe tu duda, y un asesor te responderá pronto.`,
     uidRemitente: 'admin',
     timestamp: new Date()
   };
