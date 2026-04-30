@@ -261,7 +261,7 @@ export default function NavegacionPrincipal({ user }) {
         
         {/* BOTÓN DE CONTACTO EXTERNO */}
         <a 
-          href="mailto:tucorreo@gmail.com?subject=Apelación de Cuenta Suspendida"
+          href="mailto:lrhi199507@gmail.com?subject=Apelación de Cuenta Suspendida"
           className="mt-6 text-blue-500 font-black uppercase text-[10px] tracking-widest hover:text-blue-400" >  Apelar Decisión (Soporte)  </a>
       </div>
     );
