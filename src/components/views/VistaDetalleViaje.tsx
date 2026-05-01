@@ -5,7 +5,7 @@ import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
-  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation
+  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
@@ -149,12 +149,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           )}
         </div>
 
-        {/* MODO HUD (EN CURSO) VS MODO NORMAL (DISPONIBLE/FINALIZADO) */}
+        {/* MODO HUD (EN CURSO) VS MODO NORMAL */}
         {estadoViaje === 'en_curso' ? (
           
-          /* =========================================
-             FASE 3: HUD DE VIAJE EN CURSO (MODO RADAR)
-             ========================================= */
           <div className="px-5 space-y-6 animate-in zoom-in-95 duration-500">
             
             {/* RADAR / MAPA SIMULADO */}
@@ -172,13 +169,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                </div>
             </div>
 
-            {/* BOTÓN SOS (EMERGENCIA) */}
-            <button onClick={() => alert("🚨 Activando protocolo de emergencia... (Función en desarrollo)")} className="w-full bg-rose-50 border-2 border-rose-200 text-rose-600 rounded-[30px] p-5 flex items-center justify-center gap-4 active:scale-95 transition-all shadow-sm">
-               <div className="bg-rose-500 p-2.5 rounded-full text-white shadow-lg shadow-rose-500/40"><AlertTriangle size={22} fill="currentColor" className="text-rose-100" /></div>
-               <div className="text-left">
-                 <p className="font-black uppercase text-sm tracking-wider">Botón de Pánico</p>
-                 <p className="text-[9px] font-bold text-rose-400 uppercase">Avisar a emergencias / Soporte</p>
-               </div>
+            {/* BOTÓN RECOMENDADO: COMPARTIR RUTA */}
+            <button onClick={() => alert("Abriendo WhatsApp... (En desarrollo)")} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
+               <Share2 size={20} />
+               <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
             </button>
 
             {/* LISTA DE PASAJEROS A BORDO */}
@@ -361,47 +355,66 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* BOTONERA INFERIOR FIJA */}
+      {/* BOTONERA INFERIOR FIJA CON LÓGICA INTELIGENTE */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-3 h-14">
-          <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
-            <MessageCircle size={16} /> Chat
-          </button>
+          
+          {estadoViaje === 'en_curso' ? (
+            // =====================================
+            // BOTONES MIENTRAS EL VIAJE ESTÁ EN CURSO
+            // =====================================
+            <>
+              <button onClick={() => alert("🚨 Activando protocolo de emergencia...")} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">
+                <AlertTriangle size={16} /> SOS
+              </button>
 
-          {soyConductor ? (
-             estadoViaje === 'disponible' ? (
-                <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => setModalAbordaje(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
-                  {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Iniciar Viaje'}
-                </button>
-             ) : estadoViaje === 'en_curso' ? (
-                <button disabled={cargando} onClick={() => cambiarEstadoViaje('finalizado')} className="flex-[2] bg-red-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-red-500/30 active:scale-95 transition-all border-2 border-red-500">
-                  Finalizar Viaje
-                </button>
-             ) : (
-                <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
-                  Viaje Finalizado
-                </div>
-             )
-          ) : (
-            yaSoyPasajero ? (
-              estadoViaje === 'en_curso' ? (
-                 <div className="flex-[2] bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                   <Navigation size={16} /> En Ruta a tu Destino
-                 </div>
-              ) : estadoViaje === 'finalizado' ? (
-                 <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
-                  Llegaste a tu Destino
-                 </div>
+              {soyConductor ? (
+                 <button disabled={cargando} onClick={() => cambiarEstadoViaje('finalizado')} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">
+                   Finalizar Viaje
+                 </button>
               ) : (
-                 <div className="flex-[2] bg-green-500 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg"><Check size={16} /> Puesto Confirmado</div>
-              )
-            ) : yaSolicite ? (
-              <button disabled={cargando} onClick={cancelarSolicitud} className="flex-[2] bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
-            ) : cuposRestantes > 0 && estadoViaje === 'disponible' ? (
-              <button disabled={cargando} onClick={solicitarCola} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
-            ) : (
-              <button disabled className="flex-[2] bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">No Disponible</button>
-            )
+                 <div className="flex-[2] bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                   <Navigation size={16} /> En Ruta a Destino
+                 </div>
+              )}
+            </>
+          ) : (
+            // =====================================
+            // BOTONES NORMALES (PREVIO AL VIAJE O FINALIZADO)
+            // =====================================
+            <>
+              <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+                <MessageCircle size={16} /> Chat
+              </button>
+
+              {soyConductor ? (
+                 estadoViaje === 'disponible' ? (
+                    <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => setModalAbordaje(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
+                      {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Iniciar Viaje'}
+                    </button>
+                 ) : (
+                    <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
+                      Viaje Finalizado
+                    </div>
+                 )
+              ) : (
+                yaSoyPasajero ? (
+                  estadoViaje === 'finalizado' ? (
+                     <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
+                      Llegaste a tu Destino
+                     </div>
+                  ) : (
+                     <div className="flex-[2] bg-green-500 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg"><Check size={16} /> Puesto Confirmado</div>
+                  )
+                ) : yaSolicite ? (
+                  <button disabled={cargando} onClick={cancelarSolicitud} className="flex-[2] bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
+                ) : cuposRestantes > 0 ? (
+                  <button disabled={cargando} onClick={solicitarCola} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
+                ) : (
+                  <button disabled className="flex-[2] bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
+                )
+              )}
+            </>
           )}
         </div>
       </div>
