@@ -144,34 +144,56 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  // NUEVA FUNCIÓN: Enviar la reseña a Firebase
+  // NUEVA FUNCIÓN: Enviar la reseña a Firebase (BLINDADA)
   const enviarCalificacion = async () => {
     if (estrellas === 0) {
-      setToastMessage("Selecciona al menos 1 estrella"); setShowToast(true); return;
+      setToastMessage("Selecciona al menos 1 estrella"); 
+      setShowToast(true); 
+      return;
     }
+    
     setCargando(true);
+    
     try {
-      // 1. Guardamos la reseña en una colección nueva
+      // 1. Blindamos las variables para que Firebase no colapse por un "undefined"
+      const idChofer = viaje.uidConductor || viaje.idCreador || "SinID";
+      const idPasaj = userData?.id || "SinID";
+      const nomPasaj = userData?.nombre || "Usuario";
+      const comentarioSeguro = comentarioResena || ""; // Si no escribe nada, manda texto vacío
+
+      // 2. Guardamos la reseña
       await addDoc(collection(db, "Resenas"), {
         idViaje: viaje.id,
-        idConductor: viaje.uidConductor || viaje.idCreador,
-        idPasajero: userData.id,
-        nombrePasajero: userData.nombre,
+        idConductor: idChofer,
+        idPasajero: idPasaj,
+        nombrePasajero: nomPasaj,
         estrellas: estrellas,
-        comentario: comentarioResena,
+        comentario: comentarioSeguro,
         fecha: new Date().toISOString()
       });
 
-      // 2. Actualizamos el array del viaje para bloquear que vuelva a votar
+      // 3. Actualizamos al pasajero asegurándonos de atrapar su ID correcto
       const pasajerosActualizados = pasajerosConfirmados.map(p => 
-        p.id === userData.id ? { ...p, calificado: true } : p
+        (p.id === userData?.id || p.uid === userData?.id) ? { ...p, calificado: true } : p
       );
+      
       await updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados });
 
+      // 4. Éxito
       setModalCalificacion(false);
-      setToastMessage("¡Gracias por calificar!"); setShowToast(true);
-    } catch (e) { console.error(e); } finally { setCargando(false); }
+      setToastMessage("¡Gracias por calificar!"); 
+      setShowToast(true);
+
+    } catch (e) { 
+      console.error("Error fatal en Firebase:", e); 
+      // AHORA SÍ VEREMOS SI FALLA
+      setToastMessage("Error al guardar. Revisa tu conexión o base de datos."); 
+      setShowToast(true);
+    } finally { 
+      setCargando(false); 
+    }
   };
+  
 
   const compartirRuta = () => {
     const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.\n\nMi conductor es ${viaje.cN || viaje.conductor}.`;
