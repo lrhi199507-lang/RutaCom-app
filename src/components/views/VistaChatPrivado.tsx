@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
-import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X } from 'lucide-react';
+import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X, Map } from 'lucide-react';
 
 const IconoWhatsApp = ({ size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -9,15 +9,15 @@ const IconoWhatsApp = ({ size = 20, className = "" }) => (
   </svg>
 );
 
-export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
+// 👇 SE AGREGÓ LA PROPIEDAD onVerViaje 👇
+export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => {
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMsg, setNuevoMsg] = useState("");
   const [viajeActual, setViajeActual] = useState(null); 
   const scrollRef = useRef(null);
 
-  const [toast, setToast] = useState(null); // Guardará { texto: "", tipo: "exito" | "error" }
+  const [toast, setToast] = useState(null); 
 
-  // ESTADOS DEL MODAL DE REPORTE
   const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
   const [motivoReporte, setMotivoReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
@@ -193,6 +193,18 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
         {/* BOTONES DE ACCIÓN */}
         {!isSoporte && (
           <div className="flex items-center gap-1 pr-1">
+            
+            {/* 👇 NUEVO BOTÓN: PUENTE HACIA EL VIAJE 👇 */}
+            {onVerViaje && (
+              <button 
+                onClick={onVerViaje}
+                className="px-3 py-1.5 mr-1 bg-blue-600 text-white shadow-md shadow-blue-600/30 rounded-full transition-all active:scale-95 flex items-center gap-1.5"
+              >
+                <Map size={14} strokeWidth={3} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Viaje</span>
+              </button>
+            )}
+
             <button 
               onClick={abrirWhatsApp}
               type="button"
@@ -329,4 +341,4 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar }) => {
     </div>
   );
 };
-        
+                 
