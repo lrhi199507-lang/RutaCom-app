@@ -286,9 +286,10 @@ export default function NavegacionPrincipal({ user }) {
               userData={userData} 
               onIniciarChat={iniciarChat} 
             />
-          ) : (
+        ) : (
             <VistaInicio 
-              viajes={viajes} setViajeSeleccionado={setViajeSel} 
+              viajes={viajes.filter(v => !v.estado || v.estado === 'disponible')} 
+              setViajeSeleccionado={setViajeSel} 
               setVista={setVista} userData={userData} modo={modo} 
             />
           )
