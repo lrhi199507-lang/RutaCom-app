@@ -334,12 +334,16 @@ export default function NavegacionPrincipal({ user }) {
           />
         )}
         
-        {vista === "perfil" && (
+                {vista === "perfil" && (
           <VistaPerfil 
-            userData={userData} handleLogout={() => signOut(auth)} 
-            pestañaActiva={pestañaPerfil} setPestañaActiva={setPestañaPerfil}
+            userData={userData} 
+            setUserData={setUserData} // <--- AGREGA ESTA LÍNEA QUE FALTA
+            handleLogout={() => signOut(auth)} 
+            pestañaActiva={pestañaPerfil} 
+            setPestañaActiva={setPestañaPerfil}
           />
         )}
+        
         
         {vista === "publicar" && (
           <WizardPublicar 
