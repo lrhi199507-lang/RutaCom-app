@@ -295,7 +295,7 @@ export default function NavegacionPrincipal({ user }) {
           )
         )}
 
-        {vista === "mis_viajes" && (
+                {vista === "mis_viajes" && (
           <VistaMisViajes 
             viajesChofer={viajes.filter(v => v.uidConductor === userData?.id)} 
             viajesPasajeroActivos={viajes.filter(v => 
@@ -305,12 +305,16 @@ export default function NavegacionPrincipal({ user }) {
               v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado === 'finalizado'
             )}
             userData={userData} 
-            onActualizarViajeFBD={manejarActualizarViajeDirecto}
-            onEliminarViajeFBD={manejarEliminarViaje}
-            onIniciarChat={iniciarChat} 
             onRegresar={() => setVista("inicio")}
+            
+            // 👇 ESTE ES EL CABLE QUE FALTA CONECTAR 👇
+            onVerDetalles={(viaje) => {
+              setViajeSel(viaje);
+              setVista("inicio"); 
+            }}
           />
         )}
+        
 
         {vista === "inbox" && (
           <VistaInbox 
