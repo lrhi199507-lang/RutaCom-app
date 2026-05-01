@@ -309,27 +309,24 @@ export default function NavegacionPrincipal({ user }) {
           )
         )}
 
-                {vista === "mis_viajes" && (
+                        {vista === "mis_viajes" && (
           <VistaMisViajes 
-            viajesChofer={viajes.filter(v => v.uidConductor === userData?.id)} 
-            viajesPasajeroActivos={viajes.filter(v => 
+            viajesChofer={listaViajes.filter(v => v.uidConductor === userData?.id)} 
+            viajesPasajeroActivos={listaViajes.filter(v => 
               v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado !== 'finalizado'
             )} 
-            viajesPasajeroHistorial={viajes.filter(v => 
+            viajesPasajeroHistorial={listaViajes.filter(v => 
               v.pasajeros?.some(p => p.id === userData?.id || p.uid === userData?.id) && v.estado === 'finalizado'
             )}
             userData={userData} 
             onRegresar={() => setVista("inicio")}
-            
-            // 👇 ESTE ES EL CABLE QUE FALTA CONECTAR 👇
             onVerDetalles={(viaje) => {
               setViajeSel(viaje);
               setVista("inicio"); 
             }}
           />
         )}
-        
-
+  
         {vista === "inbox" && (
           <VistaInbox 
             chatsChofer={chats.filter(c => c.uidConductor === userData?.id)} 
