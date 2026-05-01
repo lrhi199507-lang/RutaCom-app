@@ -49,6 +49,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   
   const [modalAbordaje, setModalAbordaje] = useState(false);
   const [pinesIngresados, setPinesIngresados] = useState({});
+  
+  // NUEVO ESTADO PARA EL MODAL DE FINALIZAR
+  const [modalFinalizar, setModalFinalizar] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
@@ -94,9 +97,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
       if (accion === 'aceptar') {
-      if (cuposRestantes <= 0) { setToastMessage("Sin puestos disponibles");   setShowToast(true);  setCargando(false);   return; 
+        if (cuposRestantes <= 0) { 
+          setToastMessage("Sin puestos disponibles"); 
+          setShowToast(true); 
+          setCargando(false); 
+          return; 
         }
-        
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         await updateDoc(viajeRef, {
           reservasPendientes: arrayRemove(solicitud),
@@ -126,15 +132,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
   const cambiarEstadoViaje = async (nuevoEstado) => {
-    if (!window.confirm(`¿Seguro que deseas FINALIZAR el viaje?`)) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "Viajes", viaje.id), { estado: nuevoEstado });
+      setModalFinalizar(false); // Cerramos el modal por seguridad
       if (nuevoEstado === 'finalizado') onRegresar(); 
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-      const compartirRuta = () => {
+  const compartirRuta = () => {
     const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.\n\nMi conductor es ${viaje.cN || viaje.conductor}.`;
 
     if ("geolocation" in navigator) {
@@ -145,21 +151,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
-          
-          // Enlace real y universal de Google Maps
-          const linkMapa = `https://www.google.com/maps?q=${lat},${lon}`;
-          
+          const linkMapa = `https://www.google.com/maps?q=$${lat},${lon}`;
           const mensajeConUbicacion = `${mensajeBase}\n\n📍 Mi ubicación actual exacta:\n${linkMapa}`;
           
           window.open(`https://wa.me/?text=${encodeURIComponent(mensajeConUbicacion)}`, '_blank');
         },
         (error) => {
           console.error("Error GPS:", error.message);
-          setToastMessage("⚠️ GPS tardó mucho. Compartiendo sin mapa.");
+          setToastMessage("⚠️ Compartiendo sin mapa por el momento.");
           setShowToast(true);
           window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank');
         },
-        // EL TRUCO ESTÁ AQUÍ: enableHighAccuracy en false para que use WiFi/Datos móviles rápido
         { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
       );
     } else {
@@ -171,7 +173,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setToastMessage("🚨 Alerta enviada a central (Simulación)");
     setShowToast(true);
   };
-  
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative font-sans">
       <div className="flex-1 overflow-y-auto pb-48">
@@ -210,9 +212,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             </div>
 
             {/* BOTÓN RECOMENDADO: COMPARTIR RUTA */}
-            <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm"> <Share2 size={20} />
-           <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
-           </button>
+            <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
+               <Share2 size={20} />
+               <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
+            </button>
 
             {/* LISTA DE PASAJEROS A BORDO */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5 shadow-sm">
@@ -394,20 +397,18 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* BOTONERA INFERIOR FIJA CON LÓGICA INTELIGENTE */}
+      {/* BOTONERA INFERIOR FIJA */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-3 h-14">
           
           {estadoViaje === 'en_curso' ? (
-            // =====================================
-            // BOTONES MIENTRAS EL VIAJE ESTÁ EN CURSO
-            // =====================================
             <>
-              <button onClick={activarSOS} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">  <AlertTriangle size={16} /> SOS
+              <button onClick={activarSOS} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">
+                <AlertTriangle size={16} /> SOS
               </button>
-              
+
               {soyConductor ? (
-                 <button disabled={cargando} onClick={() => cambiarEstadoViaje('finalizado')} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">
+                 <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-slate-900/30 active:scale-95 transition-all">
                    Finalizar Viaje
                  </button>
               ) : (
@@ -417,9 +418,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               )}
             </>
           ) : (
-            // =====================================
-            // BOTONES NORMALES (PREVIO AL VIAJE O FINALIZADO)
-            // =====================================
             <>
               <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
                 <MessageCircle size={16} /> Chat
@@ -456,6 +454,28 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           )}
         </div>
       </div>
+
+      {/* MODAL DE FINALIZAR VIAJE */}
+      {modalFinalizar && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
+            <div className="bg-blue-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-blue-500/20">
+              <Check size={30} className="text-blue-500" />
+            </div>
+            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">¿Finalizar Viaje?</h3>
+            <p className="text-xs font-bold text-slate-400 mb-8 leading-relaxed">Estás a punto de marcar esta ruta como terminada. Los pasajeros serán notificados de su llegada.</p>
+            
+            <div className="flex gap-3">
+              <button disabled={cargando} onClick={() => setModalFinalizar(false)} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">
+                Cancelar
+              </button>
+              <button disabled={cargando} onClick={() => cambiarEstadoViaje('finalizado')} className="flex-1 bg-blue-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">
+                {cargando ? 'Procesando...' : 'Sí, Finalizar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE ABORDAJE (VALIDACIÓN PIN) */}
       {modalAbordaje && (
