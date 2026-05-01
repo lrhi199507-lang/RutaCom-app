@@ -1,7 +1,7 @@
 import React from "react";
 import { Search, PlusCircle, MessageSquare, User, Map } from "lucide-react";
 
-export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMensajesNuevos }) => {
+export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMensajesNuevos, solicitudesPendientes }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-3 pb-8 flex justify-between items-center z-50 rounded-t-[35px] shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.05)]">
       
@@ -14,12 +14,20 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Buscar</span>
       </button>
 
-      {/* BOTÓN 2: TUS VIAJES */}
+      {/* BOTÓN 2: TUS VIAJES (AHORA CON NOTIFICADOR DE SOLICITUDES) */}
       <button 
         onClick={() => setVista("mis_viajes")} 
         className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "mis_viajes" ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`}
       >
-        <Map size={20} strokeWidth={3} />
+        <div className="relative">
+          <Map size={20} strokeWidth={3} />
+          {/* EL GLOBO ROJO CON EL NÚMERO */}
+          {solicitudesPendientes > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white animate-bounce shadow-sm">
+              {solicitudesPendientes}
+            </span>
+          )}
+        </div>
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Viajes</span>
       </button>
 
@@ -40,7 +48,7 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Publicar</span>
       </button>
 
-      {/* BOTÓN 4: MENSAJES (MODIFICADO CON EL PUNTO ROJO) */}
+      {/* BOTÓN 4: MENSAJES */}
       <button 
         onClick={() => setVista("inbox")} 
         className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "inbox" ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`}
