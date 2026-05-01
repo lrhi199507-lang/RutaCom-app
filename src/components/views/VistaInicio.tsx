@@ -189,11 +189,11 @@ const viajesFiltrados = useMemo(() => {
               const cuposRestantes = asientosTotales - pasajerosConfirmados.length;
               const viajeLleno = cuposRestantes <= 0;
 
-              return (
-                <div key={viaje.id} className={viajeLleno ? 'opacity-60 pointer-events-none' : ''}>
+                            return (
+                <div key={viaje.id} className={viajeLleno ? 'opacity-65 pointer-events-none relative pt-3 mb-2' : 'relative'}>
                   {viajeLleno && (
-                    <div className="bg-slate-800 text-white text-[9px] font-black uppercase text-center py-1 rounded-t-[20px] -mb-2 relative z-10 mx-4">
-                      CUPOS COMPLETOS
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black uppercase text-center py-1.5 px-5 rounded-full z-20 shadow-lg border border-slate-700 whitespace-nowrap flex items-center gap-1">
+                      🚫 Cupos Completos
                     </div>
                   )}
                   <CardViajeOptimizada
