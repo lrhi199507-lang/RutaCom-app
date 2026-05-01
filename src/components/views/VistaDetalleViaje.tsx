@@ -325,17 +325,20 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             <MessageCircle size={16} /> Chat
           </button>
 
-          {/* LÓGICA DE BOTÓN PRINCIPAL */}
+             {/* LÓGICA DE BOTÓN PRINCIPAL: CONDUCTOR */}
           {soyConductor ? (
-            // BOTONES DEL CONDUCTOR
              estadoViaje === 'disponible' ? (
                 <button disabled={cargando} onClick={() => cambiarEstadoViaje('en_curso')} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">
                   Iniciar Viaje
                 </button>
-             ) : (
+             ) : estadoViaje === 'en_curso' ? (
                 <button disabled={cargando} onClick={() => cambiarEstadoViaje('finalizado')} className="flex-[2] bg-red-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">
                   Finalizar Viaje
                 </button>
+             ) : (
+                <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
+                  Viaje Finalizado
+                </div>
              )
           ) : (
             // BOTONES DEL PASAJERO
