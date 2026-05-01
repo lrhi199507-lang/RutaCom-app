@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
-  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2
+  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
@@ -49,9 +49,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   
   const [modalAbordaje, setModalAbordaje] = useState(false);
   const [pinesIngresados, setPinesIngresados] = useState({});
-  
-  // NUEVO ESTADO PARA EL MODAL DE FINALIZAR
   const [modalFinalizar, setModalFinalizar] = useState(false);
+
+  // NUEVOS ESTADOS PARA CALIFICACIÓN
+  const [modalCalificacion, setModalCalificacion] = useState(false);
+  const [estrellas, setEstrellas] = useState(0);
+  const [comentarioResena, setComentarioResena] = useState("");
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
@@ -71,6 +74,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSolicite = solicitudesPendientes.some(p => p.id === userData.id);
   const miReserva = pasajerosConfirmados.find(p => p.id === userData.id);
   const yaSoyPasajero = !!miReserva;
+  const yaCalifico = miReserva?.calificado === true; // Seguro para saber si ya votó
   const mostrarBannerRetorno = viaje.publicarRegreso && viaje.tipoRuta !== 'vuelta_de_ruta';
 
   const solicitarCola = async () => {
@@ -106,7 +110,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         await updateDoc(viajeRef, {
           reservasPendientes: arrayRemove(solicitud),
-          pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false })
+          pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
         });
       } else {
         await updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) });
@@ -135,8 +139,37 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       await updateDoc(doc(db, "Viajes", viaje.id), { estado: nuevoEstado });
-      setModalFinalizar(false); // Cerramos el modal por seguridad
+      setModalFinalizar(false); 
       if (nuevoEstado === 'finalizado') onRegresar(); 
+    } catch (e) { console.error(e); } finally { setCargando(false); }
+  };
+
+  // NUEVA FUNCIÓN: Enviar la reseña a Firebase
+  const enviarCalificacion = async () => {
+    if (estrellas === 0) {
+      setToastMessage("Selecciona al menos 1 estrella"); setShowToast(true); return;
+    }
+    setCargando(true);
+    try {
+      // 1. Guardamos la reseña en una colección nueva
+      await addDoc(collection(db, "Resenas"), {
+        idViaje: viaje.id,
+        idConductor: viaje.uidConductor || viaje.idCreador,
+        idPasajero: userData.id,
+        nombrePasajero: userData.nombre,
+        estrellas: estrellas,
+        comentario: comentarioResena,
+        fecha: new Date().toISOString()
+      });
+
+      // 2. Actualizamos el array del viaje para bloquear que vuelva a votar
+      const pasajerosActualizados = pasajerosConfirmados.map(p => 
+        p.id === userData.id ? { ...p, calificado: true } : p
+      );
+      await updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados });
+
+      setModalCalificacion(false);
+      setToastMessage("¡Gracias por calificar!"); setShowToast(true);
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
@@ -151,13 +184,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
-          const linkMapa = `https://www.google.com/maps?q=$${lat},${lon}`;
+          const linkMapa = `https://www.google.com/maps?q=${lat},${lon}`;
           const mensajeConUbicacion = `${mensajeBase}\n\n📍 Mi ubicación actual exacta:\n${linkMapa}`;
-          
           window.open(`https://wa.me/?text=${encodeURIComponent(mensajeConUbicacion)}`, '_blank');
         },
         (error) => {
-          console.error("Error GPS:", error.message);
           setToastMessage("⚠️ Compartiendo sin mapa por el momento.");
           setShowToast(true);
           window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank');
@@ -191,33 +222,26 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           )}
         </div>
 
-        {/* MODO HUD (EN CURSO) VS MODO NORMAL */}
         {estadoViaje === 'en_curso' ? (
           
           <div className="px-5 space-y-6 animate-in zoom-in-95 duration-500">
-            
-            {/* RADAR / MAPA SIMULADO */}
             <div className="bg-slate-900 rounded-[40px] h-64 relative overflow-hidden flex flex-col items-center justify-center border-4 border-slate-800 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
                <Map className="text-slate-800 absolute w-[150%] h-[150%] animate-[spin_60s_linear_infinite] opacity-50" />
                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-0" />
-               
                <div className="z-10 bg-blue-600 p-5 rounded-full shadow-[0_0_40px_rgba(37,99,235,0.6)] animate-pulse border-4 border-blue-400/30">
                  <Navigation size={32} className="text-white fill-white" />
                </div>
-               
                <div className="z-10 mt-6 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/10 flex items-center gap-2">
                  <div className="w-2 h-2 rounded-full bg-green-400 animate-ping" />
                  <p className="text-white text-[11px] font-black uppercase tracking-widest">En ruta a {obtenerEstado(viaje.cD)}</p>
                </div>
             </div>
 
-            {/* BOTÓN RECOMENDADO: COMPARTIR RUTA */}
             <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
                <Share2 size={20} />
                <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
             </button>
 
-            {/* LISTA DE PASAJEROS A BORDO */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5 shadow-sm">
               <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center flex items-center justify-center gap-2">
                 <Users size={14} /> Pasajeros a Bordo ({pasajerosConfirmados.filter(p => p.abordado).length})
@@ -240,16 +264,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                  )}
               </div>
             </div>
-
           </div>
 
         ) : (
 
-          /* =========================================
-             VISTA NORMAL (DISPONIBLE O FINALIZADO)
-             ========================================= */
           <div className="px-5 space-y-4">
-            {/* TARJETA PRINCIPAL */}
             <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-8">
               <div className="flex justify-between items-start">
                 <div>
@@ -286,7 +305,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
 
-            {/* PIN PARA PASAJERO */}
             {yaSoyPasajero && !soyConductor && estadoViaje === 'disponible' && (
               <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
                 <div className="bg-blue-500/20 p-3 rounded-full mb-3"><Key size={24} className="text-blue-400" /></div>
@@ -296,7 +314,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
 
-            {/* PERFIL CONDUCTOR */}
             <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-4 active:scale-95 transition-all">
               <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm">
                 {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <User size={20} className="m-auto mt-3 text-slate-300"/>}
@@ -308,7 +325,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <ChevronRight size={16} className="text-slate-300" />
             </div>
 
-            {/* PUESTOS */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PUESTOS ({pasajerosConfirmados.length}/{puestosTotales})</p>
@@ -338,10 +354,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
-            {/* PREFERENCIAS DEL VIAJE */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
-              
               <div className="grid grid-cols-2 gap-3">
                 {viaje.preferencias?.ac && (
                   <div className="bg-blue-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-blue-100/50">
@@ -361,7 +375,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                     <p className="text-[9px] font-black text-amber-800 uppercase tracking-wide">Mascotas</p>
                   </div>
                 )}
-                
                 <div className="bg-slate-50 p-4 rounded-[20px] flex items-center gap-3 border border-slate-100 col-span-2">
                   <span className="text-xl">{obtenerIconoEquipaje(viaje.tipoEquipaje)}</span>
                   <div>
@@ -372,7 +385,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
-            {/* SOLICITUDES PENDIENTES */}
             {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
               <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom mb-10">
                 <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
@@ -406,7 +418,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <button onClick={activarSOS} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">
                 <AlertTriangle size={16} /> SOS
               </button>
-
               {soyConductor ? (
                  <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-slate-900/30 active:scale-95 transition-all">
                    Finalizar Viaje
@@ -436,9 +447,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               ) : (
                 yaSoyPasajero ? (
                   estadoViaje === 'finalizado' ? (
-                     <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
-                      Llegaste a tu Destino
-                     </div>
+                     yaCalifico ? (
+                       <div className="flex-[2] bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                         <Star size={16} className="fill-green-600" /> Viaje Calificado
+                       </div>
+                     ) : (
+                       <button onClick={() => setModalCalificacion(true)} className="flex-[2] bg-amber-400 text-amber-950 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 active:scale-95 transition-all border border-amber-300">
+                         <Star size={16} className="fill-amber-950" /> Calificar Experiencia
+                       </button>
+                     )
                   ) : (
                      <div className="flex-[2] bg-green-500 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg"><Check size={16} /> Puesto Confirmado</div>
                   )
@@ -455,7 +472,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       </div>
 
-      {/* MODAL DE FINALIZAR VIAJE */}
+      {/* MODAL FINALIZAR VIAJE */}
       {modalFinalizar && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
@@ -473,6 +490,41 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 {cargando ? 'Procesando...' : 'Sí, Finalizar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CALIFICAR EXPERIENCIA */}
+      {modalCalificacion && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
+            <button onClick={() => setModalCalificacion(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white transition-colors">
+              <X size={20} />
+            </button>
+            <div className="w-16 h-16 rounded-full mx-auto overflow-hidden mb-4 border-2 border-slate-700">
+              {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <User size={30} className="m-auto mt-4 text-slate-500"/>}
+            </div>
+            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-1">Califica a {viaje.cN || viaje.conductor}</h3>
+            <p className="text-[10px] font-bold text-slate-400 mb-6 uppercase tracking-widest">¿Qué tal estuvo el viaje?</p>
+            
+            <div className="flex justify-center gap-2 mb-6">
+              {[1, 2, 3, 4, 5].map(num => (
+                <button key={num} onClick={() => setEstrellas(num)} className="active:scale-75 transition-all">
+                  <Star size={36} className={`${estrellas >= num ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-slate-700'} transition-colors`} />
+                </button>
+              ))}
+            </div>
+
+            <textarea 
+              value={comentarioResena} 
+              onChange={(e) => setComentarioResena(e.target.value)} 
+              placeholder="Deja un breve comentario (Opcional)..." 
+              className="w-full bg-slate-900 border border-slate-700 text-white rounded-[20px] p-4 text-xs font-bold outline-none focus:border-amber-400 resize-none h-24 mb-6"
+            />
+            
+            <button disabled={cargando || estrellas === 0} onClick={enviarCalificacion} className="w-full bg-amber-400 text-amber-950 rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-amber-900/50 active:scale-95 transition-all disabled:opacity-50 disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none">
+              {cargando ? 'Enviando...' : 'Enviar Reseña'}
+            </button>
           </div>
         </div>
       )}
