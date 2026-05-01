@@ -266,28 +266,38 @@ export default function NavegacionPrincipal({ user }) {
       </div>
     );
   }
-  // --- ESCUDOS PROTECTORES CONTRA PANTALLA EN BLANCO ---
+
+    // --- ESCUDOS Y LÓGICA DE ALERTAS ---
   const listaViajes = viajes || [];
   const listaChats = chats || [];
 
-  // 1. ALERTA PARA EL CHOFER (Alguien le pide cola)
-  const alertasChofer = listaViajes
-    .filter(v => v.uidConductor === userData?.id && (!v.estado || v.estado === 'disponible'))
-    .reduce((total, viaje) => total + (viaje.reservasPendientes?.length || 0), 0);
-  
-  // 2. ALERTA PARA EL PASAJERO (El chofer lo aceptó, debe ver su PIN)
-  const alertasPasajero = listaViajes
-    .filter(v => v.pasajeros?.some(p => (p.id === userData?.id || p.uid === userData?.id) && p.estado === 'confirmado' && !p.abordado))
-    .length;
-  
-  // 3. SUMA DE AMBAS (El globo rojo final)
-  const totalAlertasViajes = alertasChofer + alertasPasajero;
+  // Solo calculamos si hay un usuario logueado para evitar falsos positivos
+  let totalAlertasViajes = 0;
+  let tieneMensajesNuevos = false;
 
-  // LÓGICA DE MENSAJES
-  const misChatsUnificados = listaChats.filter(c => c.uidConductor === userData?.id || c.uidPasajero === userData?.id);
-  const tieneMensajesNuevos = misChatsUnificados.some(c => 
-    c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData?.id 
-  );
+  if (userData?.id) {
+    // 1. Chofer: Solo viajes DISPONIBLES con gente esperando
+    const alertasChofer = listaViajes.filter(v => 
+      v.uidConductor === userData.id && 
+      v.estado === 'disponible' && 
+      v.reservasPendientes?.length > 0
+    ).reduce((total, v) => total + v.reservasPendientes.length, 0);
+
+    // 2. Pasajero: Solo viajes que NO han terminado donde me aceptaron y no me he subido
+    const alertasPasajero = listaViajes.filter(v => 
+      v.estado !== 'finalizado' && 
+      v.pasajeros?.some(p => p.id === userData.id && p.estado === 'confirmado' && p.abordado === false)
+    ).length;
+
+    totalAlertasViajes = alertasChofer + alertasPasajero;
+
+    // 3. Mensajes: Solo si hay chats nuevos donde yo no fui el último en escribir
+    const misChats = listaChats.filter(c => c.uidConductor === userData.id || c.uidPasajero === userData.id);
+    tieneMensajesNuevos = misChats.some(c => 
+      c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData.id
+    );
+  }
+
   
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
