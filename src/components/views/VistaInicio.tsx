@@ -8,15 +8,12 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const [destino, setDestino] = useState("");
   const [sugerencias, setSugerencias] = useState([]);
   const [campoActivo, setCampoActivo] = useState(null);
-  const [ordenPrecio, setOrdenPrecio] = useState('asc'); // 'asc' para menor a mayor, 'desc' para mayor a menor
+  const [ordenPrecio, setOrdenPrecio] = useState('asc'); 
   
-  
-  // Estados para Filtros
   const [showCalendar, setShowCalendar] = useState(false);
   const [showPasajeros, setShowPasajeros] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   
-  // Estado de Pasajeros (Simplificado: Adultos y Niños)
   const [pasajeros, setPasajeros] = useState({ adultos: 1, niños: 0 });
 
   const totalPasajeros = pasajeros.adultos + pasajeros.niños;
@@ -48,56 +45,43 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }).replace('.', '');
   };
 
-
 const viajesFiltrados = useMemo(() => {
   const lista = Array.isArray(viajes) ? viajes : [];
   
-  // 1. FECHA DEL BUSCADOR: La forzamos a medianoche local para comparar solo día/mes/año
   const fechaBusquedaBase = new Date(fechaSeleccionada);
   const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
   const filtrados = lista.filter(v => {
-    // FILTRO DE TEXTO (Origen/Destino)
     const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
     const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
     const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
 
-    // 🚨 FILTRO DE FECHA ULTRA-ESTRICTO
     const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
     const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
-    
-    // Extraemos el YYYY-MM-DD del viaje de Firebase
     const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
-    
-    // Solo si son idénticos (ej: "2026-04-29" === "2026-04-29")
     const coincideFecha = fechaViajeStr === fechaBusquedaStr;
 
-    // FILTRO DE ASIENTOS
+    // Solo verificamos que quepan los pasajeros que buscas, no si el viaje está al 100%
     const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
-    const cabenTodos = asientosDisponibles >= (pasajeros.adultos + pasajeros.niños);
+    const cabenTodos = asientosDisponibles >= totalPasajeros;
 
     return coincideTexto && coincideFecha && cabenTodos;
   });
 
-  // 2. ORDENAMIENTO POR PRECIO (Mantenemos la lógica numérica que arreglamos)
   return [...filtrados].sort((a, b) => {
     const precioA = parseFloat(String(a.precio).replace(/[^0-9.]/g, '')) || 0;
     const precioB = parseFloat(String(b.precio).replace(/[^0-9.]/g, '')) || 0;
     return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
   });
-}, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio]);
-  
-  
+}, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros]);
   
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <div className="p-4 space-y-6">
         
-        {/* BUSCADOR PRO: ORIGEN + DESTINO + FECHA + PASAJEROS */}
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
-          {/* INPUTS DE RUTA */}
           <div className="bg-slate-50/50 rounded-[28px] overflow-hidden">
             <div className="flex items-center gap-3 p-4">
               <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
@@ -122,7 +106,6 @@ const viajesFiltrados = useMemo(() => {
             </div>
           </div>
 
-          {/* FILTROS INFERIORES (FECHA Y PERSONAS) */}
           <div className="flex gap-1 p-1">
             <button 
               onClick={() => setShowCalendar(true)}
@@ -145,7 +128,6 @@ const viajesFiltrados = useMemo(() => {
             </button>
           </div>
 
-          {/* SUGERENCIAS DE CIUDADES */}
           {sugerencias.length > 0 && (
             <div className="absolute left-4 right-4 top-[45%] bg-white shadow-2xl rounded-3xl border border-slate-100 z-[110] overflow-hidden">
               {sugerencias.map((s, i) => (
@@ -169,54 +151,59 @@ const viajesFiltrados = useMemo(() => {
           )}
         </div>
 
-        {/* LISTADO DE VIAJES */}
         <div className="space-y-4 px-1">
          <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center px-1">
-  <div className="flex items-center gap-2">
-    {fechaSeleccionada.toDateString() === new Date().toDateString() 
-      ? "Colas para Hoy" 
-      : `Colas: ${formatearFechaBusqueda(fechaSeleccionada)}`}
-    <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
-      {viajesFiltrados.length}
-    </span>
-  </div>
+            <div className="flex items-center gap-2">
+              {fechaSeleccionada.toDateString() === new Date().toDateString() 
+                ? "Colas para Hoy" 
+                : `Colas: ${formatearFechaBusqueda(fechaSeleccionada)}`}
+              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
+                {viajesFiltrados.length}
+              </span>
+            </div>
 
-  {/* BOTÓN DE ORDEN DINÁMICO */}
-  <button 
-    onClick={() => setOrdenPrecio(ordenPrecio === 'asc' ? 'desc' : 'asc')}
-    className={`flex items-center gap-2 px-3 py-2 rounded-2xl transition-all active:scale-95 border ${
-      ordenPrecio === 'asc' 
-        ? 'bg-blue-50 border-blue-100 shadow-sm' 
-        : 'bg-white border-slate-200 shadow-sm'
-    }`}
-  >
-    <span className={`text-[9px] font-black uppercase italic ${
-      ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-500'
-    }`}>
-      {ordenPrecio === 'asc' ? 'Más baratos' : 'Precio alto'}
-    </span>
-    
-    <div className={ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-400'}>
-      {ordenPrecio === 'asc' ? (
-        // Flecha hacia arriba (Indica que el precio va subiendo)
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
-      ) : (
-        // Flecha hacia abajo (Indica que el precio va bajando)
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="M12 9V20"/></svg>
-      )}
-    </div>
-  </button>
-</h2>
+            <button 
+              onClick={() => setOrdenPrecio(ordenPrecio === 'asc' ? 'desc' : 'asc')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-2xl transition-all active:scale-95 border ${
+                ordenPrecio === 'asc' ? 'bg-blue-50 border-blue-100 shadow-sm' : 'bg-white border-slate-200 shadow-sm'
+              }`}
+            >
+              <span className={`text-[9px] font-black uppercase italic ${ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-500'}`}>
+                {ordenPrecio === 'asc' ? 'Más baratos' : 'Precio alto'}
+              </span>
+              <div className={ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-400'}>
+                {ordenPrecio === 'asc' ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="M12 9V20"/></svg>
+                )}
+              </div>
+            </button>
+          </h2>
           
           {viajesFiltrados.length > 0 ? (
-            viajesFiltrados.map((viaje) => (
-              <CardViajeOptimizada
-                key={viaje.id}
-                viaje={viaje}
-                onClickDetalle={() => setViajeSeleccionado(viaje)}
-                onClickPedir={() => setViajeSeleccionado(viaje)}
-              />
-            ))
+            viajesFiltrados.map((viaje) => {
+              // --- LÓGICA DE VIAJE LLENO ---
+              const pasajerosConfirmados = viaje.pasajeros || [];
+              const asientosTotales = viaje.asientos || viaje.puestos || 1;
+              const cuposRestantes = asientosTotales - pasajerosConfirmados.length;
+              const viajeLleno = cuposRestantes <= 0;
+
+              return (
+                <div key={viaje.id} className={viajeLleno ? 'opacity-60 pointer-events-none' : ''}>
+                  {viajeLleno && (
+                    <div className="bg-slate-800 text-white text-[9px] font-black uppercase text-center py-1 rounded-t-[20px] -mb-2 relative z-10 mx-4">
+                      CUPOS COMPLETOS
+                    </div>
+                  )}
+                  <CardViajeOptimizada
+                    viaje={viaje}
+                    onClickDetalle={() => !viajeLleno && setViajeSeleccionado(viaje)}
+                    onClickPedir={() => !viajeLleno && setViajeSeleccionado(viaje)}
+                  />
+                </div>
+              );
+            })
           ) : (
             <div className="text-center py-16 bg-white rounded-[40px] border border-dashed border-slate-200 px-8">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
@@ -231,7 +218,6 @@ const viajesFiltrados = useMemo(() => {
         </div>
       </div>
 
-      {/* MODAL SELECCIÓN PASAJEROS (NUEVO) */}
       {showPasajeros && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300">
@@ -241,106 +227,77 @@ const viajesFiltrados = useMemo(() => {
             </div>
 
             <div className="space-y-6">
-              {/* FILA ADULTOS */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-black italic uppercase text-sm text-slate-700 leading-none">Adultos</p>
                   <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Mayores de 12 años</p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => setPasajeros(p => ({...p, adultos: Math.max(1, p.adultos - 1)}))}
-                    className="w-10 h-10 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-50"
-                  >
-                    <Minus size={16} />
-                  </button>
+                  <button onClick={() => setPasajeros(p => ({...p, adultos: Math.max(1, p.adultos - 1)}))} className="w-10 h-10 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-50"><Minus size={16} /></button>
                   <span className="font-black italic text-lg w-4 text-center">{pasajeros.adultos}</span>
-                  <button 
-                    onClick={() => setPasajeros(p => ({...p, adultos: Math.min(4, p.adultos + 1)}))}
-                    className="w-10 h-10 rounded-full border-2 border-blue-600 flex items-center justify-center text-blue-600 active:bg-blue-50"
-                  >
-                    <Plus size={16} />
-                  </button>
+                  <button onClick={() => setPasajeros(p => ({...p, adultos: Math.min(4, p.adultos + 1)}))} className="w-10 h-10 rounded-full border-2 border-blue-600 flex items-center justify-center text-blue-600 active:bg-blue-50"><Plus size={16} /></button>
                 </div>
               </div>
 
-              {/* FILA NIÑOS */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-black italic uppercase text-sm text-slate-700 leading-none">Niños</p>
                   <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Menores de 12 años</p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => setPasajeros(p => ({...p, niños: Math.max(0, p.niños - 1)}))}
-                    className="w-10 h-10 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-50"
-                  >
-                    <Minus size={16} />
-                  </button>
+                  <button onClick={() => setPasajeros(p => ({...p, niños: Math.max(0, p.niños - 1)}))} className="w-10 h-10 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-50"><Minus size={16} /></button>
                   <span className="font-black italic text-lg w-4 text-center">{pasajeros.niños}</span>
-                  <button 
-                    onClick={() => setPasajeros(p => ({...p, niños: Math.min(3, p.niños + 1)}))}
-                    className="w-10 h-10 rounded-full border-2 border-blue-600 flex items-center justify-center text-blue-600 active:bg-blue-50"
-                  >
-                    <Plus size={16} />
-                  </button>
+                  <button onClick={() => setPasajeros(p => ({...p, niños: Math.min(3, p.niños + 1)}))} className="w-10 h-10 rounded-full border-2 border-blue-600 flex items-center justify-center text-blue-600 active:bg-blue-50"><Plus size={16} /></button>
                 </div>
               </div>
             </div>
 
-            <button 
-              onClick={() => setShowPasajeros(false)}
-              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-sm mt-10 shadow-lg active:scale-95 transition-all"
-            >
+            <button onClick={() => setShowPasajeros(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-sm mt-10 shadow-lg active:scale-95 transition-all">
               Confirmar {totalPasajeros} {totalPasajeros === 1 ? 'Viajero' : 'Viajeros'}
             </button>
           </div>
         </div>
       )}
 
-      {/* MODAL CALENDARIO (LÓGICA AUTOMÁTICA) */}
-{showCalendar && (
-  <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-    <div className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2">
-        <h3 className="text-lg font-black italic uppercase text-slate-800">¿Cuándo sales?</h3>
-        <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full">
-          <X size={18} />
-        </button>
-      </div>
-      
-      <div className="space-y-2">
-        {/* GENERAMOS 14 DÍAS AUTOMÁTICAMENTE */}
-        {[...Array(14)].map((_, i) => {
-          const d = new Date();
-          d.setDate(d.getDate() + i); // Sumamos días a la fecha actual
-          
-          return (
-            <button 
-              key={i}
-              onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
-              className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
-                fechaSeleccionada.toDateString() === d.toDateString() 
-                ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
-                : 'bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <div className="text-left">
-                <p className={`text-[10px] font-black uppercase ${fechaSeleccionada.toDateString() === d.toDateString() ? 'text-blue-100' : 'text-slate-400'}`}>
-                  {i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
-                </p>
-                <p className="text-sm font-black italic uppercase">
-                  {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-                </p>
-              </div>
-              <ChevronRight size={18} className={fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white' : 'text-blue-600'} />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  </div>
-)}
+      {showCalendar && (
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2">
+              <h3 className="text-lg font-black italic uppercase text-slate-800">¿Cuándo sales?</h3>
+              <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} /></button>
+            </div>
+            
+            <div className="space-y-2">
+              {[...Array(14)].map((_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() + i); 
+                
+                return (
+                  <button 
+                    key={i}
+                    onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
+                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
+                      fechaSeleccionada.toDateString() === d.toDateString() 
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
+                      : 'bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <p className={`text-[10px] font-black uppercase ${fechaSeleccionada.toDateString() === d.toDateString() ? 'text-blue-100' : 'text-slate-400'}`}>
+                        {i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
+                      </p>
+                      <p className="text-sm font-black italic uppercase">
+                        {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className={fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white' : 'text-blue-600'} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
