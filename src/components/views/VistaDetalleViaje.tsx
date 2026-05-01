@@ -94,7 +94,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
       if (accion === 'aceptar') {
-        if (cuposRestantes <= 0) { alert("Ya no tienes puestos disponibles."); setCargando(false); return; }
+      if (cuposRestantes <= 0) { setToastMessage("Sin puestos disponibles");   setShowToast(true);  setCargando(false);   return; 
+        }
+        
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         await updateDoc(viajeRef, {
           reservasPendientes: arrayRemove(solicitud),
@@ -132,6 +134,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
+  const compartirRuta = () => {
+    const mensaje = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.\n\nMi conductor es ${viaje.cN || viaje.conductor}.`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+  };
+
+  const activarSOS = () => {
+    setToastMessage("🚨 Alerta enviada a central (Simulación)");
+    setShowToast(true);
+  };
+  
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative font-sans">
       <div className="flex-1 overflow-y-auto pb-48">
