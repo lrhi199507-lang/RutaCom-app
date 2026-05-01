@@ -266,19 +266,26 @@ export default function NavegacionPrincipal({ user }) {
       </div>
     );
   }
+        // --- ESCUDOS PROTECTORES CONTRA PANTALLA EN BLANCO ---
+  const listaViajes = viajes || [];
+  const listaChats = chats || [];
 
-  // LÓGICA PARA EL INDICADOR DE MENSAJES
-  const misChatsUnificados = chats.filter(c => c.uidConductor === userData?.id || c.uidPasajero === userData?.id);
+  // LÓGICA DE ALERTAS GLOBALES DE VIAJE (Chofer y Pasajero)
+  const alertasChofer = listaViajes
+    .filter(v => v.uidConductor === userData?.id && (!v.estado || v.estado === 'disponible'))
+    .reduce((total, viaje) => total + (viaje.reservasPendientes?.length || 0), 0);
+  
+  const alertasPasajero = listaViajes
+    .filter(v => v.pasajeros?.some(p => (p.id === userData?.id || p.uid === userData?.id) && p.estado === 'confirmado' && !p.abordado))
+    .length;
+  
+  const totalAlertasViajes = alertasChofer + alertasPasajero;
+
+  // LÓGICA DE MENSAJES
+  const misChatsUnificados = listaChats.filter(c => c.uidConductor === userData?.id || c.uidPasajero === userData?.id);
   const tieneMensajesNuevos = misChatsUnificados.some(c => 
     c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData?.id 
   );
-
-      // LÓGICA DE ALERTAS GLOBALES DE VIAJE (Chofer y Pasajero)
-  const alertasChofer = viajes.filter(v => v.uidConductor === userData?.id && v.estado === 'disponible').reduce((total, viaje) => total + (viaje.reservasPendientes?.length || 0), 0);
-  
-  const alertasPasajero = viajes.filter(v => v.pasajeros?.some(p => p.id === userData?.id && p.estado === 'confirmado' && !p.abordado)).length;
-  
-  const totalAlertasViajes = alertasChofer + alertasPasajero;
   
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
