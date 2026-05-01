@@ -182,10 +182,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             </div>
 
             {/* BOTÓN RECOMENDADO: COMPARTIR RUTA */}
-            <button onClick={() => alert("Abriendo WhatsApp... (En desarrollo)")} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
-               <Share2 size={20} />
-               <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
-            </button>
+            <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm"> <Share2 size={20} />
+           <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
+           </button>
 
             {/* LISTA DE PASAJEROS A BORDO */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5 shadow-sm">
@@ -376,10 +375,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             // BOTONES MIENTRAS EL VIAJE ESTÁ EN CURSO
             // =====================================
             <>
-              <button onClick={() => alert("🚨 Activando protocolo de emergencia...")} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">
-                <AlertTriangle size={16} /> SOS
+              <button onClick={activarSOS} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">  <AlertTriangle size={16} /> SOS
               </button>
-
+              
               {soyConductor ? (
                  <button disabled={cargando} onClick={() => cambiarEstadoViaje('finalizado')} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">
                    Finalizar Viaje
