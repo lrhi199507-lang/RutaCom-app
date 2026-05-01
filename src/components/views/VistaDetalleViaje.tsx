@@ -134,9 +134,39 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  const compartirRuta = () => {
-    const mensaje = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.\n\nMi conductor es ${viaje.cN || viaje.conductor}.`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+    const compartirRuta = () => {
+    const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.\n\nMi conductor es ${viaje.cN || viaje.conductor}.`;
+
+    // 1. Verificamos si el teléfono soporta GPS
+    if ("geolocation" in navigator) {
+      setToastMessage("📍 Obteniendo ubicación...");
+      setShowToast(true);
+
+      // 2. Pedimos las coordenadas exactas
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const linkMapa = `https://www.google.com/maps?q=${lat},${lon}`;
+          
+          const mensajeConUbicacion = `${mensajeBase}\n\n📍 Mi ubicación actual exacta:\n${linkMapa}`;
+          
+          // 3. Abrimos WhatsApp con el link de Google Maps incluido
+          window.open(`https://wa.me/?text=${encodeURIComponent(mensajeConUbicacion)}`, '_blank');
+        },
+        (error) => {
+          // Si el usuario denegó el permiso del GPS o falló, mandamos el mensaje sin mapa
+          console.error("Error GPS:", error);
+          setToastMessage("⚠️ No se pudo obtener el GPS. Compartiendo sin mapa.");
+          setShowToast(true);
+          window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      // Si el navegador es muy viejo y no tiene GPS
+      window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank');
+    }
   };
 
   const activarSOS = () => {
