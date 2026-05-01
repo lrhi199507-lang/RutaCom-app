@@ -87,26 +87,27 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
-  const subirFotoConfirmada = async () => {
+    const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
-    setCargando(true);
     
+    // 1. Guardamos la foto y el ID en variables temporales
+    const fotoParaSubir = fotoTemporal;
+    const userId = auth.currentUser?.uid || userData.id;
+
+    // 2. CERRAMOS EL MODAL Y ACTUALIZAMOS TU PERFIL AL INSTANTE
+    setUserData({ ...userData, fotoPerfil: fotoParaSubir });
+    setPasoFoto(false); 
+    setFotoTemporal(null);
+    
+    // 3. Dejamos que Firebase pelee con el internet en segundo plano
     try {
-      const userId = auth.currentUser?.uid || userData.id;
-      await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: fotoTemporal });
-      setUserData({ ...userData, fotoPerfil: fotoTemporal });
-      setPasoFoto(false); 
-      setFotoTemporal(null);
+      await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: fotoParaSubir });
     } catch (e) { 
-      setToast({ texto: "Retraso de red. Se subirá en segundo plano.", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-      setUserData({ ...userData, fotoPerfil: fotoTemporal });
-      setPasoFoto(false); 
-      setFotoTemporal(null);
-    } finally { 
-      setCargando(false); 
+      console.error("Error subiendo foto en segundo plano:", e);
+      // Opcional: Podrías poner un setToast aquí si quieres avisar si falla
     }
   };
+  
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
     try {
