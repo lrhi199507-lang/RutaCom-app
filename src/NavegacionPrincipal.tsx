@@ -266,19 +266,21 @@ export default function NavegacionPrincipal({ user }) {
       </div>
     );
   }
-        // --- ESCUDOS PROTECTORES CONTRA PANTALLA EN BLANCO ---
+  // --- ESCUDOS PROTECTORES CONTRA PANTALLA EN BLANCO ---
   const listaViajes = viajes || [];
   const listaChats = chats || [];
 
-  // LÓGICA DE ALERTAS GLOBALES DE VIAJE (Chofer y Pasajero)
+  // 1. ALERTA PARA EL CHOFER (Alguien le pide cola)
   const alertasChofer = listaViajes
     .filter(v => v.uidConductor === userData?.id && (!v.estado || v.estado === 'disponible'))
     .reduce((total, viaje) => total + (viaje.reservasPendientes?.length || 0), 0);
   
+  // 2. ALERTA PARA EL PASAJERO (El chofer lo aceptó, debe ver su PIN)
   const alertasPasajero = listaViajes
     .filter(v => v.pasajeros?.some(p => (p.id === userData?.id || p.uid === userData?.id) && p.estado === 'confirmado' && !p.abordado))
     .length;
   
+  // 3. SUMA DE AMBAS (El globo rojo final)
   const totalAlertasViajes = alertasChofer + alertasPasajero;
 
   // LÓGICA DE MENSAJES
@@ -371,16 +373,14 @@ export default function NavegacionPrincipal({ user }) {
         )}
       </main>
 
-      <Navbar 
+            <Navbar 
         vista={vista} 
         modo={modo} 
         setVista={setVista} 
         setModo={setModo} 
         setPasoWizard={setPasoWizard} 
         tieneMensajesNuevos={tieneMensajesNuevos} 
-        tieneMensajesNuevos={tieneMensajesNuevos} 
-        solicitudesPendientes={totalSolicitudesPendientes}
-        solicitudesPendientes={totalAlertasViajes}
+        solicitudesPendientes={totalAlertasViajes} 
       />
     </div>
   );
