@@ -4,7 +4,7 @@ import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove } from 'firebase/fi
 import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { 
-  ArrowLeft, MapPin, User, ShieldCheck, 
+  ArrowLeft, MapPin, User, Users, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
