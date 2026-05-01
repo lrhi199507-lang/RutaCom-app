@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
-  X, CheckCircle, Repeat, ArrowLeftRight 
+  X, CheckCircle, Repeat, ArrowLeftRight, Settings
 } from 'lucide-react';
 
 // --- FUNCIONES FORMATEADORAS VISUALES ---
@@ -23,9 +23,8 @@ const formatearFechaCorta = (fechaString) => {
     weekday: 'short', 
     day: 'numeric', 
     month: 'short' 
-  }).replace('.', ''); // Ejemplo: "mié, 29 abr"
+  }).replace('.', '');
 };
-// ----------------------------------------
 
 // COMPONENTE: Notificación Toast
 const ToastNotification = ({ message, show, onClose }) => {
@@ -40,7 +39,6 @@ const ToastNotification = ({ message, show, onClose }) => {
 
   return (
     <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] transition-transform duration-300 transform ${show ? 'translate-y-0' : '-translate-y-full'}`}>
-      {/* Se agregó whitespace-nowrap y se ajustó el padding (px-5 py-3) para que sea lineal y elegante */}
       <div className="bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-slate-800 whitespace-nowrap">
         <CheckCircle className="text-blue-500" size={20} />
         <span className="text-sm font-bold uppercase tracking-wider">{message}</span>
@@ -48,7 +46,8 @@ const ToastNotification = ({ message, show, onClose }) => {
     </div>
   );
 };
-// COMPONENTE: Modal para Confirmar Eliminación (Estilo Oscuro)
+
+// COMPONENTE: Modal para Confirmar Eliminación (Lo mantenemos por si acaso luego lo movemos al detalle)
 const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
@@ -71,82 +70,9 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
-// COMPONENTE: Modal para Editar Viaje
-const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
-  const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
-  const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
-
-  const [formData, setFormData] = useState({
-    fechaForm: fechaActual || '',
-    horaForm: horaActual || '',
-    precio: viaje.precio || '',
-    asientos: viaje.asientos || viaje.puestos || ''
-  });
-
-  if (!isOpen) return null;
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: name === 'precio' || name === 'asientos' ? parseInt(value) || '' : value 
-    }));
-  };
-
-  const handleGuardar = () => {
-    onSave({
-      id: viaje.id,
-      tipoRuta: viaje.tipoRuta,
-      ...formData
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center">
-      <div className="bg-[#0f172a] w-full max-w-md rounded-[35px] shadow-2xl p-8 relative">
-        <button onClick={onClose} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
-          <X size={24} />
-        </button>
-
-        <h3 className="text-center text-xs font-black text-blue-500 uppercase tracking-[4px] mb-8">Editar Mi Viaje</h3>
-
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Fecha</label>
-              <input type="date" name="fechaForm" value={formData.fechaForm} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Hora</label>
-              <input type="time" name="horaForm" value={formData.horaForm} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Costo ($)</label>
-              <input type="number" name="precio" value={formData.precio} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Puestos Libres</label>
-              <input type="number" name="asientos" value={formData.asientos} onChange={handleChange} className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-3.5 text-sm font-bold focus:border-blue-500 focus:outline-none" />
-            </div>
-          </div>
-          
-          <button onClick={handleGuardar} className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-[3px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all mt-4">
-            Guardar Cambios
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-
 // COMPONENTE: Tarjeta de Viaje - Chofer
-const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
-  const pasajerosCount = viaje.pasajerosConfirmados ? viaje.pasajerosConfirmados.length : 0;
+const ViajeCardChofer = ({ viaje, onClickGestionar }) => {
+  const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
 
@@ -163,14 +89,6 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
         <div className={esRetorno ? 'mt-6' : ''}>
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo ($)</p>
           <p className="text-4xl font-black italic text-blue-600 leading-none">${viaje.precio}</p>
-        </div>
-        <div className="flex gap-2.5">
-          <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500 hover:text-blue-600 transition-colors">
-            <Edit2 size={16} />
-          </button>
-          <button onClick={onDelete} className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100 text-rose-500 hover:bg-rose-100 transition-colors">
-            <Trash2 size={16} />
-          </button>
         </div>
       </div>
 
@@ -189,12 +107,10 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 grid grid-cols-2 gap-4">
         <div className="flex items-center gap-2.5">
           <Calendar size={16} className="text-blue-500"/>
-          {/* Aquí aplicamos el formateo de fecha */}
           <p className="text-xs font-bold text-slate-700 capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p>
         </div>
         <div className="flex items-center gap-2.5">
           <Clock size={16} className="text-blue-500"/>
-          {/* Aquí aplicamos el formateo de hora */}
           <p className="text-xs font-bold text-slate-700">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p>
         </div>
         <div className="flex items-center gap-2.5 col-span-2">
@@ -202,12 +118,20 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete }) => {
           <p className="text-xs font-bold text-slate-700">{pasajerosCount} / {puestosTotales} Puestos Confirmados</p>
         </div>
       </div>
+
+      {/* BOTÓN MÁGICO PARA ENTRAR A LA SALA DE CONTROL */}
+      <button 
+        onClick={() => onClickGestionar(viaje)}
+        className="w-full mt-4 bg-green-500 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-green-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+      >
+        <Settings size={16} /> Gestionar Viaje
+      </button>
     </div>
   );
 };
 
 // COMPONENTE: Tarjeta de Viaje - Pasajero
-const ViajeCardPasajero = ({ viaje, tipo }) => (
+const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar }) => (
   <div className="bg-white p-6 rounded-[30px] shadow-sm border border-slate-100 space-y-4 relative">
     <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
         {tipo === 'activo' ? 'ACTIVO' : 'FINALIZADO'}
@@ -238,71 +162,46 @@ const ViajeCardPasajero = ({ viaje, tipo }) => (
     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-between gap-4">
       <div className="flex items-center gap-2">
         <Calendar size={16} className="text-blue-500"/>
-        {/* Aquí aplicamos el formateo de fecha */}
         <p className="text-xs font-bold text-slate-700 capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p>
       </div>
       <div className="flex items-center gap-2">
         <Clock size={16} className="text-blue-500"/>
-        {/* Aquí aplicamos el formateo de hora */}
         <p className="text-xs font-bold text-slate-700">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p>
       </div>
     </div>
+
+     {/* BOTÓN PARA PASAJEROS */}
+     {tipo === 'activo' && (
+      <button 
+          onClick={() => onClickGestionar(viaje)}
+          className="w-full mt-4 bg-slate-900 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg"
+        >
+          Ver Detalles del Viaje
+        </button>
+     )}
   </div>
 );
 
-// COMPONENTE PRINCIPAL (VISTA MIS VIAJES)
 export const VistaMisViajes = ({ 
   viajesChofer = [], 
   viajesPasajeroActivos = [], 
   viajesPasajeroHistorial = [], 
   onRegresar, 
-  onActualizarViajeFBD,
-  onEliminarViajeFBD,
-  onIniciarChat
+  onVerDetalles // <--- NUEVA FUNCIÓN QUE RECIBIREMOS DEL COMPONENTE PRINCIPAL
 }) => {
   const [activeTab, setActiveTab] = useState('chofer'); 
-  const [editingViaje, setEditingViaje] = useState(null);
-  const [viajeAEliminar, setViajeAEliminar] = useState(null); // Nuevo estado
+  const [viajeAEliminar, setViajeAEliminar] = useState(null); 
   const [toastData, setToastData] = useState({ show: false, message: '' });
-
-  const handleEditSave = async (updatedViaje) => {
-    try {
-      if(onActualizarViajeFBD) {
-        await onActualizarViajeFBD(updatedViaje);
-      }
-      setEditingViaje(null);
-      setToastData({ show: true, message: 'Guardado con éxito' });
-    } catch (error) {
-      setToastData({ show: true, message: 'Error al guardar' });
-    }
-  };
-
-  const handleConfirmarEliminar = async () => {
-    if(onEliminarViajeFBD && viajeAEliminar) {
-      await onEliminarViajeFBD(viajeAEliminar);
-      setViajeAEliminar(null);
-      setToastData({ show: true, message: 'Viaje eliminado' });
-    }
-  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
       <ToastNotification show={toastData.show} message={toastData.message} onClose={() => setToastData({ show: false, message: '' })} />
       
-      {editingViaje && (
-        <ModalEditarViaje 
-          viaje={editingViaje} 
-          isOpen={true} 
-          onClose={() => setEditingViaje(null)} 
-          onSave={handleEditSave}
-        />
-      )}
-
-      {/* NUEVO MODAL DE ELIMINACIÓN */}
+      {/* Modal Eliminación oculto temporalmente, la lógica la pasaremos luego al Detalle */}
       <ModalConfirmarEliminar 
         isOpen={!!viajeAEliminar}
         onClose={() => setViajeAEliminar(null)}
-        onConfirm={handleConfirmarEliminar}
+        onConfirm={() => {}} 
       />
 
       <div className="p-4 pt-8 bg-white">
@@ -311,8 +210,6 @@ export const VistaMisViajes = ({
           <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
         </button>
       </div>
-
-      
 
       <div className="px-5 space-y-6 flex-1 overflow-y-auto pb-32 bg-white">
         
@@ -338,7 +235,12 @@ export const VistaMisViajes = ({
                         </div>
                     ) : (
                       viajesPasajeroActivos.map(viaje => (
-                        <ViajeCardPasajero key={viaje.id} viaje={viaje} tipo="activo" />
+                        <ViajeCardPasajero 
+                          key={viaje.id} 
+                          viaje={viaje} 
+                          tipo="activo" 
+                          onClickGestionar={onVerDetalles} // Pasajero ve detalles
+                        />
                       ))
                     )}
                 </div>
@@ -365,8 +267,7 @@ export const VistaMisViajes = ({
                     <ViajeCardChofer 
                         key={viaje.id} 
                         viaje={viaje} 
-                        onEdit={() => setEditingViaje(viaje)}
-                        onDelete={() => setViajeAEliminar(viaje.id)} /* ACTUALIZADO */
+                        onClickGestionar={onVerDetalles} // Chofer va a la cabina de control
                     />
                   ))
                 )}
@@ -377,3 +278,4 @@ export const VistaMisViajes = ({
     </div>
   );
 };
+          
