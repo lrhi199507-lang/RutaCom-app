@@ -273,6 +273,11 @@ export default function NavegacionPrincipal({ user }) {
     c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData?.id 
   );
 
+    // 👇 NUEVA LÓGICA: CONTADOR DE SOLICITUDES PARA EL CHOFER 👇
+  const totalSolicitudesPendientes = viajes
+    .filter(v => v.uidConductor === userData?.id && v.estado === 'disponible')
+    .reduce((total, viaje) => total + (viaje.reservasPendientes?.length || 0), 0);
+
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
       <Header userData={userData} modo={modo} />
@@ -367,6 +372,8 @@ export default function NavegacionPrincipal({ user }) {
         setModo={setModo} 
         setPasoWizard={setPasoWizard} 
         tieneMensajesNuevos={tieneMensajesNuevos} 
+        tieneMensajesNuevos={tieneMensajesNuevos} 
+        solicitudesPendientes={totalSolicitudesPendientes}
       />
     </div>
   );
