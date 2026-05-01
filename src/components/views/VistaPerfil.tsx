@@ -5,7 +5,7 @@ import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capa
 import { getAuth } from 'firebase/auth';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
-  ShieldCheck, RefreshCw, AlertCircle,
+  ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
   Car, Palette, Hash, Gauge, LogOut, Camera, X
 } from 'lucide-react';
 
