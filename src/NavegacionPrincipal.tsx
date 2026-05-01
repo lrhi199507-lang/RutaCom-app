@@ -351,6 +351,7 @@ export default function NavegacionPrincipal({ user }) {
           />
         )}   
 
+                {/* CHAT PRIVADO */}
         {vista === "chat_individual" && chatActivo && (
           <VistaChatPrivado 
             chat={chatActivo} 
@@ -359,8 +360,20 @@ export default function NavegacionPrincipal({ user }) {
               setChatActivo(null);
               setVista("inbox");
             }} 
+            // 👇 ESTE ES EL CABLE QUE FALTA CONECTAR 👇
+            onVerViaje={() => {
+              const viajeAsociado = listaViajes.find(v => v.id === chatActivo.idViaje);
+              if (viajeAsociado) {
+                setChatActivo(null);
+                setViajeSel(viajeAsociado);
+                setVista("inicio"); 
+              } else {
+                alert("Este viaje ya no está disponible."); 
+              }
+            }}
           />
         )}
+        
         
                 {vista === "perfil" && (
           <VistaPerfil 
