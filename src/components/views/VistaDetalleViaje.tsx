@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
+// --- FUNCIONES AYUDANTES ---
 const obtenerEstado = (ciudadNombre) => {
   if (!ciudadNombre) return "Estado";
   const [soloCiudad] = ciudadNombre.split(',');
@@ -32,9 +33,10 @@ const obtenerIconoEquipaje = (tipo) => {
   switch(tipo?.toLowerCase()) {
     case 'maleta': return '🧳';
     case 'caja': return '📦';
-    default: return '🎒';
+    case 'bolso': case 'bolso ligero': default: return '🎒';
   }
 };
+// -----------------------------
 
 export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, onIniciarChat }) => {
   if (!viajeInicial) return null;
@@ -45,10 +47,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [toastMessage, setToastMessage] = useState("");
   const [cargando, setCargando] = useState(false);
   
-  // NUEVOS ESTADOS PARA EL PIN Y ABORDAJE
+  // ESTADOS DE ABORDAJE (FASE 2)
   const [modalAbordaje, setModalAbordaje] = useState(false);
   const [pinesIngresados, setPinesIngresados] = useState({});
 
+  // Escucha en tiempo real (Base de Datos)
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
       if (docSnap.exists()) setViaje({ id: docSnap.id, ...docSnap.data() });
@@ -56,6 +59,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
+  // Variables lógicas estrictas leyendo desde tu BD
   const soyConductor = viaje.uidConductor === userData?.id || viaje.idCreador === userData?.id;
   const estadoViaje = viaje.estado || "disponible"; 
   
@@ -69,6 +73,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSoyPasajero = !!miReserva;
   const mostrarBannerRetorno = viaje.publicarRegreso && viaje.tipoRuta !== 'vuelta_de_ruta';
 
+  // --- LÓGICA DEL PASAJERO ---
   const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
@@ -88,6 +93,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
+  // --- LÓGICA DEL CONDUCTOR (FASE 2 PIN) ---
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
@@ -95,7 +101,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       if (accion === 'aceptar') {
         if (cuposRestantes <= 0) { alert("Ya no tienes puestos disponibles."); setCargando(false); return; }
         
-        // MAGIA: GENERAMOS EL PIN ALEATORIO DE 4 DÍGITOS
+        // MAGIA FASE 2: GENERAMOS EL PIN ALEATORIO DE 4 DÍGITOS
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         
         await updateDoc(viajeRef, {
@@ -108,7 +114,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  // NUEVA FUNCIÓN: INICIAR VIAJE CON VALIDACIÓN DE PINES
   const procesarAbordajeEIniciar = async () => {
     setCargando(true);
     try {
@@ -139,6 +144,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     <div className="min-h-screen bg-slate-50 flex flex-col relative font-sans">
       <div className="flex-1 overflow-y-auto pb-48">
         
+        {/* HEADER DE VIAJE */}
         <div className="p-4 pt-6 flex justify-between items-center">
           <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
             <ArrowLeft size={16} strokeWidth={3} />
@@ -153,6 +159,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
         <div className="px-5 space-y-4">
           
+          {/* TARJETA PRINCIPAL (Costo y Ruta) */}
           <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-8">
             <div className="flex justify-between items-start">
               <div>
@@ -189,7 +196,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             </div>
           )}
 
-          {/* VISTA DEL PIN PARA EL PASAJERO (SOLO SI FUE ACEPTADO) */}
+          {/* VISTA DEL PIN PARA EL PASAJERO (SOLO SI FUE ACEPTADO) - FASE 2 */}
           {yaSoyPasajero && !soyConductor && estadoViaje === 'disponible' && (
             <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
               <div className="bg-blue-500/20 p-3 rounded-full mb-3"><Key size={24} className="text-blue-400" /></div>
@@ -199,6 +206,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             </div>
           )}
 
+          {/* PERFIL CONDUCTOR */}
           <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-4 active:scale-95 transition-all">
             <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm">
               {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <User size={20} className="m-auto mt-3 text-slate-300"/>}
@@ -210,6 +218,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             <ChevronRight size={16} className="text-slate-300" />
           </div>
 
+          {/* PUESTOS Y PASAJEROS */}
           <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
             <div className="flex justify-between items-center">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PUESTOS ({pasajerosConfirmados.length}/{puestosTotales})</p>
@@ -239,8 +248,44 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             </div>
           </div>
 
+          {/* ✅ --- BLOQUE RESTAURADO: PREFERENCIAS DEL VIAJE --- */}
+          <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {viaje.preferencias?.ac && (
+                <div className="bg-blue-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-blue-100/50">
+                  <Snowflake size={18} className="text-blue-500" />
+                  <p className="text-[9px] font-black text-blue-700 uppercase tracking-wide">Aire a.</p>
+                </div>
+              )}
+              {viaje.preferencias?.noFumar && (
+                <div className="bg-rose-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-rose-100/50">
+                  <CigaretteOff size={18} className="text-rose-500" />
+                  <p className="text-[9px] font-black text-rose-700 uppercase tracking-wide">Sin humo</p>
+                </div>
+              )}
+              {viaje.preferencias?.mascotas && (
+                <div className="bg-amber-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-amber-100/50">
+                  <Dog size={18} className="text-amber-600" />
+                  <p className="text-[9px] font-black text-amber-800 uppercase tracking-wide">Mascotas</p>
+                </div>
+              )}
+              
+              <div className="bg-slate-50 p-4 rounded-[20px] flex items-center gap-3 border border-slate-100 col-span-2">
+                <span className="text-xl">{obtenerIconoEquipaje(viaje.tipoEquipaje)}</span>
+                <div>
+                    <p className="text-[8px] font-bold text-slate-400 uppercase">Equipaje permitido</p>
+                    <p className="text-[10px] font-black text-slate-700 uppercase mt-0.5">{viaje.tipoEquipaje || "Bolso Ligero"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* --- FIN BLOQUE RESTAURADO --- */}
+
+          {/* SOLICITUDES PENDIENTES (SOLO CONDUCTOR) */}
           {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
-            <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom">
+            <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom mb-10">
               <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
               {solicitudesPendientes.map((solicitud, index) => (
                 <div key={index} className="bg-white p-4 rounded-[25px] flex items-center gap-3 border border-orange-100 shadow-sm">
@@ -262,12 +307,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       </div>
 
+      {/* BOTONERA INFERIOR FIJA */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-3 h-14">
           <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
             <MessageCircle size={16} /> Chat
           </button>
 
+          {/* LÓGICA DE BOTONES PRINCIPALES */}
           {soyConductor ? (
              estadoViaje === 'disponible' ? (
                 <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => setModalAbordaje(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
@@ -296,7 +343,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       </div>
 
-      {/* NUEVO MODAL DE ABORDAJE (VALIDACIÓN PIN) */}
+      {/* NUEVO MODAL DE ABORDAJE (VALIDACIÓN PIN) - FASE 2 */}
       {modalAbordaje && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300">
