@@ -71,13 +71,17 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
 };
 
 // COMPONENTE: Tarjeta de Viaje - Chofer
-const ViajeCardChofer = ({ viaje, onClickGestionar }) => {
+const ViajeCardChofer = ({ viaje, onClickGestionar, estadoLabel }) => {
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
 
   return (
-    <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
+    <div className={`bg-white p-6 rounded-[30px] border shadow-sm relative space-y-4`}>
+      {/* ETIQUETA DE ESTADO */}
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${estadoLabel === 'EN CURSO' ? 'bg-green-50 border-green-200 text-green-600' : estadoLabel === 'FINALIZADO' ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+          {estadoLabel}
+      </div>
       {esRetorno && (
         <div className="absolute top-6 left-6 text-emerald-600 flex items-center gap-1.5">
             <Repeat size={14} className='-rotate-90'/>
@@ -254,22 +258,41 @@ export const VistaMisViajes = ({
                   </div>
                 )}
             </div>
-          ) : (
-            <div className="space-y-6">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Mis Publicaciones</p>
-                
-                {viajesChofer.length === 0 ? (
-                    <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
-                        <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>Aún no has publicado viajes.<br/>Tus publicaciones reales aparecerán aquí.</p>
-                    </div>
-                ) : (
-                 viajesChofer.map(viaje => (
-                    <ViajeCardChofer 
-                        key={viaje.id} 
-                        viaje={viaje} 
-                        onClickGestionar={onVerDetalles} // Chofer va a la cabina de control
-                    />
-                  ))
+                    ) : (
+            <div className="space-y-10">
+                {/* 1. SECCIÓN DE VIAJES ACTIVOS / PUBLICADOS */}
+                <div className="space-y-6">
+                    <p className="text-[11px] font-semibold text-blue-500 uppercase tracking-widest px-1">Mis Publicaciones Activas</p>
+                    
+                    {viajesChofer.filter(v => v.estado !== 'finalizado').length === 0 ? (
+                        <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
+                            <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>No tienes viajes activos.</p>
+                        </div>
+                    ) : (
+                      viajesChofer.filter(v => v.estado !== 'finalizado').map(viaje => (
+                        <ViajeCardChofer 
+                            key={viaje.id} 
+                            viaje={viaje} 
+                            onClickGestionar={onVerDetalles} 
+                            estadoLabel={viaje.estado === 'en_curso' ? 'EN CURSO' : 'DISPONIBLE'}
+                        />
+                      ))
+                    )}
+                </div>
+
+                {/* 2. SECCIÓN DE HISTORIAL PARA EL CHOFER */}
+                {viajesChofer.filter(v => v.estado === 'finalizado').length > 0 && (
+                  <div className="space-y-6 opacity-70">
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Viajes Finalizados</p>
+                      {viajesChofer.filter(v => v.estado === 'finalizado').map(viaje => (
+                        <ViajeCardChofer 
+                            key={viaje.id} 
+                            viaje={viaje} 
+                            onClickGestionar={onVerDetalles} 
+                            estadoLabel="FINALIZADO"
+                        />
+                      ))}
+                  </div>
                 )}
             </div>
           )}
@@ -278,4 +301,3 @@ export const VistaMisViajes = ({
     </div>
   );
 };
-          
