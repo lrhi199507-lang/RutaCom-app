@@ -9,12 +9,14 @@ export const CampanaNotificaciones = ({ userData }) => {
 
   // Escuchar notificaciones en tiempo real
   useEffect(() => {
-    if (!userData?.id) return;
+    // BLINDAJE: Buscamos el ID del usuario de cualquier forma posible
+    const miId = userData?.id || userData?.uid;
+    if (!miId) return;
     
-    // Consultamos las notificaciones dirigidas a este usuario
+    // Consultamos las notificaciones dirigidas a este usuario exacto
     const q = query(
       collection(db, "Notificaciones"), 
-      where("idDestino", "==", userData.id)
+      where("idDestino", "==", miId)
     );
 
     const unsub = onSnapshot(q, (snap) => {
@@ -26,7 +28,8 @@ export const CampanaNotificaciones = ({ userData }) => {
     });
 
     return () => unsub();
-  }, [userData?.id]);
+  }, [userData]);
+  
 
   const noLeidas = notificaciones.filter(n => !n.leida).length;
 
