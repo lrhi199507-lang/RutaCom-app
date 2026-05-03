@@ -31,7 +31,8 @@ export default function NavegacionPrincipal({ user }) {
   const [viajeAEditar, setViajeAEditar] = useState(null); 
   const [pestañaPerfil, setPestañaPerfil] = useState("publico");
   const [pasoWizard, setPasoWizard] = useState(1);
-  const [chatActivo, setChatActivo] = useState(null);
+  const [chatActivo, setChatActivo] = useState(null); 
+  const [vistaOrigen, setVistaOrigen] = useState("inicio");
   
   const [viajeForm, setViajeForm] = useState({
     origen: "", destino: "", precio: "", asientos: "4", 
@@ -305,23 +306,26 @@ export default function NavegacionPrincipal({ user }) {
 
       <main className="flex-1 overflow-y-auto bg-slate-50">
         {vista === "inicio" && (
-          viajeSel ? (
-            <VistaDetalleViaje 
-              viaje={viajeSel} 
-              onRegresar={() => setViajeSel(null)} 
-              userData={userData} 
-              onIniciarChat={iniciarChat} 
-            />
-        ) : (
-            <VistaInicio 
-              viajes={viajes.filter(v => !v.estado || v.estado === 'disponible')} 
-              setViajeSeleccionado={setViajeSel} 
-              setVista={setVista} userData={userData} modo={modo} 
-            />
-          )
-        )}
+          {viajeSel ? (
+  <VistaDetalleViaje 
+    viaje={viajeSel} 
+    onRegresar={() => setViajeSel(null)} 
+    userData={userData} 
+    onIniciarChat={iniciarChat} 
+  />
+) : (
+  <>
+    {vista === "inicio" && (
+      <VistaInicio 
+        viajes={viajes.filter(v => !v.estado || v.estado === 'disponible')} 
+        setViajeSeleccionado={setViajeSel} 
+        setVista={setVista} 
+        userData={userData} 
+        modo={modo} 
+      />
+    )}
 
-                        {vista === "mis_viajes" && (
+         {vista === "mis_viajes" && (
           <VistaMisViajes 
             viajesChofer={listaViajes.filter(v => v.uidConductor === userData?.id)} 
             viajesPasajeroActivos={listaViajes.filter(v => 
@@ -333,13 +337,14 @@ export default function NavegacionPrincipal({ user }) {
             userData={userData} 
             onRegresar={() => setVista("inicio")}
             onVerDetalles={(viaje) => {
-              setViajeSel(viaje);
-              setVista("inicio"); 
+              setVistaOrigen("mis_viajes"); // 1. Guardamos la memoria
+              setViajeSel(viaje);           // 2. Seleccionamos el viaje
+              setVista("inicio");           // 3. (Lo dejamos si tu app requiere que esté en inicio para mostrar el detalle)
             }}
           />
         )}
-  
-        {vista === "inbox" && (
+        
+          {vista === "inbox" && (
           <VistaInbox 
             chatsChofer={chats.filter(c => c.uidConductor === userData?.id)} 
             chatsPasajero={chats.filter(c => c.uidPasajero === userData?.id || c.pasajeros?.some(p => p.id === userData?.id))}
