@@ -5,7 +5,7 @@ import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
-  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck
+  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
@@ -51,12 +51,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [pinesIngresados, setPinesIngresados] = useState({});
   const [modalFinalizar, setModalFinalizar] = useState(false);
 
-  // ESTADOS PARA CALIFICACIÓN
+  // ESTADOS PARA CALIFICACIÓN PASAJERO -> CHOFER
   const [modalCalificacion, setModalCalificacion] = useState(false);
   const [estrellas, setEstrellas] = useState(0);
   const [comentarioResena, setComentarioResena] = useState("");
 
-  // NUEVO: ESTADO PARA ESTRELLAS DINÁMICAS EN LA TARJETA DEL CONDUCTOR
+  // NUEVO: ESTADOS PARA CALIFICACIÓN CHOFER -> PASAJERO
+  const [modalCalificarPasajeros, setModalCalificarPasajeros] = useState(false);
+  const [ratingsChofer, setRatingsChofer] = useState({});
+
+  // ESTADO PARA ESTRELLAS DINÁMICAS EN LA TARJETA DEL CONDUCTOR
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
 
   // 1. Efecto para escuchar cambios del viaje en tiempo real
@@ -74,8 +78,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     
     const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
     getDocs(qResenas).then(snap => {
-      let suma = 0;
-      let total = 0;
+      let suma = 0; let total = 0;
       snap.forEach(d => { suma += d.data().estrellas || 0; total++; });
       setRatingConductor({
         promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
@@ -83,6 +86,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       });
     }).catch(e => console.error(e));
   }, [viajeInicial.uidConductor, viajeInicial.idCreador]);
+
+  // 3. NUEVO: Efecto para Auto-Abrir el modal de calificación al pasajero
+  useEffect(() => {
+    const esConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
+    const reservaPasajero = viaje?.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
+    
+    if (!esConductor && reservaPasajero && viaje?.estado === 'finalizado' && !reservaPasajero.calificado) {
+      setModalCalificacion(true);
+    }
+  }, [viaje?.estado, viaje?.pasajeros, userData?.id]);
 
   const soyConductor = viaje.uidConductor === userData?.id || viaje.idCreador === userData?.id;
   const estadoViaje = viaje.estado || "disponible"; 
@@ -93,7 +106,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const cuposRestantes = puestosTotales - pasajerosConfirmados.length;
 
   const yaSolicite = solicitudesPendientes.some(p => p.id === userData.id);
-  const miReserva = pasajerosConfirmados.find(p => p.id === userData.id);
+  const miReserva = pasajerosConfirmados.find(p => p.id === userData.id || p.uid === userData.id);
   const yaSoyPasajero = !!miReserva;
   const yaCalifico = miReserva?.calificado === true; 
   const mostrarBannerRetorno = viaje.publicarRegreso && viaje.tipoRuta !== 'vuelta_de_ruta';
@@ -105,7 +118,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ id: userData.id, nombre: userData.nombre, fotoPerfil: userData.fotoPerfil || null, estado: 'pendiente' })
       });
-      setToastMessage("Solicitud enviada al conductor"); setShowToast(true);
+      setToastMessage("Solicitud enviada"); setShowToast(true);
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
@@ -123,10 +136,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       const viajeRef = doc(db, "Viajes", viaje.id);
       if (accion === 'aceptar') {
         if (cuposRestantes <= 0) { 
-          setToastMessage("Sin puestos disponibles"); 
-          setShowToast(true); 
-          setCargando(false); 
-          return; 
+          setToastMessage("Sin puestos disponibles"); setShowToast(true); setCargando(false); return; 
         }
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         await updateDoc(viajeRef, {
@@ -143,8 +153,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const pasajerosActualizados = pasajerosConfirmados.map(p => {
-        if (pinesIngresados[p.id] === p.pin) return { ...p, abordado: true };
-        return p;
+        const idPasajero = p.id || p.uid;
+        if (pinesIngresados[idPasajero] === p.pin) return { ...p, abordado: true };
+        return p; 
       });
 
       await updateDoc(doc(db, "Viajes", viaje.id), { 
@@ -152,7 +163,44 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         pasajeros: pasajerosActualizados
       });
       setModalAbordaje(false);
-      setToastMessage("¡Viaje Iniciado Correctamente!"); setShowToast(true);
+      setToastMessage("¡Viaje Iniciado!"); setShowToast(true);
+    } catch (e) { console.error(e); } finally { setCargando(false); }
+  };
+
+  // NUEVO: INTERCEPTOR PARA EL CHOFER (Abre el modal de calificar pasajeros antes de cerrar el viaje)
+  const iniciarFinalizacion = () => {
+    setModalFinalizar(false);
+    if (pasajerosConfirmados.length > 0) {
+      const initRatings = {};
+      pasajerosConfirmados.forEach(p => { initRatings[p.id || p.uid] = { estrellas: 0, comentario: "" }; });
+      setRatingsChofer(initRatings);
+      setModalCalificarPasajeros(true);
+    } else {
+      cambiarEstadoViaje('finalizado');
+    }
+  };
+
+  // NUEVO: Guarda las notas a los pasajeros y finaliza
+  const enviarCalificacionesYFinalizar = async () => {
+    setCargando(true);
+    try {
+      for (const p of pasajerosConfirmados) {
+        const pid = p.id || p.uid;
+        const rat = ratingsChofer[pid];
+        if (rat && rat.estrellas > 0) {
+          await addDoc(collection(db, "Resenas"), {
+            idViaje: viaje.id,
+            idConductor: pid, // Aquí el destinatario de la nota es el PASAJERO
+            idPasajero: userData.id, // El autor es el CHOFER
+            nombrePasajero: userData.nombre,
+            estrellas: rat.estrellas,
+            comentario: "",
+            fecha: new Date().toISOString()
+          });
+        }
+      }
+      await cambiarEstadoViaje('finalizado');
+      setModalCalificarPasajeros(false);
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
@@ -160,86 +208,55 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       await updateDoc(doc(db, "Viajes", viaje.id), { estado: nuevoEstado });
-      setModalFinalizar(false); 
       if (nuevoEstado === 'finalizado') onRegresar(); 
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  // Función de Calificación Blindada
+  // Calificación del Pasajero al Chofer
   const enviarCalificacion = async () => {
     if (estrellas === 0) {
-      setToastMessage("Selecciona al menos 1 estrella"); 
-      setShowToast(true); 
-      return;
+      setToastMessage("Selecciona al menos 1 estrella"); setShowToast(true); return;
     }
-    
     setCargando(true);
-    
     try {
       const idChofer = viaje.uidConductor || viaje.idCreador || "SinID";
-      const idPasaj = userData?.id || "SinID";
-      const nomPasaj = userData?.nombre || "Usuario";
-      const comentarioSeguro = comentarioResena || ""; 
-
       await addDoc(collection(db, "Resenas"), {
         idViaje: viaje.id,
         idConductor: idChofer,
-        idPasajero: idPasaj,
-        nombrePasajero: nomPasaj,
+        idPasajero: userData?.id || "SinID",
+        nombrePasajero: userData?.nombre || "Usuario",
         estrellas: estrellas,
-        comentario: comentarioSeguro,
+        comentario: comentarioResena || "",
         fecha: new Date().toISOString()
       });
 
       const pasajerosActualizados = pasajerosConfirmados.map(p => 
         (p.id === userData?.id || p.uid === userData?.id) ? { ...p, calificado: true } : p
       );
-      
       await updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados });
 
       setModalCalificacion(false);
-      setToastMessage("¡Gracias por calificar!"); 
-      setShowToast(true);
-
+      setToastMessage("¡Gracias por calificar!"); setShowToast(true);
     } catch (e) { 
-      console.error("Error fatal en Firebase:", e); 
-      setToastMessage("Error al guardar. Revisa tu conexión o base de datos."); 
-      setShowToast(true);
-    } finally { 
-      setCargando(false); 
-    }
+      setToastMessage("Error al guardar. Revisa tu conexión."); setShowToast(true);
+    } finally { setCargando(false); }
   };
 
   const compartirRuta = () => {
-    const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.\n\nMi conductor es ${viaje.cN || viaje.conductor}.`;
-
+    const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.`;
     if ("geolocation" in navigator) {
-      setToastMessage("📍 Obteniendo ubicación...");
-      setShowToast(true);
-
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
+          const lat = position.coords.latitude; const lon = position.coords.longitude;
           const linkMapa = `https://www.google.com/maps?q=${lat},${lon}`;
-          const mensajeConUbicacion = `${mensajeBase}\n\n📍 Mi ubicación actual exacta:\n${linkMapa}`;
-          window.open(`https://wa.me/?text=${encodeURIComponent(mensajeConUbicacion)}`, '_blank');
+          window.open(`https://wa.me/?text=${encodeURIComponent(`${mensajeBase}\n\n📍 Ubicación:\n${linkMapa}`)}`, '_blank');
         },
-        (error) => {
-          setToastMessage("⚠️ Compartiendo sin mapa por el momento.");
-          setShowToast(true);
-          window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank');
-        },
+        () => { window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank'); },
         { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
       );
     } else {
       window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank');
     }
-  };
-
-  const activarSOS = () => {
-    setToastMessage("🚨 Alerta enviada a central (Simulación)");
-    setShowToast(true);
   };
 
   return (
@@ -279,24 +296,29 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
             </button>
 
+            {/* LISTA DE PASAJEROS HUD MODIFICADA (Muestra a todos, con o sin PIN) */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5 shadow-sm">
               <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center flex items-center justify-center gap-2">
-                <Users size={14} /> Pasajeros a Bordo ({pasajerosConfirmados.filter(p => p.abordado).length})
+                <Users size={14} /> Pasajeros Confirmados ({pasajerosConfirmados.length})
               </h3>
               <div className="space-y-3">
-                 {pasajerosConfirmados.filter(p => p.abordado).map(p => (
-                   <div key={p.id} className="flex items-center gap-4 bg-slate-50 p-3.5 rounded-[25px] border border-slate-100">
-                     <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm">
+                 {pasajerosConfirmados.map(p => (
+                   <div key={p.id || p.uid} className="flex items-center gap-4 bg-slate-50 p-3.5 rounded-[25px] border border-slate-100">
+                     <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm shrink-0">
                         {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="m-auto mt-3 text-slate-400" />}
                      </div>
-                     <div className="flex-1">
-                        <p className="font-black text-xs uppercase text-slate-700">{p.nombre}</p>
-                        <p className="text-[8px] font-black text-green-500 uppercase mt-0.5">Identidad Validada</p>
+                     <div className="flex-1 min-w-0">
+                        <p className="font-black text-xs uppercase text-slate-700 truncate">{p.nombre}</p>
+                        <p className={`text-[8px] font-black uppercase mt-0.5 ${p.abordado ? 'text-green-500' : 'text-amber-500'}`}>
+                          {p.abordado ? 'A Bordo (Validado)' : 'Falta Validar PIN'}
+                        </p>
                      </div>
-                     <div className="bg-green-100 p-2 rounded-full"><ShieldCheck size={18} className="text-green-600" /></div>
+                     <div className={`${p.abordado ? 'bg-green-100' : 'bg-amber-100'} p-2 rounded-full shrink-0`}>
+                       {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
+                     </div>
                    </div>
                  ))}
-                 {pasajerosConfirmados.filter(p => p.abordado).length === 0 && (
+                 {pasajerosConfirmados.length === 0 && (
                    <p className="text-center text-xs font-bold text-slate-400 uppercase py-4">Viaje sin pasajeros en la app</p>
                  )}
               </div>
@@ -351,10 +373,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
 
-            {/* --- NUEVA TARJETA DE PERFIL CONDUCTOR DINÁMICA --- */}
+            {/* TARJETA DE PERFIL CONDUCTOR DINÁMICA */}
             <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm">
-                            <div className="flex items-center gap-4">
-                {/* DE VUELTA AL CÍRCULO CON LA FOTO O EL MUÑEQUITO */}
+              <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                   {viaje.fotoPerfil ? (
                     <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> 
@@ -362,24 +383,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                     <User size={24} className="text-slate-300"/>
                   )}
                 </div>
-                              
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
                     <p className="text-base font-black italic text-slate-700 uppercase truncate">{viaje.cN || viaje.conductor || "Usuario"}</p>
-                    {/* BadgeCheck moderno */}
                     {viaje.identidadVerificada && <BadgeCheck size={18} className="text-green-500 fill-green-100 shrink-0" strokeWidth={2.5} />}
                   </div>
-                  
-                  {/* ESTRELLAS DINÁMICAS (GRISES SI ES 0) */}
                   <div className="flex items-center gap-2">
                     <div className="flex gap-0.5">
                       {[1, 2, 3, 4, 5].map(star => (
-                        <Star 
-                          key={star} 
-                          size={12} 
-                          className={star <= parseFloat(ratingConductor.promedio) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
-                        />
+                        <Star key={star} size={12} className={star <= parseFloat(ratingConductor.promedio) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} />
                       ))}
                     </div>
                     <span className="text-[9px] font-black text-slate-400 uppercase italic">
@@ -390,7 +403,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 <ChevronRight size={20} className="text-slate-300 shrink-0" />
               </div>
             </div>
-            {/* -------------------------------------------------- */}
 
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
@@ -401,14 +413,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <div className="space-y-3">
                 {pasajerosConfirmados.map((pasajero, index) => (
                     <div key={index} className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
                             {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-bold text-slate-700 uppercase">{pasajero.nombre}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-700 uppercase truncate">{pasajero.nombre}</p>
                           {pasajero.abordado && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
                         </div>
-                        {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500" /> : <Lock size={14} className="text-slate-300" />}
+                        {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500 shrink-0" /> : <Lock size={14} className="text-slate-300 shrink-0" />}
                     </div>
                 ))}
                 
@@ -418,37 +430,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                     <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">ASIENTO DISPONIBLE</p>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
-              <div className="grid grid-cols-2 gap-3">
-                {viaje.preferencias?.ac && (
-                  <div className="bg-blue-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-blue-100/50">
-                    <Snowflake size={18} className="text-blue-500" />
-                    <p className="text-[9px] font-black text-blue-700 uppercase tracking-wide">Aire a.</p>
-                  </div>
-                )}
-                {viaje.preferencias?.noFumar && (
-                  <div className="bg-rose-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-rose-100/50">
-                    <CigaretteOff size={18} className="text-rose-500" />
-                    <p className="text-[9px] font-black text-rose-700 uppercase tracking-wide">Sin humo</p>
-                  </div>
-                )}
-                {viaje.preferencias?.mascotas && (
-                  <div className="bg-amber-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-amber-100/50">
-                    <Dog size={18} className="text-amber-600" />
-                    <p className="text-[9px] font-black text-amber-800 uppercase tracking-wide">Mascotas</p>
-                  </div>
-                )}
-                <div className="bg-slate-50 p-4 rounded-[20px] flex items-center gap-3 border border-slate-100 col-span-2">
-                  <span className="text-xl">{obtenerIconoEquipaje(viaje.tipoEquipaje)}</span>
-                  <div>
-                      <p className="text-[8px] font-bold text-slate-400 uppercase">Equipaje permitido</p>
-                      <p className="text-[10px] font-black text-slate-700 uppercase mt-0.5">{viaje.tipoEquipaje || "Bolso Ligero"}</p>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -547,32 +528,70 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <Check size={30} className="text-blue-500" />
             </div>
             <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">¿Finalizar Viaje?</h3>
-            <p className="text-xs font-bold text-slate-400 mb-8 leading-relaxed">Estás a punto de marcar esta ruta como terminada. Los pasajeros serán notificados de su llegada.</p>
+            <p className="text-xs font-bold text-slate-400 mb-8 leading-relaxed">Estás a punto de marcar esta ruta como terminada. {pasajerosConfirmados.length > 0 && "Podrás calificar a tus pasajeros a continuación."}</p>
             
             <div className="flex gap-3">
               <button disabled={cargando} onClick={() => setModalFinalizar(false)} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">
                 Cancelar
               </button>
-              <button disabled={cargando} onClick={() => cambiarEstadoViaje('finalizado')} className="flex-1 bg-blue-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">
-                {cargando ? 'Procesando...' : 'Sí, Finalizar'}
+              <button disabled={cargando} onClick={iniciarFinalizacion} className="flex-1 bg-blue-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">
+                Continuar
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL CALIFICAR EXPERIENCIA */}
+      {/* NUEVO: MODAL CHOFER CALIFICA PASAJEROS */}
+      {modalCalificarPasajeros && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-[#0f172a] w-full max-w-md rounded-[35px] shadow-2xl p-6 relative border border-slate-800 my-auto">
+            <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2 text-center">Califica a tus Pasajeros</h3>
+            <p className="text-[10px] font-bold text-slate-400 mb-6 text-center uppercase tracking-widest">¿Cómo se comportaron durante el viaje?</p>
+
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar mb-6">
+              {pasajerosConfirmados.map(p => {
+                const pid = p.id || p.uid;
+                const rat = ratingsChofer[pid] || { estrellas: 0, comentario: "" };
+                return (
+                  <div key={pid} className="bg-slate-900 p-4 rounded-3xl border border-slate-800">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
+                        {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-500 m-auto mt-2"/>}
+                      </div>
+                      <p className="text-sm font-black text-white uppercase truncate">{p.nombre}</p>
+                    </div>
+                    <div className="flex justify-center gap-2 mb-2">
+                      {[1,2,3,4,5].map(num => (
+                        <button key={num} onClick={() => setRatingsChofer({...ratingsChofer, [pid]: {...rat, estrellas: num}})} className="active:scale-75 transition-all">
+                          <Star size={32} className={rat.estrellas >= num ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-slate-700'} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button onClick={enviarCalificacionesYFinalizar} disabled={cargando} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">
+              {cargando ? 'Guardando...' : 'Finalizar y Guardar'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PASAJERO CALIFICA CHOFER */}
       {modalCalificacion && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
             <button onClick={() => setModalCalificacion(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white transition-colors">
               <X size={20} />
             </button>
-            <div className="w-16 h-16 rounded-[20px] bg-blue-600 mx-auto overflow-hidden mb-4 border-2 border-slate-700 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-slate-800 mx-auto overflow-hidden mb-4 border-2 border-slate-700 flex items-center justify-center">
               {viaje.fotoPerfil ? (
                  <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> 
               ) : (
-                 <span className="text-white font-black italic text-2xl">D</span>
+                 <User size={30} className="text-slate-400"/>
               )}
             </div>
             <h3 className="text-lg font-black text-white uppercase tracking-wider mb-1">Califica a {viaje.cN || viaje.conductor || "Usuario"}</h3>
@@ -600,7 +619,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      {/* MODAL DE ABORDAJE */}
+      {/* MODAL DE ABORDAJE (PIN) */}
       {modalAbordaje && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300">
@@ -611,9 +630,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             <p className="text-xs font-bold text-slate-500 mb-6">Solicita el PIN secreto a tus pasajeros para confirmar que están en el auto.</p>
             <div className="space-y-4 max-h-[40vh] overflow-y-auto mb-6">
               {pasajerosConfirmados.map(p => {
-                const pinCorrecto = pinesIngresados[p.id] === p.pin;
+                const idPasajero = p.id || p.uid;
+                const pinCorrecto = pinesIngresados[idPasajero] === p.pin;
                 return (
-                  <div key={p.id} className={`p-4 rounded-3xl border-2 transition-all flex flex-col gap-3 ${pinCorrecto ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-slate-50'}`}>
+                  <div key={idPasajero} className={`p-4 rounded-3xl border-2 transition-all flex flex-col gap-3 ${pinCorrecto ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-slate-50'}`}>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0">
                          {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="m-auto mt-2 text-slate-400" />}
@@ -622,7 +642,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                       {pinCorrecto ? <Unlock size={18} className="text-green-500" /> : <Lock size={18} className="text-slate-400" />}
                     </div>
                     {!pinCorrecto ? (
-                       <input type="number" placeholder="Ingresar PIN de 4 dígitos" value={pinesIngresados[p.id] || ''} onChange={(e) => setPinesIngresados({...pinesIngresados, [p.id]: e.target.value})} className="w-full bg-white border border-slate-200 rounded-2xl p-3 text-center text-lg font-black tracking-[10px] outline-none focus:border-blue-500" maxLength={4} />
+                       <input type="number" placeholder="Ingresar PIN de 4 dígitos" value={pinesIngresados[idPasajero] || ''} onChange={(e) => setPinesIngresados({...pinesIngresados, [idPasajero]: e.target.value})} className="w-full bg-white border border-slate-200 rounded-2xl p-3 text-center text-lg font-black tracking-[10px] outline-none focus:border-blue-500" maxLength={4} />
                     ) : (
                       <div className="bg-green-500 text-white text-[10px] font-black uppercase text-center py-2 rounded-xl">Pasajero Validado</div>
                     )}
