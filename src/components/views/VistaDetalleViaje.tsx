@@ -139,7 +139,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setShowToast(true);
   };
   // ------------------------------------------------------------------------
-
+  // --- DISPARADOR DE NOTIFICACIONES ---
+  const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
+    try {
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino,
+        titulo,
+        mensaje,
+        tipo, // Puede ser: 'exito', 'viaje', 'alerta'
+        leida: false,
+        fecha: new Date().toISOString()
+      });
+    } catch (error) {
+      console.log("Error al enviar notificación:", error);
+    }
+  };
+  
   const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
@@ -147,6 +162,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ id: userData?.id, nombre: userData?.nombre || "Usuario", fotoPerfil: userData?.fotoPerfil || null, estado: 'pendiente' })
       });
+       // ¡NUEVO! Avisarle al chofer
+      await enviarNotificacion(
+        viaje.idConductor, // El ID del chofer
+        "¡Nueva Solicitud!",
+        `${userData?.nombre} quiere viajar contigo desde ${viaje.cO?.split(',')[0]} hasta ${viaje.cD?.split(',')[0]}.`,
+        "viaje"
+      );
       setToastMessage("Solicitud enviada"); setShowToast(true);
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
