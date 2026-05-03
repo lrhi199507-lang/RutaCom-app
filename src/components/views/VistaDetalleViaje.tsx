@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { 
@@ -217,6 +217,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
+      const dbAuth = auth.currentUser; // Importa auth de firebase/auth si no lo tienes en este archivo
+      // 1. Guardar las reseñas
       for (const p of pasajerosConfirmados) {
         if (!p) continue;
         const pid = p.id || p.uid;
@@ -231,12 +233,31 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             comentario: String(rat.comentario || ""),
             fecha: new Date().toISOString()
           });
+
+          // ACTUALIZAR AL PASAJERO: Sumarle +1 viaje como pasajero
+          const userRef = doc(db, "usuarios", pid);
+          const snap = await getDocs(query(collection(db, "usuarios"), where("id", "==", pid))); // Busca al usuario real
+          if(!snap.empty) {
+             const usrDoc = snap.docs[0];
+             const viajesPasajeroActuales = usrDoc.data().viajesComoPasajero || 0;
+             await updateDoc(doc(db, "usuarios", usrDoc.id), { viajesComoPasajero: viajesPasajeroActuales + 1 });
+          }
         }
       }
+
+      // 2. ACTUALIZAR AL CHOFER: Sumarle +1 viaje conducido a él mismo
+      if (userData?.id) {
+         const miRef = doc(db, "usuarios", userData.id); // Asumiendo que el ID de sesión es el docId
+         const misViajesCond = userData.viajesRealizados || 0;
+         await updateDoc(miRef, { viajesRealizados: misViajesCond + 1 });
+      }
+
+      // 3. Finalizar el viaje
       await cambiarEstadoViaje('finalizado');
       setModalCalificarPasajeros(false);
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
+  
 
   const cambiarEstadoViaje = async (nuevoEstado) => {
     setCargando(true);
