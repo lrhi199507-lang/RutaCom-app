@@ -3,6 +3,7 @@ import { db } from '../../firebaseConfig';
 import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
+import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock
@@ -76,6 +77,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const [modalCalificarPasajeros, setModalCalificarPasajeros] = useState(false);
   const [ratingsChofer, setRatingsChofer] = useState({});
+  const [idUsuarioVer, setIdUsuarioVer] = useState(null);
 
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
 
@@ -480,10 +482,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 {pasajerosConfirmados.map((pasajero, index) => {
                   if (!pasajero) return null;
                   return (
-                    <div key={`pasajero-${pasajero.id || pasajero.uid || index}`} className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
-                            {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
-                        </div>
+                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm hover:border-blue-300">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">                     {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
+                    </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-slate-700 uppercase truncate">{String(pasajero.nombre || "Pasajero")}</p>
                           {pasajero.abordado && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
@@ -758,6 +759,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             <button onClick={procesarAbordajeEIniciar} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">Confirmar e Iniciar Viaje</button>
           </div>
         </div>
+      )}
+
+     {/* COMPONENTE: PERFIL PÚBLICO DEL PASAJERO/CHOFER */}
+      {idUsuarioVer && (
+        <PerfilUsuarioDetalle 
+          uid={idUsuarioVer} 
+          onClose={() => setIdUsuarioVer(null)} 
+        />
       )}
 
       {verPerfil && <PerfilPublico conductor={{ ...viaje, identidadVerificada: true }} onClose={() => setVerPerfil(false)} setToastMessage={setToastMessage} setShowToast={setShowToast} />}
