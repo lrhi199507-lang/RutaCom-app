@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
-  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star
+  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
@@ -51,17 +51,38 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [pinesIngresados, setPinesIngresados] = useState({});
   const [modalFinalizar, setModalFinalizar] = useState(false);
 
-  // NUEVOS ESTADOS PARA CALIFICACIÓN
+  // ESTADOS PARA CALIFICACIÓN
   const [modalCalificacion, setModalCalificacion] = useState(false);
   const [estrellas, setEstrellas] = useState(0);
   const [comentarioResena, setComentarioResena] = useState("");
 
+  // NUEVO: ESTADO PARA ESTRELLAS DINÁMICAS EN LA TARJETA DEL CONDUCTOR
+  const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
+
+  // 1. Efecto para escuchar cambios del viaje en tiempo real
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
       if (docSnap.exists()) setViaje({ id: docSnap.id, ...docSnap.data() });
     });
     return () => unsub();
   }, [viajeInicial.id]);
+
+  // 2. Efecto para buscar la calificación del conductor en Firebase
+  useEffect(() => {
+    const idChofer = viajeInicial?.uidConductor || viajeInicial?.idCreador;
+    if (!idChofer) return;
+    
+    const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+    getDocs(qResenas).then(snap => {
+      let suma = 0;
+      let total = 0;
+      snap.forEach(d => { suma += d.data().estrellas || 0; total++; });
+      setRatingConductor({
+        promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
+        total: total
+      });
+    }).catch(e => console.error(e));
+  }, [viajeInicial.uidConductor, viajeInicial.idCreador]);
 
   const soyConductor = viaje.uidConductor === userData?.id || viaje.idCreador === userData?.id;
   const estadoViaje = viaje.estado || "disponible"; 
@@ -74,7 +95,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSolicite = solicitudesPendientes.some(p => p.id === userData.id);
   const miReserva = pasajerosConfirmados.find(p => p.id === userData.id);
   const yaSoyPasajero = !!miReserva;
-  const yaCalifico = miReserva?.calificado === true; // Seguro para saber si ya votó
+  const yaCalifico = miReserva?.calificado === true; 
   const mostrarBannerRetorno = viaje.publicarRegreso && viaje.tipoRuta !== 'vuelta_de_ruta';
 
   const solicitarCola = async () => {
@@ -144,7 +165,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  // NUEVA FUNCIÓN: Enviar la reseña a Firebase (BLINDADA)
+  // Función de Calificación Blindada
   const enviarCalificacion = async () => {
     if (estrellas === 0) {
       setToastMessage("Selecciona al menos 1 estrella"); 
@@ -155,13 +176,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     
     try {
-      // 1. Blindamos las variables para que Firebase no colapse por un "undefined"
       const idChofer = viaje.uidConductor || viaje.idCreador || "SinID";
       const idPasaj = userData?.id || "SinID";
       const nomPasaj = userData?.nombre || "Usuario";
-      const comentarioSeguro = comentarioResena || ""; // Si no escribe nada, manda texto vacío
+      const comentarioSeguro = comentarioResena || ""; 
 
-      // 2. Guardamos la reseña
       await addDoc(collection(db, "Resenas"), {
         idViaje: viaje.id,
         idConductor: idChofer,
@@ -172,28 +191,24 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         fecha: new Date().toISOString()
       });
 
-      // 3. Actualizamos al pasajero asegurándonos de atrapar su ID correcto
       const pasajerosActualizados = pasajerosConfirmados.map(p => 
         (p.id === userData?.id || p.uid === userData?.id) ? { ...p, calificado: true } : p
       );
       
       await updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados });
 
-      // 4. Éxito
       setModalCalificacion(false);
       setToastMessage("¡Gracias por calificar!"); 
       setShowToast(true);
 
     } catch (e) { 
       console.error("Error fatal en Firebase:", e); 
-      // AHORA SÍ VEREMOS SI FALLA
       setToastMessage("Error al guardar. Revisa tu conexión o base de datos."); 
       setShowToast(true);
     } finally { 
       setCargando(false); 
     }
   };
-  
 
   const compartirRuta = () => {
     const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.\n\nMi conductor es ${viaje.cN || viaje.conductor}.`;
@@ -336,16 +351,45 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
 
-            <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex items-center gap-4 active:scale-95 transition-all">
-              <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm">
-                {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <User size={20} className="m-auto mt-3 text-slate-300"/>}
+            {/* --- NUEVA TARJETA DE PERFIL CONDUCTOR DINÁMICA --- */}
+            <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm">
+              <div className="flex items-center gap-4">
+                {/* LA LETRA "D" EN LUGAR DE LA FOTO SI NO HAY FOTO */}
+                <div className="w-12 h-12 rounded-[14px] bg-blue-600 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
+                  {viaje.fotoPerfil ? (
+                    <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> 
+                  ) : (
+                    <span className="text-white font-black italic text-xl">D</span>
+                  )}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <p className="text-base font-black italic text-slate-700 uppercase truncate">{viaje.cN || viaje.conductor || "Usuario"}</p>
+                    {/* BadgeCheck moderno */}
+                    {viaje.identidadVerificada && <BadgeCheck size={18} className="text-green-500 fill-green-100 shrink-0" strokeWidth={2.5} />}
+                  </div>
+                  
+                  {/* ESTRELLAS DINÁMICAS (GRISES SI ES 0) */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <Star 
+                          key={star} 
+                          size={12} 
+                          className={star <= parseFloat(ratingConductor.promedio) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase italic">
+                      {ratingConductor.promedio} ({ratingConductor.total} opiniones)
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-slate-300 shrink-0" />
               </div>
-              <div className="flex-1">
-                <p className="text-base font-black italic text-slate-700 uppercase">{viaje.cN || viaje.conductor}</p>
-                <p className="text-[8px] font-black text-blue-600 uppercase">Perfil Verificado</p>
-              </div>
-              <ChevronRight size={16} className="text-slate-300" />
             </div>
+            {/* -------------------------------------------------- */}
 
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
@@ -523,10 +567,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             <button onClick={() => setModalCalificacion(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white transition-colors">
               <X size={20} />
             </button>
-            <div className="w-16 h-16 rounded-full mx-auto overflow-hidden mb-4 border-2 border-slate-700">
-              {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <User size={30} className="m-auto mt-4 text-slate-500"/>}
+            <div className="w-16 h-16 rounded-[20px] bg-blue-600 mx-auto overflow-hidden mb-4 border-2 border-slate-700 flex items-center justify-center">
+              {viaje.fotoPerfil ? (
+                 <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> 
+              ) : (
+                 <span className="text-white font-black italic text-2xl">D</span>
+              )}
             </div>
-            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-1">Califica a {viaje.cN || viaje.conductor}</h3>
+            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-1">Califica a {viaje.cN || viaje.conductor || "Usuario"}</h3>
             <p className="text-[10px] font-bold text-slate-400 mb-6 uppercase tracking-widest">¿Qué tal estuvo el viaje?</p>
             
             <div className="flex justify-center gap-2 mb-6">
@@ -551,7 +599,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      {/* MODAL DE ABORDAJE (VALIDACIÓN PIN) */}
+      {/* MODAL DE ABORDAJE */}
       {modalAbordaje && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300">
