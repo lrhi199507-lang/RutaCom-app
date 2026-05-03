@@ -240,39 +240,42 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
 
   return (
     <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+      
+      {/* ETIQUETA MOVIDA MÁS A LA ESQUINA (top-4 right-4) */}
+      <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
           {tipo === 'activo' ? 'ACTIVO' : 'FINALIZADO'}
       </div>
       
-      <div className="flex items-center gap-4 pt-2">
-        <div className="w-12 h-12 rounded-[14px] bg-blue-600 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+      {/* CONTENEDOR BLINDADO: pr-20 (margen derecho) y truncate para evitar choques */}
+      <div className="flex items-center gap-4 pt-1 pr-20">
+        <div className="w-12 h-12 rounded-[14px] bg-blue-600 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0">
           {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black italic text-white text-xl'>D</div>}
         </div>
-        <div>
-          <p className="text-base font-black italic text-slate-800 uppercase">{viaje.cN || viaje.conductor || "Conductor"}</p>
-          <p className="text-[8px] font-black text-blue-600 uppercase tracking-wider">Chofer Designado</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-black italic text-slate-800 uppercase truncate">{viaje.cN || viaje.conductor || "Conductor"}</p>
+          <p className="text-[8px] font-black text-blue-600 uppercase tracking-wider mt-0.5">Chofer Designado</p>
         </div>
       </div>
 
       <div className="flex items-center gap-4 text-center">
-        <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic">{viaje.cO || viaje.origen?.split(',')[0]}</p>
-            <p className="text-[7px] font-black text-slate-400 uppercase">Recogida</p>
+        <div className='flex-1 min-w-0'>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || viaje.origen?.split(',')[0]}</p>
+            <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Recogida</p>
         </div>
-        <ArrowLeftRight className='text-slate-300' size={18}/>
-        <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic">{viaje.cD || viaje.destino?.split(',')[0]}</p>
-            <p className="text-[7px] font-black text-slate-400 uppercase">Destino</p>
+        <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
+        <div className='flex-1 min-w-0'>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || viaje.destino?.split(',')[0]}</p>
+            <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Destino</p>
         </div>
       </div>
 
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Calendar size={16} className="text-blue-500"/>
+          <Calendar size={16} className="text-blue-500 shrink-0"/>
           <p className="text-xs font-bold text-slate-700 capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Clock size={16} className="text-blue-500"/>
+          <Clock size={16} className="text-blue-500 shrink-0"/>
           <p className="text-xs font-bold text-slate-700">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p>
         </div>
       </div>
@@ -289,7 +292,6 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
             {esConfirmado ? <><Check size={16} /> ¡Viaje Confirmado! Ver PIN</> : <><Info size={16} /> Esperando Confirmación</>}
         </button>
       ) : (
-        /* NUEVO: BOTÓN DE CALIFICACIÓN PARA VIAJES FINALIZADOS */
         <button 
             onClick={() => onClickGestionar(viaje)}
             className={`w-full mt-4 rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
@@ -304,6 +306,7 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
     </div>
   );
 };
+
 
 // COMPONENTE PRINCIPAL
 export const VistaMisViajes = ({ 
