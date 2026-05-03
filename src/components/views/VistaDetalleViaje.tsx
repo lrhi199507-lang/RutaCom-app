@@ -155,24 +155,39 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  const solicitarCola = async () => {
+    const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ id: userData?.id, nombre: userData?.nombre || "Usuario", fotoPerfil: userData?.fotoPerfil || null, estado: 'pendiente' })
       });
-       // ¡NUEVO! Avisarle al chofer
-      await enviarNotificacion(
-        viaje.idConductor, // El ID del chofer
-        "¡Nueva Solicitud!",
-        `${userData?.nombre} quiere viajar contigo desde ${viaje.cO?.split(',')[0]} hasta ${viaje.cD?.split(',')[0]}.`,
-        "viaje"
-      );
-      setToastMessage("Solicitud enviada"); setShowToast(true);
-    } catch (e) { console.error(e); } finally { setCargando(false); }
-  };
+      
+      // BLINDAJE: Capturar el ID del chofer sea cual sea el nombre de la variable
+      const idDelChofer = viaje.idConductor || viaje.uid || viaje.conductorId || viaje.idUsuario;
 
+      // ¡NUEVO! Avisarle al chofer
+      if (idDelChofer) {
+        await enviarNotificacion(
+          idDelChofer, 
+          "¡Nueva Solicitud!",
+          `${userData?.nombre} quiere viajar contigo desde ${viaje.cO?.split(',')[0]} hasta ${viaje.cD?.split(',')[0]}.`,
+          "viaje"
+        );
+      } else {
+        console.warn("No se encontró el ID del chofer para notificar");
+      }
+
+      setToastMessage("Solicitud enviada"); 
+      setShowToast(true);
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setCargando(false); 
+    }
+  };
+  
+  
   const cancelarSolicitud = async () => {
     setCargando(true);
     try {
