@@ -1,18 +1,33 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../../firebaseConfig';
+import { collection, query, where, getDocs } from 'firebase/firestore'; // IMPORTANTE PARA EL RATING
 import { MapPin, Navigation, Users, DollarSign, Clock, ShieldCheck, Check, Briefcase, Zap, Calendar } from 'lucide-react';
 import Toast from './Toast'; 
 
 export const WizardPublicar = ({ 
   pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
-  viajeAEditar, // Sincronizado con NavegacionPrincipal
+  viajeAEditar,
   userData 
 }) => {
 
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const hoy = new Date().toISOString().split('T')[0];
+  
+  // NUEVO: Estado y efecto para obtener el rating real antes de publicar
+  const [ratingCalculado, setRatingCalculado] = useState("0.0");
 
-  // PASO 1: UBICACIONES (Con Autocompletado blindado)
+  useEffect(() => {
+    if (!userData?.id) return;
+    const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", userData.id));
+    getDocs(qResenas).then(snap => {
+      let suma = 0, total = 0;
+      snap.forEach(d => { suma += d.data().estrellas || 0; total++; });
+      setRatingCalculado(total > 0 ? (suma / total).toFixed(1) : "0.0");
+    }).catch(e => console.error("Error rating en wizard:", e));
+  }, [userData?.id]);
+
+  // PASO 1: UBICACIONES
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right">
@@ -253,100 +268,97 @@ export const WizardPublicar = ({
             </button>
           </div>
 
-                          <button 
-          onClick={async () => {
-            if (!userData?.id) return alert("Error: No se detecta tu ID de usuario. Reintenta iniciar sesión.");
+          <button 
+            onClick={async () => {
+              if (!userData?.id) return alert("Error: No se detecta tu ID de usuario. Reintenta iniciar sesión.");
 
-            const [ciudadOri] = (viajeForm.origen || "").split(', ');
-            const [ciudadDest] = (viajeForm.destino || "").split(', ');
+              const [ciudadOri] = (viajeForm.origen || "").split(', ');
+              const [ciudadDest] = (viajeForm.destino || "").split(', ');
 
-            const datosBase = {
-              ...viajeForm,
-              idCreador: userData.id,
-              uidConductor: userData.id,
-              fotoPerfil: userData?.fotoPerfil || "",
-              conductor: userData?.nombre || "Usuario",
-              datosConductor: {
-                nombre: userData?.nombre || "Usuario",
-                foto: userData?.fotoPerfil || "",
-                rating: userData?.rating || "5.0",
-                viajesRealizados: userData?.viajesRealizados || 0,
-                bio: userData?.bio || ""
-              },
-              cO: ciudadOri || "S/N", 
-              cD: ciudadDest || "S/N",
-              estado: "disponible",
-              timestamp: Date.now()
-            };
+              const datosBase = {
+                ...viajeForm,
+                idCreador: userData.id,
+                uidConductor: userData.id,
+                fotoPerfil: userData?.fotoPerfil || "",
+                conductor: userData?.nombre || "Usuario",
+                identidadVerificada: userData?.kycVerificado || userData?.identidadVerificada || false,
+                datosConductor: {
+                  nombre: userData?.nombre || "Usuario",
+                  foto: userData?.fotoPerfil || "",
+                  // CORRECCIÓN: GUARDA EL RATING REAL CALCULADO DESDE FIREBASE
+                  rating: ratingCalculado, 
+                  viajesRealizados: userData?.viajesRealizados || 0,
+                  bio: userData?.bio || ""
+                },
+                cO: ciudadOri || "S/N", 
+                cD: ciudadDest || "S/N",
+                estado: "disponible",
+                timestamp: Date.now()
+              };
 
-            try {
-              if (viajeAEditar) {
-                // Quitamos el await si publicarRuta ya maneja la navegación, 
-                // pero si queremos ver el toast, publicarRuta NO debe hacer setVista("inicio")
-                await publicarRuta(datosBase, true); // true = no navegar automáticamente
-                setToastMessage("Guardado con éxito");
-              } else {
-                const objetoIda = {
-                  ...datosBase,
-                  conRetornoProgramado: !!viajeForm.publicarRegreso,
-                  tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
-                  fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
-                  horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
-                };
-                
-                await publicarRuta(objetoIda, true); 
+              try {
+                if (viajeAEditar) {
+                  await publicarRuta(datosBase, true); 
+                  setToastMessage("Guardado con éxito");
+                } else {
+                  const objetoIda = {
+                    ...datosBase,
+                    conRetornoProgramado: !!viajeForm.publicarRegreso,
+                    tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
+                    fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
+                    horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
+                  };
+                  
+                  await publicarRuta(objetoIda, true); 
 
-                if (viajeForm.publicarRegreso) {
-                  await publicarRuta({
-                    ...objetoIda,
-                    origen: viajeForm.destino,
-                    destino: viajeForm.origen,
-                    cO: ciudadDest || "S/N",
-                    cD: ciudadOri || "S/N",
-                    fecha: viajeForm.fechaRegreso,
-                    hora: viajeForm.horaRegreso || viajeForm.hora,
-                    tipoRuta: "vuelta_de_ruta",
-                    conRetornoProgramado: false
-                  }, true);
+                  if (viajeForm.publicarRegreso) {
+                    await publicarRuta({
+                      ...objetoIda,
+                      origen: viajeForm.destino,
+                      destino: viajeForm.origen,
+                      cO: ciudadDest || "S/N",
+                      cD: ciudadOri || "S/N",
+                      fecha: viajeForm.fechaRegreso,
+                      hora: viajeForm.horaRegreso || viajeForm.hora,
+                      tipoRuta: "vuelta_de_ruta",
+                      conRetornoProgramado: false
+                    }, true);
+                  }
+                  setToastMessage("Publicado con éxito");
                 }
-                setToastMessage("Publicado con éxito");
+
+                setShowToast(true);
+                setTimeout(() => { 
+                    setShowToast(false); 
+                    setVista("inicio"); 
+                    setPasoWizard(1);
+                }, 2000);
+
+              } catch (e) {
+                console.error("ERROR CRÍTICO AL PUBLICAR:", e);
+                alert("Error técnico al guardar en Firebase.");
               }
-
-              // Mostrar el toast
-              setShowToast(true);
-              
-              // Retrasar la navegación a Inicio hasta que el usuario lea el mensaje
-              setTimeout(() => { 
-                  setShowToast(false); 
-                  setVista("inicio"); // Ahora sí navegamos
-                  setPasoWizard(1);
-              }, 2000); // 2 segundos es ideal
-
-            } catch (e) {
-              console.error("ERROR CRÍTICO AL PUBLICAR:", e);
-              alert("Error técnico al guardar en Firebase.");
-            }
-          }}
-          className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
-        >
-          <ShieldCheck size={20} /> 
-          <span className="text-sm">
-            {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
-          </span>
-        </button>
-          
-              
-        <button 
-          onClick={() => setPasoWizard(2)} 
-          className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4"
-        >
-          Atrás
-        </button>
-      </div>
-      <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
-    </>
-  );
-} // <--- Esta cierra el if del paso 3
+            }}
+            className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
+          >
+            <ShieldCheck size={20} /> 
+            <span className="text-sm">
+              {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
+            </span>
+          </button>
+                
+          <button 
+            onClick={() => setPasoWizard(2)} 
+            className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4"
+          >
+            Atrás
+          </button>
+        </div>
+        <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
+      </>
+    );
+  } 
 
   return null;
-}; // <--- Esta cierra el componente final
+};
+                                                 
