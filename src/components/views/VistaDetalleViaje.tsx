@@ -353,15 +353,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
             {/* --- NUEVA TARJETA DE PERFIL CONDUCTOR DINÁMICA --- */}
             <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm">
-              <div className="flex items-center gap-4">
-                {/* LA LETRA "D" EN LUGAR DE LA FOTO SI NO HAY FOTO */}
-                <div className="w-12 h-12 rounded-[14px] bg-blue-600 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
+                            <div className="flex items-center gap-4">
+                {/* DE VUELTA AL CÍRCULO CON LA FOTO O EL MUÑEQUITO */}
+                <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                   {viaje.fotoPerfil ? (
                     <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> 
                   ) : (
-                    <span className="text-white font-black italic text-xl">D</span>
+                    <User size={24} className="text-slate-300"/>
                   )}
                 </div>
+                              
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
