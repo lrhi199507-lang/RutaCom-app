@@ -173,24 +173,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         })
       });
       
-      // 2. DETECTAR EL ID (Probamos todas las llaves posibles de tu Firebase)
-      // He añadido 'viaje.idCreador' y 'viaje.conductor' que son comunes
-      const idDestino = viaje.uid || viaje.idUsuario || viaje.idConductor || viaje.conductorId || viaje.idCreador || viaje.conductor;
+            // 2. DETECTAR EL ID (Usamos las propiedades que ya tienes en el useEffect del rating)
+      const idDestino = viaje?.uidConductor || viaje?.idCreador || viaje?.idUsuario || viaje?.uid;
 
-      // DIAGNÓSTICO EN PANTALLA: Esto te dirá en el celular si encontró al chofer
+      // DIAGNÓSTICO: Si esto falla, el Toast te avisará en el APK
       if (!idDestino) {
-        setToastMessage("Error: No se encontró ID del chofer en el objeto viaje");
+        setToastMessage("Error: El viaje no tiene ID de chofer asignado");
       } else {
         // 3. ENVIAR NOTIFICACIÓN
         await enviarNotificacion(
           idDestino, 
           "¡Nueva Solicitud!",
-          `${userData?.nombre} quiere unirse a tu viaje.`,
+          `${userData?.nombre || 'Alguien'} quiere unirse a tu viaje.`,
           "viaje"
         );
         setToastMessage("Solicitud enviada con éxito");
       }
-
       setShowToast(true);
     } catch (e) { 
       setToastMessage("Error crítico al solicitar");
