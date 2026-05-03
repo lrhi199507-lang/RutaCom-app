@@ -158,11 +158,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-        const solicitarCola = async () => {
+        
+    const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
     try {
-      // 1. Guardamos la reserva en el viaje
+      // 1. Guardamos la reserva
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ 
           id: userData?.id || userData?.uid, 
@@ -172,36 +173,32 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         })
       });
       
-      // 2. BUSCAMOS EL ID DEL DUEÑO DEL VIAJE
-      // En tus capturas veo que el ID del creador suele estar en 'uid' o 'idUsuario'
-      console.log("DATOS DEL VIAJE COMPLETO:", viaje);
-    
-      const idDestino = viaje.uid || viaje.idUsuario || viaje.idConductor || viaje.conductorId;
+      // 2. DETECTAR EL ID (Probamos todas las llaves posibles de tu Firebase)
+      // He añadido 'viaje.idCreador' y 'viaje.conductor' que son comunes
+      const idDestino = viaje.uid || viaje.idUsuario || viaje.idConductor || viaje.conductorId || viaje.idCreador || viaje.conductor;
 
-      console.log("ID Destino detectado:", idDestino);
-
-      if (idDestino) {
-        // Ejecutamos el disparo a la colección "Notificaciones"
+      // DIAGNÓSTICO EN PANTALLA: Esto te dirá en el celular si encontró al chofer
+      if (!idDestino) {
+        setToastMessage("Error: No se encontró ID del chofer en el objeto viaje");
+      } else {
+        // 3. ENVIAR NOTIFICACIÓN
         await enviarNotificacion(
           idDestino, 
           "¡Nueva Solicitud!",
           `${userData?.nombre} quiere unirse a tu viaje.`,
           "viaje"
         );
-      } else {
-        console.error("No se pudo determinar el ID del chofer. Revisa el objeto 'viaje'");
+        setToastMessage("Solicitud enviada con éxito");
       }
 
-      setToastMessage("Solicitud enviada"); 
       setShowToast(true);
     } catch (e) { 
-      console.error("Error en solicitarCola:", e); 
+      setToastMessage("Error crítico al solicitar");
+      setShowToast(true);
     } finally { 
       setCargando(false); 
     }
   };
-  
-  
   
   const cancelarSolicitud = async () => {
     setCargando(true);
