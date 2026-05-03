@@ -79,6 +79,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [ratingsChofer, setRatingsChofer] = useState({});
   const [idUsuarioVer, setIdUsuarioVer] = useState(null);
 
+  const [modalCancelar, setModalCancelar] = useState({ visible: false, rol: null }); // rol puede ser 'chofer' o 'pasajero'
+  const [motivoCancelacion, setMotivoCancelacion] = useState("");
+
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
 
   useEffect(() => {
@@ -155,6 +158,54 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       if (pasajeroAborrar) await updateDoc(doc(db, "Viajes", viaje.id), { reservasPendientes: arrayRemove(pasajeroAborrar) });
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
+
+    // --- SISTEMA DE CANCELACIONES ---
+  const ejecutarCancelacion = async () => {
+    if (!motivoCancelacion) {
+      setToastMessage("Debes seleccionar un motivo");
+      setShowToast(true);
+      return;
+    }
+    
+    setCargando(true);
+    try {
+      const miRef = doc(db, "usuarios", userData?.id);
+      const viajeRef = doc(db, "Viajes", viaje.id);
+
+      if (modalCancelar.rol === 'pasajero') {
+        // 1. Buscarme en la lista de confirmados y sacarme
+        const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
+        if (pasajeroAborrar) {
+          await updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) });
+          // 2. Penalizar al pasajero en su perfil
+          await updateDoc(miRef, { cancelacionesPasajero: increment(1) });
+          setToastMessage("Reserva cancelada. Se registró en tu historial.");
+        }
+      } 
+      else if (modalCancelar.rol === 'chofer') {
+        // 1. Marcar todo el viaje como cancelado y guardar el motivo
+        await updateDoc(viajeRef, { 
+          estado: 'cancelado',
+          motivoCancelacionChofer: motivoCancelacion
+        });
+        // 2. Penalizar al chofer en su perfil
+        await updateDoc(miRef, { cancelacionesChofer: increment(1) });
+        setToastMessage("Viaje cancelado. Se penalizó tu perfil.");
+      }
+
+      setModalCancelar({ visible: false, rol: null });
+      setShowToast(true);
+      if (modalCancelar.rol === 'chofer') onRegresar(); // Si el chofer cancela, lo sacamos de la vista
+      
+    } catch (error) {
+      console.error(error);
+      setToastMessage("Error al cancelar");
+      setShowToast(true);
+    } finally {
+      setCargando(false);
+    }
+  };
+  
 
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
@@ -586,11 +637,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 <MessageCircle size={16} /> Chat
               </button>
 
-              {soyConductor ? (
+                 {soyConductor ? (
                  estadoViaje === 'disponible' ? (
-                    <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => setModalAbordaje(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
-                      {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Iniciar Viaje'}
-                    </button>
+                    <div className="flex-[2] flex gap-2">
+                      <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
+                        Cancelar
+                      </button>
+                      <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => setModalAbordaje(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
+                        {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Iniciar Viaje'}
+                      </button>
+                    </div>
                  ) : (
                     <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
                       Viaje Finalizado
@@ -609,7 +665,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                        </button>
                      )
                   ) : (
-                     <div className="flex-[2] bg-green-500 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg"><Check size={16} /> Puesto Confirmado</div>
+                     <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-[2] bg-red-100 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-200">
+                       <X size={16} strokeWidth={3} /> Cancelar Asiento
+                     </button>
                   )
                 ) : yaSolicite ? (
                   <button disabled={cargando} onClick={cancelarSolicitud} className="flex-[2] bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
@@ -757,6 +815,52 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               })}
             </div>
             <button onClick={procesarAbordajeEIniciar} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">Confirmar e Iniciar Viaje</button>
+          </div>
+        </div>
+      )}
+
+            {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
+      {modalCancelar.visible && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] p-6 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-red-900/50 text-center">
+            <div className="bg-red-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-red-500/20">
+              <AlertTriangle size={30} className="text-red-500" />
+            </div>
+            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">
+              ¿Cancelar {modalCancelar.rol === 'chofer' ? 'el Viaje' : 'tu Asiento'}?
+            </h3>
+            <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
+              ¡ATENCIÓN! Cancelar a esta altura sumará una penalización a tu historial. Demasiadas cancelaciones pueden bloquear tu cuenta.
+            </p>
+
+            <div className="text-left mb-6">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Motivo de cancelación:</p>
+              <div className="space-y-2">
+                {[
+                  "Emergencia personal / Salud", 
+                  modalCancelar.rol === 'chofer' ? "Falla mecánica del auto" : "Conseguí otra alternativa",
+                  modalCancelar.rol === 'chofer' ? "No conseguí suficientes pasajeros" : "Se canceló mi compromiso",
+                  "Otro motivo"
+                ].map(motivo => (
+                  <button 
+                    key={motivo}
+                    onClick={() => setMotivoCancelacion(motivo)}
+                    className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${motivoCancelacion === motivo ? 'bg-red-950/50 border-red-500 text-red-200' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
+                  >
+                    {motivo}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button disabled={cargando} onClick={() => {setModalCancelar({visible: false, rol: null}); setMotivoCancelacion("");}} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">
+                Volver
+              </button>
+              <button disabled={cargando} onClick={ejecutarCancelacion} className="flex-1 bg-red-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-red-900/50 active:scale-95 transition-all">
+                {cargando ? '...' : 'Confirmar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
