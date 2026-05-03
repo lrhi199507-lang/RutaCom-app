@@ -139,33 +139,30 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setShowToast(true);
   };
   // ------------------------------------------------------------------------
-  // --- DISPARADOR DE NOTIFICACIONES ---
-    const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
-    if (!idDestino) {
-      console.error("ERROR: Intentaste enviar una notificación sin ID de destino");
-      return;
-    }
+   const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
+    if (!idDestino) return;
 
     try {
-      console.log(`Enviando notificación a: ${idDestino}`);
+      // Importante: Chequea que "db" esté bien importado de tu config
       await addDoc(collection(db, "Notificaciones"), {
         idDestino: idDestino,
-        titulo,
-        mensaje,
-        tipo,
+        titulo: titulo,
+        mensaje: mensaje,
+        tipo: tipo,
         leida: false,
         fecha: new Date().toISOString()
       });
+      console.log("✅ Notificación guardada en Firebase");
     } catch (error) {
-      console.log("Error Firebase Notif:", error);
+      console.error("❌ Error al guardar en Notificaciones:", error);
     }
   };
   
-      
-    const solicitarCola = async () => {
+        const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
     try {
+      // 1. Guardamos la reserva en el viaje
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ 
           id: userData?.id || userData?.uid, 
@@ -175,30 +172,33 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         })
       });
       
-      // TRIPLE VERIFICACIÓN DE ID:
-      // Probamos todas las variantes comunes en tu base de datos
-      const idDelChofer = viaje.idConductor || viaje.uid || viaje.conductorId || viaje.idUsuario;
+      // 2. BUSCAMOS EL ID DEL DUEÑO DEL VIAJE
+      // En tus capturas veo que el ID del creador suele estar en 'uid' o 'idUsuario'
+      const idDestino = viaje.uid || viaje.idUsuario || viaje.idConductor || viaje.conductorId;
 
-      // Imprimimos en consola para que tú veas si el ID es correcto
-      console.log("Intentando notificar al chofer con ID:", idDelChofer);
+      console.log("ID Destino detectado:", idDestino);
 
-      if (idDelChofer) {
+      if (idDestino) {
+        // Ejecutamos el disparo a la colección "Notificaciones"
         await enviarNotificacion(
-          idDelChofer, 
+          idDestino, 
           "¡Nueva Solicitud!",
-          `${userData?.nombre} quiere viajar contigo desde ${viaje.cO?.split(',')[0]} hasta ${viaje.cD?.split(',')[0]}.`,
+          `${userData?.nombre} quiere unirse a tu viaje.`,
           "viaje"
         );
+      } else {
+        console.error("No se pudo determinar el ID del chofer. Revisa el objeto 'viaje'");
       }
 
       setToastMessage("Solicitud enviada"); 
       setShowToast(true);
     } catch (e) { 
-      console.error(e); 
+      console.error("Error en solicitarCola:", e); 
     } finally { 
       setCargando(false); 
     }
   };
+  
   
   
   const cancelarSolicitud = async () => {
