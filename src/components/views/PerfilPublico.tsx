@@ -108,7 +108,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
       <div className="bg-white px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b border-slate-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-[14px] flex items-center justify-center shadow-lg shadow-blue-100">
-            <span className="text-white font-black italic text-lg">{inicialMostrar}</span>
+            <span className="text-white font-black italic text-lg">D</span>
           </div>
           <div>
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 italic">Perfil Público</p>
