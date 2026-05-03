@@ -214,16 +214,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-  const enviarCalificacionesYFinalizar = async () => {
+    const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
-      const dbAuth = auth.currentUser; // Importa auth de firebase/auth si no lo tienes en este archivo
-      // 1. Guardar las reseñas
+      // 1. Ciclo para los pasajeros
       for (const p of pasajerosConfirmados) {
         if (!p) continue;
         const pid = p.id || p.uid;
         const rat = ratingsChofer[pid];
+        
         if (rat && rat.estrellas > 0) {
+          // A) Guardar la reseña en la colección Resenas
           await addDoc(collection(db, "Resenas"), {
             idViaje: viaje.id,
             idConductor: pid, 
@@ -234,28 +235,32 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             fecha: new Date().toISOString()
           });
 
-          // ACTUALIZAR AL PASAJERO: Sumarle +1 viaje como pasajero
-          const userRef = doc(db, "usuarios", pid);
-          const snap = await getDocs(query(collection(db, "usuarios"), where("id", "==", pid))); // Busca al usuario real
-          if(!snap.empty) {
-             const usrDoc = snap.docs[0];
-             const viajesPasajeroActuales = usrDoc.data().viajesComoPasajero || 0;
-             await updateDoc(doc(db, "usuarios", usrDoc.id), { viajesComoPasajero: viajesPasajeroActuales + 1 });
-          }
+          // B) ACTUALIZAR AL PASAJERO: Sumarle +1 viaje como pasajero silenciosamente
+          try {
+            await updateDoc(doc(db, "usuarios", pid), {
+              viajesComoPasajero: increment(1)
+            });
+          } catch (err) { console.log("Error al sumar viaje al pasajero", err); }
         }
       }
 
       // 2. ACTUALIZAR AL CHOFER: Sumarle +1 viaje conducido a él mismo
       if (userData?.id) {
-         const miRef = doc(db, "usuarios", userData.id); // Asumiendo que el ID de sesión es el docId
-         const misViajesCond = userData.viajesRealizados || 0;
-         await updateDoc(miRef, { viajesRealizados: misViajesCond + 1 });
+         try {
+           await updateDoc(doc(db, "usuarios", userData.id), {
+             viajesRealizados: increment(1)
+           });
+         } catch (err) { console.log("Error al sumar viaje al chofer", err); }
       }
 
-      // 3. Finalizar el viaje
+      // 3. Cerrar el viaje
       await cambiarEstadoViaje('finalizado');
       setModalCalificarPasajeros(false);
-    } catch (e) { console.error(e); } finally { setCargando(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setCargando(false); 
+    }
   };
   
 
