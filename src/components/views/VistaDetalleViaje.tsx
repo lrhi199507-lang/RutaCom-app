@@ -181,7 +181,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-    // --- SISTEMA DE CANCELACIONES ---
+      // --- SISTEMA DE CANCELACIONES ---
   const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToastMessage("Debes seleccionar un motivo");
@@ -195,59 +195,101 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       const viajeRef = doc(db, "Viajes", viaje.id);
 
       if (modalCancelar.rol === 'pasajero') {
-        // 1. Buscarme en la lista de confirmados y sacarme
         const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
         if (pasajeroAborrar) {
           await updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) });
-          // 2. Penalizar al pasajero en su perfil
           await updateDoc(miRef, { cancelacionesPasajero: increment(1) });
+
+          // NOTIFICACIÓN AL CHOFER: Un pasajero se bajó
+          await enviarNotificacion(
+            viaje.idConductor,
+            "Asiento Liberado",
+            `${userData?.nombre} ha cancelado su reserva para tu viaje. El puesto vuelve a estar disponible.`,
+            "alerta"
+          );
+
           setToastMessage("Reserva cancelada. Se registró en tu historial.");
         }
       } 
       else if (modalCancelar.rol === 'chofer') {
-        // 1. Marcar todo el viaje como cancelado y guardar el motivo
         await updateDoc(viajeRef, { 
           estado: 'cancelado',
           motivoCancelacionChofer: motivoCancelacion
         });
-        // 2. Penalizar al chofer en su perfil
         await updateDoc(miRef, { cancelacionesChofer: increment(1) });
-        setToastMessage("Viaje cancelado. Se penalizó tu perfil.");
+
+        // NOTIFICACIÓN A TODOS LOS PASAJEROS CONFIRMADOS
+        for (const p of pasajerosConfirmados) {
+          if (!p) continue;
+          await enviarNotificacion(
+            p.id || p.uid,
+            "Viaje Cancelado por el Chofer",
+            `Lamentamos informarte que el viaje desde ${viaje.cO?.split(',')[0]} ha sido cancelado por motivos de: ${motivoCancelacion}.`,
+            "alerta"
+          );
+        }
+
+        setToastMessage("Viaje cancelado y pasajeros notificados");
       }
 
       setModalCancelar({ visible: false, rol: null });
       setShowToast(true);
-      if (modalCancelar.rol === 'chofer') onRegresar(); // Si el chofer cancela, lo sacamos de la vista
+      if (modalCancelar.rol === 'chofer') onRegresar();
       
     } catch (error) {
       console.error(error);
-      setToastMessage("Error al cancelar");
+      setToastMessage("Error en la operación");
       setShowToast(true);
     } finally {
       setCargando(false);
     }
   };
   
-
+  
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
+      
       if (accion === 'aceptar') {
         if (cuposRestantes <= 0) { 
           setToastMessage("Sin puestos disponibles"); setShowToast(true); setCargando(false); return; 
         }
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
+        
         await updateDoc(viajeRef, {
           reservasPendientes: arrayRemove(solicitud),
           pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
         });
-      } else {
-        await updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) });
-      }
-    } catch (e) { console.error(e); } finally { setCargando(false); }
-  };
 
+        // NOTIFICACIÓN: ¡Aceptado!
+        await enviarNotificacion(
+          solicitud.id || solicitud.uid,
+          "¡Cola Aceptada!",
+          `${userData?.nombre} te ha confirmado en su viaje. ¡Revisa tu PIN de abordaje!`,
+          "exito"
+        );
+
+      } else {
+        // RECHAZAR
+        await updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) });
+
+        // NOTIFICACIÓN: Rechazado (Crucial para que busque otra opción rápido)
+        await enviarNotificacion(
+          solicitud.id || solicitud.uid,
+          "Solicitud no confirmada",
+          "El conductor no pudo procesar tu solicitud. Te invitamos a buscar otras rutas disponibles.",
+          "alerta"
+        );
+      }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setCargando(false); 
+    }
+  };
+  
+  
   const procesarAbordajeEIniciar = async () => {
     setCargando(true);
     try {
