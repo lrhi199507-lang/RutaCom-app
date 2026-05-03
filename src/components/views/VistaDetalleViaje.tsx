@@ -139,31 +139,28 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setShowToast(true);
   };
   // ------------------------------------------------------------------------
-   const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
-    if (!idDestino) return;
-
+   
+    const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
+    // Si idDestino llega aquí, Firebase TIENE que crear la colección
     try {
-      // Importante: Chequea que "db" esté bien importado de tu config
       await addDoc(collection(db, "Notificaciones"), {
-        idDestino: idDestino,
-        titulo: titulo,
-        mensaje: mensaje,
-        tipo: tipo,
+        idDestino: String(idDestino), // Lo aseguramos como texto
+        titulo,
+        mensaje,
+        tipo,
         leida: false,
         fecha: new Date().toISOString()
       });
-      console.log("✅ Notificación guardada en Firebase");
+      console.log("Notificación creada en Firebase");
     } catch (error) {
-      console.error("❌ Error al guardar en Notificaciones:", error);
+      console.error("Error al crear documento:", error);
     }
   };
   
-        
-    const solicitarCola = async () => {
+     const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
     try {
-      // 1. Guardamos la reserva
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ 
           id: userData?.id || userData?.uid, 
@@ -173,30 +170,32 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         })
       });
       
-            // 2. DETECTAR EL ID (Usamos las propiedades que ya tienes en el useEffect del rating)
-      const idDestino = viaje?.uidConductor || viaje?.idCreador || viaje?.idUsuario || viaje?.uid;
+      // EL FIX DEFINITIVO: Usamos el nombre exacto de tu captura
+      const idDestino = viaje?.uidConductor; 
 
-      // DIAGNÓSTICO: Si esto falla, el Toast te avisará en el APK
-      if (!idDestino) {
-        setToastMessage("Error: El viaje no tiene ID de chofer asignado");
-      } else {
-        // 3. ENVIAR NOTIFICACIÓN
+      if (idDestino) {
         await enviarNotificacion(
           idDestino, 
           "¡Nueva Solicitud!",
-          `${userData?.nombre || 'Alguien'} quiere unirse a tu viaje.`,
+          `${userData?.nombre || 'Un pasajero'} quiere unirse a tu viaje.`,
           "viaje"
         );
         setToastMessage("Solicitud enviada con éxito");
+      } else {
+        // Si sale este mensaje, es que el objeto 'viaje' no está cargando el uidConductor
+        setToastMessage("Error: No se detectó uidConductor en el viaje");
       }
+
       setShowToast(true);
     } catch (e) { 
-      setToastMessage("Error crítico al solicitar");
+      setToastMessage("Error de conexión");
       setShowToast(true);
     } finally { 
       setCargando(false); 
     }
   };
+  
+    
   
   const cancelarSolicitud = async () => {
     setCargando(true);
