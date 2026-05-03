@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
-  X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check 
+  X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
 } from 'lucide-react';
 
 // --- FUNCIONES FORMATEADORAS VISUALES ---
@@ -215,13 +215,15 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
         className={`w-full mt-4 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
           solicitudes > 0 && estadoLabel !== 'FINALIZADO' 
             ? 'bg-orange-500 shadow-orange-500/40 animate-pulse' 
+            : estadoLabel === 'FINALIZADO'
+            ? 'bg-slate-800 shadow-slate-900/30'
             : 'bg-green-500 shadow-green-500/30'
         }`}
       >
         {solicitudes > 0 && estadoLabel !== 'FINALIZADO' ? (
           <><Info size={18} /> ¡Tienes {solicitudes} solicitud{solicitudes > 1 ? 'es' : ''}!</>
         ) : estadoLabel === 'FINALIZADO' ? (
-          <><Info size={16} /> Ver Resumen del Viaje</>
+          <><Star size={16} className="fill-white" /> Ver Resumen del Viaje</>
         ) : (
           <><Settings size={16} /> Gestionar Viaje</>
         )}
@@ -232,21 +234,23 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
 
 // COMPONENTE: Tarjeta de Viaje - Pasajero
 const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
-  const esConfirmado = viaje.pasajeros?.some(p => p.id === userData?.id);
+  const miReserva = viaje.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
+  const esConfirmado = !!miReserva;
+  const yaCalifico = miReserva?.calificado === true;
 
   return (
-    <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative ${esConfirmado ? 'border-blue-200' : 'border-slate-100'}`}>
+    <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
       <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
           {tipo === 'activo' ? 'ACTIVO' : 'FINALIZADO'}
       </div>
       
       <div className="flex items-center gap-4 pt-2">
-        <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-          {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black text-slate-400 text-xl'>{viaje.cN?.[0] || 'C'}</div>}
+        <div className="w-12 h-12 rounded-[14px] bg-blue-600 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+          {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black italic text-white text-xl'>D</div>}
         </div>
         <div>
-          <p className="text-base font-black italic text-slate-800 uppercase">{viaje.cN || viaje.conductor}</p>
-          <p className="text-[8px] font-black text-blue-600 uppercase tracking-wider">Conductor</p>
+          <p className="text-base font-black italic text-slate-800 uppercase">{viaje.cN || viaje.conductor || "Conductor"}</p>
+          <p className="text-[8px] font-black text-blue-600 uppercase tracking-wider">Chofer Designado</p>
         </div>
       </div>
 
@@ -273,7 +277,7 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
         </div>
       </div>
 
-      {tipo === 'activo' && (
+      {tipo === 'activo' ? (
         <button 
             onClick={() => onClickGestionar(viaje)}
             className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
@@ -283,6 +287,18 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
             }`}
           >
             {esConfirmado ? <><Check size={16} /> ¡Viaje Confirmado! Ver PIN</> : <><Info size={16} /> Esperando Confirmación</>}
+        </button>
+      ) : (
+        /* NUEVO: BOTÓN DE CALIFICACIÓN PARA VIAJES FINALIZADOS */
+        <button 
+            onClick={() => onClickGestionar(viaje)}
+            className={`w-full mt-4 rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
+              yaCalifico 
+              ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' 
+              : 'bg-amber-400 text-amber-950 shadow-amber-500/30 border border-amber-300 animate-pulse'
+            }`}
+          >
+            {yaCalifico ? <><Check size={16} /> Experiencia Calificada</> : <><Star size={16} className="fill-amber-950" /> Calificar a {viaje.cN?.split(' ')[0] || "Conductor"}</>}
         </button>
       )}
     </div>
@@ -387,7 +403,13 @@ export const VistaMisViajes = ({
                   <div className="space-y-6">
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Rutas</p>
                       {viajesPasajeroHistorial.map(viaje => (
-                          <ViajeCardPasajero key={viaje.id} viaje={viaje} tipo="finalizado" userData={userData} />
+                          <ViajeCardPasajero 
+                            key={viaje.id} 
+                            viaje={viaje} 
+                            tipo="finalizado" 
+                            onClickGestionar={onVerDetalles} // Redirige para abrir modal de calificación
+                            userData={userData} 
+                          />
                       ))}
                   </div>
                 )}
@@ -416,7 +438,7 @@ export const VistaMisViajes = ({
                 </div>
 
                 {viajesChofer.filter(v => v.estado === 'finalizado').length > 0 && (
-                  <div className="space-y-6 opacity-70">
+                  <div className="space-y-6 opacity-80">
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Viajes Finalizados</p>
                       {viajesChofer.filter(v => v.estado === 'finalizado').map(viaje => (
                         <ViajeCardChofer 
