@@ -18,10 +18,11 @@ export const CampanaNotificaciones = ({ userData }) => {
     
     console.log("Campana escuchando para el ID:", miId);
 
-    const q = query(
+        const q = query(
       collection(db, "Notificaciones"), 
-      where("idDestino", "==", miId)
+      where("idDestino", "==", String(miId)) // Forzamos que sea String
     );
+      
     // ... resto del onSnapshot igual
     const unsub = onSnapshot(q, (snap) => {
       let lista: any[] = [];
