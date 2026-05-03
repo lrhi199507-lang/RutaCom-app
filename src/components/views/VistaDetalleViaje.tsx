@@ -157,10 +157,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-     const solicitarCola = async () => {
+       const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
     try {
+      // 1. Guardar la reserva
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ 
           id: userData?.id || userData?.uid, 
@@ -170,10 +171,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         })
       });
       
-      // EL FIX DEFINITIVO: Usamos el nombre exacto de tu captura
-      const idDestino = viaje?.uidConductor; 
+      // 2. USAR EL ID QUE SÍ FUNCIONA (Copiado de tu CardViajeOptimizada)
+      const idDestino = viaje?.uidConductor || viaje?.idCreador;
 
       if (idDestino) {
+        // 3. ENVIAR NOTIFICACIÓN
         await enviarNotificacion(
           idDestino, 
           "¡Nueva Solicitud!",
@@ -182,13 +184,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         );
         setToastMessage("Solicitud enviada con éxito");
       } else {
-        // Si sale este mensaje, es que el objeto 'viaje' no está cargando el uidConductor
-        setToastMessage("Error: No se detectó uidConductor en el viaje");
+        // Si llegas aquí, es que por alguna razón el objeto viaje perdió los datos al abrirse
+        setToastMessage("Error: No se encontró el ID del conductor");
       }
 
       setShowToast(true);
     } catch (e) { 
-      setToastMessage("Error de conexión");
+      setToastMessage("Error al procesar");
       setShowToast(true);
     } finally { 
       setCargando(false); 
