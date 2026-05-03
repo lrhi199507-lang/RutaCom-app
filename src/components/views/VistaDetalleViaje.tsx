@@ -9,9 +9,9 @@ import {
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
-// --- FUNCIONES AYUDANTES ---
+// --- FUNCIONES AYUDANTES BLINDADAS ---
 const obtenerEstado = (ciudadNombre) => {
-  if (!ciudadNombre) return "Estado";
+  if (!ciudadNombre || typeof ciudadNombre !== 'string') return "Destino";
   const [soloCiudad] = ciudadNombre.split(',');
   const estadoEncontrado = Object.keys(UBICACIONES).find(estado => UBICACIONES[estado].includes(soloCiudad.trim()));
   return estadoEncontrado || "Venezuela";
@@ -56,14 +56,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [estrellas, setEstrellas] = useState(0);
   const [comentarioResena, setComentarioResena] = useState("");
 
-  // NUEVO: ESTADOS PARA CALIFICACIÓN CHOFER -> PASAJERO
+  // ESTADOS PARA CALIFICACIÓN CHOFER -> PASAJERO
   const [modalCalificarPasajeros, setModalCalificarPasajeros] = useState(false);
   const [ratingsChofer, setRatingsChofer] = useState({});
 
   // ESTADO PARA ESTRELLAS DINÁMICAS EN LA TARJETA DEL CONDUCTOR
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
 
-  // 1. Efecto para escuchar cambios del viaje en tiempo real
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
       if (docSnap.exists()) setViaje({ id: docSnap.id, ...docSnap.data() });
@@ -71,7 +70,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-  // 2. Efecto para buscar la calificación del conductor en Firebase
   useEffect(() => {
     const idChofer = viajeInicial?.uidConductor || viajeInicial?.idCreador;
     if (!idChofer) return;
@@ -87,7 +85,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }).catch(e => console.error(e));
   }, [viajeInicial.uidConductor, viajeInicial.idCreador]);
 
-  // 3. NUEVO: Efecto para Auto-Abrir el modal de calificación al pasajero
   useEffect(() => {
     const esConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
     const reservaPasajero = viaje?.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
@@ -149,13 +146,20 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
+  // ESTA ES LA FUNCIÓN BLINDADA PARA EVITAR LA PANTALLA BLANCA
   const procesarAbordajeEIniciar = async () => {
     setCargando(true);
     try {
       const pasajerosActualizados = pasajerosConfirmados.map(p => {
         const idPasajero = p.id || p.uid;
-        if (pinesIngresados[idPasajero] === p.pin) return { ...p, abordado: true };
-        return p; 
+        // Convertimos a string forzosamente y quitamos espacios para evitar choque de tipos
+        const pinIngresado = String(pinesIngresados[idPasajero] || "").trim();
+        const pinReal = String(p.pin || "").trim();
+        
+        if (pinIngresado === pinReal && pinReal !== "") {
+          return { ...p, abordado: true };
+        }
+        return { ...p, abordado: false }; 
       });
 
       await updateDoc(doc(db, "Viajes", viaje.id), { 
@@ -164,10 +168,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       });
       setModalAbordaje(false);
       setToastMessage("¡Viaje Iniciado!"); setShowToast(true);
-    } catch (e) { console.error(e); } finally { setCargando(false); }
+    } catch (e) { 
+      console.error(e); 
+      setToastMessage("Error al procesar viaje."); setShowToast(true);
+    } finally { 
+      setCargando(false); 
+    }
   };
 
-  // NUEVO: INTERCEPTOR PARA EL CHOFER (Abre el modal de calificar pasajeros antes de cerrar el viaje)
   const iniciarFinalizacion = () => {
     setModalFinalizar(false);
     if (pasajerosConfirmados.length > 0) {
@@ -180,7 +188,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-  // NUEVO: Guarda las notas a los pasajeros y finaliza
   const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
@@ -190,11 +197,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         if (rat && rat.estrellas > 0) {
           await addDoc(collection(db, "Resenas"), {
             idViaje: viaje.id,
-            idConductor: pid, // Aquí el destinatario de la nota es el PASAJERO
-            idPasajero: userData.id, // El autor es el CHOFER
-            nombrePasajero: userData.nombre,
+            idConductor: pid, 
+            idPasajero: userData.id, 
+            nombrePasajero: userData.nombre || "Conductor",
             estrellas: rat.estrellas,
-            comentario: "",
+            comentario: rat.comentario || "",
             fecha: new Date().toISOString()
           });
         }
@@ -212,7 +219,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  // Calificación del Pasajero al Chofer
   const enviarCalificacion = async () => {
     if (estrellas === 0) {
       setToastMessage("Selecciona al menos 1 estrella"); setShowToast(true); return;
@@ -243,7 +249,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
   const compartirRuta = () => {
-    const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${obtenerEstado(viaje.cD)} desde ${obtenerEstado(viaje.cO)} en Dame la cola.`;
+    const cD_seguro = obtenerEstado(viaje.cD || "");
+    const cO_seguro = obtenerEstado(viaje.cO || "");
+    const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${cD_seguro} desde ${cO_seguro} en Dame la cola.`;
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -287,7 +295,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                </div>
                <div className="z-10 mt-6 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/10 flex items-center gap-2">
                  <div className="w-2 h-2 rounded-full bg-green-400 animate-ping" />
-                 <p className="text-white text-[11px] font-black uppercase tracking-widest">En ruta a {obtenerEstado(viaje.cD)}</p>
+                 <p className="text-white text-[11px] font-black uppercase tracking-widest">En ruta a {obtenerEstado(viaje.cD || "")}</p>
                </div>
             </div>
 
@@ -296,19 +304,18 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
             </button>
 
-            {/* LISTA DE PASAJEROS HUD MODIFICADA (Muestra a todos, con o sin PIN) */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5 shadow-sm">
               <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center flex items-center justify-center gap-2">
                 <Users size={14} /> Pasajeros Confirmados ({pasajerosConfirmados.length})
               </h3>
               <div className="space-y-3">
                  {pasajerosConfirmados.map(p => (
-                   <div key={p.id || p.uid} className="flex items-center gap-4 bg-slate-50 p-3.5 rounded-[25px] border border-slate-100">
-                     <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm shrink-0">
-                        {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="m-auto mt-3 text-slate-400" />}
+                   <div key={p.id || p.uid || Math.random()} className="flex items-center gap-4 bg-slate-50 p-3.5 rounded-[25px] border border-slate-100">
+                     <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
+                        {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-400" />}
                      </div>
                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-xs uppercase text-slate-700 truncate">{p.nombre}</p>
+                        <p className="font-black text-xs uppercase text-slate-700 truncate">{p.nombre || "Usuario"}</p>
                         <p className={`text-[8px] font-black uppercase mt-0.5 ${p.abordado ? 'text-green-500' : 'text-amber-500'}`}>
                           {p.abordado ? 'A Bordo (Validado)' : 'Falta Validar PIN'}
                         </p>
@@ -342,14 +349,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <div className="flex items-center justify-between px-2">
                 <div className="flex flex-col items-center flex-1 text-center">
                   <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /></div>
-                  <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cO}</p>
-                  <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje.cO)}</p>
+                  <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cO || "N/A"}</p>
+                  <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje.cO || "")}</p>
                 </div>
                 <div className="flex-1 px-2"><div className="w-full h-[2px] bg-blue-600 rounded-full" /></div>
                 <div className="flex flex-col items-center flex-1 text-center">
                   <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center border-2 border-slate-200"><MapPin size={16} className="text-slate-300" /></div>
-                  <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cD}</p>
-                  <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje.cD)}</p>
+                  <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{viaje.cD || "N/A"}</p>
+                  <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje.cD || "")}</p>
                 </div>
               </div>
             </div>
@@ -368,7 +375,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
                 <div className="bg-blue-500/20 p-3 rounded-full mb-3"><Key size={24} className="text-blue-400" /></div>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Tu PIN de abordaje</p>
-                <p className="text-5xl font-black italic text-white tracking-[5px] leading-none mb-4">{miReserva.pin}</p>
+                <p className="text-5xl font-black italic text-white tracking-[5px] leading-none mb-4">{miReserva.pin || "0000"}</p>
                 <div className="bg-slate-800 text-slate-300 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">Dáselo al chofer al subir al vehículo</div>
               </div>
             )}
@@ -412,12 +419,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               
               <div className="space-y-3">
                 {pasajerosConfirmados.map((pasajero, index) => (
-                    <div key={index} className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4">
+                    <div key={pasajero.id || pasajero.uid || index} className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
                             {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-700 uppercase truncate">{pasajero.nombre}</p>
+                          <p className="text-xs font-bold text-slate-700 uppercase truncate">{pasajero.nombre || "Pasajero"}</p>
                           {pasajero.abordado && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
                         </div>
                         {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500 shrink-0" /> : <Lock size={14} className="text-slate-300 shrink-0" />}
@@ -433,13 +440,44 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
+            <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
+              <div className="grid grid-cols-2 gap-3">
+                {viaje.preferencias?.ac && (
+                  <div className="bg-blue-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-blue-100/50">
+                    <Snowflake size={18} className="text-blue-500" />
+                    <p className="text-[9px] font-black text-blue-700 uppercase tracking-wide">Aire a.</p>
+                  </div>
+                )}
+                {viaje.preferencias?.noFumar && (
+                  <div className="bg-rose-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-rose-100/50">
+                    <CigaretteOff size={18} className="text-rose-500" />
+                    <p className="text-[9px] font-black text-rose-700 uppercase tracking-wide">Sin humo</p>
+                  </div>
+                )}
+                {viaje.preferencias?.mascotas && (
+                  <div className="bg-amber-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-amber-100/50">
+                    <Dog size={18} className="text-amber-600" />
+                    <p className="text-[9px] font-black text-amber-800 uppercase tracking-wide">Mascotas</p>
+                  </div>
+                )}
+                <div className="bg-slate-50 p-4 rounded-[20px] flex items-center gap-3 border border-slate-100 col-span-2">
+                  <span className="text-xl">{obtenerIconoEquipaje(viaje.tipoEquipaje)}</span>
+                  <div>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase">Equipaje permitido</p>
+                      <p className="text-[10px] font-black text-slate-700 uppercase mt-0.5">{viaje.tipoEquipaje || "Bolso Ligero"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
               <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom mb-10">
                 <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
                 {solicitudesPendientes.map((solicitud, index) => (
                   <div key={index} className="bg-white p-4 rounded-[25px] flex items-center gap-3 border border-orange-100 shadow-sm">
-                    <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-slate-100">
-                       {solicitud.fotoPerfil ? <img src={solicitud.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="m-auto mt-3 text-slate-300" />}
+                    <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
+                       {solicitud.fotoPerfil ? <img src={solicitud.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-300" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-black uppercase text-slate-800 truncate">{solicitud.nombre}</p>
@@ -556,10 +594,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 return (
                   <div key={pid} className="bg-slate-900 p-4 rounded-3xl border border-slate-800">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
-                        {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-500 m-auto mt-2"/>}
+                      <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-slate-700 flex items-center justify-center">
+                        {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-500"/>}
                       </div>
-                      <p className="text-sm font-black text-white uppercase truncate">{p.nombre}</p>
+                      <p className="text-sm font-black text-white uppercase truncate">{p.nombre || "Pasajero"}</p>
                     </div>
                     <div className="flex justify-center gap-2 mb-2">
                       {[1,2,3,4,5].map(num => (
@@ -631,14 +669,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             <div className="space-y-4 max-h-[40vh] overflow-y-auto mb-6">
               {pasajerosConfirmados.map(p => {
                 const idPasajero = p.id || p.uid;
-                const pinCorrecto = pinesIngresados[idPasajero] === p.pin;
+                const pinCorrecto = String(pinesIngresados[idPasajero] || "").trim() === String(p.pin || "").trim() && p.pin;
                 return (
                   <div key={idPasajero} className={`p-4 rounded-3xl border-2 transition-all flex flex-col gap-3 ${pinCorrecto ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-slate-50'}`}>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0">
-                         {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="m-auto mt-2 text-slate-400" />}
+                      <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                         {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-400" />}
                       </div>
-                      <p className="flex-1 text-xs font-black uppercase text-slate-700 truncate">{p.nombre}</p>
+                      <p className="flex-1 text-xs font-black uppercase text-slate-700 truncate">{p.nombre || "Usuario"}</p>
                       {pinCorrecto ? <Unlock size={18} className="text-green-500" /> : <Lock size={18} className="text-slate-400" />}
                     </div>
                     {!pinCorrecto ? (
