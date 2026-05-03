@@ -23,6 +23,9 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     totalOpiniones: 0
   });
   const [cargandoStats, setCargandoStats] = useState(true);
+  const [listaResenas, setListaResenas] = useState([]);
+  const [mostrarModalResenas, setMostrarModalResenas] = useState(false);
+  
 
   // 1. MEJORA: Atrapar el nombre correcto sin importar de dónde venga
   const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
@@ -54,16 +57,19 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           if (esConductor || esPasajero) contadorViajes++;
         });
 
-        // B. Obtener Reseñas y calcular promedio
-        const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
+                const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
         const snapshotResenas = await getDocs(qResenas);
         
         let sumaEstrellas = 0;
         let totalResenas = 0;
+        let resenasObtenidas = []; // NUEVO: Array para guardar los comentarios
 
         snapshotResenas.forEach((docSnap) => {
-          sumaEstrellas += docSnap.data().estrellas || 0;
+          const data = docSnap.data();
+          sumaEstrellas += data.estrellas || 0;
           totalResenas++;
+          // Guardamos cada reseña en la lista
+          resenasObtenidas.push({ id: docSnap.id, ...data });
         });
 
         // 2. MEJORA: Si no hay reseñas, muestra "0.0" estrictamente
@@ -75,8 +81,9 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             promedio: promedioCalculado,
             totalOpiniones: totalResenas
           });
+          setListaResenas(resenasObtenidas); // NUEVO: Guardamos la lista en el estado
           setCargandoStats(false);
-        }
+      }
 
       } catch (error) {
         console.error("Error cargando estadísticas:", error);
@@ -91,15 +98,15 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
 
   const nivel = calcularNivel(estadisticas.viajesRealizados);
 
-  const manejarClickOpiniones = () => {
+    const manejarClickOpiniones = () => {
     if (estadisticas.totalOpiniones === 0) {
-      setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificarlo al terminar el viaje!");
+      setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
       setShowToast(true);
     } else {
-      setToastMessage("Próximamente: Lista completa de opiniones.");
-      setShowToast(true);
+      setMostrarModalResenas(true); // Abre el nuevo modal
     }
   };
+  
 
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
@@ -200,7 +207,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             </div>
         </div>
 
-        {/* OPINIONES DINÁMICAS */}
+                {/* OPINIONES DINÁMICAS */}
         <div className="mb-32">
           <button 
             onClick={manejarClickOpiniones}
@@ -224,6 +231,49 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </button>
         </div>
       </div>
+
+      {/* --- MODAL DE LISTA DE RESEÑAS --- */}
+      {mostrarModalResenas && (
+        <div className="fixed inset-0 z-[600] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10 shadow-sm">
+            <h3 className="font-black italic uppercase text-slate-800 text-lg">Opiniones ({estadisticas.totalOpiniones})</h3>
+            <button onClick={() => setMostrarModalResenas(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 active:scale-90 transition-all">
+              <ArrowLeft size={20} className="rotate-180" />
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
+            {listaResenas.map((resena) => (
+              <div key={resena.id} className="bg-white p-5 rounded-[25px] border border-slate-100 shadow-sm">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User size={16} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase text-slate-800">{resena.nombrePasajero || "Pasajero"}</p>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase">
+                        {new Date(resena.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex bg-amber-50 px-2 py-1 rounded-lg items-center gap-1">
+                    <Star size={12} className="text-amber-500 fill-amber-500" />
+                    <span className="text-[10px] font-black text-amber-600">{resena.estrellas}.0</span>
+                  </div>
+                </div>
+                {resena.comentario && (
+                  <p className="text-[11px] font-bold text-slate-600 italic bg-slate-50 p-3 rounded-2xl">
+                    "{resena.comentario}"
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* --------------------------------- */}
+      
     </div>
   );
 };
