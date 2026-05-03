@@ -155,7 +155,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-    const solicitarCola = async () => {
+      const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
     try {
@@ -163,8 +163,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         reservasPendientes: arrayUnion({ id: userData?.id, nombre: userData?.nombre || "Usuario", fotoPerfil: userData?.fotoPerfil || null, estado: 'pendiente' })
       });
       
-      // BLINDAJE: Capturar el ID del chofer sea cual sea el nombre de la variable
-      const idDelChofer = viaje.idConductor || viaje.uid || viaje.conductorId || viaje.idUsuario;
+      // EL FIX ESTÁ AQUÍ: Usamos tus nombres reales de base de datos
+      const idDelChofer = viaje.uidConductor || viaje.idCreador;
 
       // ¡NUEVO! Avisarle al chofer
       if (idDelChofer) {
@@ -196,7 +196,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-      // --- SISTEMA DE CANCELACIONES ---
+        // --- SISTEMA DE CANCELACIONES ---
   const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToastMessage("Debes seleccionar un motivo");
@@ -208,6 +208,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     try {
       const miRef = doc(db, "usuarios", userData?.id);
       const viajeRef = doc(db, "Viajes", viaje.id);
+      
+      // EL FIX ESTÁ AQUÍ TAMBIÉN
+      const idDelChofer = viaje.uidConductor || viaje.idCreador;
 
       if (modalCancelar.rol === 'pasajero') {
         const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
@@ -216,12 +219,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           await updateDoc(miRef, { cancelacionesPasajero: increment(1) });
 
           // NOTIFICACIÓN AL CHOFER: Un pasajero se bajó
-          await enviarNotificacion(
-            viaje.idConductor,
-            "Asiento Liberado",
-            `${userData?.nombre} ha cancelado su reserva para tu viaje. El puesto vuelve a estar disponible.`,
-            "alerta"
-          );
+          if (idDelChofer) {
+             await enviarNotificacion(
+               idDelChofer,
+               "Asiento Liberado",
+               `${userData?.nombre} ha cancelado su reserva para tu viaje. El puesto vuelve a estar disponible.`,
+               "alerta"
+             );
+          }
 
           setToastMessage("Reserva cancelada. Se registró en tu historial.");
         }
@@ -233,7 +238,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         });
         await updateDoc(miRef, { cancelacionesChofer: increment(1) });
 
-        // NOTIFICACIÓN A TODOS LOS PASAJEROS CONFIRMADOS
         for (const p of pasajerosConfirmados) {
           if (!p) continue;
           await enviarNotificacion(
