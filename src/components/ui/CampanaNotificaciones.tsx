@@ -7,18 +7,22 @@ export const CampanaNotificaciones = ({ userData }) => {
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [abierto, setAbierto] = useState(false);
 
-  // Escuchar notificaciones en tiempo real
-  useEffect(() => {
-    // BLINDAJE: Buscamos el ID del usuario de cualquier forma posible
-    const miId = userData?.id || userData?.uid;
-    if (!miId) return;
+    useEffect(() => {
+    // BLINDAJE TOTAL: Intentamos todas las formas posibles de capturar tu ID
+    const miId = userData?.id || userData?.uid || userData?.idUsuario;
     
-    // Consultamos las notificaciones dirigidas a este usuario exacto
+    if (!miId) {
+      console.log("Campana: Esperando ID de usuario...");
+      return;
+    }
+    
+    console.log("Campana escuchando para el ID:", miId);
+
     const q = query(
       collection(db, "Notificaciones"), 
       where("idDestino", "==", miId)
     );
-
+    // ... resto del onSnapshot igual
     const unsub = onSnapshot(q, (snap) => {
       let lista: any[] = [];
       snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
