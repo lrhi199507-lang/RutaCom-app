@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { Search, MapPin, Calendar, X, ChevronRight, Users, Plus, Minus } from 'lucide-react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { UBICACIONES } from '../../constants/ubicaciones';
-import { CampanaNotificaciones } from '../ui/CampanaNotificaciones'; 
-
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
   const [origen, setOrigen] = useState("");
