@@ -132,7 +132,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </button>
         </div>
         
-        {/* TARJETA DE PERFIL CENTRAL */}
+                {/* TARJETA DE PERFIL CENTRAL */}
         <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col items-center mb-8 relative">
           
           <div className="w-28 h-28 bg-white rounded-[35px] border-4 border-slate-50 shadow-xl overflow-hidden mb-4 flex items-center justify-center relative">
@@ -141,11 +141,8 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             ) : (
               <User size={40} className="text-slate-200" />
             )}
-            
-            <div className={`absolute -bottom-1 -right-1 ${nivel.bg} ${nivel.color} border-2 border-white w-8 h-8 rounded-full flex items-center justify-center`}>
-              {nivel.icon}
-            </div>
           </div>
+            
           
           {/* 3. MEJORA: Icono BadgeCheck moderno en lugar del Emoji */}
           <h2 className="text-2xl font-black text-slate-800 flex items-center justify-center gap-2 italic text-center w-full">
