@@ -161,18 +161,27 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-      const solicitarCola = async () => {
+      
+    const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "Viajes", viaje.id), {
-        reservasPendientes: arrayUnion({ id: userData?.id, nombre: userData?.nombre || "Usuario", fotoPerfil: userData?.fotoPerfil || null, estado: 'pendiente' })
+        reservasPendientes: arrayUnion({ 
+          id: userData?.id || userData?.uid, 
+          nombre: userData?.nombre || "Usuario", 
+          fotoPerfil: userData?.fotoPerfil || null, 
+          estado: 'pendiente' 
+        })
       });
       
-      // EL FIX ESTÁ AQUÍ: Usamos tus nombres reales de base de datos
-      const idDelChofer = viaje.uidConductor || viaje.idCreador;
+      // TRIPLE VERIFICACIÓN DE ID:
+      // Probamos todas las variantes comunes en tu base de datos
+      const idDelChofer = viaje.idConductor || viaje.uid || viaje.conductorId || viaje.idUsuario;
 
-      // ¡NUEVO! Avisarle al chofer
+      // Imprimimos en consola para que tú veas si el ID es correcto
+      console.log("Intentando notificar al chofer con ID:", idDelChofer);
+
       if (idDelChofer) {
         await enviarNotificacion(
           idDelChofer, 
@@ -180,8 +189,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           `${userData?.nombre} quiere viajar contigo desde ${viaje.cO?.split(',')[0]} hasta ${viaje.cD?.split(',')[0]}.`,
           "viaje"
         );
-      } else {
-        console.warn("No se encontró el ID del chofer para notificar");
       }
 
       setToastMessage("Solicitud enviada"); 
