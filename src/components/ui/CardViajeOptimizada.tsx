@@ -1,8 +1,36 @@
-import React from 'react';
-import { MapPin, Navigation, Clock, Users, Star, Car, ChevronRight, User, ShieldCheck, Repeat } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../../firebaseConfig';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { MapPin, Navigation, Clock, Users, Star, Car, ChevronRight, User, BadgeCheck, Repeat } from 'lucide-react';
 
 export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => {
   if (!viaje) return null;
+
+  const [ratingInfo, setRatingInfo] = useState({ promedio: "0.0", total: 0 });
+
+  // EFECTO: Buscar calificación real del conductor para esta tarjeta
+  useEffect(() => {
+    let unmounted = false;
+    const idChofer = viaje.uidConductor || viaje.idCreador;
+    
+    if (!idChofer) return;
+
+    const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+    getDocs(qResenas).then(snap => {
+      let suma = 0;
+      let total = 0;
+      snap.forEach(d => { suma += d.data().estrellas || 0; total++; });
+      
+      if (!unmounted) {
+        setRatingInfo({
+          promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
+          total: total
+        });
+      }
+    }).catch(e => console.error(e));
+
+    return () => { unmounted = true; };
+  }, [viaje.uidConductor, viaje.idCreador]);
 
   const esUltimoPuesto = (viaje.asientos || viaje.puestos) === 1;
   const esRutaCompleta = viaje.tipoRuta === "ida_y_vuelta";
@@ -63,32 +91,37 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         </div>
       )}
 
-      {/* HEADER - TEXTO CORREGIDO PARA UNA SOLA LÍNEA (flex-1 min-w-0 truncate shrink-0) */}
+      {/* HEADER */}
       <div className="flex justify-between items-start gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="w-12 h-12 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center text-slate-300">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          
+          {/* AVATAR: LETRA "D" SI NO HAY FOTO */}
+          <div className="w-12 h-12 bg-blue-600 rounded-[14px] border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center">
             {viaje.fotoPerfil ? ( 
               <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" /> 
-            ) : ( <User size={20} /> )}
+            ) : ( 
+              <span className="text-white font-black italic text-xl">D</span> 
+            )}
           </div>
+          
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 mb-0.5">
               <h3 className="text-sm font-black italic uppercase text-slate-800 truncate tracking-tight leading-none">
-                {viaje.conductor || "Conductor"}
+                {viaje.conductor || viaje.cN || "Usuario"}
               </h3>
-              <ShieldCheck size={14} className="text-green-500 shrink-0" />
+              {/* CHECK VERIFICADO MODERNO */}
+              <BadgeCheck size={16} className="text-green-500 fill-green-100 shrink-0" strokeWidth={2.5} />
             </div>
             
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5 text-amber-500">
-                <Star size={12} fill="currentColor"/>
-                <span className="text-[10px] font-black italic">
-                  {/* BUSQUEDA DOBLE PARA EL RATING */}
-                  {viaje.datosConductor?.rating || viaje.rating || "5.0"}
+              {/* ESTRELLA DINÁMICA: GRIS SI ES 0.0 */}
+              <div className="flex items-center gap-0.5">
+                <Star size={12} className={parseFloat(ratingInfo.promedio) > 0 ? 'text-amber-500 fill-amber-500' : 'text-slate-300 fill-slate-200'} />
+                <span className={`text-[10px] font-black italic ${parseFloat(ratingInfo.promedio) > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+                  {ratingInfo.promedio}
                 </span>
               </div>
               <span className="text-[9px] font-bold uppercase italic text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                {/* BUSQUEDA DOBLE PARA EL NIVEL */}
                 {obtenerNivel(viaje.datosConductor?.viajesRealizados || viaje.viajesRealizados)}
               </span>
             </div>
@@ -155,10 +188,8 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
                 hour12: true 
               }) : "--:--"}
             </span>
-            {/* *** SOLUCIÓN 2: LÓGICA DEL ICONO AM/PM INVERTIDA *** */}
             <span className="text-[12px]">
               {viaje.hora && (
-                // Invertí la condición: si la hora es >= 6 y < 18, es sol; de lo contrario, es luna.
                 parseInt(viaje.hora.split(':')[0]) >= 6 && parseInt(viaje.hora.split(':')[0]) < 18 ? '☀️' : '🌙'
               )}
             </span>
