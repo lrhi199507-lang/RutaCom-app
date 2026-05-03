@@ -174,6 +174,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       
       // 2. BUSCAMOS EL ID DEL DUEÑO DEL VIAJE
       // En tus capturas veo que el ID del creador suele estar en 'uid' o 'idUsuario'
+      console.log("DATOS DEL VIAJE COMPLETO:", viaje);
+    
       const idDestino = viaje.uid || viaje.idUsuario || viaje.idConductor || viaje.conductorId;
 
       console.log("ID Destino detectado:", idDestino);
