@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
-// --- FUNCIONES AYUDANTES ULTRA BLINDADAS ---
+// --- FUNCIONES AYUDANTES BLINDADAS ---
 const obtenerEstado = (ciudadNombre) => {
   try {
     if (!ciudadNombre || typeof ciudadNombre !== 'string') return "Destino";
@@ -49,7 +49,6 @@ const obtenerIconoEquipaje = (tipo) => {
   }
 };
 
-// LA FÓRMULA MÁGICA: Evita que el bug de Firebase (Array a Object) rompa la pantalla
 const obtenerArraySeguro = (dato) => {
   if (!dato) return [];
   if (Array.isArray(dato)) return dato;
@@ -117,7 +116,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
   
-  // APLICANDO EL BLINDAJE A TODAS LAS LISTAS
   const pasajerosConfirmados = obtenerArraySeguro(viaje?.pasajeros);
   const solicitudesPendientes = obtenerArraySeguro(viaje?.reservasPendientes);
   
@@ -129,6 +127,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSoyPasajero = !!miReserva;
   const yaCalifico = miReserva?.calificado === true; 
   const mostrarBannerRetorno = viaje?.publicarRegreso && viaje?.tipoRuta !== 'vuelta_de_ruta';
+
+  // --- ¡AQUÍ ESTÁ LA FUNCIÓN QUE FALTABA Y CAUSABA LA PANTALLA BLANCA! ---
+  const activarSOS = () => {
+    setToastMessage("🚨 Alerta enviada a central (Simulación)");
+    setShowToast(true);
+  };
+  // ------------------------------------------------------------------------
 
   const solicitarCola = async () => {
     if (cuposRestantes <= 0) return;
