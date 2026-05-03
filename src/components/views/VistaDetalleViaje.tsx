@@ -140,18 +140,24 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
   // ------------------------------------------------------------------------
   // --- DISPARADOR DE NOTIFICACIONES ---
-  const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
+    const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
+    if (!idDestino) {
+      console.error("ERROR: Intentaste enviar una notificación sin ID de destino");
+      return;
+    }
+
     try {
+      console.log(`Enviando notificación a: ${idDestino}`);
       await addDoc(collection(db, "Notificaciones"), {
-        idDestino,
+        idDestino: idDestino,
         titulo,
         mensaje,
-        tipo, // Puede ser: 'exito', 'viaje', 'alerta'
+        tipo,
         leida: false,
         fecha: new Date().toISOString()
       });
     } catch (error) {
-      console.log("Error al enviar notificación:", error);
+      console.log("Error Firebase Notif:", error);
     }
   };
   
