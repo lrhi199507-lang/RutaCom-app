@@ -1,6 +1,7 @@
 import React from 'react';
 import { Wallet } from 'lucide-react';
-import { CampanaNotificaciones } from './ui/CampanaNotificaciones'; // <-- IMPORTAMOS LA CAMPANITA
+import { CampanaNotificaciones } from "./CampanaNotificaciones";
+
 
 export const Header = ({ userData, modo }) => {
   const nombre = userData?.nombre || "Cargando...";
