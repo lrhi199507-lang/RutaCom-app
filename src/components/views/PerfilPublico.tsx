@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { 
   ArrowLeft, MessageCircle, Phone, ShieldCheck, 
-  Star, Music, MessageSquare, User, Car, Wallet, Trophy, Medal, MapPin
+  Star, Music, MessageSquare, User, Car, Trophy, Medal, MapPin, BadgeCheck
 } from 'lucide-react';
 
 // --- FUNCIÓN PARA CALCULAR EL NIVEL (RANGO) ---
@@ -24,11 +24,15 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   });
   const [cargandoStats, setCargandoStats] = useState(true);
 
+  // 1. MEJORA: Atrapar el nombre correcto sin importar de dónde venga
+  const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
+  const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
+
   // EFECTO MAGIA: CONSULTAR FIREBASE EN VIVO
   useEffect(() => {
     let unmounted = false;
     
-    // Obtener ID real del conductor (dependiendo de si lo pasaron directo o dentro de un viaje)
+    // Obtener ID real del conductor
     const idUsuario = conductor.uidConductor || conductor.idCreador || conductor.id;
 
     if (!idUsuario) {
@@ -38,7 +42,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
 
     const cargarEstadisticas = async () => {
       try {
-        // 1. Contar Viajes Finalizados (Como Conductor o Pasajero)
+        // A. Contar Viajes Finalizados
         const qViajes = query(collection(db, "Viajes"), where("estado", "==", "finalizado"));
         const snapshotViajes = await getDocs(qViajes);
         let contadorViajes = 0;
@@ -50,7 +54,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           if (esConductor || esPasajero) contadorViajes++;
         });
 
-        // 2. Obtener Reseñas y calcular promedio
+        // B. Obtener Reseñas y calcular promedio
         const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
         const snapshotResenas = await getDocs(qResenas);
         
@@ -62,7 +66,8 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           totalResenas++;
         });
 
-        const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "5.0";
+        // 2. MEJORA: Si no hay reseñas, muestra "0.0" estrictamente
+        const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "0.0";
 
         if (!unmounted) {
           setEstadisticas({
@@ -99,15 +104,15 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
       
-      {/* 1. ENCABEZADO */}
+      {/* ENCABEZADO */}
       <div className="bg-white px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b border-slate-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-[14px] flex items-center justify-center shadow-lg shadow-blue-100">
-            <span className="text-white font-black italic text-lg">{conductor.cN?.[0] || conductor.nombre?.[0] || 'U'}</span>
+            <span className="text-white font-black italic text-lg">{inicialMostrar}</span>
           </div>
           <div>
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 italic">Perfil Público</p>
-            <p className="text-xs font-black text-slate-800 leading-none truncate max-w-[150px]">{conductor.cN || conductor.nombre || 'Usuario'}</p>
+            <p className="text-xs font-black text-slate-800 leading-none truncate max-w-[150px]">{nombreMostrar}</p>
           </div>
         </div>
 
@@ -137,15 +142,17 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
               <User size={40} className="text-slate-200" />
             )}
             
-            {/* BADGE DE EXPERIENCIA FLOTANTE */}
             <div className={`absolute -bottom-1 -right-1 ${nivel.bg} ${nivel.color} border-2 border-white w-8 h-8 rounded-full flex items-center justify-center`}>
               {nivel.icon}
             </div>
           </div>
           
-          <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2 italic text-center">
-            {conductor.cN || conductor.nombre || 'Usuario'}
-            {conductor.identidadVerificada ? <span className="text-blue-600 text-xl">✅</span> : null}
+          {/* 3. MEJORA: Icono BadgeCheck moderno en lugar del Emoji */}
+          <h2 className="text-2xl font-black text-slate-800 flex items-center justify-center gap-2 italic text-center w-full">
+            <span className="truncate max-w-[80%]">{nombreMostrar}</span>
+            {conductor.identidadVerificada && (
+              <BadgeCheck size={26} className="text-green-500 fill-green-100 flex-shrink-0" strokeWidth={2.5} />
+            )}
           </h2>
           <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[2px] mt-1 italic">
             {conductor.identidadVerificada ? 'Identidad Verificada' : 'Usuario Nuevo'}
@@ -177,7 +184,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </div>
         </div>
 
-        {/* ESTADÍSTICAS REALES (CON CARGA SIMULADA) */}
+        {/* ESTADÍSTICAS REALES */}
         <div className="grid grid-cols-2 gap-3 mb-8">
             <div className="bg-white p-4 rounded-[28px] border border-slate-100 flex items-center gap-3 shadow-sm">
               <ShieldCheck size={18} className={conductor.identidadVerificada ? "text-blue-500" : "text-slate-300"} />
@@ -196,7 +203,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             </div>
         </div>
 
-        {/* OPINIONES DINÁMICAS Y REALES */}
+        {/* OPINIONES DINÁMICAS */}
         <div className="mb-32">
           <button 
             onClick={manejarClickOpiniones}
@@ -225,4 +232,3 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
 };
 
 export default PerfilPublico;
-        
