@@ -153,7 +153,7 @@ const viajesFiltrados = useMemo(() => {
           {coordsDestino && (
             <div className="p-2 animate-in fade-in zoom-in duration-300">
               <p className="text-[9px] font-black uppercase text-slate-400 mb-2 ml-2 italic">📍 Destino seleccionado:</p>
-              <MapaView lat={coordsDestino.lat} lng={coordsDestino.lon} />
+              <MapaView origen={coordsOrigen} destino={coordsDestino} />
             </div>
           )}
 
