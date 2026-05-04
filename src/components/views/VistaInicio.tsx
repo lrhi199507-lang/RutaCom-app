@@ -38,7 +38,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       setCampoActivo(tipo);
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${texto},Venezuela&limit=4`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${texto}&countrycodes=ve&addressdetails=1&limit=5`
         );
         const data = await response.json();
         
