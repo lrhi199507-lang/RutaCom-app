@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Search, MapPin, Calendar, X, ChevronRight, Users, Plus, Minus } from 'lucide-react';
+import { Search, MapPin, Calendar, X, ChevronRight, Users, Plus, Minus, Map } from 'lucide-react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { UBICACIONES } from '../../constants/ubicaciones';
-import MapaView from '../Map/MapaView'; // <-- Importación del mapa
+import MapaView from '../Map/MapaView'; 
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
   const [origen, setOrigen] = useState("");
@@ -15,41 +15,34 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const [showPasajeros, setShowPasajeros] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   
-  // <-- Nuevos estados para coordenadas
   const [coordsOrigen, setCoordsOrigen] = useState(null); 
   const [coordsDestino, setCoordsDestino] = useState(null);
   
+  // <-- NUEVO: Estado para el Modal del Mapa
+  const [showMapaModal, setShowMapaModal] = useState(false);
+  const [tipoMapa, setTipoMapa] = useState(null); // 'origen' o 'destino'
+  const [coordsTemporales, setCoordsTemporales] = useState(null);
+  const [buscandoDireccion, setBuscandoDireccion] = useState(false);
+  
   const [pasajeros, setPasajeros] = useState({ adultos: 1, niños: 0 });
-
   const totalPasajeros = pasajeros.adultos + pasajeros.niños;
 
-  const locationsArray = useMemo(() => {
-    return Object.entries(UBICACIONES).flatMap(([estado, ciudades]) =>
-      ciudades.map(ciudad => ({ ciudad, estado }))
-    );
-  }, []);
-
-  // El guardián del temporizador
   const timerRef = useRef(null);
 
   const manejarBusqueda = (texto, tipo) => {
-    // 1. Actualizamos el texto en pantalla inmediatamente para que no se sienta lag
     if (tipo === 'origen') {
         if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, origen: texto});
-        else setOrigen(texto); // Para VistaInicio
+        else setOrigen(texto); 
     } else {
         if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, destino: texto});
-        else setDestino(texto); // Para VistaInicio
+        else setDestino(texto); 
     }
 
-    // 2. Lógica de búsqueda con Debounce
     if (texto.length > 2) {
       setCampoActivo(tipo);
       
-      // Si el usuario sigue escribiendo, cancelamos el "fetch" anterior
       if (timerRef.current) clearTimeout(timerRef.current);
       
-      // Iniciamos un nuevo temporizador de 600 milisegundos
       timerRef.current = setTimeout(async () => {
         try {
           const response = await fetch(
@@ -68,18 +61,56 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         } catch (error) {
           console.error("Error buscando ubicación:", error);
         }
-      }, 600); // <-- Magia aquí: espera 0.6 segundos sin teclear antes de buscar
+      }, 600); 
       
     } else {
       setSugerencias([]);
     }
   };
   
-  
   const formatearFechaBusqueda = (date) => {
     return date.toLocaleDateString('es-ES', { 
       weekday: 'short', day: 'numeric', month: 'short' 
     }).replace('.', '');
+  };
+
+  // <-- NUEVO: Función de Reverse Geocoding
+  const confirmarUbicacionMapa = async () => {
+    if (!coordsTemporales) return;
+    
+    setBuscandoDireccion(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=10`
+      );
+      const data = await response.json();
+      
+      const ciudadNombre = data.address?.city || data.address?.town || data.address?.village || data.name || "Ubicación seleccionada";
+      
+      if (tipoMapa === 'origen') {
+        setOrigen(ciudadNombre);
+        setCoordsOrigen(coordsTemporales);
+      } else {
+        setDestino(ciudadNombre);
+        setCoordsDestino(coordsTemporales);
+      }
+      
+      setShowMapaModal(false);
+      setCoordsTemporales(null);
+    } catch (error) {
+      console.error("Error al obtener dirección:", error);
+      // Fallback si la API falla
+      if (tipoMapa === 'origen') {
+        setOrigen("Ubicación en mapa");
+        setCoordsOrigen(coordsTemporales);
+      } else {
+        setDestino("Ubicación en mapa");
+        setCoordsDestino(coordsTemporales);
+      }
+      setShowMapaModal(false);
+    } finally {
+      setBuscandoDireccion(false);
+    }
   };
 
 const viajesFiltrados = useMemo(() => {
@@ -89,18 +120,27 @@ const viajesFiltrados = useMemo(() => {
   const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
   const filtrados = lista.filter(v => {
+    // 1. Filtro de Estado: SOLO mostrar disponibles
+    if (v.estado && v.estado !== 'disponible') return false;
+
+    // 2. Filtro de Texto (Tolerante)
     const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
     const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
     const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
 
+    // 3. Filtro de Fecha
     const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
     const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
     const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
     const coincideFecha = fechaViajeStr === fechaBusquedaStr;
 
-    // Solo verificamos que quepan los pasajeros que buscas, no si el viaje está al 100%
-    const asientosDisponibles = parseInt(v.asientos || v.puestos || 0);
-    const cabenTodos = asientosDisponibles >= totalPasajeros;
+    // 4. Filtro de Cupos (La matemática corregida)
+    const pasajerosConfirmados = Array.isArray(v.pasajeros) ? v.pasajeros : [];
+    const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
+    const puestosTotales = Number(v.asientos) || Number(v.puestos) || 1;
+    const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
+    
+    const cabenTodos = cuposRestantes >= totalPasajeros;
 
     return coincideTexto && coincideFecha && cabenTodos;
   });
@@ -120,7 +160,7 @@ const viajesFiltrados = useMemo(() => {
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
           <div className="bg-slate-50/50 rounded-[28px] overflow-hidden">
-            <div className="flex items-center gap-3 p-4">
+            <div className="flex items-center gap-3 p-4 relative">
               <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
               <input 
                 value={origen}
@@ -128,11 +168,10 @@ const viajesFiltrados = useMemo(() => {
                 placeholder="¿Desde dónde sales?" 
                 className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
               />
-              {/* <-- Limpiamos coordenadas al borrar texto */}
               {origen && <X size={14} className="text-slate-300" onClick={() => { setOrigen(""); setCoordsOrigen(null); }} />}
             </div>
             <div className="h-[1px] bg-white mx-4" />
-            <div className="flex items-center gap-3 p-4">
+            <div className="flex items-center gap-3 p-4 relative">
               <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
               <input 
                 value={destino}
@@ -140,9 +179,24 @@ const viajesFiltrados = useMemo(() => {
                 placeholder="¿A dónde vas?" 
                 className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
               />
-              {/* <-- Limpiamos coordenadas al borrar texto */}
               {destino && <X size={14} className="text-slate-300" onClick={() => { setDestino(""); setCoordsDestino(null); }} />}
             </div>
+          </div>
+          
+          {/* <-- NUEVO: Botón de Selección por Mapa */}
+          <div className="flex gap-2 px-2 pb-1 justify-center">
+             <button 
+                onClick={() => { setTipoMapa('origen'); setCoordsTemporales(coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                className="flex items-center gap-1 p-2 text-slate-400 hover:text-blue-600 transition-colors active:scale-95"
+             >
+                <Map size={12} /> <span className="text-[9px] font-black uppercase tracking-widest">Pin Origen</span>
+             </button>
+             <button 
+                onClick={() => { setTipoMapa('destino'); setCoordsTemporales(coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                className="flex items-center gap-1 p-2 text-slate-400 hover:text-blue-600 transition-colors active:scale-95"
+             >
+                <Map size={12} /> <span className="text-[9px] font-black uppercase tracking-widest">Pin Destino</span>
+             </button>
           </div>
 
           <div className="flex gap-1 p-1">
@@ -167,24 +221,16 @@ const viajesFiltrados = useMemo(() => {
             </button>
           </div>
 
-          {/* <-- MAPA DE REFERENCIA (Aparece si hay destino seleccionado) */}
-          {coordsDestino && (
-            <div className="p-2 animate-in fade-in zoom-in duration-300">
-              <p className="text-[9px] font-black uppercase text-slate-400 mb-2 ml-2 italic">📍 Destino seleccionado:</p>
-              <MapaView origen={coordsOrigen} destino={coordsDestino} />
-            </div>
-          )}
-
           {sugerencias.length > 0 && (
             <div className="absolute left-4 right-4 top-[45%] bg-white shadow-2xl rounded-3xl border border-slate-100 z-[110] overflow-hidden">
               {sugerencias.map((s, i) => ( 
               <button  key={i} onClick={() => {
                 if (campoActivo === 'origen') {
                   setOrigen(s.ciudad); 
-                  setCoordsOrigen({ lat: s.lat, lon: s.lon }); // <-- Guardamos coordenadas
+                  setCoordsOrigen({ lat: s.lat, lon: s.lon }); 
                 } else {
                   setDestino(s.ciudad); 
-                  setCoordsDestino({ lat: s.lat, lon: s.lon }); // <-- Guardamos coordenadas
+                  setCoordsDestino({ lat: s.lat, lon: s.lon }); 
                 }   
                 setSugerencias([]);  
               }}
@@ -222,7 +268,6 @@ const viajesFiltrados = useMemo(() => {
                 {ordenPrecio === 'asc' ? 'Más baratos' : 'Precio alto'}
               </span>
               <div className={ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-400'}>
-                {/* <-- Se mantienen tus SVGs originales intactos */}
                 {ordenPrecio === 'asc' ? (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
                 ) : (
@@ -234,12 +279,13 @@ const viajesFiltrados = useMemo(() => {
           
           {viajesFiltrados.length > 0 ? (
             viajesFiltrados.map((viaje) => {
-              const pasajerosConfirmados = viaje.pasajeros || [];
-              const asientosTotales = viaje.asientos || viaje.puestos || 1;
-              const cuposRestantes = asientosTotales - pasajerosConfirmados.length;
+              const pasajerosConfirmados = Array.isArray(viaje.pasajeros) ? viaje.pasajeros : [];
+              const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
+              const asientosTotales = Number(viaje.asientos) || Number(viaje.puestos) || 1;
+              const cuposRestantes = asientosTotales - asientosOcupados;
               const viajeLleno = cuposRestantes <= 0;
 
-                            return (
+              return (
                 <div key={viaje.id} className={viajeLleno ? 'opacity-65 pointer-events-none relative pt-3 mb-2' : 'relative'}>
                   {viajeLleno && (
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black uppercase text-center py-1.5 px-5 rounded-full z-20 shadow-lg border border-slate-700 whitespace-nowrap flex items-center gap-1">
@@ -346,6 +392,44 @@ const viajesFiltrados = useMemo(() => {
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* <-- NUEVO: MODAL DEL MAPA */}
+      {showMapaModal && (
+        <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+           <div className="p-4 flex items-center justify-between shadow-sm z-10">
+              <div>
+                <h3 className="font-black uppercase italic text-slate-800 text-sm">
+                  Ubica tu {tipoMapa === 'origen' ? 'Punto de Salida' : 'Destino'}
+                </h3>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Mueve el mapa para ajustar el pin
+                </p>
+              </div>
+              <button onClick={() => setShowMapaModal(false)} className="p-2 bg-slate-100 rounded-full text-slate-500">
+                <X size={18} />
+              </button>
+           </div>
+           
+           <div className="flex-1 relative bg-slate-100">
+              <MapaView 
+                origen={tipoMapa === 'origen' ? coordsTemporales : null}
+                destino={tipoMapa === 'destino' ? coordsTemporales : null}
+                onMarkerDragEnd={(coords) => setCoordsTemporales(coords)}
+                interactivo={true}
+              />
+           </div>
+
+           <div className="p-6 bg-white shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-10">
+              <button 
+                onClick={confirmarUbicacionMapa}
+                disabled={buscandoDireccion}
+                className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {buscandoDireccion ? 'Traduciendo Dirección...' : 'Confirmar Ubicación'}
+              </button>
+           </div>
         </div>
       )}
     </div>
