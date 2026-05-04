@@ -3,10 +3,17 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet
 import L from 'leaflet';
 import './mapStyles.css';
 
-// Fix para que el icono del marcador aparezca en el celular
-const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+// Fix para que el icono del marcador aparezca en el celul
+const BlueIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+const GreenIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 });
@@ -50,9 +57,8 @@ const MapaView = ({ origen, destino }) => {
         <MapUpdater origen={origen} destino={destino} />
 
         {/* Pines condicionales */}
-        {origen && <Marker position={[origen.lat, origen.lon]} icon={DefaultIcon} />}
-        {destino && <Marker position={[destino.lat, destino.lon]} icon={DefaultIcon} />}
-        
+        {origen && <Marker position={[origen.lat, origen.lon]} icon={BlueIcon} />}
+        {destino && <Marker position={[destino.lat, destino.lon]} icon={GreenIcon} />}
         {/* La línea de la ruta (Solo aparece si están ambos puntos) */}
         {origen && destino && (
           <Polyline 
