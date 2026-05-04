@@ -32,12 +32,17 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
     return () => { unmounted = true; };
   }, [viaje.uidConductor, viaje.idCreador]);
 
-  const esUltimoPuesto = (viaje.asientos || viaje.puestos) === 1;
   const esRutaCompleta = viaje.tipoRuta === "ida_y_vuelta";
   const esRutaSoloVuelta = viaje.tipoRuta === "vuelta_de_ruta";
-
   const fechaCorrecta = (esRutaSoloVuelta && viaje.fechaRegreso) ? viaje.fechaRegreso : viaje.fecha;
   
+  // --- LÓGICA PROFESIONAL DE CUPOS ---
+  const pasajerosConfirmados = Array.isArray(viaje.pasajeros) ? viaje.pasajeros : [];
+  const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
+  const puestosTotales = Number(viaje.asientos) || Number(viaje.puestos) || 1;
+  const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
+  const estaLleno = cuposRestantes === 0;
+
   const formatearLugar = (texto, index) => {
     if (!texto || typeof texto !== 'string') return index === 0 ? "No especificado" : "";
     const partes = texto.split(',');
@@ -80,7 +85,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   return (
     <div
       onClick={onClickDetalle}
-      className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm space-y-4 hover:border-blue-100 transition-all relative overflow-hidden cursor-pointer active:scale-[0.98]"
+      className={`bg-white p-5 rounded-[30px] border shadow-sm transition-all relative overflow-hidden cursor-pointer active:scale-[0.98] ${estaLleno ? 'border-red-100 opacity-90' : 'border-slate-100 hover:border-blue-100'}`}
     >
       
       {/* ETIQUETA DE RUTA CON RETORNO */}
@@ -95,10 +100,10 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
       <div className="flex justify-between items-start gap-2">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           
-          {/* AVATAR: LETRA "D" SI NO HAY FOTO */}
-          <div className="w-12 h-12 bg-blue-600 rounded-[14px] border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center">
+          {/* AVATAR: SE PONE GRIS SI ESTÁ LLENO */}
+          <div className={`w-12 h-12 rounded-[14px] border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center ${estaLleno ? 'bg-slate-300' : 'bg-blue-600'}`}>
             {viaje.fotoPerfil ? ( 
-              <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="Perfil" /> 
+              <img src={viaje.fotoPerfil} className={`w-full h-full object-cover ${estaLleno ? 'grayscale opacity-80' : ''}`} alt="Perfil" /> 
             ) : ( 
               <span className="text-white font-black italic text-xl">D</span> 
             )}
@@ -106,15 +111,13 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <h3 className="text-sm font-black italic uppercase text-slate-800 truncate tracking-tight leading-none">
+              <h3 className={`text-sm font-black italic uppercase truncate tracking-tight leading-none ${estaLleno ? 'text-slate-500' : 'text-slate-800'}`}>
                 {viaje.conductor || viaje.cN || "Usuario"}
               </h3>
-              {/* CHECK VERIFICADO MODERNO */}
-              <BadgeCheck size={16} className="text-green-500 fill-green-100 shrink-0" strokeWidth={2.5} />
+              <BadgeCheck size={16} className={`shrink-0 ${estaLleno ? 'text-slate-300' : 'text-green-500 fill-green-100'}`} strokeWidth={2.5} />
             </div>
             
             <div className="flex items-center gap-2">
-              {/* ESTRELLA DINÁMICA: GRIS SI ES 0.0 */}
               <div className="flex items-center gap-0.5">
                 <Star size={12} className={parseFloat(ratingInfo.promedio) > 0 ? 'text-amber-500 fill-amber-500' : 'text-slate-300 fill-slate-200'} />
                 <span className={`text-[10px] font-black italic ${parseFloat(ratingInfo.promedio) > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
@@ -128,22 +131,27 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           </div>
         </div>
 
+        {/* ÁREA DE PRECIO Y BADGE DE CUPOS */}
         <div className={`text-right shrink-0 ${esRutaCompleta ? 'mt-6' : ''}`}>
-          <p className="text-2xl font-black italic text-blue-600 leading-none">
+          <p className={`text-2xl font-black italic leading-none ${estaLleno ? 'text-slate-400' : 'text-blue-600'}`}>
             ${viaje.precio || "0"}
           </p>
-          {(viaje.asientos <= 2 || viaje.puestos <= 2) && (
-            <div className="mt-1 flex justify-end">
-              <span className="bg-amber-500 text-white text-[7px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
-                ● {(viaje.asientos === 1 || viaje.puestos === 1) ? 'Último Puesto!' : 'Últimos Puestos'}
+          <div className="mt-1 flex justify-end">
+            {estaLleno ? (
+              <span className="bg-red-50 text-red-500 border border-red-200 text-[8px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
+                ● Completo
               </span>
-            </div>
-          )}
+            ) : cuposRestantes <= 2 ? (
+              <span className="bg-amber-500 text-white text-[8px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
+                ● Queda{cuposRestantes === 1 ? '' : 'n'} {cuposRestantes}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
       {/* RUTA SEGURA */}
-      <div className="flex items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+      <div className="flex items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 mt-2">
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <div className="w-7 h-7 rounded-full border border-blue-200 flex items-center justify-center bg-white shrink-0">
             <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
@@ -196,9 +204,11 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           </p>
         </div>
           
-        <div className="flex items-center gap-2 text-slate-500">
+        <div className={`flex items-center gap-2 ${estaLleno ? 'text-red-500' : 'text-slate-500'}`}>
           <Users size={14} />
-          <p className="text-[10px] font-bold">Puestos: <span className='font-black'>{viaje.asientos || viaje.puestos || "0"}</span></p>
+          <p className="text-[10px] font-bold">
+            {estaLleno ? <span className="font-black uppercase">Agotado</span> : <>Libres: <span className='font-black'>{cuposRestantes}</span></>}
+          </p>
         </div>
         
         <div className="flex items-center gap-2 text-slate-500 col-span-2 border-t border-slate-50 pt-2">
