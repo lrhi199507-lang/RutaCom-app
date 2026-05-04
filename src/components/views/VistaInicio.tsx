@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, MapPin, Calendar, X, ChevronRight, Users, Plus, Minus } from 'lucide-react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { UBICACIONES } from '../../constants/ubicaciones';
+import MapaView from '../Map/MapaView'; // <-- Importación del mapa
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
   const [origen, setOrigen] = useState("");
@@ -14,6 +15,10 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const [showPasajeros, setShowPasajeros] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   
+  // <-- Nuevos estados para coordenadas
+  const [coordsOrigen, setCoordsOrigen] = useState(null); 
+  const [coordsDestino, setCoordsDestino] = useState(null);
+  
   const [pasajeros, setPasajeros] = useState({ adultos: 1, niños: 0 });
 
   const totalPasajeros = pasajeros.adultos + pasajeros.niños;
@@ -24,16 +29,30 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     );
   }, []);
 
-  const manejarBusqueda = (texto, tipo) => {
+  // <-- Función de búsqueda actualizada con API de OpenStreetMap
+  const manejarBusqueda = async (texto, tipo) => {
     if (tipo === 'origen') setOrigen(texto);
     else setDestino(texto);
 
-    if (texto.length > 0) {
-      const filtradas = locationsArray.filter(u => 
-        u.ciudad.toLowerCase().includes(texto.toLowerCase())
-      ).slice(0, 4);
-      setSugerencias(filtradas);
+    if (texto.length > 2) {
       setCampoActivo(tipo);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${texto},Venezuela&limit=4`
+        );
+        const data = await response.json();
+        
+        const sugerenciasFiltradas = data.map(item => ({
+          ciudad: item.display_name.split(',')[0],
+          estado: item.display_name.split(',')[1] || "Venezuela",
+          lat: parseFloat(item.lat),
+          lon: parseFloat(item.lon)
+        }));
+        
+        setSugerencias(sugerenciasFiltradas);
+      } catch (error) {
+        console.error("Error buscando ubicación:", error);
+      }
     } else {
       setSugerencias([]);
     }
@@ -91,7 +110,8 @@ const viajesFiltrados = useMemo(() => {
                 placeholder="¿Desde dónde sales?" 
                 className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
               />
-              {origen && <X size={14} className="text-slate-300" onClick={() => setOrigen("")} />}
+              {/* <-- Limpiamos coordenadas al borrar texto */}
+              {origen && <X size={14} className="text-slate-300" onClick={() => { setOrigen(""); setCoordsOrigen(null); }} />}
             </div>
             <div className="h-[1px] bg-white mx-4" />
             <div className="flex items-center gap-3 p-4">
@@ -102,7 +122,8 @@ const viajesFiltrados = useMemo(() => {
                 placeholder="¿A dónde vas?" 
                 className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
               />
-              {destino && <X size={14} className="text-slate-300" onClick={() => setDestino("")} />}
+              {/* <-- Limpiamos coordenadas al borrar texto */}
+              {destino && <X size={14} className="text-slate-300" onClick={() => { setDestino(""); setCoordsDestino(null); }} />}
             </div>
           </div>
 
@@ -128,18 +149,29 @@ const viajesFiltrados = useMemo(() => {
             </button>
           </div>
 
+          {/* <-- MAPA DE REFERENCIA (Aparece si hay destino seleccionado) */}
+          {coordsDestino && (
+            <div className="p-2 animate-in fade-in zoom-in duration-300">
+              <p className="text-[9px] font-black uppercase text-slate-400 mb-2 ml-2 italic">📍 Destino seleccionado:</p>
+              <MapaView lat={coordsDestino.lat} lng={coordsDestino.lon} />
+            </div>
+          )}
+
           {sugerencias.length > 0 && (
             <div className="absolute left-4 right-4 top-[45%] bg-white shadow-2xl rounded-3xl border border-slate-100 z-[110] overflow-hidden">
-              {sugerencias.map((s, i) => (
-                <button 
-                  key={i}
-                  onClick={() => {
-                    if (campoActivo === 'origen') setOrigen(s.ciudad);
-                    else setDestino(s.ciudad);
-                    setSugerencias([]);
-                  }}
-                  className="w-full p-4 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-50 last:border-none"
-                >
+              {sugerencias.map((s, i) => ( 
+              <button  key={i} onClick={() => {
+                if (campoActivo === 'origen') {
+                  setOrigen(s.ciudad); 
+                  setCoordsOrigen({ lat: s.lat, lon: s.lon }); // <-- Guardamos coordenadas
+                } else {
+                  setDestino(s.ciudad); 
+                  setCoordsDestino({ lat: s.lat, lon: s.lon }); // <-- Guardamos coordenadas
+                }   
+                setSugerencias([]);  
+              }}
+              className="w-full p-4 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-50 last:border-none"
+              >
                   <MapPin size={14} className="text-slate-300" />
                   <div>
                     <p className="text-xs font-black text-slate-700">{s.ciudad}</p>
@@ -172,6 +204,7 @@ const viajesFiltrados = useMemo(() => {
                 {ordenPrecio === 'asc' ? 'Más baratos' : 'Precio alto'}
               </span>
               <div className={ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-400'}>
+                {/* <-- Se mantienen tus SVGs originales intactos */}
                 {ordenPrecio === 'asc' ? (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
                 ) : (
@@ -183,7 +216,6 @@ const viajesFiltrados = useMemo(() => {
           
           {viajesFiltrados.length > 0 ? (
             viajesFiltrados.map((viaje) => {
-              // --- LÓGICA DE VIAJE LLENO ---
               const pasajerosConfirmados = viaje.pasajeros || [];
               const asientosTotales = viaje.asientos || viaje.puestos || 1;
               const cuposRestantes = asientosTotales - pasajerosConfirmados.length;
