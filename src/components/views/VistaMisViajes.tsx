@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, deleteDoc } from 'firebase/firestore';
+import Toast from "../ui/Toast"; 
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
   X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
@@ -26,27 +27,6 @@ const formatearFechaCorta = (fechaString) => {
     day: 'numeric', 
     month: 'short' 
   }).replace('.', ''); 
-};
-
-// COMPONENTE: Notificación Toast
-const ToastNotification = ({ message, show, onClose }) => {
-  React.useEffect(() => {
-    if (show) {
-      const timer = setTimeout(() => onClose(), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [show, onClose]);
-
-  if (!show) return null;
-
-  return (
-    <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] transition-transform duration-300 transform ${show ? 'translate-y-0' : '-translate-y-full'}`}>
-      <div className="bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-slate-800 whitespace-nowrap">
-        <CheckCircle className="text-blue-500" size={20} />
-        <span className="text-sm font-bold uppercase tracking-wider">{message}</span>
-      </div>
-    </div>
-  );
 };
 
 // COMPONENTE: Modal para Confirmar Eliminación
@@ -336,7 +316,6 @@ export const VistaMisViajes = ({
     }
   };
 
-  // 1. EL VIGILANTE: Revisa si hay pasajeros antes de dejar borrar
   const handleIntentarEliminar = (viaje) => {
     const tienePasajeros = viaje.pasajeros?.length > 0;
     const tieneSolicitudes = viaje.reservasPendientes?.length > 0;
@@ -344,7 +323,7 @@ export const VistaMisViajes = ({
     if (tienePasajeros || tieneSolicitudes) {
       setToastData({ 
         show: true, 
-        message: 'Tiene usuarios activos. Entra a "Gestionar Viaje" para Cancelar formalmente.' 
+        message: 'Hay reservas. Usa "Gestionar Viaje" para cancelar.' // MENSAJE CORTO Y DIRECTO
       });
     } else {
       setViajeAEliminar(viaje.id);
@@ -371,9 +350,14 @@ export const VistaMisViajes = ({
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
-      <ToastNotification show={toastData.show} message={toastData.message} onClose={() => setToastData({ show: false, message: '' })} />
+      {/* USAMOS TU TOAST OFICIAL AQUÍ */}
+      <Toast 
+        show={toastData.show} 
+        message={toastData.message} 
+        onClose={() => setToastData({ show: false, message: '' })} 
+      />
       
       {editingViaje && (
         <ModalEditarViaje 
