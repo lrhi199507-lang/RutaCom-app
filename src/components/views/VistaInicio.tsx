@@ -18,9 +18,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const [coordsOrigen, setCoordsOrigen] = useState(null); 
   const [coordsDestino, setCoordsDestino] = useState(null);
   
-  // <-- NUEVO: Estado para el Modal del Mapa
   const [showMapaModal, setShowMapaModal] = useState(false);
-  const [tipoMapa, setTipoMapa] = useState(null); // 'origen' o 'destino'
+  const [tipoMapa, setTipoMapa] = useState(null); 
   const [coordsTemporales, setCoordsTemporales] = useState(null);
   const [buscandoDireccion, setBuscandoDireccion] = useState(false);
   
@@ -74,7 +73,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }).replace('.', '');
   };
 
-  // <-- NUEVO: Función de Reverse Geocoding
   const confirmarUbicacionMapa = async () => {
     if (!coordsTemporales) return;
     
@@ -99,7 +97,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       setCoordsTemporales(null);
     } catch (error) {
       console.error("Error al obtener dirección:", error);
-      // Fallback si la API falla
       if (tipoMapa === 'origen') {
         setOrigen("Ubicación en mapa");
         setCoordsOrigen(coordsTemporales);
@@ -113,46 +110,41 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }
   };
 
-const viajesFiltrados = useMemo(() => {
-  const lista = Array.isArray(viajes) ? viajes : [];
-  
-  const fechaBusquedaBase = new Date(fechaSeleccionada);
-  const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
-
-  const filtrados = lista.filter(v => {
-    // 1. Filtro de Estado: SOLO mostrar disponibles
-    if (v.estado && v.estado !== 'disponible') return false;
-
-    // 2. Filtro de Texto (Tolerante)
-    const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
-    const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
-    const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
-
-    // 3. Filtro de Fecha
-    const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
-    const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
-    const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
-    const coincideFecha = fechaViajeStr === fechaBusquedaStr;
-
-    // 4. Filtro de Cupos (La matemática corregida)
-    const pasajerosConfirmados = Array.isArray(v.pasajeros) ? v.pasajeros : [];
-    const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
-    const puestosTotales = Number(v.asientos) || Number(v.puestos) || 1;
-    const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
+  const viajesFiltrados = useMemo(() => {
+    const lista = Array.isArray(viajes) ? viajes : [];
     
-    const cabenTodos = cuposRestantes >= totalPasajeros;
+    const fechaBusquedaBase = new Date(fechaSeleccionada);
+    const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
-    return coincideTexto && coincideFecha && cabenTodos;
-  });
+    const filtrados = lista.filter(v => {
+      if (v.estado && v.estado !== 'disponible') return false;
 
-  return [...filtrados].sort((a, b) => {
-    const precioA = parseFloat(String(a.precio).replace(/[^0-9.]/g, '')) || 0;
-    const precioB = parseFloat(String(b.precio).replace(/[^0-9.]/g, '')) || 0;
-    return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
-  });
-}, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros]);
+      const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
+      const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
+      const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
+
+      const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
+      const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
+      const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
+      const coincideFecha = fechaViajeStr === fechaBusquedaStr;
+
+      const pasajerosConfirmados = Array.isArray(v.pasajeros) ? v.pasajeros : [];
+      const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
+      const puestosTotales = Number(v.asientos) || Number(v.puestos) || 1;
+      const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
+      
+      const cabenTodos = cuposRestantes >= totalPasajeros;
+
+      return coincideTexto && coincideFecha && cabenTodos;
+    });
+
+    return [...filtrados].sort((a, b) => {
+      const precioA = parseFloat(String(a.precio).replace(/[^0-9.]/g, '')) || 0;
+      const precioB = parseFloat(String(b.precio).replace(/[^0-9.]/g, '')) || 0;
+      return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
+    });
+  }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros]);
   
-
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <div className="p-4 space-y-6">
@@ -160,7 +152,8 @@ const viajesFiltrados = useMemo(() => {
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
           <div className="bg-slate-50/50 rounded-[28px] overflow-hidden">
-            <div className="flex items-center gap-3 p-4 relative">
+            {/* INPUT ORIGEN CON ICONO INTEGRADO */}
+            <div className="flex items-center gap-3 p-4 focus-within:bg-blue-50/30 transition-colors">
               <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
               <input 
                 value={origen}
@@ -168,10 +161,22 @@ const viajesFiltrados = useMemo(() => {
                 placeholder="¿Desde dónde sales?" 
                 className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
               />
-              {origen && <X size={14} className="text-slate-300" onClick={() => { setOrigen(""); setCoordsOrigen(null); }} />}
+              <div className="flex items-center gap-3 shrink-0">
+                {origen && <X size={16} className="text-slate-300 active:scale-90" onClick={() => { setOrigen(""); setCoordsOrigen(null); }} />}
+                <div className="w-[1px] h-5 bg-slate-200" />
+                <button 
+                  onClick={() => { setTipoMapa('origen'); setCoordsTemporales(coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                  className="text-slate-400 hover:text-blue-600 active:scale-90 transition-all"
+                >
+                  <Map size={18} />
+                </button>
+              </div>
             </div>
+            
             <div className="h-[1px] bg-white mx-4" />
-            <div className="flex items-center gap-3 p-4 relative">
+            
+            {/* INPUT DESTINO CON ICONO INTEGRADO */}
+            <div className="flex items-center gap-3 p-4 focus-within:bg-green-50/30 transition-colors">
               <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
               <input 
                 value={destino}
@@ -179,24 +184,17 @@ const viajesFiltrados = useMemo(() => {
                 placeholder="¿A dónde vas?" 
                 className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
               />
-              {destino && <X size={14} className="text-slate-300" onClick={() => { setDestino(""); setCoordsDestino(null); }} />}
+              <div className="flex items-center gap-3 shrink-0">
+                {destino && <X size={16} className="text-slate-300 active:scale-90" onClick={() => { setDestino(""); setCoordsDestino(null); }} />}
+                <div className="w-[1px] h-5 bg-slate-200" />
+                <button 
+                  onClick={() => { setTipoMapa('destino'); setCoordsTemporales(coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                  className="text-slate-400 hover:text-green-600 active:scale-90 transition-all"
+                >
+                  <Map size={18} />
+                </button>
+              </div>
             </div>
-          </div>
-          
-          {/* <-- NUEVO: Botón de Selección por Mapa */}
-          <div className="flex gap-2 px-2 pb-1 justify-center">
-             <button 
-                onClick={() => { setTipoMapa('origen'); setCoordsTemporales(coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
-                className="flex items-center gap-1 p-2 text-slate-400 hover:text-blue-600 transition-colors active:scale-95"
-             >
-                <Map size={12} /> <span className="text-[9px] font-black uppercase tracking-widest">Pin Origen</span>
-             </button>
-             <button 
-                onClick={() => { setTipoMapa('destino'); setCoordsTemporales(coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
-                className="flex items-center gap-1 p-2 text-slate-400 hover:text-blue-600 transition-colors active:scale-95"
-             >
-                <Map size={12} /> <span className="text-[9px] font-black uppercase tracking-widest">Pin Destino</span>
-             </button>
           </div>
 
           <div className="flex gap-1 p-1">
@@ -395,7 +393,7 @@ const viajesFiltrados = useMemo(() => {
         </div>
       )}
 
-      {/* <-- NUEVO: MODAL DEL MAPA */}
+      {/* <-- MODAL DEL MAPA ACTUALIZADO --> */}
       {showMapaModal && (
         <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
            <div className="p-4 flex items-center justify-between shadow-sm z-10">
