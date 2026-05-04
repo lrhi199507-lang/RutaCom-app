@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { db } from '../../firebaseConfig';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
   X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
@@ -334,13 +336,27 @@ export const VistaMisViajes = ({
     }
   };
 
-  const handleConfirmarEliminar = async () => {
-    if(onEliminarViajeFBD && viajeAEliminar) {
-      await onEliminarViajeFBD(viajeAEliminar);
-      setViajeAEliminar(null);
-      setToastData({ show: true, message: 'Viaje eliminado' });
+    const handleConfirmarEliminar = async () => {
+    if (viajeAEliminar) {
+      try {
+        // 1. Ejecutamos el borrado REAL en la base de datos
+        await deleteDoc(doc(db, "Viajes", viajeAEliminar));
+        
+        // 2. Ejecutamos la función visual (si existe) para que desaparezca de la pantalla
+        if (onEliminarViajeFBD) {
+          await onEliminarViajeFBD(viajeAEliminar);
+        }
+        
+        setViajeAEliminar(null);
+        setToastData({ show: true, message: 'Viaje eliminado correctamente' });
+      } catch (error) {
+        console.error("Error de Firebase al borrar:", error);
+        setViajeAEliminar(null);
+        setToastData({ show: true, message: 'No tienes permisos para borrarlo' });
+      }
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
