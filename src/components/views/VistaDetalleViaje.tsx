@@ -81,6 +81,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const [modalCancelar, setModalCancelar] = useState({ visible: false, rol: null }); // rol puede ser 'chofer' o 'pasajero'
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
+    // ESTADOS PARA EL MODAL DE ACOMPAÑANTES
+  const [modalAcompanantes, setModalAcompanantes] = useState(false);
+  const [adultosExtra, setAdultosExtra] = useState(0);
+  const [ninosExtra, setNinosExtra] = useState(0);
+  
 
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
 
@@ -124,9 +129,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const pasajerosConfirmados = obtenerArraySeguro(viaje?.pasajeros);
   const solicitudesPendientes = obtenerArraySeguro(viaje?.reservasPendientes);
   
-  const puestosTotales = Number(viaje?.asientos) || Number(viaje?.puestos) || 1;
-  const cuposRestantes = Math.max(0, puestosTotales - pasajerosConfirmados.length);
-
+    // LÓGICA PROFESIONAL DE CUPOS: Sumamos los puestos que pidió cada pasajero
+  const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
+  const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
+  
+  // Puestos que el usuario actual quiere pedir (1 por él mismo + los extra)
+  const puestosQueQuiero = 1 + adultosExtra + ninosExtra;
+  
   const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
   const miReserva = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
   const yaSoyPasajero = !!miReserva;
@@ -157,37 +166,48 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-       const solicitarCola = async () => {
-    if (cuposRestantes <= 0) return;
+         const solicitarCola = async () => {
+    // 1. Bloqueo de seguridad: No puede pedir más de lo que hay
+    if (puestosQueQuiero > cuposRestantes) {
+      setToastMessage("No hay suficientes puestos disponibles");
+      setShowToast(true);
+      return;
+    }
+    
     setCargando(true);
     try {
-      // 1. Guardar la reserva
+      // 2. Guardamos la reserva con los acompañantes
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ 
           id: userData?.id || userData?.uid, 
           nombre: userData?.nombre || "Usuario", 
           fotoPerfil: userData?.fotoPerfil || null, 
-          estado: 'pendiente' 
+          estado: 'pendiente',
+          puestosSolicitados: puestosQueQuiero, // ¡NUEVO!
+          adultosExtra: adultosExtra,           // ¡NUEVO!
+          ninosExtra: ninosExtra                // ¡NUEVO!
         })
       });
       
-      // 2. USAR EL ID QUE SÍ FUNCIONA (Copiado de tu CardViajeOptimizada)
       const idDestino = viaje?.uidConductor || viaje?.idCreador;
 
       if (idDestino) {
-        // 3. ENVIAR NOTIFICACIÓN
+        // 3. Notificación inteligente
+        const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
+        
         await enviarNotificacion(
-          idDestino, 
+          String(idDestino), 
           "¡Nueva Solicitud!",
-          `${userData?.nombre || 'Un pasajero'} quiere unirse a tu viaje.`,
+          `${userData?.nombre || 'Un pasajero'} quiere unirse a tu viaje${extraTexto}.`,
           "viaje"
         );
-        setToastMessage("Solicitud enviada con éxito");
+        setToastMessage("Solicitud enviada al conductor");
       } else {
-        // Si llegas aquí, es que por alguna razón el objeto viaje perdió los datos al abrirse
         setToastMessage("Error: No se encontró el ID del conductor");
       }
-
+      
+      // 4. Cerramos el modal
+      setModalAcompanantes(false); 
       setShowToast(true);
     } catch (e) { 
       setToastMessage("Error al procesar");
@@ -197,7 +217,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-    
   
   const cancelarSolicitud = async () => {
     setCargando(true);
@@ -766,8 +785,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 ) : yaSolicite ? (
                   <button disabled={cargando} onClick={cancelarSolicitud} className="flex-[2] bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
                 ) : cuposRestantes > 0 ? (
-                  <button disabled={cargando} onClick={solicitarCola} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
-                ) : (
+                  <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
+                    ) : (
                   <button disabled className="flex-[2] bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
                 )
               )}
@@ -912,6 +931,71 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           </div>
         </div>
       )}
+
+            {/* MODAL DE ACOMPAÑANTES */}
+      {modalAcompanantes && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
+          <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black italic uppercase text-slate-800">¿Vas con alguien más?</h3>
+              <button onClick={() => setModalAcompanantes(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors"><X size={18} /></button>
+            </div>
+            
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Selecciona tus acompañantes</p>
+
+            <div className="space-y-4 mb-8">
+              {/* Tú (Siempre 1) */}
+              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><User size={18} /></div>
+                  <span className="text-sm font-black text-slate-700 uppercase">Tú (Principal)</span>
+                </div>
+                <span className="font-black text-lg text-slate-400">1</span>
+              </div>
+
+              {/* Adultos Extra */}
+              <div className="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-2xl">
+                <div className="flex items-center gap-3 pl-2">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"><Users size={18} /></div>
+                  <div>
+                    <p className="text-sm font-black text-slate-700 uppercase leading-none">Adultos</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-1 border border-slate-100">
+                  <button onClick={() => setAdultosExtra(Math.max(0, adultosExtra - 1))} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-slate-600">-</button>
+                  <span className="font-black w-4 text-center">{adultosExtra}</span>
+                  <button onClick={() => setAdultosExtra(adultosExtra + 1)} disabled={puestosQueQuiero >= cuposRestantes} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-blue-600 disabled:opacity-50">+</button>
+                </div>
+              </div>
+
+              {/* Niños */}
+              <div className="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-2xl">
+                <div className="flex items-center gap-3 pl-2">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"><Users size={16} /></div>
+                  <div>
+                    <p className="text-sm font-black text-slate-700 uppercase leading-none">Niños</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-1 border border-slate-100">
+                  <button onClick={() => setNinosExtra(Math.max(0, ninosExtra - 1))} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-slate-600">-</button>
+                  <span className="font-black w-4 text-center">{ninosExtra}</span>
+                  <button onClick={() => setNinosExtra(ninosExtra + 1)} disabled={puestosQueQuiero >= cuposRestantes} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-blue-600 disabled:opacity-50">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl mb-6">
+               <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider">Asientos a ocupar</span>
+               <span className="text-xl font-black italic text-blue-600">{puestosQueQuiero} / {cuposRestantes}</span>
+            </div>
+
+            <button disabled={cargando || puestosQueQuiero > cuposRestantes} onClick={solicitarCola} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:bg-slate-300 disabled:shadow-none">
+              {cargando ? 'Enviando...' : 'Confirmar Solicitud'}
+            </button>
+          </div>
+        </div>
+      )}
+      
 
             {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
