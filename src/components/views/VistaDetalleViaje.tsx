@@ -81,12 +81,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const [modalCancelar, setModalCancelar] = useState({ visible: false, rol: null }); // rol puede ser 'chofer' o 'pasajero'
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
-    // ESTADOS PARA EL MODAL DE ACOMPAÑANTES
+  
+  // ESTADOS PARA EL MODAL DE ACOMPAÑANTES
   const [modalAcompanantes, setModalAcompanantes] = useState(false);
   const [adultosExtra, setAdultosExtra] = useState(0);
   const [ninosExtra, setNinosExtra] = useState(0);
   
-
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
 
   useEffect(() => {
@@ -129,11 +129,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const pasajerosConfirmados = obtenerArraySeguro(viaje?.pasajeros);
   const solicitudesPendientes = obtenerArraySeguro(viaje?.reservasPendientes);
   
-    // LÓGICA PROFESIONAL DE CUPOS: Sumamos los puestos que pidió cada pasajero
+  // EL ORDEN ES CRÍTICO AQUÍ PARA NO ROMPER LA PANTALLA
+  const puestosTotales = Number(viaje?.asientos) || Number(viaje?.puestos) || 1;
   const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
   const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
-  
-  // Puestos que el usuario actual quiere pedir (1 por él mismo + los extra)
   const puestosQueQuiero = 1 + adultosExtra + ninosExtra;
   
   const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
@@ -149,11 +148,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
   // ------------------------------------------------------------------------
    
-    const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
-    // Si idDestino llega aquí, Firebase TIENE que crear la colección
+  const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
     try {
       await addDoc(collection(db, "Notificaciones"), {
-        idDestino: String(idDestino), // Lo aseguramos como texto
+        idDestino: String(idDestino), 
         titulo,
         mensaje,
         tipo,
@@ -166,8 +164,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-         const solicitarCola = async () => {
-    // 1. Bloqueo de seguridad: No puede pedir más de lo que hay
+  const solicitarCola = async () => {
     if (puestosQueQuiero > cuposRestantes) {
       setToastMessage("No hay suficientes puestos disponibles");
       setShowToast(true);
@@ -176,25 +173,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     
     setCargando(true);
     try {
-      // 2. Guardamos la reserva con los acompañantes
       await updateDoc(doc(db, "Viajes", viaje.id), {
         reservasPendientes: arrayUnion({ 
           id: userData?.id || userData?.uid, 
           nombre: userData?.nombre || "Usuario", 
           fotoPerfil: userData?.fotoPerfil || null, 
           estado: 'pendiente',
-          puestosSolicitados: puestosQueQuiero, // ¡NUEVO!
-          adultosExtra: adultosExtra,           // ¡NUEVO!
-          ninosExtra: ninosExtra                // ¡NUEVO!
+          puestosSolicitados: puestosQueQuiero,
+          adultosExtra: adultosExtra,           
+          ninosExtra: ninosExtra                
         })
       });
       
       const idDestino = viaje?.uidConductor || viaje?.idCreador;
 
       if (idDestino) {
-        // 3. Notificación inteligente
         const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
-        
         await enviarNotificacion(
           String(idDestino), 
           "¡Nueva Solicitud!",
@@ -206,7 +200,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setToastMessage("Error: No se encontró el ID del conductor");
       }
       
-      // 4. Cerramos el modal
       setModalAcompanantes(false); 
       setShowToast(true);
     } catch (e) { 
@@ -217,7 +210,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  
   const cancelarSolicitud = async () => {
     setCargando(true);
     try {
@@ -226,7 +218,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-        // --- SISTEMA DE CANCELACIONES ---
+  // --- SISTEMA DE CANCELACIONES ---
   const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToastMessage("Debes seleccionar un motivo");
@@ -238,8 +230,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     try {
       const miRef = doc(db, "usuarios", userData?.id);
       const viajeRef = doc(db, "Viajes", viaje.id);
-      
-      // EL FIX ESTÁ AQUÍ TAMBIÉN
       const idDelChofer = viaje.uidConductor || viaje.idCreador;
 
       if (modalCancelar.rol === 'pasajero') {
@@ -248,7 +238,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           await updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) });
           await updateDoc(miRef, { cancelacionesPasajero: increment(1) });
 
-          // NOTIFICACIÓN AL CHOFER: Un pasajero se bajó
           if (idDelChofer) {
              await enviarNotificacion(
                idDelChofer,
@@ -257,7 +246,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                "alerta"
              );
           }
-
           setToastMessage("Reserva cancelada. Se registró en tu historial.");
         }
       } 
@@ -277,7 +265,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             "alerta"
           );
         }
-
         setToastMessage("Viaje cancelado y pasajeros notificados");
       }
 
@@ -294,16 +281,20 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
       
       if (accion === 'aceptar') {
-        if (cuposRestantes <= 0) { 
-          setToastMessage("Sin puestos disponibles"); setShowToast(true); setCargando(false); return; 
+        const puestosQuePidio = Number(solicitud.puestosSolicitados) || 1;
+        if (puestosQuePidio > cuposRestantes) { 
+          setToastMessage("Sin puestos disponibles para esta solicitud"); 
+          setShowToast(true); 
+          setCargando(false); 
+          return; 
         }
+        
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         
         await updateDoc(viajeRef, {
@@ -311,7 +302,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
         });
 
-        // NOTIFICACIÓN: ¡Aceptado!
         await enviarNotificacion(
           solicitud.id || solicitud.uid,
           "¡Cola Aceptada!",
@@ -320,10 +310,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         );
 
       } else {
-        // RECHAZAR
         await updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) });
 
-        // NOTIFICACIÓN: Rechazado (Crucial para que busque otra opción rápido)
         await enviarNotificacion(
           solicitud.id || solicitud.uid,
           "Solicitud no confirmada",
@@ -337,7 +325,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setCargando(false); 
     }
   };
-  
   
   const procesarAbordajeEIniciar = async () => {
     setCargando(true);
@@ -380,17 +367,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-    const enviarCalificacionesYFinalizar = async () => {
+  const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
-      // 1. Ciclo para los pasajeros
       for (const p of pasajerosConfirmados) {
         if (!p) continue;
         const pid = p.id || p.uid;
         const rat = ratingsChofer[pid];
         
         if (rat && rat.estrellas > 0) {
-          // A) Guardar la reseña en la colección Resenas
           await addDoc(collection(db, "Resenas"), {
             idViaje: viaje.id,
             idConductor: pid, 
@@ -401,25 +386,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             fecha: new Date().toISOString()
           });
 
-          // B) ACTUALIZAR AL PASAJERO: Sumarle +1 viaje como pasajero silenciosamente
           try {
             await updateDoc(doc(db, "usuarios", pid), {
               viajesComoPasajero: increment(1)
             });
-          } catch (err) { console.log("Error al sumar viaje al pasajero", err); }
+          } catch (err) { console.log("Error al sumar viaje", err); }
         }
       }
 
-      // 2. ACTUALIZAR AL CHOFER: Sumarle +1 viaje conducido a él mismo
       if (userData?.id) {
          try {
            await updateDoc(doc(db, "usuarios", userData.id), {
              viajesRealizados: increment(1)
            });
-         } catch (err) { console.log("Error al sumar viaje al chofer", err); }
+         } catch (err) { console.log("Error al sumar chofer", err); }
       }
 
-      // 3. Cerrar el viaje
       await cambiarEstadoViaje('finalizado');
       setModalCalificarPasajeros(false);
     } catch (e) { 
@@ -428,7 +410,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setCargando(false); 
     }
   };
-  
 
   const cambiarEstadoViaje = async (nuevoEstado) => {
     setCargando(true);
@@ -638,20 +619,24 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PUESTOS ({pasajerosConfirmados.length}/{puestosTotales})</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PUESTOS ({asientosOcupados}/{puestosTotales})</p>
                 {cuposRestantes <= 0 && <span className="text-[9px] text-red-500 font-black uppercase bg-red-50 px-2 py-1 rounded-md">Lleno</span>}
               </div>
               
               <div className="space-y-3">
                 {pasajerosConfirmados.map((pasajero, index) => {
                   if (!pasajero) return null;
+                  const puestosPedidos = Number(pasajero.puestosSolicitados) || 1;
                   return (
-                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm hover:border-blue-300">
+                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm hover:border-blue-300 relative">
                     <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">                     {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
                     </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-slate-700 uppercase truncate">{String(pasajero.nombre || "Pasajero")}</p>
-                          {pasajero.abordado && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
+                          <div className="flex items-center gap-2 mt-0.5">
+                              {pasajero.abordado && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
+                              {puestosPedidos > 1 && <span className="text-[8px] font-black text-blue-600 uppercase bg-blue-100 px-2 py-0.5 rounded-full">+{puestosPedidos - 1} Acompañante(s)</span>}
+                          </div>
                         </div>
                         {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500 shrink-0" /> : <Lock size={14} className="text-slate-300 shrink-0" />}
                     </div>
@@ -703,6 +688,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
                 {solicitudesPendientes.map((solicitud, index) => {
                   if (!solicitud) return null;
+                  const puestosPedidos = Number(solicitud.puestosSolicitados) || 1;
                   return (
                     <div key={`sol-${index}`} className="bg-white p-4 rounded-[25px] flex items-center gap-3 border border-orange-100 shadow-sm">
                       <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
@@ -710,7 +696,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-black uppercase text-slate-800 truncate">{String(solicitud.nombre || "Usuario")}</p>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase">Quiere viajar contigo</p>
+                        <p className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Pide <span className="text-orange-600 font-black">{puestosPedidos}</span> asiento(s)</p>
                       </div>
                       <div className="flex gap-2">
                         <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'rechazar')} className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all"><X size={16} strokeWidth={3} /></button>
@@ -932,7 +918,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-            {/* MODAL DE ACOMPAÑANTES */}
+      {/* MODAL DE ACOMPAÑANTES */}
       {modalAcompanantes && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
           <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative">
@@ -996,8 +982,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
       
-
-            {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
+      {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-red-900/50 text-center">
