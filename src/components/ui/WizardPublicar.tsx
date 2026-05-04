@@ -18,9 +18,9 @@ export const WizardPublicar = ({
   const [sugerencias, setSugerencias] = useState([]);
   const [campoActivo, setCampoActivo] = useState(null);
 
-  // <-- NUEVOS ESTADOS PARA EL MODAL DEL MAPA
+  // <-- ESTADOS PARA EL MODAL DEL MAPA
   const [showMapaModal, setShowMapaModal] = useState(false);
-  const [tipoMapa, setTipoMapa] = useState(null); // 'origen' o 'destino'
+  const [tipoMapa, setTipoMapa] = useState(null); 
   const [coordsTemporales, setCoordsTemporales] = useState(null);
   const [buscandoDireccion, setBuscandoDireccion] = useState(false);
 
@@ -77,7 +77,7 @@ export const WizardPublicar = ({
     }
   };
 
-  // <-- NUEVO: Función Reverse Geocoding
+  // <-- Función Reverse Geocoding
   const confirmarUbicacionMapa = async () => {
     if (!coordsTemporales) return;
     
@@ -131,48 +131,53 @@ export const WizardPublicar = ({
         </h2>
         
         <div className="space-y-4 relative">
-          {/* CAMPO ORIGEN */}
+          
+          {/* CAMPO ORIGEN CON ÍCONO INTEGRADO */}
           <div className="relative">
-            <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-blue-400">
-              <MapPin size={22} className="text-blue-600"/>
+            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
+              <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
               <input 
                 type="text" 
                 placeholder="Punto de salida (Ej. Valencia)" 
-                className="bg-transparent w-full text-sm font-bold outline-none text-slate-700" 
+                className="bg-transparent w-full text-sm font-bold outline-none text-slate-700 placeholder:text-slate-400" 
                 value={viajeForm.origen || ""} 
                 onChange={(e) => manejarBusqueda(e.target.value, 'origen')} 
               />
-              {viajeForm.origen && <X size={16} className="text-slate-300" onClick={() => setViajeForm({...viajeForm, origen: "", coordsOrigen: null})} />}
+              <div className="flex items-center gap-3 shrink-0">
+                {viajeForm.origen && <X size={16} className="text-slate-300 active:scale-90 cursor-pointer" onClick={() => setViajeForm({...viajeForm, origen: "", coordsOrigen: null})} />}
+                <div className="w-[1px] h-5 bg-slate-200" />
+                <button 
+                  onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                  className="text-slate-400 hover:text-blue-600 active:scale-90 transition-all"
+                >
+                  <Map size={18} />
+                </button>
+              </div>
             </div>
-            {/* Botón Mapa Origen */}
-            <button 
-                onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
-                className="absolute -bottom-6 right-2 flex items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors"
-            >
-                <Map size={10} /> <span className="text-[8px] font-black uppercase tracking-widest">Pin en Mapa</span>
-            </button>
           </div>
 
-          {/* CAMPO DESTINO */}
-          <div className="relative mt-8">
-            <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-green-400">
-              <Navigation size={22} className="text-green-600"/>
+          {/* CAMPO DESTINO CON ÍCONO INTEGRADO */}
+          <div className="relative">
+            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-green-400 focus-within:bg-green-50/30 transition-colors">
+              <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
               <input 
                 type="text" 
                 placeholder="Punto de llegada (Ej. Caracas)" 
-                className="bg-transparent w-full text-sm font-bold outline-none text-slate-700" 
+                className="bg-transparent w-full text-sm font-bold outline-none text-slate-700 placeholder:text-slate-400" 
                 value={viajeForm.destino || ""} 
                 onChange={(e) => manejarBusqueda(e.target.value, 'destino')} 
               />
-              {viajeForm.destino && <X size={16} className="text-slate-300" onClick={() => setViajeForm({...viajeForm, destino: "", coordsDestino: null})} />}
+              <div className="flex items-center gap-3 shrink-0">
+                {viajeForm.destino && <X size={16} className="text-slate-300 active:scale-90 cursor-pointer" onClick={() => setViajeForm({...viajeForm, destino: "", coordsDestino: null})} />}
+                <div className="w-[1px] h-5 bg-slate-200" />
+                <button 
+                  onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                  className="text-slate-400 hover:text-green-600 active:scale-90 transition-all"
+                >
+                  <Map size={18} />
+                </button>
+              </div>
             </div>
-            {/* Botón Mapa Destino */}
-            <button 
-                onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
-                className="absolute -bottom-6 right-2 flex items-center gap-1 text-slate-400 hover:text-green-600 transition-colors"
-            >
-                <Map size={10} /> <span className="text-[8px] font-black uppercase tracking-widest">Pin en Mapa</span>
-            </button>
           </div>
 
           {/* CAJA DE SUGERENCIAS FLOTANTE */}
@@ -213,7 +218,7 @@ export const WizardPublicar = ({
 
         {/* MAPA DE CONFIRMACIÓN DE RUTA PARA EL CHOFER */}
         {(viajeForm.coordsOrigen || viajeForm.coordsDestino) && (
-          <div className="pt-6 animate-in fade-in zoom-in duration-300">
+          <div className="pt-2 animate-in fade-in zoom-in duration-300">
             <h3 className="text-[10px] font-black uppercase text-slate-400 mb-2 italic">📍 Ruta a publicar:</h3>
             <div className="rounded-[25px] overflow-hidden border border-slate-100">
                 <MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} />
@@ -226,7 +231,7 @@ export const WizardPublicar = ({
           <button onClick={() => setPasoWizard(2)} disabled={!viajeForm.origen || !viajeForm.destino} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg disabled:opacity-50">Siguiente</button>
         </div>
 
-        {/* <-- NUEVO: MODAL DEL MAPA --> */}
+        {/* <-- MODAL DEL MAPA --> */}
         {showMapaModal && (
             <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
                <div className="p-4 flex items-center justify-between shadow-sm z-10">
