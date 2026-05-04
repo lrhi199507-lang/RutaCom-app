@@ -57,7 +57,7 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center">
       <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
         <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">¿Eliminar Viaje?</h3>
-        <p className="text-xs font-bold text-slate-400 mb-8">Esta acción no se puede deshacer. Si tienes pasajeros, perderán su reserva.</p>
+        <p className="text-xs font-bold text-slate-400 mb-8">Esta acción no se puede deshacer. (Solo permitido si no hay pasajeros).</p>
         
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">
@@ -336,13 +336,27 @@ export const VistaMisViajes = ({
     }
   };
 
-    const handleConfirmarEliminar = async () => {
+  // 1. EL VIGILANTE: Revisa si hay pasajeros antes de dejar borrar
+  const handleIntentarEliminar = (viaje) => {
+    const tienePasajeros = viaje.pasajeros?.length > 0;
+    const tieneSolicitudes = viaje.reservasPendientes?.length > 0;
+
+    if (tienePasajeros || tieneSolicitudes) {
+      setToastData({ 
+        show: true, 
+        message: 'Tiene usuarios activos. Entra a "Gestionar Viaje" para Cancelar formalmente.' 
+      });
+    } else {
+      setViajeAEliminar(viaje.id);
+    }
+  };
+
+  // 2. EL EJECUTOR: Borra el documento si pasa el filtro del vigilante
+  const handleConfirmarEliminar = async () => {
     if (viajeAEliminar) {
       try {
-        // 1. Ejecutamos el borrado REAL en la base de datos
         await deleteDoc(doc(db, "Viajes", viajeAEliminar));
         
-        // 2. Ejecutamos la función visual (si existe) para que desaparezca de la pantalla
         if (onEliminarViajeFBD) {
           await onEliminarViajeFBD(viajeAEliminar);
         }
@@ -356,7 +370,6 @@ export const VistaMisViajes = ({
       }
     }
   };
-  
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -448,7 +461,7 @@ export const VistaMisViajes = ({
                             key={viaje.id} 
                             viaje={viaje} 
                             onEdit={() => setEditingViaje(viaje)}
-                            onDelete={() => setViajeAEliminar(viaje.id)} 
+                            onDelete={() => handleIntentarEliminar(viaje)} // CONEXIÓN AL VIGILANTE AQUÍ
                             onClickGestionar={onVerDetalles} 
                             estadoLabel={viaje.estado === 'en_curso' ? 'EN CURSO' : 'DISPONIBLE'}
                         />
