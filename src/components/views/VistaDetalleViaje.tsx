@@ -370,12 +370,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
+      // 1. Ciclo para los pasajeros
       for (const p of pasajerosConfirmados) {
         if (!p) continue;
         const pid = p.id || p.uid;
         const rat = ratingsChofer[pid];
         
         if (rat && rat.estrellas > 0) {
+          // A) Guardar la reseña en la colección Resenas
           await addDoc(collection(db, "Resenas"), {
             idViaje: viaje.id,
             idConductor: pid, 
@@ -386,22 +388,34 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             fecha: new Date().toISOString()
           });
 
+          // B) ACTUALIZAR AL PASAJERO: Sumarle +1 viaje como pasajero silenciosamente
           try {
             await updateDoc(doc(db, "usuarios", pid), {
               viajesComoPasajero: increment(1)
             });
-          } catch (err) { console.log("Error al sumar viaje", err); }
+          } catch (err) { console.log("Error al sumar viaje al pasajero", err); }
         }
+
+        // --- ¡NUEVO! NOTIFICACIÓN PARA EL PASAJERO ---
+        // Esto se envía sin importar si el chofer le dio estrellas o no
+        await enviarNotificacion(
+          pid,
+          "¡Llegaste a tu destino!",
+          `El viaje ha finalizado. Entra a "Mis Viajes" para calificar a ${userData?.nombre || "tu conductor"}.`,
+          "alerta" 
+        );
       }
 
+      // 2. ACTUALIZAR AL CHOFER: Sumarle +1 viaje conducido a él mismo
       if (userData?.id) {
          try {
            await updateDoc(doc(db, "usuarios", userData.id), {
              viajesRealizados: increment(1)
            });
-         } catch (err) { console.log("Error al sumar chofer", err); }
+         } catch (err) { console.log("Error al sumar viaje al chofer", err); }
       }
 
+      // 3. Cerrar el viaje
       await cambiarEstadoViaje('finalizado');
       setModalCalificarPasajeros(false);
     } catch (e) { 
@@ -410,7 +424,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setCargando(false); 
     }
   };
-
+  
+  
   const cambiarEstadoViaje = async (nuevoEstado) => {
     setCargando(true);
     try {
