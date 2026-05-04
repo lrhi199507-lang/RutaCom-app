@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore'; 
-import { MapPin, Navigation, Users, DollarSign, Clock, ShieldCheck, Check, Briefcase, Zap, Calendar, X } from 'lucide-react'; // <-- Añadí la X
+import { MapPin, Navigation, Users, DollarSign, Clock, ShieldCheck, Check, Briefcase, Zap, Calendar, X, Map } from 'lucide-react'; 
 import Toast from './Toast'; 
-import MapaView from '../Map/MapaView'; // <-- Importación del mapa
+import MapaView from '../Map/MapaView'; 
 
 export const WizardPublicar = ({ 
   pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
@@ -15,9 +15,14 @@ export const WizardPublicar = ({
   const [toastMessage, setToastMessage] = useState("");
   const hoy = new Date().toISOString().split('T')[0];
   
-  // Estados para las sugerencias de la API de mapas
   const [sugerencias, setSugerencias] = useState([]);
   const [campoActivo, setCampoActivo] = useState(null);
+
+  // <-- NUEVOS ESTADOS PARA EL MODAL DEL MAPA
+  const [showMapaModal, setShowMapaModal] = useState(false);
+  const [tipoMapa, setTipoMapa] = useState(null); // 'origen' o 'destino'
+  const [coordsTemporales, setCoordsTemporales] = useState(null);
+  const [buscandoDireccion, setBuscandoDireccion] = useState(false);
 
   const [ratingCalculado, setRatingCalculado] = useState("0.0");
 
@@ -31,27 +36,22 @@ export const WizardPublicar = ({
     }).catch(e => console.error("Error rating en wizard:", e));
   }, [userData?.id]);
 
-  // El guardián del temporizador
   const timerRef = useRef(null);
 
   const manejarBusqueda = (texto, tipo) => {
-    // 1. Actualizamos el texto en pantalla inmediatamente para que no se sienta lag
     if (tipo === 'origen') {
         if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, origen: texto});
-        else setOrigen(texto); // Para VistaInicio
+        else setOrigen(texto); 
     } else {
         if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, destino: texto});
-        else setDestino(texto); // Para VistaInicio
+        else setDestino(texto); 
     }
 
-    // 2. Lógica de búsqueda con Debounce
     if (texto.length > 2) {
       setCampoActivo(tipo);
       
-      // Si el usuario sigue escribiendo, cancelamos el "fetch" anterior
       if (timerRef.current) clearTimeout(timerRef.current);
       
-      // Iniciamos un nuevo temporizador de 600 milisegundos
       timerRef.current = setTimeout(async () => {
         try {
           const response = await fetch(
@@ -70,10 +70,54 @@ export const WizardPublicar = ({
         } catch (error) {
           console.error("Error buscando ubicación:", error);
         }
-      }, 600); // <-- Magia aquí: espera 0.6 segundos sin teclear antes de buscar
+      }, 600); 
       
     } else {
       setSugerencias([]);
+    }
+  };
+
+  // <-- NUEVO: Función Reverse Geocoding
+  const confirmarUbicacionMapa = async () => {
+    if (!coordsTemporales) return;
+    
+    setBuscandoDireccion(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=10`
+      );
+      const data = await response.json();
+      
+      const ciudadNombre = data.address?.city || data.address?.town || data.address?.village || data.name || "Ubicación seleccionada";
+      const estadoNombre = data.address?.state || "Venezuela";
+      const textoCompleto = `${ciudadNombre}, ${estadoNombre}`;
+
+      if (tipoMapa === 'origen') {
+        setViajeForm({
+            ...viajeForm, 
+            origen: textoCompleto,
+            coordsOrigen: coordsTemporales
+        });
+      } else {
+        setViajeForm({
+            ...viajeForm, 
+            destino: textoCompleto,
+            coordsDestino: coordsTemporales
+        });
+      }
+      
+      setShowMapaModal(false);
+      setCoordsTemporales(null);
+    } catch (error) {
+      console.error("Error al obtener dirección:", error);
+      if (tipoMapa === 'origen') {
+        setViajeForm({...viajeForm, origen: "Ubicación en mapa", coordsOrigen: coordsTemporales});
+      } else {
+        setViajeForm({...viajeForm, destino: "Ubicación en mapa", coordsDestino: coordsTemporales});
+      }
+      setShowMapaModal(false);
+    } finally {
+      setBuscandoDireccion(false);
     }
   };
 
@@ -100,10 +144,17 @@ export const WizardPublicar = ({
               />
               {viajeForm.origen && <X size={16} className="text-slate-300" onClick={() => setViajeForm({...viajeForm, origen: "", coordsOrigen: null})} />}
             </div>
+            {/* Botón Mapa Origen */}
+            <button 
+                onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                className="absolute -bottom-6 right-2 flex items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors"
+            >
+                <Map size={10} /> <span className="text-[8px] font-black uppercase tracking-widest">Pin en Mapa</span>
+            </button>
           </div>
 
           {/* CAMPO DESTINO */}
-          <div className="relative">
+          <div className="relative mt-8">
             <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-[25px] border border-slate-100 focus-within:border-green-400">
               <Navigation size={22} className="text-green-600"/>
               <input 
@@ -115,6 +166,13 @@ export const WizardPublicar = ({
               />
               {viajeForm.destino && <X size={16} className="text-slate-300" onClick={() => setViajeForm({...viajeForm, destino: "", coordsDestino: null})} />}
             </div>
+            {/* Botón Mapa Destino */}
+            <button 
+                onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
+                className="absolute -bottom-6 right-2 flex items-center gap-1 text-slate-400 hover:text-green-600 transition-colors"
+            >
+                <Map size={10} /> <span className="text-[8px] font-black uppercase tracking-widest">Pin en Mapa</span>
+            </button>
           </div>
 
           {/* CAJA DE SUGERENCIAS FLOTANTE */}
@@ -155,16 +213,56 @@ export const WizardPublicar = ({
 
         {/* MAPA DE CONFIRMACIÓN DE RUTA PARA EL CHOFER */}
         {(viajeForm.coordsOrigen || viajeForm.coordsDestino) && (
-          <div className="p-2 animate-in fade-in zoom-in duration-300">
+          <div className="pt-6 animate-in fade-in zoom-in duration-300">
             <h3 className="text-[10px] font-black uppercase text-slate-400 mb-2 italic">📍 Ruta a publicar:</h3>
-            <MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} />
+            <div className="rounded-[25px] overflow-hidden border border-slate-100">
+                <MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} />
+            </div>
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-6">
           <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px]">Cancelar</button>
           <button onClick={() => setPasoWizard(2)} disabled={!viajeForm.origen || !viajeForm.destino} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg disabled:opacity-50">Siguiente</button>
         </div>
+
+        {/* <-- NUEVO: MODAL DEL MAPA --> */}
+        {showMapaModal && (
+            <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+               <div className="p-4 flex items-center justify-between shadow-sm z-10">
+                  <div>
+                    <h3 className="font-black uppercase italic text-slate-800 text-sm">
+                      Ubica tu {tipoMapa === 'origen' ? 'Punto de Salida' : 'Destino'}
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      Mueve el mapa para ajustar el pin
+                    </p>
+                  </div>
+                  <button onClick={() => setShowMapaModal(false)} className="p-2 bg-slate-100 rounded-full text-slate-500">
+                    <X size={18} />
+                  </button>
+               </div>
+               
+               <div className="flex-1 relative bg-slate-100">
+                  <MapaView 
+                    origen={tipoMapa === 'origen' ? coordsTemporales : null}
+                    destino={tipoMapa === 'destino' ? coordsTemporales : null}
+                    onMarkerDragEnd={(coords) => setCoordsTemporales(coords)}
+                    interactivo={true}
+                  />
+               </div>
+
+               <div className="p-6 bg-white shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-10">
+                  <button 
+                    onClick={confirmarUbicacionMapa}
+                    disabled={buscandoDireccion}
+                    className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {buscandoDireccion ? 'Traduciendo Dirección...' : 'Confirmar Ubicación'}
+                  </button>
+               </div>
+            </div>
+        )}
       </div>
     );
   }
@@ -337,7 +435,6 @@ export const WizardPublicar = ({
               const [ciudadOri] = (viajeForm.origen || "").split(', ');
               const [ciudadDest] = (viajeForm.destino || "").split(', ');
 
-              // AQUÍ SE INYECTAN LAS COORDENADAS PARA LA BASE DE DATOS
               const datosBase = {
                 ...viajeForm,
                 idCreador: userData.id,
@@ -354,8 +451,8 @@ export const WizardPublicar = ({
                 },
                 cO: ciudadOri || "S/N", 
                 cD: ciudadDest || "S/N",
-                coordsOrigen: viajeForm.coordsOrigen || null,   // <-- GUARDADO NUEVO
-                coordsDestino: viajeForm.coordsDestino || null, // <-- GUARDADO NUEVO
+                coordsOrigen: viajeForm.coordsOrigen || null,   
+                coordsDestino: viajeForm.coordsDestino || null, 
                 estado: "disponible",
                 timestamp: Date.now()
               };
@@ -375,7 +472,6 @@ export const WizardPublicar = ({
                   
                   await publicarRuta(objetoIda, true); 
 
-                  // LÓGICA DE REGRESO INVIRTIENDO COORDENADAS
                   if (viajeForm.publicarRegreso) {
                     await publicarRuta({
                       ...objetoIda,
@@ -383,8 +479,8 @@ export const WizardPublicar = ({
                       destino: viajeForm.origen,
                       cO: ciudadDest || "S/N",
                       cD: ciudadOri || "S/N",
-                      coordsOrigen: viajeForm.coordsDestino || null, // Se invierten
-                      coordsDestino: viajeForm.coordsOrigen || null, // Se invierten
+                      coordsOrigen: viajeForm.coordsDestino || null, 
+                      coordsDestino: viajeForm.coordsOrigen || null, 
                       fecha: viajeForm.fechaRegreso,
                       hora: viajeForm.horaRegreso || viajeForm.hora,
                       tipoRuta: "vuelta_de_ruta",
