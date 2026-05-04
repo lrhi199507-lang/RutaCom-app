@@ -29,35 +29,53 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     );
   }, []);
 
-  // <-- Función de búsqueda actualizada con API de OpenStreetMap
-  const manejarBusqueda = async (texto, tipo) => {
-    if (tipo === 'origen') setOrigen(texto);
-    else setDestino(texto);
+  // El guardián del temporizador
+  const timerRef = useRef(null);
 
+  const manejarBusqueda = (texto, tipo) => {
+    // 1. Actualizamos el texto en pantalla inmediatamente para que no se sienta lag
+    if (tipo === 'origen') {
+        if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, origen: texto});
+        else setOrigen(texto); // Para VistaInicio
+    } else {
+        if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, destino: texto});
+        else setDestino(texto); // Para VistaInicio
+    }
+
+    // 2. Lógica de búsqueda con Debounce
     if (texto.length > 2) {
       setCampoActivo(tipo);
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${texto}&countrycodes=ve&addressdetails=1&limit=5`
-        );
-        const data = await response.json();
-        
-        const sugerenciasFiltradas = data.map(item => ({
-          ciudad: item.display_name.split(',')[0],
-          estado: item.display_name.split(',')[1] || "Venezuela",
-          lat: parseFloat(item.lat),
-          lon: parseFloat(item.lon)
-        }));
-        
-        setSugerencias(sugerenciasFiltradas);
-      } catch (error) {
-        console.error("Error buscando ubicación:", error);
-      }
+      
+      // Si el usuario sigue escribiendo, cancelamos el "fetch" anterior
+      if (timerRef.current) clearTimeout(timerRef.current);
+      
+      // Iniciamos un nuevo temporizador de 600 milisegundos
+      timerRef.current = setTimeout(async () => {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${texto}&countrycodes=ve&addressdetails=1&limit=5`
+          );
+          const data = await response.json();
+          
+          const sugerenciasFiltradas = data.map(item => ({
+            ciudad: item.address?.city || item.address?.town || item.address?.village || item.name,
+            estado: item.address?.state || "Venezuela",
+            lat: parseFloat(item.lat),
+            lon: parseFloat(item.lon)
+          }));
+          
+          setSugerencias(sugerenciasFiltradas);
+        } catch (error) {
+          console.error("Error buscando ubicación:", error);
+        }
+      }, 600); // <-- Magia aquí: espera 0.6 segundos sin teclear antes de buscar
+      
     } else {
       setSugerencias([]);
     }
   };
-
+  
+  
   const formatearFechaBusqueda = (date) => {
     return date.toLocaleDateString('es-ES', { 
       weekday: 'short', day: 'numeric', month: 'short' 
