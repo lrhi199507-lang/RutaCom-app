@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore'; 
-import { MapPin, Navigation, Users, ShieldCheck, Check, Info, Calendar, X, Map, Clock } from 'lucide-react'; 
+import { MapPin, Navigation, ShieldCheck, X, Map, Clock } from 'lucide-react'; 
 import Toast from './Toast'; 
 import MapaView from '../Map/MapaView'; 
 
@@ -55,7 +55,6 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo }) => {
   if (!isOpen) return null;
 
   const handleConfirm = () => {
-    // Convertir a formato 24h para Firebase
     let h24 = parseInt(hora);
     if (periodo === "PM" && h24 < 12) h24 += 12;
     if (periodo === "AM" && h24 === 12) h24 = 0;
@@ -74,20 +73,17 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo }) => {
         </div>
 
         <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-[30px] p-6 border border-slate-100 mb-6">
-          {/* Columna Hora */}
           <div className="flex flex-col items-center gap-2 h-40 overflow-y-auto scrollbar-hide snap-y">
             {["01","02","03","04","05","06","07","08","09","10","11","12"].map(h => (
               <button key={h} onClick={() => setHora(h)} className={`snap-center text-3xl font-black transition-all ${hora === h ? 'text-blue-600 scale-110' : 'text-slate-300'}`}>{h}</button>
             ))}
           </div>
           <span className="text-3xl font-black text-slate-300 mb-2">:</span>
-          {/* Columna Minutos */}
           <div className="flex flex-col items-center gap-2 h-40 overflow-y-auto scrollbar-hide snap-y">
             {["00","15","30","45"].map(m => (
               <button key={m} onClick={() => setMinuto(m)} className={`snap-center text-3xl font-black transition-all ${minuto === m ? 'text-blue-600 scale-110' : 'text-slate-300'}`}>{m}</button>
             ))}
           </div>
-          {/* AM / PM */}
           <div className="flex flex-col gap-2 ml-4">
             <button onClick={() => setPeriodo("AM")} className={`py-3 px-4 rounded-2xl font-black text-sm transition-all ${periodo === "AM" ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white text-slate-400 border border-slate-200'}`}>AM</button>
             <button onClick={() => setPeriodo("PM")} className={`py-3 px-4 rounded-2xl font-black text-sm transition-all ${periodo === "PM" ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white text-slate-400 border border-slate-200'}`}>PM</button>
@@ -101,7 +97,6 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo }) => {
     </div>
   );
 };
-
 
 export const WizardPublicar = ({ 
   pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
@@ -120,7 +115,6 @@ export const WizardPublicar = ({
   const [coordsTemporales, setCoordsTemporales] = useState(null);
   const [buscandoDireccion, setBuscandoDireccion] = useState(false);
 
-  // Estados para los modales de hora
   const [showTimeModalIda, setShowTimeModalIda] = useState(false);
   const [showTimeModalRegreso, setShowTimeModalRegreso] = useState(false);
 
@@ -219,7 +213,7 @@ export const WizardPublicar = ({
     return `${horas}:${m} ${ampm}`;
   };
 
-  // PASO 1: UBICACIONES (INTACTO)
+  // PASO 1: UBICACIONES
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative">
@@ -310,82 +304,14 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 2: DETALLES (NUEVO DISEÑO UI/UX)
+  // PASO 2: DETALLES
   if (pasoWizard === 2) {
-    // Si no tiene fecha, asignamos la de hoy por defecto
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
 
     return (
-      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
-        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del<br/>Viaje</h2>
-        
-        {/* CARRUSEL DE FECHAS */}
-        <div className="space-y-3">
-          <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Fecha de Salida</p>
-          <CarruselFechas 
-            fechaSeleccionada={viajeForm.fecha} 
-            onSelect={(date) => setViajeForm({...viajeForm, fecha: date})} 
-            minDate={hoy} 
-          />
-        </div>
-
-        {/* SELECTOR DE HORA MODERNO */}
-        <div className="space-y-3">
-           <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Hora de Salida</p>
-           <button 
-             onClick={() => setShowTimeModalIda(true)}
-             className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[25px] flex items-center justify-between active:scale-95 transition-all focus-within:border-blue-400 focus-within:bg-blue-50/30"
-           >
-             <div className="flex items-center gap-3">
-               <Clock className="text-blue-600" size={20} />
-               <span className={`text-xl font-black italic ${viajeForm.hora ? 'text-slate-800' : 'text-slate-300'}`}>
-                 {formatearHoraAmPm(viajeForm.hora)}
-               </span>
-             </div>
-             <div className="bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-               Cambiar
-             </div>
-           </button>
-        </div>
-
-        {/* PRECIO Y ASIENTOS */}
-        <div className="grid grid-cols-2 gap-4 pt-2">
-          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
-            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p>
-            <input type="number" placeholder="0.00" className="bg-transparent w-full text-2xl font-black italic outline-none text-blue-600 placeholder:text-slate-300" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} />
-          </div>
-          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
-            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">🪑 Asientos Libres</p>
-            <input type="number" placeholder="1 a 4" className="bg-transparent w-full text-2xl font-black italic outline-none text-slate-700 placeholder:text-slate-300" value={viajeForm.asientos || ""} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} />
-          </div>
-        </div>
-
-        {/* COMODIDADES */}
-        <div className="space-y-2">
-          <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { id: 'ac', icon: '❄️', label: 'Aire A.' },
-              { id: 'noFumar', icon: '🚭', label: 'Sin Humo' },
-              { id: 'mascotas', icon: '🐾', label: 'Mascotas' },
-            ].map((pref) => (
-              <button 
-                key={pref.id}
-                type="button"
-                onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref.id]: !viajeForm.preferencias?.[pref.id]}})}
-                className={`p-3 rounded-[20px] border-2 transition-all flex flex-col items-center gap-1 ${viajeForm.preferencias?.[pref.id] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-50 bg-white text-slate-400 hover:border-slate-100'}`}
-
-  // PASO 2: DETALLES (NUEVO DISEÑO UI/UX)
-  if (pasoWizard === 2) {
-    // Si no tiene fecha, asignamos la de hoy por defecto
-    if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
-
-    return (
-      // 🔥 LA MAGIA ESTÁ AQUÍ: Agregué pb-32 para que puedas hacer scroll hasta abajo
       <div className="bg-white p-7 pb-32 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
         <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del<br/>Viaje</h2>
         
-        {/* CARRUSEL DE FECHAS */}
         <div className="space-y-3">
           <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Fecha de Salida</p>
           <CarruselFechas 
@@ -395,7 +321,6 @@ export const WizardPublicar = ({
           />
         </div>
 
-        {/* SELECTOR DE HORA MODERNO */}
         <div className="space-y-3">
            <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Hora de Salida</p>
            <button 
@@ -414,7 +339,6 @@ export const WizardPublicar = ({
            </button>
         </div>
 
-        {/* PRECIO Y ASIENTOS */}
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
             <p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p>
@@ -426,7 +350,6 @@ export const WizardPublicar = ({
           </div>
         </div>
 
-        {/* COMODIDADES */}
         <div className="space-y-2">
           <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
           <div className="grid grid-cols-3 gap-2">
@@ -448,7 +371,6 @@ export const WizardPublicar = ({
           </div>
         </div>
 
-        {/* VIAJE DE REGRESO */}
         {!viajeAEditar && (
           <button 
             type="button"
@@ -502,30 +424,16 @@ export const WizardPublicar = ({
         
         <div className="flex gap-3 pt-4">
           <button onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px]">Atrás</button>
-          
-          {/* Ojo: El botón "Siguiente" solo se activa si llenaste Precio, Asientos y Hora */}
           <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 disabled:opacity-50">Siguiente</button>    
         </div>
 
-        {/* Modales de Hora inyectados */}
-        <ModalHoraCustom 
-          isOpen={showTimeModalIda} 
-          onClose={() => setShowTimeModalIda(false)} 
-          onConfirm={(hora) => setViajeForm({...viajeForm, hora})} 
-          titulo="Hora de Salida"
-        />
-        <ModalHoraCustom 
-          isOpen={showTimeModalRegreso} 
-          onClose={() => setShowTimeModalRegreso(false)} 
-          onConfirm={(hora) => setViajeForm({...viajeForm, horaRegreso: hora})} 
-          titulo="Hora de Retorno"
-        />
+        <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(hora) => setViajeForm({...viajeForm, hora})} titulo="Hora de Salida" />
+        <ModalHoraCustom isOpen={showTimeModalRegreso} onClose={() => setShowTimeModalRegreso(false)} onConfirm={(hora) => setViajeForm({...viajeForm, horaRegreso: hora})} titulo="Hora de Retorno" />
       </div>
     );
-    }
-        
-                
-  // PASO 3: AJUSTES FINALES Y GUARDADO (NUEVO CONTROL KYC INCLUIDO)
+  }
+
+  // PASO 3: AJUSTES FINALES
   if (pasoWizard === 3) {
     return (
       <>
@@ -534,25 +442,14 @@ export const WizardPublicar = ({
           
           <div className="space-y-1">
             <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro / Referencia</p>
-            <textarea 
-              rows={2}
-              placeholder="Ej: Frente al Farmatodo de la redoma..." 
-              className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none focus:border-blue-400 focus:bg-blue-50/30 transition-colors"
-              value={viajeForm.referencia} 
-              onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} 
-            />
+            <textarea rows={2} placeholder="Ej: Frente al Farmatodo de la redoma..." className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none focus:border-blue-400 focus:bg-blue-50/30 transition-colors" value={viajeForm.referencia} onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} />
           </div>
 
           <div className="space-y-2">
             <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Equipaje permitido</p>
             <div className="grid grid-cols-3 gap-2">
               {[{id:'ligero', i:'🎒'}, {id:'medio', i:'🧳'}, {id:'pesado', i:'📦'}].map(eq => (
-                <button 
-                  key={eq.id}
-                  type="button"
-                  onClick={() => setViajeForm({...viajeForm, equipaje: eq.id})}
-                  className={`p-3 rounded-[20px] border-2 transition-all ${viajeForm.equipaje === eq.id ? 'border-blue-600 bg-blue-50' : 'border-slate-50 bg-white hover:border-slate-100'}`}
-                >
+                <button key={eq.id} type="button" onClick={() => setViajeForm({...viajeForm, equipaje: eq.id})} className={`p-3 rounded-[20px] border-2 transition-all ${viajeForm.equipaje === eq.id ? 'border-blue-600 bg-blue-50' : 'border-slate-50 bg-white hover:border-slate-100'}`}>
                   <span className="text-xl">{eq.i}</span>
                 </button>
               ))}
@@ -564,11 +461,7 @@ export const WizardPublicar = ({
               <p className="text-[10px] font-black uppercase text-slate-700">Reserva Automática</p>
               <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-1">Aceptar cola sin preguntar</p>
             </div>
-            <button 
-              type="button"
-              onClick={() => setViajeForm({...viajeForm, autoAceptar: !viajeForm.autoAceptar})}
-              className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${viajeForm.autoAceptar ? 'bg-green-500' : 'bg-slate-300'}`}
-            >
+            <button type="button" onClick={() => setViajeForm({...viajeForm, autoAceptar: !viajeForm.autoAceptar})} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${viajeForm.autoAceptar ? 'bg-green-500' : 'bg-slate-300'}`}>
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${viajeForm.autoAceptar ? 'left-7' : 'left-1'}`} />
             </button>
           </div>
@@ -663,14 +556,10 @@ export const WizardPublicar = ({
             className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
           >
             <ShieldCheck size={20} /> 
-            <span className="text-sm">
-              {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
-            </span>
+            <span className="text-sm">{viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}</span>
           </button>
                 
-          <button onClick={() => setPasoWizard(2)} className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4">
-            Atrás
-          </button>
+          <button onClick={() => setPasoWizard(2)} className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4">Atrás</button>
         </div>
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </>
