@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import Toast from "../ui/Toast"; 
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
@@ -51,6 +51,7 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
     </div>
   );
 };
+
 
 // COMPONENTE: Modal para Editar Viaje
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
@@ -306,13 +307,33 @@ export const VistaMisViajes = ({
   const [viajeAEliminar, setViajeAEliminar] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
+  // ¡AQUÍ ES DONDE DEBE IR LA FUNCIÓN!
   const handleEditSave = async (updatedViaje) => {
     try {
-      if(onActualizarViajeFBD) await onActualizarViajeFBD(updatedViaje);
+      const viajeRef = doc(db, "Viajes", updatedViaje.id);
+      
+      const datosNuevos = {
+        precio: Number(updatedViaje.precio),
+        asientos: Number(updatedViaje.asientos),
+        puestos: Number(updatedViaje.asientos), 
+        fecha: updatedViaje.fechaForm,
+        hora: updatedViaje.horaForm,
+        ...(updatedViaje.tipoRuta === 'vuelta_de_ruta' 
+            ? { fechaRegreso: updatedViaje.fechaForm, horaRegreso: updatedViaje.horaForm }
+            : { fechaSalida: updatedViaje.fechaForm, horaSalida: updatedViaje.horaForm })
+      };
+
+      await updateDoc(viajeRef, datosNuevos);
+
+      if (onActualizarViajeFBD) {
+        await onActualizarViajeFBD({ ...updatedViaje, ...datosNuevos });
+      }
+      
       setEditingViaje(null);
-      setToastData({ show: true, message: 'Guardado con éxito' });
+      setToastData({ show: true, message: '¡Viaje actualizado en todo el sistema!' });
     } catch (error) {
-      setToastData({ show: true, message: 'Error al guardar' });
+      console.error("Error al actualizar viaje:", error);
+      setToastData({ show: true, message: 'Error de conexión al guardar' });
     }
   };
 
@@ -323,14 +344,13 @@ export const VistaMisViajes = ({
     if (tienePasajeros || tieneSolicitudes) {
       setToastData({ 
         show: true, 
-        message: 'Hay reservas. Usa "Gestionar Viaje" para cancelar.' // MENSAJE CORTO Y DIRECTO
+        message: 'Hay reservas. Usa "Gestionar Viaje" para cancelar.' 
       });
     } else {
       setViajeAEliminar(viaje.id);
     }
   };
 
-  // 2. EL EJECUTOR: Borra el documento si pasa el filtro del vigilante
   const handleConfirmarEliminar = async () => {
     if (viajeAEliminar) {
       try {
@@ -423,7 +443,7 @@ export const VistaMisViajes = ({
                             key={viaje.id} 
                             viaje={viaje} 
                             tipo="finalizado" 
-                            onClickGestionar={onVerDetalles} // Redirige para abrir modal de calificación
+                            onClickGestionar={onVerDetalles} 
                             userData={userData} 
                           />
                       ))}
@@ -445,7 +465,7 @@ export const VistaMisViajes = ({
                             key={viaje.id} 
                             viaje={viaje} 
                             onEdit={() => setEditingViaje(viaje)}
-                            onDelete={() => handleIntentarEliminar(viaje)} // CONEXIÓN AL VIGILANTE AQUÍ
+                            onDelete={() => handleIntentarEliminar(viaje)} 
                             onClickGestionar={onVerDetalles} 
                             estadoLabel={viaje.estado === 'en_curso' ? 'EN CURSO' : 'DISPONIBLE'}
                         />
@@ -460,8 +480,8 @@ export const VistaMisViajes = ({
                         <ViajeCardChofer 
                             key={viaje.id} 
                             viaje={viaje} 
-                            onEdit={() => {}} // Bloqueado
-                            onDelete={() => {}} // Bloqueado
+                            onEdit={() => {}} 
+                            onDelete={() => {}} 
                             onClickGestionar={onVerDetalles} 
                             estadoLabel="FINALIZADO"
                         />
