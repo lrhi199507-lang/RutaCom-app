@@ -453,9 +453,23 @@ export const WizardPublicar = ({
             </button>
           </div>
 
-          <button 
+                    <button 
             onClick={async () => {
-              if (!userData?.id) return alert("Error: No se detecta tu ID de usuario. Reintenta iniciar sesión.");
+              // 1. Verificación de sesión
+              if (!userData?.id) {
+                setToastMessage("Sesión no detectada. Reinicia la aplicación.");
+                setShowToast(true);
+                return;
+              }
+
+              // 2. VERIFICACIÓN KYC BLINDADA
+              const estaVerificado = userData?.kycVerificado === true || userData?.identidadVerificada === true;
+              
+              if (!estaVerificado) {
+                setToastMessage("Por seguridad, verifica tu identidad en 'Mi Cuenta' para publicar.");
+                setShowToast(true);
+                return; 
+              }
 
               const [ciudadOri] = (viajeForm.origen || "").split(', ');
               const [ciudadDest] = (viajeForm.destino || "").split(', ');
@@ -466,7 +480,7 @@ export const WizardPublicar = ({
                 uidConductor: userData.id,
                 fotoPerfil: userData?.fotoPerfil || "",
                 conductor: userData?.nombre || "Usuario",
-                identidadVerificada: userData?.kycVerificado || userData?.identidadVerificada || false,
+                identidadVerificada: true,
                 datosConductor: {
                   nombre: userData?.nombre || "Usuario",
                   foto: userData?.fotoPerfil || "",
@@ -512,7 +526,7 @@ export const WizardPublicar = ({
                       conRetornoProgramado: false
                     }, true);
                   }
-                  setToastMessage("Publicado con éxito");
+                  setToastMessage("¡Publicado con éxito!");
                 }
 
                 setShowToast(true);
@@ -524,7 +538,8 @@ export const WizardPublicar = ({
 
               } catch (e) {
                 console.error("ERROR CRÍTICO AL PUBLICAR:", e);
-                alert("Error técnico al guardar en Firebase.");
+                setToastMessage("Ocurrió un error de conexión al publicar.");
+                setShowToast(true);
               }
             }}
             className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
@@ -534,6 +549,7 @@ export const WizardPublicar = ({
               {viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}
             </span>
           </button>
+          
                 
           <button 
             onClick={() => setPasoWizard(2)} 
