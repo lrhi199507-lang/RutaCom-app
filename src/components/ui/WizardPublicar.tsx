@@ -374,6 +374,72 @@ export const WizardPublicar = ({
                 type="button"
                 onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref.id]: !viajeForm.preferencias?.[pref.id]}})}
                 className={`p-3 rounded-[20px] border-2 transition-all flex flex-col items-center gap-1 ${viajeForm.preferencias?.[pref.id] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-50 bg-white text-slate-400 hover:border-slate-100'}`}
+
+  // PASO 2: DETALLES (NUEVO DISEÑO UI/UX)
+  if (pasoWizard === 2) {
+    // Si no tiene fecha, asignamos la de hoy por defecto
+    if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
+
+    return (
+      // 🔥 LA MAGIA ESTÁ AQUÍ: Agregué pb-32 para que puedas hacer scroll hasta abajo
+      <div className="bg-white p-7 pb-32 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del<br/>Viaje</h2>
+        
+        {/* CARRUSEL DE FECHAS */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Fecha de Salida</p>
+          <CarruselFechas 
+            fechaSeleccionada={viajeForm.fecha} 
+            onSelect={(date) => setViajeForm({...viajeForm, fecha: date})} 
+            minDate={hoy} 
+          />
+        </div>
+
+        {/* SELECTOR DE HORA MODERNO */}
+        <div className="space-y-3">
+           <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Hora de Salida</p>
+           <button 
+             onClick={() => setShowTimeModalIda(true)}
+             className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[25px] flex items-center justify-between active:scale-95 transition-all focus-within:border-blue-400 focus-within:bg-blue-50/30"
+           >
+             <div className="flex items-center gap-3">
+               <Clock className="text-blue-600" size={20} />
+               <span className={`text-xl font-black italic ${viajeForm.hora ? 'text-slate-800' : 'text-slate-300'}`}>
+                 {formatearHoraAmPm(viajeForm.hora)}
+               </span>
+             </div>
+             <div className="bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+               Cambiar
+             </div>
+           </button>
+        </div>
+
+        {/* PRECIO Y ASIENTOS */}
+        <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
+            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p>
+            <input type="number" placeholder="0.00" className="bg-transparent w-full text-2xl font-black italic outline-none text-blue-600 placeholder:text-slate-300" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} />
+          </div>
+          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
+            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">🪑 Asientos Libres</p>
+            <input type="number" placeholder="1 a 4" className="bg-transparent w-full text-2xl font-black italic outline-none text-slate-700 placeholder:text-slate-300" value={viajeForm.asientos || ""} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} />
+          </div>
+        </div>
+
+        {/* COMODIDADES */}
+        <div className="space-y-2">
+          <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'ac', icon: '❄️', label: 'Aire A.' },
+              { id: 'noFumar', icon: '🚭', label: 'Sin Humo' },
+              { id: 'mascotas', icon: '🐾', label: 'Mascotas' },
+            ].map((pref) => (
+              <button 
+                key={pref.id}
+                type="button"
+                onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref.id]: !viajeForm.preferencias?.[pref.id]}})}
+                className={`p-3 rounded-[20px] border-2 transition-all flex flex-col items-center gap-1 ${viajeForm.preferencias?.[pref.id] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-50 bg-white text-slate-400 hover:border-slate-100'}`}
               >
                 <span className="text-xl">{pref.icon}</span>
                 <span className="text-[8px] font-black uppercase text-center tracking-widest mt-1">{pref.label}</span>
@@ -436,7 +502,9 @@ export const WizardPublicar = ({
         
         <div className="flex gap-3 pt-4">
           <button onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px]">Atrás</button>
-          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.fecha || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 disabled:opacity-50">Siguiente</button>    
+          
+          {/* Ojo: El botón "Siguiente" solo se activa si llenaste Precio, Asientos y Hora */}
+          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 disabled:opacity-50">Siguiente</button>    
         </div>
 
         {/* Modales de Hora inyectados */}
@@ -454,8 +522,9 @@ export const WizardPublicar = ({
         />
       </div>
     );
-  }
-
+    }
+        
+                
   // PASO 3: AJUSTES FINALES Y GUARDADO (NUEVO CONTROL KYC INCLUIDO)
   if (pasoWizard === 3) {
     return (
