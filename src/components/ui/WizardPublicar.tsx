@@ -38,18 +38,17 @@ export const WizardPublicar = ({
 
   const timerRef = useRef(null);
 
-  const manejarBusqueda = (texto, tipo) => {
+    const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
-        if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, origen: texto});
+        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, origen: texto}));
         else setOrigen(texto); 
     } else {
-        if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, destino: texto});
+        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, destino: texto}));
         else setDestino(texto); 
     }
 
     if (texto.length > 2) {
       setCampoActivo(tipo);
-      
       if (timerRef.current) clearTimeout(timerRef.current);
       
       timerRef.current = setTimeout(async () => {
@@ -67,15 +66,27 @@ export const WizardPublicar = ({
           }));
           
           setSugerencias(sugerenciasFiltradas);
+
+          // 🔥 EL MISMO TRUCO AQUÍ: Guarda las coordenadas en silencio al publicar
+          if (sugerenciasFiltradas.length > 0) {
+            const mejorOpcion = { lat: sugerenciasFiltradas[0].lat, lon: sugerenciasFiltradas[0].lon };
+            if (tipo === 'origen') {
+              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsOrigen: mejorOpcion}));
+              else setCoordsOrigen(mejorOpcion);
+            } else {
+              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsDestino: mejorOpcion}));
+              else setCoordsDestino(mejorOpcion);
+            }
+          }
         } catch (error) {
           console.error("Error buscando ubicación:", error);
         }
       }, 600); 
-      
     } else {
       setSugerencias([]);
     }
   };
+  
 
   // <-- Función Reverse Geocoding
    const confirmarUbicacionMapa = async () => {
