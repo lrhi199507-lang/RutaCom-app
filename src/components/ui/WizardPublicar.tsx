@@ -38,7 +38,7 @@ export const WizardPublicar = ({
 
   const timerRef = useRef(null);
 
-    const manejarBusqueda = (texto, tipo) => {
+      const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
         if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, origen: texto}));
         else setOrigen(texto); 
@@ -86,7 +86,6 @@ export const WizardPublicar = ({
       setSugerencias([]);
     }
   };
-  
 
   // <-- Función Reverse Geocoding
    const confirmarUbicacionMapa = async () => {
