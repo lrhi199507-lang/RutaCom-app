@@ -125,26 +125,63 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }
   };
   
-  
+    // FÓRMULA DE HAVERSINE: Calcula distancia en KM entre dos puntos GPS
+  const calcularDistancia = (lat1, lon1, lat2, lon2) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; 
+  };
 
-  const viajesFiltrados = useMemo(() => {
+    const viajesFiltrados = useMemo(() => {
     const lista = Array.isArray(viajes) ? viajes : [];
+    const RADIO_BUSQUEDA_KM = 15; // Rango de tolerancia (Ej: 15 km de Valencia a La Isabelica/Los Guayos)
     
     const fechaBusquedaBase = new Date(fechaSeleccionada);
     const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
     const filtrados = lista.filter(v => {
+      // 1. Filtro de Estado
       if (v.estado && v.estado !== 'disponible') return false;
 
-      const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
-      const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
-      const coincideTexto = nomO.includes(origen.toLowerCase()) && nomD.includes(destino.toLowerCase());
+      // 2. Filtro de Origen (Por distancia o por texto como plan B)
+      let coincideOrigen = true;
+      if (origen.trim() !== "") {
+        if (coordsOrigen && v.coordsOrigen) {
+          const dist = calcularDistancia(coordsOrigen.lat, coordsOrigen.lon, v.coordsOrigen.lat, v.coordsOrigen.lon);
+          coincideOrigen = dist !== null && dist <= RADIO_BUSQUEDA_KM;
+        } else {
+          const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
+          coincideOrigen = nomO.includes(origen.toLowerCase());
+        }
+      }
 
+      // 3. Filtro de Destino (Por distancia o por texto como plan B)
+      let coincideDestino = true;
+      if (destino.trim() !== "") {
+        if (coordsDestino && v.coordsDestino) {
+          const dist = calcularDistancia(coordsDestino.lat, coordsDestino.lon, v.coordsDestino.lat, v.coordsDestino.lon);
+          coincideDestino = dist !== null && dist <= RADIO_BUSQUEDA_KM;
+        } else {
+          const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
+          coincideDestino = nomD.includes(destino.toLowerCase());
+        }
+      }
+
+      const coincideTextoYDistancia = coincideOrigen && coincideDestino;
+
+      // 4. Filtro de Fecha
       const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
       const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
       const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
       const coincideFecha = fechaViajeStr === fechaBusquedaStr;
 
+      // 5. Filtro de Cupos
       const pasajerosConfirmados = Array.isArray(v.pasajeros) ? v.pasajeros : [];
       const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
       const puestosTotales = Number(v.asientos) || Number(v.puestos) || 1;
@@ -152,7 +189,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       
       const cabenTodos = cuposRestantes >= totalPasajeros;
 
-      return coincideTexto && coincideFecha && cabenTodos;
+      return coincideTextoYDistancia && coincideFecha && cabenTodos;
     });
 
     return [...filtrados].sort((a, b) => {
@@ -160,7 +197,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       const precioB = parseFloat(String(b.precio).replace(/[^0-9.]/g, '')) || 0;
       return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
     });
-  }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros]);
+  }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros, coordsOrigen, coordsDestino]);
+  
   
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
