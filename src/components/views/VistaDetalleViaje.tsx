@@ -164,7 +164,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  const solicitarCola = async () => {
+    const solicitarCola = async () => {
     if (puestosQueQuiero > cuposRestantes) {
       setToastMessage("No hay suficientes puestos disponibles");
       setShowToast(true);
@@ -173,37 +173,73 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     
     setCargando(true);
     try {
-      await updateDoc(doc(db, "Viajes", viaje.id), {
-        reservasPendientes: arrayUnion({ 
-          id: userData?.id || userData?.uid, 
-          nombre: userData?.nombre || "Usuario", 
-          fotoPerfil: userData?.fotoPerfil || null, 
-          estado: 'pendiente',
-          puestosSolicitados: puestosQueQuiero,
-          adultosExtra: adultosExtra,           
-          ninosExtra: ninosExtra                
-        })
-      });
+      const idConductor = viaje?.uidConductor || viaje?.idCreador;
+      const viajeRef = doc(db, "Viajes", viaje.id);
       
-      const idDestino = viaje?.uidConductor || viaje?.idCreador;
+      const datosPasajeroBase = {
+        id: userData?.id || userData?.uid, 
+        nombre: userData?.nombre || "Usuario", 
+        fotoPerfil: userData?.fotoPerfil || null, 
+        puestosSolicitados: puestosQueQuiero,
+        adultosExtra: adultosExtra,           
+        ninosExtra: ninosExtra
+      };
 
-      if (idDestino) {
-        const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
-        await enviarNotificacion(
-          String(idDestino), 
-          "¡Nueva Solicitud!",
-          `${userData?.nombre || 'Un pasajero'} quiere unirse a tu viaje${extraTexto}.`,
-          "viaje"
-        );
-        setToastMessage("Solicitud enviada al conductor");
+      // 🔥 LÓGICA DE RESERVA AUTOMÁTICA
+      if (viaje.autoAceptar === true) {
+        // 1. Generamos el PIN de una vez porque ya está confirmado
+        const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        // 2. Lo metemos directamente al arreglo de 'pasajeros' (Confirmados)
+        await updateDoc(viajeRef, {
+          pasajeros: arrayUnion({ 
+            ...datosPasajeroBase, 
+            estado: 'confirmado', 
+            pin: pinGenerado, 
+            abordado: false, 
+            calificado: false 
+          })
+        });
+
+        // 3. Notificamos al conductor que alguien se unió automáticamente
+        if (idConductor) {
+          await enviarNotificacion(
+            idConductor,
+            "¡Nuevo Pasajero!",
+            `${userData?.nombre} se ha unido a tu viaje automáticamente.`,
+            "exito"
+          );
+        }
+        setToastMessage("¡Reserva confirmada al instante!");
+        
       } else {
-        setToastMessage("Error: No se encontró el ID del conductor");
+        // --- LÓGICA DE RESERVA MANUAL (ESPERAR APROBACIÓN) ---
+        await updateDoc(viajeRef, {
+          reservasPendientes: arrayUnion({ 
+            ...datosPasajeroBase, 
+            estado: 'pendiente' 
+          })
+        });
+        
+        if (idConductor) {
+          const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
+          await enviarNotificacion(
+            idConductor, 
+            "¡Nueva Solicitud!",
+            `${userData?.nombre || 'Un pasajero'} quiere unirse a tu viaje${extraTexto}.`,
+            "viaje"
+          );
+          setToastMessage("Solicitud enviada al conductor");
+        } else {
+          setToastMessage("Error: No se encontró el ID del conductor");
+        }
       }
       
       setModalAcompanantes(false); 
       setShowToast(true);
     } catch (e) { 
-      setToastMessage("Error al procesar");
+      console.error("Error en reserva:", e);
+      setToastMessage("Error al procesar la reserva");
       setShowToast(true);
     } finally { 
       setCargando(false); 
