@@ -1,10 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin } from 'lucide-react'; // <-- Para el Pin fijo en el centro
+import { MapPin } from 'lucide-react';
 import './mapStyles.css';
 
-// Íconos clásicos para el modo "Ver Ruta"
 const BlueIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -19,7 +18,6 @@ const GreenIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-// Componente invisible que auto-ajusta el zoom del mapa para ver los dos puntos
 const MapUpdater = ({ origen, destino }) => {
   const map = useMap();
   
@@ -37,7 +35,6 @@ const MapUpdater = ({ origen, destino }) => {
   return null;
 };
 
-// NUEVO: Rastreador del centro del mapa (Modo "Yummy")
 const CenterWatcher = ({ onMapMove }) => {
   const map = useMapEvents({
     moveend: () => {
@@ -50,19 +47,47 @@ const CenterWatcher = ({ onMapMove }) => {
   return null;
 };
 
-// COMPONENTE PRINCIPAL
 const MapaView = ({ origen, destino, interactivo = false, onMarkerDragEnd }) => {
-  // Centro por defecto (ej. Valencia) si no hay nada seleccionado
   const defaultCenter = { lat: 10.1620, lon: -67.9567 };
   const initialCoords = origen || destino || defaultCenter;
+  
+  // ESTADO PARA GUARDAR LA RUTA CALLE POR CALLE
+  const [rutaCalles, setRutaCalles] = useState([]);
+
+  useEffect(() => {
+    // Solo busca la ruta si tenemos ambos puntos y NO estamos en modo mover mapa
+    if (origen && destino && !interactivo) {
+      const trazarRuta = async () => {
+        try {
+          // OSRM API (Gratuita y sin API Key). Ojo: OSRM usa longitud,latitud
+          const url = `https://router.project-osrm.org/route/v1/driving/${origen.lon},${origen.lat};${destino.lon},${destino.lat}?overview=full&geometries=geojson`;
+          const respuesta = await fetch(url);
+          const data = await respuesta.json();
+          
+          if (data.routes && data.routes.length > 0) {
+            // GeoJSON trae [lon, lat], lo invertimos para Leaflet [lat, lon]
+            const coords = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            setRutaCalles(coords);
+          }
+        } catch (error) {
+          console.error("Error trazando calles:", error);
+          // Si el servidor gratis falla, fallback a la línea recta
+          setRutaCalles([[origen.lat, origen.lon], [destino.lat, destino.lon]]);
+        }
+      };
+      trazarRuta();
+    } else {
+      setRutaCalles([]);
+    }
+  }, [origen, destino, interactivo]);
 
   return (
     <div className="map-wrapper relative w-full h-full min-h-[300px] border-2 border-slate-200 rounded-[25px] overflow-hidden shadow-sm">
       
       <MapContainer 
         center={[initialCoords.lat, initialCoords.lon]} 
-        zoom={interactivo ? 16 : 13} // Más cerca si el usuario va a elegir la calle
-        scrollWheelZoom={interactivo} // Bloqueado en vista estática, libre en interactivo
+        zoom={interactivo ? 16 : 13} 
+        scrollWheelZoom={interactivo} 
         className="w-full h-full z-0"
       >
         <TileLayer
@@ -70,24 +95,25 @@ const MapaView = ({ origen, destino, interactivo = false, onMarkerDragEnd }) => 
           attribution='&copy; OSM'
         />
         
-        {/* LÓGICA DE ACTUALIZACIÓN SEGÚN EL MODO */}
         {!interactivo && <MapUpdater origen={origen} destino={destino} />}
         {interactivo && <CenterWatcher onMapMove={onMarkerDragEnd} />}
 
-        {/* PINES CLÁSICOS Y RUTA (SOLO MODO ESTÁTICO) */}
         {!interactivo && origen && <Marker position={[origen.lat, origen.lon]} icon={BlueIcon} />}
         {!interactivo && destino && <Marker position={[destino.lat, destino.lon]} icon={GreenIcon} />}
-        {!interactivo && origen && destino && (
+        
+        {/* DIBUJO DE LA RUTA INTELIGENTE */}
+        {!interactivo && rutaCalles.length > 0 && (
           <Polyline 
-            positions={[[origen.lat, origen.lon], [destino.lat, destino.lon]]} 
+            positions={rutaCalles} 
             color="#2563eb"
-            weight={4}
-            dashArray="10, 10" 
+            weight={5}
+            opacity={0.8}
+            lineCap="round"
+            lineJoin="round"
           />
         )}
       </MapContainer>
 
-      {/* EL PIN CENTRAL FIJO (SOLO MODO INTERACTIVO) */}
       {interactivo && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-[1000] pointer-events-none drop-shadow-2xl flex flex-col items-center">
           <div className="bg-slate-900 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full mb-1 shadow-lg">
