@@ -78,48 +78,58 @@ export const WizardPublicar = ({
   };
 
   // <-- Función Reverse Geocoding
-  const confirmarUbicacionMapa = async () => {
+   const confirmarUbicacionMapa = async () => {
     if (!coordsTemporales) return;
     
     setBuscandoDireccion(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=10`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18` 
+        // Nota: Le subí el zoom a 18 para que traiga datos de calles y barrios
       );
       const data = await response.json();
       
-      const ciudadNombre = data.address?.city || data.address?.town || data.address?.village || data.name || "Ubicación seleccionada";
-      const estadoNombre = data.address?.state || "Venezuela";
-      const textoCompleto = `${ciudadNombre}, ${estadoNombre}`;
+      const address = data.address || {};
+      
+      // 1. Buscamos lo más específico (Barrio, urbanización, calle)
+      const zonaLocal = address.suburb || address.neighbourhood || address.residential || address.road || "";
+      // 2. Buscamos la ciudad o municipio
+      const ciudadMunicipio = address.city || address.town || address.village || address.county || data.name || "";
+      // 3. Buscamos el estado
+      const estado = address.state || "Venezuela";
+
+      // Juntamos todo filtrando los vacíos y evitando repeticiones
+      const partes = [zonaLocal, ciudadMunicipio, estado].filter(Boolean);
+      const partesUnicas = [...new Set(partes)]; 
+      const textoCompleto = partesUnicas.join(", "); // Ej: "Paraparal, Los Guayos, Carabobo"
 
       if (tipoMapa === 'origen') {
-        setViajeForm({
-            ...viajeForm, 
-            origen: textoCompleto,
-            coordsOrigen: coordsTemporales
-        });
+        // Usa setViajeForm si estás en WizardPublicar, o setOrigen si estás en VistaInicio
+        if (typeof setViajeForm !== 'undefined') {
+            setViajeForm({...viajeForm, origen: textoCompleto, coordsOrigen: coordsTemporales});
+        } else {
+            setOrigen(textoCompleto);
+            setCoordsOrigen(coordsTemporales);
+        }
       } else {
-        setViajeForm({
-            ...viajeForm, 
-            destino: textoCompleto,
-            coordsDestino: coordsTemporales
-        });
+        if (typeof setViajeForm !== 'undefined') {
+            setViajeForm({...viajeForm, destino: textoCompleto, coordsDestino: coordsTemporales});
+        } else {
+            setDestino(textoCompleto);
+            setCoordsDestino(coordsTemporales);
+        }
       }
       
       setShowMapaModal(false);
       setCoordsTemporales(null);
     } catch (error) {
       console.error("Error al obtener dirección:", error);
-      if (tipoMapa === 'origen') {
-        setViajeForm({...viajeForm, origen: "Ubicación en mapa", coordsOrigen: coordsTemporales});
-      } else {
-        setViajeForm({...viajeForm, destino: "Ubicación en mapa", coordsDestino: coordsTemporales});
-      }
       setShowMapaModal(false);
     } finally {
       setBuscandoDireccion(false);
     }
   };
+
 
 
   // PASO 1: UBICACIONES
