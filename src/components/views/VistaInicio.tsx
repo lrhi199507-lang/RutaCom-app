@@ -28,18 +28,18 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
 
   const timerRef = useRef(null);
 
+  // --- NUEVA BÚSQUEDA INTELIGENTE ---
   const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
-        if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, origen: texto});
+        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, origen: texto}));
         else setOrigen(texto); 
     } else {
-        if (typeof setViajeForm !== 'undefined') setViajeForm({...viajeForm, destino: texto});
+        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, destino: texto}));
         else setDestino(texto); 
     }
 
     if (texto.length > 2) {
       setCampoActivo(tipo);
-      
       if (timerRef.current) clearTimeout(timerRef.current);
       
       timerRef.current = setTimeout(async () => {
@@ -57,11 +57,22 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
           }));
           
           setSugerencias(sugerenciasFiltradas);
+
+          // 🔥 MAGIA: Auto-asignar las coordenadas de la mejor opción ocultamente
+          if (sugerenciasFiltradas.length > 0) {
+            const mejorOpcion = { lat: sugerenciasFiltradas[0].lat, lon: sugerenciasFiltradas[0].lon };
+            if (tipo === 'origen') {
+              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsOrigen: mejorOpcion}));
+              else setCoordsOrigen(mejorOpcion);
+            } else {
+              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsDestino: mejorOpcion}));
+              else setCoordsDestino(mejorOpcion);
+            }
+          }
         } catch (error) {
           console.error("Error buscando ubicación:", error);
         }
       }, 600); 
-      
     } else {
       setSugerencias([]);
     }
@@ -73,46 +84,26 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }).replace('.', '');
   };
 
-    const confirmarUbicacionMapa = async () => {
+  const confirmarUbicacionMapa = async () => {
     if (!coordsTemporales) return;
-    
     setBuscandoDireccion(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18` 
-        // Nota: Le subí el zoom a 18 para que traiga datos de calles y barrios
-      );
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
       const data = await response.json();
-      
       const address = data.address || {};
       
-      // 1. Buscamos lo más específico (Barrio, urbanización, calle)
       const zonaLocal = address.suburb || address.neighbourhood || address.residential || address.road || "";
-      // 2. Buscamos la ciudad o municipio
       const ciudadMunicipio = address.city || address.town || address.village || address.county || data.name || "";
-      // 3. Buscamos el estado
       const estado = address.state || "Venezuela";
-
-      // Juntamos todo filtrando los vacíos y evitando repeticiones
       const partes = [zonaLocal, ciudadMunicipio, estado].filter(Boolean);
-      const partesUnicas = [...new Set(partes)]; 
-      const textoCompleto = partesUnicas.join(", "); // Ej: "Paraparal, Los Guayos, Carabobo"
+      const textoCompleto = [...new Set(partes)].join(", ");
 
       if (tipoMapa === 'origen') {
-        // Usa setViajeForm si estás en WizardPublicar, o setOrigen si estás en VistaInicio
-        if (typeof setViajeForm !== 'undefined') {
-            setViajeForm({...viajeForm, origen: textoCompleto, coordsOrigen: coordsTemporales});
-        } else {
-            setOrigen(textoCompleto);
-            setCoordsOrigen(coordsTemporales);
-        }
+        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, origen: textoCompleto, coordsOrigen: coordsTemporales}));
+        else { setOrigen(textoCompleto); setCoordsOrigen(coordsTemporales); }
       } else {
-        if (typeof setViajeForm !== 'undefined') {
-            setViajeForm({...viajeForm, destino: textoCompleto, coordsDestino: coordsTemporales});
-        } else {
-            setDestino(textoCompleto);
-            setCoordsDestino(coordsTemporales);
-        }
+        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, destino: textoCompleto, coordsDestino: coordsTemporales}));
+        else { setDestino(textoCompleto); setCoordsDestino(coordsTemporales); }
       }
       
       setShowMapaModal(false);
@@ -124,72 +115,81 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       setBuscandoDireccion(false);
     }
   };
-  
-    // FÓRMULA DE HAVERSINE: Calcula distancia en KM entre dos puntos GPS
+
+  // FÓRMULA DE DISTANCIA (HAVERSINE)
   const calcularDistancia = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-    const R = 6371; // Radio de la Tierra en km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c; 
   };
 
-    const viajesFiltrados = useMemo(() => {
+  // NORMALIZADOR DE TEXTOS BLINDADO
+  const normalizar = (str) => {
+    if (!str) return "";
+    return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  };
+
+  // --- FILTRO INTELIGENTE ---
+  const viajesFiltrados = useMemo(() => {
     const lista = Array.isArray(viajes) ? viajes : [];
-    const RADIO_BUSQUEDA_KM = 15; // Rango de tolerancia (Ej: 15 km de Valencia a La Isabelica/Los Guayos)
+    const RADIO_KM = 20; // 20 km de tolerancia
     
     const fechaBusquedaBase = new Date(fechaSeleccionada);
     const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
     const filtrados = lista.filter(v => {
-      // 1. Filtro de Estado
       if (v.estado && v.estado !== 'disponible') return false;
 
-      // 2. Filtro de Origen (Por distancia o por texto como plan B)
+      // 1. EVALUAR ORIGEN
       let coincideOrigen = true;
       if (origen.trim() !== "") {
+        const origenNorm = normalizar(origen);
+        const textoViajeOrigen = normalizar(`${v.cO || ""} ${v.eO || ""} ${v.origen || ""}`);
+        
+        // Coincidencia de texto crudo (Ideal si busca "Carabobo" o "Isabelica")
+        const matchTexto = textoViajeOrigen.includes(origenNorm) || origenNorm.includes(textoViajeOrigen);
+        
+        // Coincidencia kilométrica (Ideal si busca "Valencia" y el viaje es de "Los Guayos")
+        let matchDist = false;
         if (coordsOrigen && v.coordsOrigen) {
           const dist = calcularDistancia(coordsOrigen.lat, coordsOrigen.lon, v.coordsOrigen.lat, v.coordsOrigen.lon);
-          coincideOrigen = dist !== null && dist <= RADIO_BUSQUEDA_KM;
-        } else {
-          const nomO = `${v.cO || v.origen || ""} ${v.eO || ""}`.toLowerCase();
-          coincideOrigen = nomO.includes(origen.toLowerCase());
+          matchDist = dist !== null && dist <= RADIO_KM;
         }
+        coincideOrigen = matchTexto || matchDist;
       }
 
-      // 3. Filtro de Destino (Por distancia o por texto como plan B)
+      // 2. EVALUAR DESTINO
       let coincideDestino = true;
       if (destino.trim() !== "") {
+        const destinoNorm = normalizar(destino);
+        const textoViajeDest = normalizar(`${v.cD || ""} ${v.eD || ""} ${v.destino || ""}`);
+        
+        const matchTexto = textoViajeDest.includes(destinoNorm) || destinoNorm.includes(textoViajeDest);
+        
+        let matchDist = false;
         if (coordsDestino && v.coordsDestino) {
           const dist = calcularDistancia(coordsDestino.lat, coordsDestino.lon, v.coordsDestino.lat, v.coordsDestino.lon);
-          coincideDestino = dist !== null && dist <= RADIO_BUSQUEDA_KM;
-        } else {
-          const nomD = `${v.cD || v.destino || ""} ${v.eD || ""}`.toLowerCase();
-          coincideDestino = nomD.includes(destino.toLowerCase());
+          matchDist = dist !== null && dist <= RADIO_KM;
         }
+        coincideDestino = matchTexto || matchDist;
       }
 
-      const coincideTextoYDistancia = coincideOrigen && coincideDestino;
-
-      // 4. Filtro de Fecha
+      // 3. FECHA Y CUPOS
       const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
       const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
       const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
       const coincideFecha = fechaViajeStr === fechaBusquedaStr;
 
-      // 5. Filtro de Cupos
       const pasajerosConfirmados = Array.isArray(v.pasajeros) ? v.pasajeros : [];
       const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
       const puestosTotales = Number(v.asientos) || Number(v.puestos) || 1;
-      const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
-      
-      const cabenTodos = cuposRestantes >= totalPasajeros;
+      const cabenTodos = Math.max(0, puestosTotales - asientosOcupados) >= totalPasajeros;
 
-      return coincideTextoYDistancia && coincideFecha && cabenTodos;
+      return coincideOrigen && coincideDestino && coincideFecha && cabenTodos;
     });
 
     return [...filtrados].sort((a, b) => {
@@ -199,7 +199,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     });
   }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros, coordsOrigen, coordsDestino]);
   
-  
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <div className="p-4 space-y-6">
@@ -207,7 +206,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
           <div className="bg-slate-50/50 rounded-[28px] overflow-hidden">
-            {/* INPUT ORIGEN CON ICONO INTEGRADO */}
             <div className="flex items-center gap-3 p-4 focus-within:bg-blue-50/30 transition-colors">
               <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
               <input 
@@ -230,7 +228,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
             
             <div className="h-[1px] bg-white mx-4" />
             
-            {/* INPUT DESTINO CON ICONO INTEGRADO */}
             <div className="flex items-center gap-3 p-4 focus-within:bg-green-50/30 transition-colors">
               <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
               <input 
@@ -448,7 +445,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         </div>
       )}
 
-      {/* <-- MODAL DEL MAPA ACTUALIZADO --> */}
       {showMapaModal && (
         <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
            <div className="p-4 flex items-center justify-between shadow-sm z-10">
