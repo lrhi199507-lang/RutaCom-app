@@ -50,13 +50,16 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Sincronización Capacitor
+       - name: Sincronización Capacitor
         run: |
-          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest --legacy-peer-deps
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest --legacy-peer-deps
           echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'RutaCom', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
           npx cap add android || true
+          cp google-services.json android/app/
+          sed -i '/dependencies {/a \        classpath "com.google.gms:google-services:4.4.1"' android/build.gradle
+          echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
           npx cap sync android
-
+          
       - name: Generar APK Final
         run: |
           cd android
