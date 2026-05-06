@@ -33,7 +33,7 @@ jobs:
             <head>
               <meta charset="UTF-8" />
               <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-              <title>RutaCom</title>
+              <title>Dame la cola</title>
             </head>
             <body>
               <div id="root"></div>
@@ -41,7 +41,7 @@ jobs:
             </body>
           </html>' > index.html
 
-          # 4. COMPILAR (Con el plugin de Vite que pusiste antes)
+          # 4. COMPILAR
           npx vite build --outDir dist
 
       - name: Set up JDK 21
@@ -50,10 +50,10 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-       - name: Sincronización Capacitor
+      - name: Sincronización Capacitor
         run: |
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest --legacy-peer-deps
-          echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'RutaCom', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
+          echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'Dame la cola', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
           npx cap add android || true
           cp google-services.json android/app/
           sed -i '/dependencies {/a \        classpath "com.google.gms:google-services:4.4.1"' android/build.gradle
@@ -69,6 +69,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RutaCom-App-Fixed
+          name: DameLaCola-App
           path: android/app/build/outputs/apk/debug/*.apk
-          
