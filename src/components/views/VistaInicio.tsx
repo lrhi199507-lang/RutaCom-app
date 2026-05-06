@@ -2,7 +2,9 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Search, MapPin, Calendar, X, ChevronRight, Users, Plus, Minus, Map } from 'lucide-react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { UBICACIONES } from '../../constants/ubicaciones';
-import MapaView from '../Map/MapaView'; 
+import MapaView from '../Map/MapaView';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { doc, updateDoc } from 'firebase/firestore';
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
   const [origen, setOrigen] = useState("");
