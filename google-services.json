@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1080063705561",
+    "project_id": "rutacom-4ea87",
+    "storage_bucket": "rutacom-4ea87.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1080063705561:android:13e55af74b0c48340ad9c8",
+        "android_client_info": {
+          "package_name": "com.rutacom.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvlwpZ541-PGT4gUerMiyjE8y72FXqrkw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
