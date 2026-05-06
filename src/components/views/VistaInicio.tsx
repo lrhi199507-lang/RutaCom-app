@@ -5,6 +5,7 @@ import { UBICACIONES } from '../../constants/ubicaciones';
 import MapaView from '../Map/MapaView';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig'; 
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
   const [origen, setOrigen] = useState("");
@@ -200,10 +201,66 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
     });
   }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros, coordsOrigen, coordsDestino]);
+
+    // --- ACTIVAR NOTIFICACIONES NATIVAS (CAPACITOR) ---
+  const activarNotificacionesNativas = async () => {
+    try {
+      console.log("Verificando permisos nativos de Android...");
+      // 1. Preguntarle a Android si tenemos permiso
+      let permStatus = await PushNotifications.checkPermissions();
+
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+
+      if (permStatus.receive !== 'granted') {
+        alert("Necesitas aceptar los permisos para recibir alertas de viajes.");
+        return;
+      }
+
+      // 2. Conectarse a los servidores de Google FCM
+      await PushNotifications.register();
+
+      // 3. Escuchar cuando Android nos entregue el Token
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('¡Token Nativo generado!:', token.value);
+        
+        // 4. Guardarlo en el perfil de este usuario en Firestore
+        if (userData?.id) {
+          await updateDoc(doc(db, "usuarios", userData.id), {
+            fcmTokenNativo: token.value
+          });
+          alert("¡Teléfono registrado para notificaciones!");
+        }
+      });
+
+      // Manejo de errores
+      PushNotifications.addListener('registrationError', (error) => {
+        console.error('Error al registrar el dispositivo:', error);
+      });
+
+      // Escuchar si llega una notificación MIENTRAS la app está abierta
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        console.log('Notificación recibida con la app abierta:', notification);
+        // Aquí más adelante conectaremos esto con tu campanita
+      });
+
+    } catch (error) {
+      console.error("Error crítico con Capacitor Push:", error);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <div className="p-4 space-y-6">
+                {/* BOTÓN TEMPORAL DE REGISTRO PUSH */}
+        <button 
+          onClick={activarNotificacionesNativas} 
+          className="w-full bg-slate-900 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 transition-all mb-4"
+        >
+          Activar Notificaciones (Prueba)
+        </button>
+        
         
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
