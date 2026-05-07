@@ -6,8 +6,10 @@ import Toast from "../ui/Toast";
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 // --- NUEVOS IMPORTS PARA EL MAPA VIVO ---
 import { Geolocation } from '@capacitor/geolocation';
+import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+
 // ----------------------------------------
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
@@ -21,6 +23,26 @@ const RecenterMap = ({ lat, lng }) => {
   useEffect(() => { map.setView([lat, lng]); }, [lat, lng, map]);
   return null;
 };
+
+// --- ICONO DE VEHÍCULO PROFESIONAL ---
+const iconoCarroPro = L.divIcon({
+  className: 'icono-custom', // Evita el cuadro blanco por defecto
+  html: `
+    <div style="background: #2563eb; width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; position: relative;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+        <circle cx="7" cy="17" r="2"/>
+        <path d="M9 17h6"/>
+        <circle cx="17" cy="17" r="2"/>
+      </svg>
+      <div style="position: absolute; bottom: -5px; width: 12px; height: 12px; background: #2563eb; transform: rotate(45deg); z-index: -1; border-bottom: 3px solid white; border-right: 3px solid white; border-bottom-right-radius: 2px;"></div>
+    </div>
+  `,
+  iconSize: [40, 46],
+  iconAnchor: [20, 46], // Clava la punta exacta en la coordenada
+  popupAnchor: [0, -46] // El mensaje emergente sale arriba del pin
+});
+
 
 // --- FUNCIONES AYUDANTES BLINDADAS ---
 const obtenerEstado = (ciudadNombre) => {
@@ -584,7 +606,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                   zoomControl={false}
                 >
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <Marker position={[viaje.latChofer, viaje.lngChofer]}>
+                  <Marker position={[viaje.latChofer, viaje.lngChofer]} icon={iconoCarroPro}>
                     <Popup>Ubicación del conductor</Popup>
                   </Marker>
                   <RecenterMap lat={viaje.latChofer} lng={viaje.lngChofer} />
