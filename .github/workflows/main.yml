@@ -52,13 +52,29 @@ jobs:
 
       - name: Sincronización Capacitor
         run: |
-          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest --legacy-peer-deps
+          # 1. Instalamos Capacitor, Notificaciones y Geolocation
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest --legacy-peer-deps
+          
+          # 2. Creamos el archivo de configuración
           echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'Dame la cola', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
+          
+          # 3. Agregamos la plataforma Android
           npx cap add android || true
+          
+          # 4. Copiamos el archivo de Firebase
           cp google-services.json android/app/
+          
+          # 5. Inyectamos Firebase en los archivos Gradle
           sed -i '/dependencies {/a \        classpath "com.google.gms:google-services:4.4.1"' android/build.gradle
           echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+          
+          # 6. Sincronizamos (Esto crea la carpeta android si no existe y aplica cambios)
           npx cap sync android
+
+          # 7. INYECTAR PERMISOS DE GPS (Directo al archivo generado)
+          # Este comando inserta los permisos justo después de la etiqueta <manifest>
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" />' android/app/src/main/AndroidManifest.xml
+
           
       - name: Generar APK Final
         run: |
