@@ -145,6 +145,26 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
   const solicitudes = viaje.reservasPendientes?.length || 0;
 
   // --- LÓGICA DE TRANSMISIÓN DE UBICACIÓN (SOLO CHOFER) ---
+useEffect(() => {
+  const pedirPermisosGps = async () => {
+    try {
+      // Esto fuerza a Android a mostrar el cuadro de diálogo
+      const status = await Geolocation.requestPermissions();
+      console.log("Estado de permisos:", status);
+      
+      if (status.location !== 'granted') {
+        setToastData({ show: true, message: 'Se requiere GPS para el mapa vivo.' });
+      }
+    } catch (e) {
+      console.error("Error pidiendo permisos", e);
+    }
+  };
+
+  if (activeTab === 'chofer') {
+    pedirPermisosGps();
+  }
+}, [activeTab]);
+  
   useEffect(() => {
     let intervaloGps;
     
