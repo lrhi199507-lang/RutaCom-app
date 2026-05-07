@@ -1,10 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import Toast from "../ui/Toast"; 
-import { Geolocation } from '@capacitor/geolocation';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css'; // Vital para que el mapa no se vea roto
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
   X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
@@ -32,15 +29,6 @@ const formatearFechaCorta = (fechaString) => {
   }).replace('.', ''); 
 };
 
-// COMPONENTE AUXILIAR: Para que el mapa siga al chofer
-const RecenterMap = ({ lat, lng }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lng]);
-  }, [lat, lng, map]);
-  return null;
-};
-
 // COMPONENTE: Modal para Confirmar Eliminación
 const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
@@ -63,7 +51,6 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
     </div>
   );
 };
-
 
 // COMPONENTE: Modal para Editar Viaje
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
@@ -136,7 +123,6 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   );
 };
 
-
 // COMPONENTE: Tarjeta de Viaje - Chofer
 const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabel }) => {
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
@@ -144,57 +130,8 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
   const solicitudes = viaje.reservasPendientes?.length || 0;
 
-  // --- LÓGICA DE TRANSMISIÓN DE UBICACIÓN (SOLO CHOFER) ---
-useEffect(() => {
-  const pedirPermisosGps = async () => {
-    try {
-      // Esto fuerza a Android a mostrar el cuadro de diálogo
-      const status = await Geolocation.requestPermissions();
-      console.log("Estado de permisos:", status);
-      
-      if (status.location !== 'granted') {
-        setToastData({ show: true, message: 'Se requiere GPS para el mapa vivo.' });
-      }
-    } catch (e) {
-      console.error("Error pidiendo permisos", e);
-    }
-  };
-
-  if (activeTab === 'chofer') {
-    pedirPermisosGps();
-  }
-}, [activeTab]);
-  
-  useEffect(() => {
-    let intervaloGps;
-    
-    // Solo transmite si el viaje está en curso
-    if (viaje.estado === 'en_curso') {
-      intervaloGps = setInterval(async () => {
-        try {
-          const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-          const viajeRef = doc(db, "Viajes", viaje.id);
-          
-          await updateDoc(viajeRef, {
-            latChofer: position.coords.latitude,
-            lngChofer: position.coords.longitude,
-            ultimaActualizacion: new Date()
-          });
-        } catch (error) {
-          console.error("Error al obtener o enviar GPS:", error);
-        }
-      }, 15000); // 15 segundos
-    }
-
-    return () => {
-      if (intervaloGps) clearInterval(intervaloGps);
-    };
-  }, [viaje.estado, viaje.id]);
-
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
-      
-      {/* Etiqueta de Estado */}
       <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${estadoLabel === 'EN CURSO' ? 'bg-green-50 border-green-200 text-green-600 animate-pulse' : estadoLabel === 'FINALIZADO' ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
           {estadoLabel}
       </div>
@@ -212,7 +149,6 @@ useEffect(() => {
           <p className="text-4xl font-black italic text-blue-600 leading-none">${viaje.precio}</p>
         </div>
         
-        {/* Íconos de Editar y Eliminar Originales */}
         {estadoLabel !== 'FINALIZADO' && (
           <div className="flex gap-2.5 mt-8">
             <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500 hover:text-blue-600 transition-colors">
@@ -252,7 +188,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* BOTÓN INTELIGENTE */}
       <button 
         onClick={() => onClickGestionar(viaje)}
         className={`w-full mt-4 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
@@ -280,22 +215,6 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
   const miReserva = viaje.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
   const esConfirmado = !!miReserva;
   const yaCalifico = miReserva?.calificado === true;
-
-  // --- LÓGICA DE RECEPCIÓN Y DIBUJO DE MAPA (SOLO PASAJERO) ---
-  const [posicionChofer, setPosicionChofer] = useState(null);
-
-  useEffect(() => {
-    // Solo escuchamos a Firebase si el viaje está activo y el chofer lo marcó "en_curso"
-    if (tipo === 'activo' && esConfirmado && viaje.estado === 'en_curso') {
-      const unsub = onSnapshot(doc(db, "Viajes", viaje.id), (docSnap) => {
-        const data = docSnap.data();
-        if (data?.latChofer && data?.lngChofer) {
-          setPosicionChofer({ lat: data.latChofer, lng: data.lngChofer });
-        }
-      });
-      return () => unsub();
-    }
-  }, [tipo, esConfirmado, viaje.estado, viaje.id]);
 
   return (
     <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
@@ -337,24 +256,6 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
         </div>
       </div>
 
-      {/* --- INYECCIÓN DEL MAPA VIVO --- */}
-      {posicionChofer && viaje.estado === 'en_curso' && (
-        <div className="w-full h-48 rounded-2xl overflow-hidden shadow-inner border border-slate-200 relative z-0">
-          <MapContainer 
-            center={[posicionChofer.lat, posicionChofer.lng]} 
-            zoom={16} 
-            style={{ height: '100%', width: '100%', zIndex: 0 }}
-            zoomControl={false}
-          >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <Marker position={[posicionChofer.lat, posicionChofer.lng]}>
-              <Popup>Tu chofer va en camino</Popup>
-            </Marker>
-            <RecenterMap lat={posicionChofer.lat} lng={posicionChofer.lng} />
-          </MapContainer>
-        </div>
-      )}
-
       {tipo === 'activo' ? (
         <button 
             onClick={() => onClickGestionar(viaje)}
@@ -381,7 +282,6 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
     </div>
   );
 };
-
 
 // COMPONENTE PRINCIPAL
 export const VistaMisViajes = ({ 
