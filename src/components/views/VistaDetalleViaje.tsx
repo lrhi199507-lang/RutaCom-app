@@ -4,11 +4,23 @@ import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection
 import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
+// --- NUEVOS IMPORTS PARA EL MAPA VIVO ---
+import { Geolocation } from '@capacitor/geolocation';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+// ----------------------------------------
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
+
+// --- COMPONENTE AUXILIAR DEL MAPA ---
+const RecenterMap = ({ lat, lng }) => {
+  const map = useMap();
+  useEffect(() => { map.setView([lat, lng]); }, [lat, lng, map]);
+  return null;
+};
 
 // --- FUNCIONES AYUDANTES BLINDADAS ---
 const obtenerEstado = (ciudadNombre) => {
@@ -89,6 +101,45 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
 
+  const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
+  const estadoViaje = viaje?.estado || "disponible"; 
+
+  // --- LÓGICA DE TRANSMISIÓN GPS (SOLO CHOFER) ---
+  useEffect(() => {
+    let intervaloGps;
+    
+    const iniciarTransmision = async () => {
+      // Pedimos permisos forzados si es el chofer y el viaje está en curso
+      try {
+        await Geolocation.requestPermissions();
+      } catch (e) {
+        console.error("Permiso GPS denegado", e);
+      }
+
+      intervaloGps = setInterval(async () => {
+        try {
+          const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+          await updateDoc(doc(db, "Viajes", viaje.id), {
+            latChofer: position.coords.latitude,
+            lngChofer: position.coords.longitude,
+            ultimaActualizacion: new Date()
+          });
+        } catch (error) {
+          console.error("Error al obtener GPS:", error);
+        }
+      }, 15000); // 15 Segundos
+    };
+
+    if (soyConductor && estadoViaje === 'en_curso') {
+      iniciarTransmision();
+    }
+
+    return () => {
+      if (intervaloGps) clearInterval(intervaloGps);
+    };
+  }, [soyConductor, estadoViaje, viaje?.id]);
+  // ----------------------------------------------
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
       if (docSnap.exists()) {
@@ -122,9 +173,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setModalCalificacion(true);
     }
   }, [viaje?.estado, viaje?.pasajeros, userData?.id]);
-
-  const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
-  const estadoViaje = viaje?.estado || "disponible"; 
   
   const pasajerosConfirmados = obtenerArraySeguro(viaje?.pasajeros);
   const solicitudesPendientes = obtenerArraySeguro(viaje?.reservasPendientes);
@@ -141,12 +189,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaCalifico = miReserva?.calificado === true; 
   const mostrarBannerRetorno = viaje?.publicarRegreso && viaje?.tipoRuta !== 'vuelta_de_ruta';
 
-  // --- ¡AQUÍ ESTÁ LA FUNCIÓN QUE FALTABA Y CAUSABA LA PANTALLA BLANCA! ---
   const activarSOS = () => {
     setToastMessage("🚨 Alerta enviada a central (Simulación)");
     setShowToast(true);
   };
-  // ------------------------------------------------------------------------
    
   const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
     try {
@@ -185,12 +231,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         ninosExtra: ninosExtra
       };
 
-      // 🔥 LÓGICA DE RESERVA AUTOMÁTICA
       if (viaje.autoAceptar === true) {
-        // 1. Generamos el PIN de una vez porque ya está confirmado
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         
-        // 2. Lo metemos directamente al arreglo de 'pasajeros' (Confirmados)
         await updateDoc(viajeRef, {
           pasajeros: arrayUnion({ 
             ...datosPasajeroBase, 
@@ -201,7 +244,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           })
         });
 
-        // 3. Notificamos al conductor que alguien se unió automáticamente
         if (idConductor) {
           await enviarNotificacion(
             idConductor,
@@ -213,7 +255,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setToastMessage("¡Reserva confirmada al instante!");
         
       } else {
-        // --- LÓGICA DE RESERVA MANUAL (ESPERAR APROBACIÓN) ---
         await updateDoc(viajeRef, {
           reservasPendientes: arrayUnion({ 
             ...datosPasajeroBase, 
@@ -254,7 +295,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  // --- SISTEMA DE CANCELACIONES ---
   const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToastMessage("Debes seleccionar un motivo");
@@ -406,14 +446,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
-      // 1. Ciclo para los pasajeros
       for (const p of pasajerosConfirmados) {
         if (!p) continue;
         const pid = p.id || p.uid;
         const rat = ratingsChofer[pid];
         
         if (rat && rat.estrellas > 0) {
-          // A) Guardar la reseña en la colección Resenas
           await addDoc(collection(db, "Resenas"), {
             idViaje: viaje.id,
             idConductor: pid, 
@@ -424,7 +462,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             fecha: new Date().toISOString()
           });
 
-          // B) ACTUALIZAR AL PASAJERO: Sumarle +1 viaje como pasajero silenciosamente
           try {
             await updateDoc(doc(db, "usuarios", pid), {
               viajesComoPasajero: increment(1)
@@ -432,8 +469,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           } catch (err) { console.log("Error al sumar viaje al pasajero", err); }
         }
 
-        // --- ¡NUEVO! NOTIFICACIÓN PARA EL PASAJERO ---
-        // Esto se envía sin importar si el chofer le dio estrellas o no
         await enviarNotificacion(
           pid,
           "¡Llegaste a tu destino!",
@@ -442,7 +477,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         );
       }
 
-      // 2. ACTUALIZAR AL CHOFER: Sumarle +1 viaje conducido a él mismo
       if (userData?.id) {
          try {
            await updateDoc(doc(db, "usuarios", userData.id), {
@@ -451,7 +485,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
          } catch (err) { console.log("Error al sumar viaje al chofer", err); }
       }
 
-      // 3. Cerrar el viaje
       await cambiarEstadoViaje('finalizado');
       setModalCalificarPasajeros(false);
     } catch (e) { 
@@ -540,17 +573,45 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         {estadoViaje === 'en_curso' ? (
           
           <div className="px-5 space-y-6 animate-in zoom-in-95 duration-500">
-            <div className="bg-slate-900 rounded-[40px] h-64 relative overflow-hidden flex flex-col items-center justify-center border-4 border-slate-800 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
-               <Map className="text-slate-800 absolute w-[150%] h-[150%] animate-[spin_60s_linear_infinite] opacity-50" />
-               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-0" />
-               <div className="z-10 bg-blue-600 p-5 rounded-full shadow-[0_0_40px_rgba(37,99,235,0.6)] animate-pulse border-4 border-blue-400/30">
-                 <Navigation size={32} className="text-white fill-white" />
-               </div>
-               <div className="z-10 mt-6 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/10 flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-green-400 animate-ping" />
-                 <p className="text-white text-[11px] font-black uppercase tracking-widest">En ruta a {obtenerEstado(viaje?.cD || "")}</p>
-               </div>
-            </div>
+            
+            {/* LÓGICA DEL MAPA: Se dibuja solo si existen coordenadas */}
+            {viaje?.latChofer && viaje?.lngChofer ? (
+              <div className="bg-white rounded-[40px] h-64 relative overflow-hidden border-4 border-slate-100 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] z-0">
+                <MapContainer 
+                  center={[viaje.latChofer, viaje.lngChofer]} 
+                  zoom={16} 
+                  style={{ height: '100%', width: '100%', zIndex: 0 }}
+                  zoomControl={false}
+                >
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker position={[viaje.latChofer, viaje.lngChofer]}>
+                    <Popup>Ubicación del conductor</Popup>
+                  </Marker>
+                  <RecenterMap lat={viaje.latChofer} lng={viaje.lngChofer} />
+                </MapContainer>
+                
+                {/* Overlay flotante informativo */}
+                <div className="absolute top-4 left-0 right-0 flex justify-center z-[1000] pointer-events-none">
+                  <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-slate-200 flex items-center gap-2 shadow-lg">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
+                    <p className="text-slate-800 text-[11px] font-black uppercase tracking-widest">En ruta a {obtenerEstado(viaje?.cD || "")}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* PANTALLA DE CARGA MIENTRAS EL GPS DETECTA LA SEÑAL */
+              <div className="bg-slate-900 rounded-[40px] h-64 relative overflow-hidden flex flex-col items-center justify-center border-4 border-slate-800 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
+                 <Map className="text-slate-800 absolute w-[150%] h-[150%] animate-[spin_60s_linear_infinite] opacity-50" />
+                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-0" />
+                 <div className="z-10 bg-amber-500 p-5 rounded-full shadow-[0_0_40px_rgba(245,158,11,0.6)] animate-pulse border-4 border-amber-300/30">
+                   <Navigation size={32} className="text-white fill-white" />
+                 </div>
+                 <div className="z-10 mt-6 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/10 flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                   <p className="text-white text-[11px] font-black uppercase tracking-widest">Conectando GPS...</p>
+                 </div>
+              </div>
+            )}
 
             <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
                <Share2 size={20} />
@@ -637,7 +698,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
 
-            {/* TARJETA DE PERFIL CONDUCTOR DINÁMICA */}
             <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-[14px] bg-blue-600 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
@@ -762,7 +822,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* BOTONERA INFERIOR FIJA */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-3 h-14">
           
