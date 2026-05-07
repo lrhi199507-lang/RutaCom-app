@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import Toast from "../ui/Toast"; 
+import { Geolocation } from '@capacitor/geolocation';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css'; // Vital para que el mapa no se vea roto
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
   X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
@@ -27,6 +30,15 @@ const formatearFechaCorta = (fechaString) => {
     day: 'numeric', 
     month: 'short' 
   }).replace('.', ''); 
+};
+
+// COMPONENTE AUXILIAR: Para que el mapa siga al chofer
+const RecenterMap = ({ lat, lng }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([lat, lng]);
+  }, [lat, lng, map]);
+  return null;
 };
 
 // COMPONENTE: Modal para Confirmar Eliminación
@@ -124,12 +136,40 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   );
 };
 
+
 // COMPONENTE: Tarjeta de Viaje - Chofer
 const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabel }) => {
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
   const solicitudes = viaje.reservasPendientes?.length || 0;
+
+  // --- LÓGICA DE TRANSMISIÓN DE UBICACIÓN (SOLO CHOFER) ---
+  useEffect(() => {
+    let intervaloGps;
+    
+    // Solo transmite si el viaje está en curso
+    if (viaje.estado === 'en_curso') {
+      intervaloGps = setInterval(async () => {
+        try {
+          const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+          const viajeRef = doc(db, "Viajes", viaje.id);
+          
+          await updateDoc(viajeRef, {
+            latChofer: position.coords.latitude,
+            lngChofer: position.coords.longitude,
+            ultimaActualizacion: new Date()
+          });
+        } catch (error) {
+          console.error("Error al obtener o enviar GPS:", error);
+        }
+      }, 15000); // 15 segundos
+    }
+
+    return () => {
+      if (intervaloGps) clearInterval(intervaloGps);
+    };
+  }, [viaje.estado, viaje.id]);
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
@@ -221,15 +261,29 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
   const esConfirmado = !!miReserva;
   const yaCalifico = miReserva?.calificado === true;
 
+  // --- LÓGICA DE RECEPCIÓN Y DIBUJO DE MAPA (SOLO PASAJERO) ---
+  const [posicionChofer, setPosicionChofer] = useState(null);
+
+  useEffect(() => {
+    // Solo escuchamos a Firebase si el viaje está activo y el chofer lo marcó "en_curso"
+    if (tipo === 'activo' && esConfirmado && viaje.estado === 'en_curso') {
+      const unsub = onSnapshot(doc(db, "Viajes", viaje.id), (docSnap) => {
+        const data = docSnap.data();
+        if (data?.latChofer && data?.lngChofer) {
+          setPosicionChofer({ lat: data.latChofer, lng: data.lngChofer });
+        }
+      });
+      return () => unsub();
+    }
+  }, [tipo, esConfirmado, viaje.estado, viaje.id]);
+
   return (
     <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
       
-      {/* ETIQUETA MOVIDA MÁS A LA ESQUINA (top-4 right-4) */}
       <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
           {tipo === 'activo' ? 'ACTIVO' : 'FINALIZADO'}
       </div>
       
-      {/* CONTENEDOR BLINDADO: pr-20 (margen derecho) y truncate para evitar choques */}
       <div className="flex items-center gap-4 pt-1 pr-20">
         <div className="w-12 h-12 rounded-[14px] bg-blue-600 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0">
           {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black italic text-white text-xl'>D</div>}
@@ -262,6 +316,24 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
           <p className="text-xs font-bold text-slate-700">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p>
         </div>
       </div>
+
+      {/* --- INYECCIÓN DEL MAPA VIVO --- */}
+      {posicionChofer && viaje.estado === 'en_curso' && (
+        <div className="w-full h-48 rounded-2xl overflow-hidden shadow-inner border border-slate-200 relative z-0">
+          <MapContainer 
+            center={[posicionChofer.lat, posicionChofer.lng]} 
+            zoom={16} 
+            style={{ height: '100%', width: '100%', zIndex: 0 }}
+            zoomControl={false}
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <Marker position={[posicionChofer.lat, posicionChofer.lng]}>
+              <Popup>Tu chofer va en camino</Popup>
+            </Marker>
+            <RecenterMap lat={posicionChofer.lat} lng={posicionChofer.lng} />
+          </MapContainer>
+        </div>
+      )}
 
       {tipo === 'activo' ? (
         <button 
@@ -307,7 +379,6 @@ export const VistaMisViajes = ({
   const [viajeAEliminar, setViajeAEliminar] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-  // ¡AQUÍ ES DONDE DEBE IR LA FUNCIÓN!
   const handleEditSave = async (updatedViaje) => {
     try {
       const viajeRef = doc(db, "Viajes", updatedViaje.id);
@@ -372,7 +443,6 @@ export const VistaMisViajes = ({
 
     return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
-      {/* USAMOS TU TOAST OFICIAL AQUÍ */}
       <Toast 
         show={toastData.show} 
         message={toastData.message} 
