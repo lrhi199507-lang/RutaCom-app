@@ -71,10 +71,10 @@ jobs:
           # 6. Sincronizamos (Esto crea la carpeta android si no existe y aplica cambios)
           npx cap sync android
 
-          # 7. INYECTAR PERMISOS DE GPS (Directo al archivo generado)
-          # Este comando inserta los permisos justo después de la etiqueta <manifest>
-          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" />' android/app/src/main/AndroidManifest.xml
-
+          # 7. INYECTAR PERMISOS DE GPS (Método Robusto)
+          # Buscamos la línea del paquete y pegamos los permisos justo debajo
+          sed -i '/package=/a \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
+          
           
       - name: Generar APK Final
         run: |
