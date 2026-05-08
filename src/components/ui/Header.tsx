@@ -2,8 +2,7 @@ import React from 'react';
 import { Wallet } from 'lucide-react';
 import { CampanaNotificaciones } from "./CampanaNotificaciones";
 
-
-export const Header = ({ userData, modo }) => {
+export const Header = ({ userData, modo, onAbrirWallet }) => {
   const nombre = userData?.nombre || "Cargando...";
   const saldo = typeof userData?.saldo === 'number' ? userData.saldo.toFixed(2) : "0.00";
 
@@ -32,7 +31,10 @@ export const Header = ({ userData, modo }) => {
         <CampanaNotificaciones userData={userData} />
 
         {/* Botón de Wallet Slim (px-3.5 y py-2) */}
-        <div className="bg-slate-900 text-white px-3.5 py-2 rounded-[18px] flex items-center gap-2.5 shadow-xl active:scale-95 transition-all cursor-pointer">
+        <div 
+          onClick={onAbrirWallet}
+          className="bg-slate-900 text-white px-3.5 py-2 rounded-[18px] flex items-center gap-2.5 shadow-xl active:scale-95 transition-all cursor-pointer"
+        >
           <Wallet size={14} className="text-blue-400" />
           <p className="text-xs font-black italic">
             ${saldo}
