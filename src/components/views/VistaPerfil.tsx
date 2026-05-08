@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, collection, increment } from 'firebase/firestore';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth } from 'firebase/auth';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
-  Car, Palette, Hash, Gauge, LogOut, Camera, X
+  Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign
 } from 'lucide-react';
 
 const auth = getAuth();
@@ -23,7 +23,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
-  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes'>('pendientes');
+  const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); // NUEVO ESTADO PARA PAGOS
+  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos'>('pendientes');
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   const [modalInstruccionesSelfie, setModalInstruccionesSelfie] = useState(false);
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
@@ -87,27 +88,22 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
-    const subirFotoConfirmada = async () => {
+  const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
     
-    // 1. Guardamos la foto y el ID en variables temporales
     const fotoParaSubir = fotoTemporal;
     const userId = auth.currentUser?.uid || userData.id;
 
-    // 2. CERRAMOS EL MODAL Y ACTUALIZAMOS TU PERFIL AL INSTANTE
     setUserData({ ...userData, fotoPerfil: fotoParaSubir });
     setPasoFoto(false); 
     setFotoTemporal(null);
     
-    // 3. Dejamos que Firebase pelee con el internet en segundo plano
     try {
       await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: fotoParaSubir });
     } catch (e) { 
       console.error("Error subiendo foto en segundo plano:", e);
-      // Opcional: Podrías poner un setToast aquí si quieres avisar si falla
     }
   };
-  
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
     try {
@@ -169,10 +165,51 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     try {
       const snapUsers = await getDocs(collection(db, "usuarios"));
       setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
+      
       const snapReports = await getDocs(collection(db, "Reportes"));
       setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      // NUEVO: Cargar pagos pendientes
+      const snapPagos = await getDocs(collection(db, "PagosPendientes"));
+      setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter((p: any) => p.estado === 'pendiente'));
+
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
+
+  // --- LÓGICA DE APROBACIÓN DE PAGOS ---
+  const aprobarPago = async (pago: any) => {
+    if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}? Asegúrate de haber verificado tu cuenta bancaria.`)) return;
+    setCargando(true);
+    try {
+      // 1. Sumar saldo al usuario usando increment (A prueba de fallos)
+      await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
+      // 2. Marcar el pago como completado en el historial
+      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+      // 3. Quitarlo de la vista
+      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+      
+      setToast({ texto: `¡$${pago.monto} acreditados a ${pago.nombre}!`, tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast({ texto: "Error al aprobar pago", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
+
+  const rechazarPago = async (pagoId: string) => {
+    if(!window.confirm(`¿Rechazar esta recarga? (No se encontró el dinero)`)) return;
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "PagosPendientes", pagoId), { estado: "rechazado" });
+      setPagosAdmin(pagosAdmin.filter(p => p.id !== pagoId));
+      setToast({ texto: "Recarga rechazada", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast({ texto: "Error al rechazar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
+  // -------------------------------------
 
   const resolverReporte = async (reporteId: string) => {
     if(!window.confirm("¿Marcar este reporte como revisado? Se eliminará de la lista.")) return;
@@ -292,15 +329,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
-      {/* TOAST FLOTANTE LÍNEAL Y ESTÉTICO */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
-            {toast.tipo === 'exito' ? (
-              <ShieldCheck size={18} className="text-green-400 shrink-0" />
-            ) : (
-              <AlertTriangle size={18} className="shrink-0" />
-            )}
+            {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="truncate whitespace-nowrap">{toast.texto}</span>
           </div>
         </div>
@@ -315,33 +347,22 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       </div>
 
       <div className="flex-1 overflow-y-auto pb-32">
-        {/* VISTA PÚBLICA (PERFIL) */}
+        {/* VISTA PÚBLICA */}
         {view === 'publico' && (
           <div className="p-5 space-y-6 animate-in fade-in duration-500">
-            {/* AVISO DE VERIFICACIÓN INTELIGENTE */}
             {auth.currentUser && !auth.currentUser.emailVerified && (
               <div className="bg-blue-600 rounded-[30px] p-5 shadow-lg border-b-4 border-blue-800 animate-in zoom-in">
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="bg-white/20 p-2 rounded-xl text-white">
-                      <AlertCircle size={20} />
-                    </div>
+                    <div className="bg-white/20 p-2 rounded-xl text-white"><AlertCircle size={20} /></div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black text-white uppercase italic tracking-widest leading-none mb-1">
-                        Correo sin verificar
-                      </p>
-                      <p className="text-[11px] font-bold text-blue-100">
-                        Revisa tu email para activar tu cuenta.
-                      </p>
+                      <p className="text-[10px] font-black text-white uppercase italic tracking-widest leading-none mb-1">Correo sin verificar</p>
+                      <p className="text-[11px] font-bold text-blue-100">Revisa tu email para activar tu cuenta.</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={verificarCuentaCorreo} className="flex-1 bg-white/10 text-white border border-white/20 py-2.5 rounded-2xl text-[9px] font-black uppercase">
-                      Reenviar Link
-                    </button>
-                    <button onClick={actualizarEstadoVerificacion} className="flex-1 bg-white text-blue-600 py-2.5 rounded-2xl text-[9px] font-black uppercase shadow-sm active:scale-95 transition-all">
-                      ¡Ya lo hice! ✨
-                    </button>
+                    <button onClick={verificarCuentaCorreo} className="flex-1 bg-white/10 text-white border border-white/20 py-2.5 rounded-2xl text-[9px] font-black uppercase">Reenviar Link</button>
+                    <button onClick={actualizarEstadoVerificacion} className="flex-1 bg-white text-blue-600 py-2.5 rounded-2xl text-[9px] font-black uppercase shadow-sm active:scale-95 transition-all">¡Ya lo hice! ✨</button>
                   </div>
                 </div>
               </div>
@@ -403,7 +424,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         {/* VISTA DE CUENTA */}
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
-            {/* DATOS BÁSICOS */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Básica</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -430,7 +450,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
-            {/* SEGURIDAD PERSONAL */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -441,7 +460,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
-            {/* VEHÍCULO DETALLES */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-blue-600 uppercase tracking-[3px] ml-4 italic">Datos del Vehículo</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -452,7 +470,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
-            {/* FOTOS DEL AUTO */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[3px] ml-4 italic">Fotos del Auto</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -463,7 +480,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
-            {/* MENSAJE DE RECHAZO */}
             {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
               <div className="mx-2 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6">
                 <div className="flex items-start gap-4">
@@ -487,38 +503,65 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
 
-        {/* PANEL ADMINISTRATIVO (CON REPORTES) */}
+        {/* PANEL ADMINISTRATIVO MAESTRO */}
         {view === 'admin' && (
           <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
             <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
-              <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl">
-                <ChevronRight size={20} className="rotate-180" />
-              </button>
+              <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl"><ChevronRight size={20} className="rotate-180" /></button>
               <div className="text-center">
                 <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
                 <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
               </div>
-              <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl">
-                <RefreshCw size={20} />
-              </button>
+              <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} /></button>
             </div>
 
-            {/* SELECTOR DE SUB-PESTAÑAS (3 OPCIONES) */}
-            <div className="flex bg-slate-900 p-1 border-b border-white/5">
-              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>
-                Pendientes ({usuariosAdmin.filter(u => (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)).length})
+            {/* SELECTOR DE SUB-PESTAÑAS (AHORA SON 4) */}
+            <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar">
+              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>
+                Cuentas
               </button>
-              <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>
-                Reportes ({reportesAdmin.length})
+              <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>
+                Pagos ({pagosAdmin.length})
               </button>
-              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>
-                Aprobados ({usuariosAdmin.filter(u => u.kycVerificado).length})
+              <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>
+                Reportes
+              </button>
+              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>
+                Aprobados
               </button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
               {cargando ? (
                 <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
+              ) : subPestañaAdmin === 'pagos' ? (
+                /* VISTA DE PAGOS PENDIENTES (NUEVA) */
+                pagosAdmin.length === 0 ? (
+                  <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
+                ) : (
+                  pagosAdmin.map(pago => (
+                    <div key={pago.id} className="bg-slate-900 border border-blue-500/20 rounded-[25px] p-5 space-y-4 text-white">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><DollarSign size={20}/></div>
+                          <div>
+                            <p className="text-xs font-black uppercase italic">{pago.nombre}</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Ref: <span className="text-white">{pago.referencia}</span></p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-black text-blue-400 italic leading-none">${pago.monto.toFixed(2)}</p>
+                          <p className="text-[8px] text-emerald-500 font-black mt-1 uppercase">≈ Bs. {(pago.monto * pago.tasaAplicada).toFixed(2)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2 border-t border-white/5">
+                        <button onClick={() => rechazarPago(pago.id)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">Rechazar</button>
+                        <button onClick={() => aprobarPago(pago)} className="flex-[2] bg-blue-600 text-white p-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-blue-900/50 hover:bg-blue-500 transition-colors">Aprobar y Acreditar</button>
+                      </div>
+                    </div>
+                  ))
+                )
               ) : subPestañaAdmin === 'reportes' ? (
                 /* VISTA DE REPORTES */
                 reportesAdmin.length === 0 ? (
@@ -532,9 +575,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             <AlertCircle size={16} />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">
-                              Denunciado: {r.nombreReportado}
-                            </p>
+                            <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">Denunciado: {r.nombreReportado}</p>
                             <p className="text-[8px] text-slate-500 font-bold uppercase">Por: {r.nombreReportador}</p>
                           </div>
                         </div>
@@ -549,7 +590,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                   ))
                 )
               ) : (
-
                 /* VISTA DE USUARIOS PENDIENTES/APROBADOS */
                 usuariosAdmin
                   .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
@@ -560,12 +600,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                     return (
                       <div key={u.id} className={`bg-slate-900 border ${estaSuspendido ? 'border-red-900' : 'border-white/5'} rounded-[25px] overflow-hidden transition-colors`}>
                         <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white relative">
-                          
-                          {/* Etiqueta visual si está suspendido */}
-                          {estaSuspendido && (
-                            <div className="absolute top-0 right-0 bg-red-600 text-white text-[7px] font-black uppercase px-2 py-1 rounded-bl-xl">Suspendido</div>
-                          )}
-
+                          {estaSuspendido && <div className="absolute top-0 right-0 bg-red-600 text-white text-[7px] font-black uppercase px-2 py-1 rounded-bl-xl">Suspendido</div>}
                           <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 ${estaSuspendido ? 'bg-red-950/50 text-red-500' : 'bg-slate-800 text-white'} rounded-full flex items-center justify-center font-black text-xs`}>
                               {u.nombre?.charAt(0).toUpperCase()}
@@ -582,9 +617,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                           <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
                             <div className="grid grid-cols-3 gap-2">
                               {[
-                                { img: u.kycFoto, label: 'Cédula' }, 
-                                { img: u.selfieFoto, label: 'Selfie' }, 
-                                { img: u.fotoFrontal, label: 'Auto' }
+                                { img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' }, { img: u.fotoFrontal, label: 'Auto' }
                               ].map((item, idx) => (
                                 <div key={idx} className="flex flex-col gap-1">
                                   <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
@@ -597,12 +630,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             
                             <div className="flex flex-col gap-2">
                               {estaSuspendido ? (
-                                // Si está suspendido, solo mostramos Reactivar
-                                <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">
-                                  Reactivar Cuenta
-                                </button>
+                                <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
                               ) : (
-                                // Si NO está suspendido, mostramos las opciones normales
                                 <>
                                   {subPestañaAdmin === 'pendientes' && (
                                     <div className="flex gap-2">
@@ -610,13 +639,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                                       <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
                                     </div>
                                   )}
-                                  <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">
-                                    Suspender Usuario
-                                  </button>
+                                  <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">Suspender Usuario</button>
                                 </>
                               )}
                             </div>
-                            
                           </div>
                         )}     
                       </div>
@@ -633,9 +659,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
           <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
-            <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">
-              Editar {tipoEdicion?.label}
-            </h4>
+            <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">Editar {tipoEdicion?.label}</h4>
             {tipoEdicion?.id === 'bio' ? (
               <textarea value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-6 rounded-3xl font-medium text-sm mb-8 outline-none border-2 border-slate-100 min-h-[150px] resize-none text-slate-600 leading-relaxed" placeholder="Ej: Hola, soy Luis..." autoFocus />
             ) : (
@@ -701,27 +725,15 @@ const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   if (status === 'rechazado') { statusText = "REINTENTAR ⚠️"; statusColor = "text-orange-600"; }
 
   return (
-    <button 
-      onClick={onClick} 
-      disabled={status === 'verificado' || status === 'revision'} 
-      className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 disabled:opacity-80 overflow-hidden"
-    >
+    <button onClick={onClick} disabled={status === 'verificado' || status === 'revision'} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 disabled:opacity-80 overflow-hidden">
       <div className="flex items-center gap-5 flex-1 min-w-0">
-        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm flex-shrink-0">
-          <Icon size={20} />
-        </div>
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm flex-shrink-0"><Icon size={20} /></div>
         <div className="text-left flex-1 min-w-0">
-          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 truncate">
-            {label}
-          </p>
-          <p className={`text-xs font-black uppercase ${statusColor} truncate`}>
-            {statusText}
-          </p>
+          <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 truncate">{label}</p>
+          <p className={`text-xs font-black uppercase ${statusColor} truncate`}>{statusText}</p>
         </div>
       </div>
-      {status !== 'verificado' && status !== 'revision' && (
-        <ChevronRight size={18} className="text-slate-200 ml-3 flex-shrink-0" />
-      )}
+      {status !== 'verificado' && status !== 'revision' && <ChevronRight size={18} className="text-slate-200 ml-3 flex-shrink-0" />}
     </button>
   );
 };
