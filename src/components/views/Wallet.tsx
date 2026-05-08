@@ -1,26 +1,32 @@
 import React, { useState } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, addDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, addDoc, increment } from "firebase/firestore";
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, ShieldCheck, CreditCard, X, Copy, Check, Info
+  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote
 } from "lucide-react";
 import Toast from "../ui/Toast";
 
 export const Wallet = ({ userData, onRegresar }) => {
   const [showModalRecarga, setShowModalRecarga] = useState(false);
+  const [showModalRetiro, setShowModalRetiro] = useState(false);
+  
   const [montoRecarga, setMontoRecarga] = useState("");
   const [referencia, setReferencia] = useState("");
+  
+  const [montoRetiro, setMontoRetiro] = useState("");
+  const [datosBancarios, setDatosBancarios] = useState({ banco: "", telefono: "", cedula: "" });
+
   const [enviando, setEnviando] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
 
-  const tasaBCV = 496.83; // Tasa de prueba
+  const tasaBCV = 496.83; // Tasa de prueba (luego la haremos dinámica)
   const saldoUSD = userData?.saldo || 0;
   const saldoConvertido = (saldoUSD * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
 
-  // DATOS DE PAGO (Cámbialos por tus datos reales)
-  const datosPago = {
+  // DATOS DE PAGO DEL ADMIN (Para que te recarguen)
+  const datosPagoAdmin = {
     banco: "Banco de Venezuela",
     telefono: "04121234567",
     cedula: "V-12345678"
@@ -61,6 +67,55 @@ export const Wallet = ({ userData, onRegresar }) => {
     }
   };
 
+  const manejarRetiro = async (e) => {
+    e.preventDefault();
+    const monto = Number(montoRetiro);
+    
+    if (!monto || monto <= 0 || !datosBancarios.banco || !datosBancarios.telefono || !datosBancarios.cedula) {
+      setToastMsg("Completa todos los datos bancarios");
+      setShowToast(true);
+      return;
+    }
+
+    if (monto > saldoUSD) {
+      setToastMsg("Saldo insuficiente para retirar");
+      setShowToast(true);
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      // 1. DESCONTAR EL SALDO INMEDIATAMENTE
+      await updateDoc(doc(db, "usuarios", userData.id), {
+        saldo: increment(-monto)
+      });
+
+      // 2. CREAR LA SOLICITUD DE RETIRO
+      await addDoc(collection(db, "PagosPendientes"), {
+        uid: userData.id,
+        nombre: userData.nombre,
+        monto: monto,
+        datosBancarios: datosBancarios,
+        tasaAplicada: tasaBCV,
+        fecha: new Date().toISOString(),
+        estado: "pendiente",
+        tipo: "retiro"
+      });
+
+      setToastMsg("Retiro en proceso. El saldo ha sido retenido.");
+      setShowToast(true);
+      setShowModalRetiro(false);
+      setMontoRetiro("");
+      setDatosBancarios({ banco: "", telefono: "", cedula: "" });
+    } catch (error) {
+      console.error(error);
+      setToastMsg("Error al procesar el retiro");
+      setShowToast(true);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative">
       <Toast show={showToast} message={toastMsg} onClose={() => setShowToast(false)} />
@@ -80,6 +135,9 @@ export const Wallet = ({ userData, onRegresar }) => {
       <div className="px-5 space-y-8">
         {/* TARJETA DE SALDO */}
         <div className="relative overflow-hidden rounded-[35px] p-8 border border-white/10 bg-gradient-to-br from-blue-900/40 to-slate-900/80 backdrop-blur-xl shadow-lg mt-2">
+          <div className="absolute -top-20 -right-20 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
           <div className="relative z-10 flex flex-col items-center text-center">
             <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-300/80 mb-2">Saldo Neto</p>
             <div className="flex items-start justify-center gap-1">
@@ -95,17 +153,14 @@ export const Wallet = ({ userData, onRegresar }) => {
 
         {/* BOTONES PRINCIPALES */}
         <div className="grid grid-cols-2 gap-4">
-          <button 
-            onClick={() => setShowModalRecarga(true)}
-            className="bg-emerald-600 p-5 rounded-[28px] shadow-lg flex flex-col items-center gap-3 active:scale-95 transition-all border border-emerald-500"
-          >
+          <button onClick={() => setShowModalRecarga(true)} className="bg-emerald-600 p-5 rounded-[28px] shadow-lg flex flex-col items-center gap-3 active:scale-95 transition-all border border-emerald-500">
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <ArrowDownLeft size={24} className="text-white" />
             </div>
             <span className="text-[11px] font-black uppercase tracking-widest text-white">Recargar</span>
           </button>
 
-          <button className="bg-slate-900 p-5 rounded-[28px] flex flex-col items-center gap-3 active:scale-95 transition-all border border-slate-800">
+          <button onClick={() => setShowModalRetiro(true)} className="bg-slate-900 p-5 rounded-[28px] flex flex-col items-center gap-3 active:scale-95 transition-all border border-slate-800 hover:border-slate-700">
             <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center">
               <ArrowUpRight size={24} className="text-blue-400" />
             </div>
@@ -113,14 +168,14 @@ export const Wallet = ({ userData, onRegresar }) => {
           </button>
         </div>
 
-        {/* HISTORIAL VACÍO (Muestra algo elegante si no hay datos) */}
+        {/* HISTORIAL VACÍO */}
         <div className="pt-2 text-center py-10">
           <History size={40} className="mx-auto text-slate-800 mb-3" />
           <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest leading-loose">No hay movimientos recientes que mostrar</p>
         </div>
       </div>
 
-      {/* MODAL DE RECARGA */}
+      {/* MODAL DE RECARGA (SIN CAMBIOS) */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -132,53 +187,63 @@ export const Wallet = ({ userData, onRegresar }) => {
             <div className="space-y-4 mb-8 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
               <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-slate-400">Banco:</span>
-                  <span className="text-xs font-black text-white uppercase">{datosPago.banco}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-slate-400">Teléfono:</span>
-                  <span className="text-xs font-black text-white">{datosPago.telefono}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-slate-400">Cédula:</span>
-                  <span className="text-xs font-black text-white">{datosPago.cedula}</span>
-                </div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400">Banco:</span><span className="text-xs font-black text-white uppercase">{datosPagoAdmin.banco}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400">Teléfono:</span><span className="text-xs font-black text-white">{datosPagoAdmin.telefono}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400">Cédula:</span><span className="text-xs font-black text-white">{datosPagoAdmin.cedula}</span></div>
               </div>
             </div>
 
             <form onSubmit={manejarRecarga} className="space-y-4">
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($)</label>
-                <input 
-                  type="number" 
-                  value={montoRecarga}
-                  onChange={(e) => setMontoRecarga(e.target.value)}
-                  placeholder="Ej: 10.00"
-                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all"
-                />
-                {montoRecarga && (
-                  <p className="text-[9px] font-black text-emerald-500 uppercase mt-2 ml-1 italic">≈ Bs. {(Number(montoRecarga) * tasaBCV).toFixed(2)}</p>
+                <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 10.00" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
+              </div>
+              <div>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Nro de Referencia (Últimos 4-6)</label>
+                <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="0000" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
+              </div>
+              <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50">
+                {enviando ? "Notificando..." : "Notificar Pago"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE RETIRO (NUEVO) */}
+      {showModalRetiro && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black italic uppercase text-white">Retirar Dinero</h3>
+              <button onClick={() => setShowModalRetiro(false)} className="p-2 bg-slate-800 rounded-full text-white"><X size={18} /></button>
+            </div>
+
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
+              Introduce tus datos de Pago Móvil. El saldo se descontará y procesaremos la transferencia en breve.
+            </p>
+
+            <form onSubmit={manejarRetiro} className="space-y-4">
+              <div>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Retirar ($)</label>
+                <input type="number" value={montoRetiro} onChange={(e) => setMontoRetiro(e.target.value)} placeholder={`Max: $${saldoUSD.toFixed(2)}`} className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
+                {montoRetiro && (
+                  <p className="text-[9px] font-black text-blue-400 uppercase mt-2 ml-1 italic">Recibirás ≈ Bs. {(Number(montoRetiro) * tasaBCV).toFixed(2)}</p>
                 )}
               </div>
 
-              <div>
-                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Nro de Referencia (Últimos 4-6)</label>
-                <input 
-                  type="text" 
-                  value={referencia}
-                  onChange={(e) => setReferencia(e.target.value)}
-                  placeholder="0000"
-                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all"
-                />
+              <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Banknote size={14}/> Mis Datos de Recibo</p>
+                
+                <input type="text" value={datosBancarios.banco} onChange={(e) => setDatosBancarios({...datosBancarios, banco: e.target.value})} placeholder="Banco (Ej: Mercantil)" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
+                
+                <input type="tel" value={datosBancarios.telefono} onChange={(e) => setDatosBancarios({...datosBancarios, telefono: e.target.value})} placeholder="Teléfono" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
+                
+                <input type="text" value={datosBancarios.cedula} onChange={(e) => setDatosBancarios({...datosBancarios, cedula: e.target.value})} placeholder="Cédula (Ej: V-12345678)" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
               </div>
 
-              <button 
-                type="submit"
-                disabled={enviando}
-                className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50"
-              >
-                {enviando ? "Notificando..." : "Notificar Pago"}
+              <button type="submit" disabled={enviando || Number(montoRetiro) > saldoUSD} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
+                {enviando ? "Procesando..." : "Solicitar Retiro"}
               </button>
             </form>
           </div>
