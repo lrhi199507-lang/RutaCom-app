@@ -232,7 +232,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-    const solicitarCola = async () => {
+  const solicitarCola = async () => {
+    // 1. CANDADO FINANCIERO: Validar que tenga plata antes de subirse
+    const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
+    const miSaldoActual = Number(userData?.saldo || 0);
+
+    if (miSaldoActual < costoTotalPeticion) {
+      setToastMessage(`Saldo insuficiente. Necesitas $${costoTotalPeticion.toFixed(2)}`);
+      setShowToast(true);
+      return;
+    }
+
     if (puestosQueQuiero > cuposRestantes) {
       setToastMessage("No hay suficientes puestos disponibles");
       setShowToast(true);
@@ -308,6 +318,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setCargando(false); 
     }
   };
+  
   
   const cancelarSolicitud = async () => {
     setCargando(true);
@@ -465,14 +476,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-  const enviarCalificacionesYFinalizar = async () => {
+    const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
+      const precioPorAsiento = Number(viaje.precio) || 0;
+      let gananciaTotalChofer = 0;
+
       for (const p of pasajerosConfirmados) {
         if (!p) continue;
         const pid = p.id || p.uid;
         const rat = ratingsChofer[pid];
         
+        // Calcular cuánto se le va a cobrar a este pasajero
+        const puestosOcupados = Number(p.puestosSolicitados) || 1;
+        const cobroTotalPasajero = precioPorAsiento * puestosOcupados;
+        
+        // A) Guardar reseña si la hay
         if (rat && rat.estrellas > 0) {
           await addDoc(collection(db, "Resenas"), {
             idViaje: viaje.id,
@@ -483,30 +502,39 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             comentario: String(rat.comentario || ""),
             fecha: new Date().toISOString()
           });
-
-          try {
-            await updateDoc(doc(db, "usuarios", pid), {
-              viajesComoPasajero: increment(1)
-            });
-          } catch (err) { console.log("Error al sumar viaje al pasajero", err); }
         }
 
+        // B) MOVIMIENTO DE DINERO: Restarle al pasajero
+        try {
+          await updateDoc(doc(db, "usuarios", pid), {
+            viajesComoPasajero: increment(1),
+            saldo: increment(-cobroTotalPasajero) // El signo menos resta automáticamente
+          });
+          
+          // Sumamos a la bolsa total del chofer
+          gananciaTotalChofer += cobroTotalPasajero;
+        } catch (err) { console.log("Error al cobrarle al pasajero", err); }
+
+        // C) Notificarle el cobro
         await enviarNotificacion(
           pid,
           "¡Llegaste a tu destino!",
-          `El viaje ha finalizado. Entra a "Mis Viajes" para calificar a ${userData?.nombre || "tu conductor"}.`,
+          `El viaje finalizó. Se descontaron $${cobroTotalPasajero.toFixed(2)} de tu Wallet. ¡Califica a tu conductor!`,
           "alerta" 
         );
       }
 
+      // D) MOVIMIENTO DE DINERO: Pagarle al Chofer todo lo acumulado
       if (userData?.id) {
          try {
            await updateDoc(doc(db, "usuarios", userData.id), {
-             viajesRealizados: increment(1)
+             viajesRealizados: increment(1),
+             saldo: increment(gananciaTotalChofer) // Le entra el dinero al chofer
            });
-         } catch (err) { console.log("Error al sumar viaje al chofer", err); }
+         } catch (err) { console.log("Error al pagarle al chofer", err); }
       }
 
+      // E) Cerrar el viaje
       await cambiarEstadoViaje('finalizado');
       setModalCalificarPasajeros(false);
     } catch (e) { 
@@ -515,6 +543,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setCargando(false); 
     }
   };
+  
   
   
   const cambiarEstadoViaje = async (nuevoEstado) => {
