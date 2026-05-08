@@ -302,10 +302,10 @@ export default function NavegacionPrincipal({ user }) {
   }
 
   
-    // 👇 INYECCIÓN DE LA WALLET 👇
+      // 👇 INYECCIÓN DE LA WALLET 👇
   if (verWallet) {
     return (
-      <div className="w-full max-w-md mx-auto h-screen bg-[#0b1120] flex flex-col relative overflow-hidden border-x z-[100]">
+      <div className="w-full max-w-md mx-auto h-screen bg-[#0b1120] flex flex-col relative overflow-hidden z-[100]">
         <Wallet userData={userData} onRegresar={() => setVerWallet(false)} />
       </div>
     );
