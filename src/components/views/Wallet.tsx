@@ -70,9 +70,10 @@ export const Wallet = ({ userData, onRegresar }) => {
   const manejarRetiro = async (e) => {
     e.preventDefault();
     const monto = Number(montoRetiro);
-    
-    if (!monto || monto <= 0 || !datosBancarios.banco || !datosBancarios.telefono || !datosBancarios.cedula) {
-      setToastMsg("Completa todos los datos bancarios");
+    const MINIMO_RETIRO = 10; // <--- Definimos el mínimo
+
+    if (monto < MINIMO_RETIRO) {
+      setToastMsg(`El retiro mínimo es de $10`);
       setShowToast(true);
       return;
     }
