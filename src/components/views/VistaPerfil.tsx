@@ -176,40 +176,56 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  // --- LÓGICA DE APROBACIÓN DE PAGOS ---
+    // --- LÓGICA DE PAGOS Y RETIROS ---
   const aprobarPago = async (pago: any) => {
-    if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}? Asegúrate de haber verificado tu cuenta bancaria.`)) return;
+    if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
     setCargando(true);
     try {
-      // 1. Sumar saldo al usuario usando increment (A prueba de fallos)
       await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
-      // 2. Marcar el pago como completado en el historial
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
-      // 3. Quitarlo de la vista
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
-      
-      setToast({ texto: `¡$${pago.monto} acreditados a ${pago.nombre}!`, tipo: "exito" });
+      setToast({ texto: `¡$${pago.monto} acreditados!`, tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
     } catch (error) {
-      setToast({ texto: "Error al aprobar pago", tipo: "error" });
+      setToast({ texto: "Error al aprobar", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
 
-  const rechazarPago = async (pagoId: string) => {
-    if(!window.confirm(`¿Rechazar esta recarga? (No se encontró el dinero)`)) return;
+  const marcarRetiroComoPagado = async (pago: any) => {
+    if(!window.confirm(`¿Confirmas que ya transferiste a ${pago.nombre}?`)) return;
     setCargando(true);
     try {
-      await updateDoc(doc(db, "PagosPendientes", pagoId), { estado: "rechazado" });
-      setPagosAdmin(pagosAdmin.filter(p => p.id !== pagoId));
-      setToast({ texto: "Recarga rechazada", tipo: "exito" });
+      // Solo actualizamos el estado, la plata ya se le descontó de la Wallet al solicitarlo
+      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+      setToast({ texto: "Retiro marcado como pagado", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast({ texto: "Error al procesar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
+
+  const rechazarPago = async (pago: any) => {
+    if(!window.confirm(pago.tipo === 'retiro' ? '¿Rechazar retiro y devolver fondos a su Wallet?' : '¿Rechazar recarga?')) return;
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
+      
+      // DEVOLUCIÓN DE DINERO: Si tú rechazas el retiro, le regresamos la plata al chofer a su Wallet
+      if (pago.tipo === 'retiro') {
+        await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
+      }
+
+      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+      setToast({ texto: "Movimiento rechazado", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
     } catch (error) {
       setToast({ texto: "Error al rechazar", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
-  // -------------------------------------
 
   const resolverReporte = async (reporteId: string) => {
     if(!window.confirm("¿Marcar este reporte como revisado? Se eliminará de la lista.")) return;
@@ -536,32 +552,57 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
               ) : subPestañaAdmin === 'pagos' ? (
                 /* VISTA DE PAGOS PENDIENTES (NUEVA) */
-                pagosAdmin.length === 0 ? (
-                  <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
-                ) : (
-                  pagosAdmin.map(pago => (
-                    <div key={pago.id} className="bg-slate-900 border border-blue-500/20 rounded-[25px] p-5 space-y-4 text-white">
+                                pagosAdmin.map(pago => {
+                  const esRetiro = pago.tipo === 'retiro';
+                  return (
+                    <div key={pago.id} className={`bg-slate-900 border ${esRetiro ? 'border-amber-500/20' : 'border-blue-500/20'} rounded-[25px] p-5 space-y-4 text-white`}>
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><DollarSign size={20}/></div>
+                          <div className={`w-10 h-10 ${esRetiro ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'} rounded-full flex items-center justify-center`}>
+                            {esRetiro ? <ArrowUpRight size={20}/> : <DollarSign size={20}/>}
+                          </div>
                           <div>
-                            <p className="text-xs font-black uppercase italic">{pago.nombre}</p>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Ref: <span className="text-white">{pago.referencia}</span></p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-black uppercase italic">{pago.nombre}</p>
+                              <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${esRetiro ? 'bg-amber-500 text-amber-950' : 'bg-blue-500 text-white'}`}>
+                                {esRetiro ? 'SOLICITUD RETIRO' : 'RECARGA SALDO'}
+                              </span>
+                            </div>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">
+                              {esRetiro ? 'Saldo retenido' : `Ref: ${pago.referencia}`}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-black text-blue-400 italic leading-none">${pago.monto.toFixed(2)}</p>
-                          <p className="text-[8px] text-emerald-500 font-black mt-1 uppercase">≈ Bs. {(pago.monto * pago.tasaAplicada).toFixed(2)}</p>
+                          <p className={`text-xl font-black italic leading-none ${esRetiro ? 'text-amber-400' : 'text-blue-400'}`}>
+                            ${pago.monto.toFixed(2)}
+                          </p>
+                          <p className="text-[8px] text-slate-500 font-black mt-1 uppercase italic">
+                            BCV: {pago.tasaAplicada}
+                          </p>
                         </div>
                       </div>
+
+                      {esRetiro && (
+                        <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 space-y-1 mt-2">
+                          <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-2">Datos para transferirle:</p>
+                          <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Banco:</span><span className="text-white uppercase">{pago.datosBancarios?.banco}</span></div>
+                          <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Teléfono:</span><span className="text-white">{pago.datosBancarios?.telefono}</span></div>
+                          <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Cédula:</span><span className="text-white">{pago.datosBancarios?.cedula}</span></div>
+                        </div>
+                      )}
                       
-                      <div className="flex gap-2 pt-2 border-t border-white/5">
-                        <button onClick={() => rechazarPago(pago.id)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">Rechazar</button>
-                        <button onClick={() => aprobarPago(pago)} className="flex-[2] bg-blue-600 text-white p-3 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-blue-900/50 hover:bg-blue-500 transition-colors">Aprobar y Acreditar</button>
+                      <div className="flex gap-2 pt-2 border-t border-white/5 mt-3">
+                        <button onClick={() => rechazarPago(pago)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">
+                          {esRetiro ? 'Rechazar y Devolver' : 'Rechazar'}
+                        </button>
+                        <button onClick={() => esRetiro ? marcarRetiroComoPagado(pago) : aprobarPago(pago)} className={`flex-[2] p-3 rounded-xl font-black text-[10px] uppercase shadow-lg transition-colors ${esRetiro ? 'bg-amber-500 text-amber-950 hover:bg-amber-400' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
+                          {esRetiro ? 'Ya transferí (OK)' : 'Aprobar y Acreditar'}
+                        </button>
                       </div>
                     </div>
-                  ))
-                )
+                  );
+                })
               ) : subPestañaAdmin === 'reportes' ? (
                 /* VISTA DE REPORTES */
                 reportesAdmin.length === 0 ? (
