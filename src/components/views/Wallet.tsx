@@ -1,124 +1,189 @@
-import React from "react";
+import React, { useState } from "react";
+import { db } from "../../firebaseConfig";
+import { collection, addDoc } from "firebase/firestore";
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, ShieldCheck, CreditCard
+  RefreshCcw, ShieldCheck, CreditCard, X, Copy, Check, Info
 } from "lucide-react";
+import Toast from "../ui/Toast";
 
 export const Wallet = ({ userData, onRegresar }) => {
-  // TASA OFICIAL BCV (Mock - En producción debería venir de tu backend/Firebase)
-  const tasaBCV = 496.83; 
-  const saldoUSD = userData?.saldo || 15.50; // Saldo de prueba si no hay datos
+  const [showModalRecarga, setShowModalRecarga] = useState(false);
+  const [montoRecarga, setMontoRecarga] = useState("");
+  const [referencia, setReferencia] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const tasaBCV = 496.83; // Tasa de prueba
+  const saldoUSD = userData?.saldo || 0;
   const saldoConvertido = (saldoUSD * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
 
-  // MOCK DE MOVIMIENTOS RECIENTES
-  const movimientos = [
-    { id: 1, tipo: 'ingreso', titulo: 'Viaje finalizado (Caracas)', monto: 12.00, fecha: 'Hoy, 10:30 AM' },
-    { id: 2, tipo: 'gasto', titulo: 'Pago de cola (Valencia)', monto: -4.50, fecha: 'Ayer, 2:15 PM' },
-    { id: 3, tipo: 'retiro', titulo: 'Retiro a Pago Móvil', monto: -10.00, fecha: '05 May, 9:00 AM' },
-  ];
+  // DATOS DE PAGO (Cámbialos por tus datos reales)
+  const datosPago = {
+    banco: "Banco de Venezuela",
+    telefono: "04121234567",
+    cedula: "V-12345678"
+  };
+
+  const manejarRecarga = async (e) => {
+    e.preventDefault();
+    if (!montoRecarga || !referencia) {
+      setToastMsg("Completa todos los campos");
+      setShowToast(true);
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      await addDoc(collection(db, "PagosPendientes"), {
+        uid: userData.id,
+        nombre: userData.nombre,
+        monto: Number(montoRecarga),
+        referencia: referencia,
+        tasaAplicada: tasaBCV,
+        fecha: new Date().toISOString(),
+        estado: "pendiente",
+        tipo: "recarga"
+      });
+
+      setToastMsg("Solicitud enviada. Espera la validación.");
+      setShowToast(true);
+      setShowModalRecarga(false);
+      setMontoRecarga("");
+      setReferencia("");
+    } catch (error) {
+      console.error(error);
+      setToastMsg("Error al enviar solicitud");
+      setShowToast(true);
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#0b1120] font-sans pb-24">
-      
-      {/* HEADER DE LA WALLET */}
+    <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative">
+      <Toast show={showToast} message={toastMsg} onClose={() => setShowToast(false)} />
+
+      {/* HEADER */}
       <div className="p-6 pt-10 flex justify-between items-center sticky top-0 bg-[#0b1120]/80 backdrop-blur-lg z-50">
-        <div>
-          <h2 className="text-2xl font-black italic text-white uppercase tracking-tighter">Mi Billetera</h2>
-          <div className="flex items-center gap-1.5 mt-1">
-            <ShieldCheck size={14} className="text-emerald-400" />
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fondos Seguros • Tasa BCV</p>
-          </div>
-        </div>
-        <button onClick={onRegresar} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 shadow-inner text-slate-300 active:scale-95 transition-all">
-          <History size={18} />
+        <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
+            <ArrowDownLeft className="rotate-90" size={20} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Volver</span>
         </button>
+        <div className="text-right">
+          <h2 className="text-xl font-black italic text-white uppercase tracking-tighter leading-none">Mi Billetera</h2>
+          <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest mt-1">BCV: {tasaBCV}</p>
+        </div>
       </div>
 
       <div className="px-5 space-y-8">
-        
-        {/* TARJETA DE SALDO PRINCIPAL (GLASSMORPHISM) */}
-        <div className="relative overflow-hidden rounded-[35px] p-8 border border-white/10 bg-gradient-to-br from-blue-900/40 to-slate-900/80 backdrop-blur-xl shadow-[0_20px_50px_-12px_rgba(37,99,235,0.2)] mt-2">
-          {/* Círculos decorativos de fondo */}
-          <div className="absolute -top-20 -right-20 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
+        {/* TARJETA DE SALDO */}
+        <div className="relative overflow-hidden rounded-[35px] p-8 border border-white/10 bg-gradient-to-br from-blue-900/40 to-slate-900/80 backdrop-blur-xl shadow-lg mt-2">
           <div className="relative z-10 flex flex-col items-center text-center">
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-300/80 mb-2">Saldo Disponible</p>
+            <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-300/80 mb-2">Saldo Neto</p>
             <div className="flex items-start justify-center gap-1">
               <span className="text-3xl font-black italic text-blue-400 mt-2">$</span>
               <span className="text-7xl font-black italic text-white tracking-tighter leading-none">{saldoUSD.toFixed(2)}</span>
             </div>
-            
-            {/* EQUIVALENTE OFICIAL EN BCV */}
             <div className="mt-6 flex items-center gap-2 bg-slate-950/50 px-5 py-2.5 rounded-full border border-slate-800/50">
               <RefreshCcw size={12} className="text-green-400" />
-              <p className="text-[11px] font-bold text-slate-300 tracking-wide">
-                ≈ Bs. {saldoConvertido} <span className="text-slate-500 uppercase text-[9px] ml-1">(TASA OFICIAL BCV)</span>
-              </p>
+              <p className="text-[11px] font-bold text-slate-300 tracking-wide">≈ Bs. {saldoConvertido}</p>
             </div>
           </div>
         </div>
 
-        {/* BOTONES DE ACCIÓN RÁPIDA */}
+        {/* BOTONES PRINCIPALES */}
         <div className="grid grid-cols-2 gap-4">
-          <button className="bg-gradient-to-b from-emerald-500 to-emerald-700 p-5 rounded-[28px] shadow-lg shadow-emerald-900/20 flex flex-col items-center gap-3 active:scale-95 transition-all border border-emerald-400/30">
+          <button 
+            onClick={() => setShowModalRecarga(true)}
+            className="bg-emerald-600 p-5 rounded-[28px] shadow-lg flex flex-col items-center gap-3 active:scale-95 transition-all border border-emerald-500"
+          >
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <ArrowDownLeft size={24} className="text-white" />
             </div>
-            <div className="text-center">
-              <span className="block text-[11px] font-black uppercase tracking-widest text-white">Recargar</span>
-              <span className="block text-[8px] font-bold text-emerald-100 uppercase mt-0.5">Ingresar dinero</span>
-            </div>
+            <span className="text-[11px] font-black uppercase tracking-widest text-white">Recargar</span>
           </button>
 
-          <button className="bg-slate-900 p-5 rounded-[28px] flex flex-col items-center gap-3 active:scale-95 transition-all border border-slate-800 hover:border-slate-700">
+          <button className="bg-slate-900 p-5 rounded-[28px] flex flex-col items-center gap-3 active:scale-95 transition-all border border-slate-800">
             <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center">
               <ArrowUpRight size={24} className="text-blue-400" />
             </div>
-            <div className="text-center">
-              <span className="block text-[11px] font-black uppercase tracking-widest text-slate-300">Retirar</span>
-              <span className="block text-[8px] font-bold text-slate-500 uppercase mt-0.5">A cuenta bancaria</span>
-            </div>
+            <span className="text-[11px] font-black uppercase tracking-widest text-slate-300">Retirar</span>
           </button>
         </div>
 
-        {/* HISTORIAL RECIENTE */}
-        <div className="pt-2">
-          <div className="flex justify-between items-end mb-4 px-1">
-            <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400">Actividad Reciente</h3>
-            <button className="text-[9px] font-bold uppercase text-blue-400 hover:text-blue-300 active:scale-95 transition-all">Ver todo</button>
-          </div>
+        {/* HISTORIAL VACÍO (Muestra algo elegante si no hay datos) */}
+        <div className="pt-2 text-center py-10">
+          <History size={40} className="mx-auto text-slate-800 mb-3" />
+          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest leading-loose">No hay movimientos recientes que mostrar</p>
+        </div>
+      </div>
 
-          <div className="space-y-3">
-            {movimientos.map((mov) => (
-              <div key={mov.id} className="bg-slate-900/50 p-4 rounded-[24px] border border-slate-800/80 flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border ${
-                  mov.tipo === 'ingreso' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
-                  mov.tipo === 'retiro' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
-                  'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                }`}>
-                  {mov.tipo === 'ingreso' ? <ArrowDownLeft size={20} /> : 
-                   mov.tipo === 'retiro' ? <CreditCard size={20} /> : <ArrowUpRight size={20} />}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-200 truncate">{mov.titulo}</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">{mov.fecha}</p>
-                </div>
+      {/* MODAL DE RECARGA */}
+      {showModalRecarga && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black italic uppercase text-white">Recargar Saldo</h3>
+              <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white"><X size={18} /></button>
+            </div>
 
-                <div className="text-right shrink-0">
-                  <p className={`text-sm font-black italic ${
-                    mov.tipo === 'ingreso' ? 'text-emerald-400' : 'text-white'
-                  }`}>
-                    {mov.monto > 0 ? '+' : ''}{mov.monto.toFixed(2)}$
-                  </p>
+            <div className="space-y-4 mb-8 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
+              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-400">Banco:</span>
+                  <span className="text-xs font-black text-white uppercase">{datosPago.banco}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-400">Teléfono:</span>
+                  <span className="text-xs font-black text-white">{datosPago.telefono}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-400">Cédula:</span>
+                  <span className="text-xs font-black text-white">{datosPago.cedula}</span>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <form onSubmit={manejarRecarga} className="space-y-4">
+              <div>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($)</label>
+                <input 
+                  type="number" 
+                  value={montoRecarga}
+                  onChange={(e) => setMontoRecarga(e.target.value)}
+                  placeholder="Ej: 10.00"
+                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all"
+                />
+                {montoRecarga && (
+                  <p className="text-[9px] font-black text-emerald-500 uppercase mt-2 ml-1 italic">≈ Bs. {(Number(montoRecarga) * tasaBCV).toFixed(2)}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Nro de Referencia (Últimos 4-6)</label>
+                <input 
+                  type="text" 
+                  value={referencia}
+                  onChange={(e) => setReferencia(e.target.value)}
+                  placeholder="0000"
+                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all"
+                />
+              </div>
+
+              <button 
+                type="submit"
+                disabled={enviando}
+                className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {enviando ? "Notificando..." : "Notificar Pago"}
+              </button>
+            </form>
           </div>
         </div>
-
-      </div>
+      )}
     </div>
   );
 };
