@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { AlertCircle } from 'lucide-react';
+import { Wallet } from './components/views/Wallet'; 
 
 import { 
   doc, onSnapshot, collection, query, orderBy, 
@@ -33,6 +34,7 @@ export default function NavegacionPrincipal({ user }) {
   const [pasoWizard, setPasoWizard] = useState(1);
   const [chatActivo, setChatActivo] = useState(null); 
   const [vistaOrigen, setVistaOrigen] = useState("inicio");
+  const [verWallet, setVerWallet] = useState(false);
   
   const [viajeForm, setViajeForm] = useState({
     origen: "", destino: "", precio: "", asientos: "4", 
@@ -47,7 +49,7 @@ export default function NavegacionPrincipal({ user }) {
     "Apure": ["San Fernando", "Guasdualito"], 
     "Aragua": ["Maracay", "Turmero", "La Victoria", "Cagua"],
     "Barinas": ["Barinas", "Socopó"], 
-    "Bolívar": ["Ciudad Guayana", "Ciudad Bolívar", "Upata", "Santa Elena de Uairén"],
+    "Bolívar": ["Ciudadconst [verWallet, setVerWallet] = useState(false); Guayana", "Ciudad Bolívar", "Upata", "Santa Elena de Uairén"],
     "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego", "Puerto Cabello", "Mariara", "Los Guayos"],
     "Cojedes": ["San Carlos", "Tinaquillo"], 
     "Delta Amacuro": ["Tucupita"],
@@ -300,9 +302,23 @@ export default function NavegacionPrincipal({ user }) {
   }
 
   
+    // 👇 INYECCIÓN DE LA WALLET 👇
+  if (verWallet) {
+    return (
+      <div className="w-full max-w-md mx-auto h-screen bg-[#0b1120] flex flex-col relative overflow-hidden border-x z-[100]">
+        <Wallet userData={userData} onRegresar={() => setVerWallet(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
-      <Header userData={userData} modo={modo} />
+      {/* 👇 LE PASAMOS LA ORDEN AL HEADER 👇 */}
+      <Header 
+        userData={userData} 
+        modo={modo} 
+        onAbrirWallet={() => setVerWallet(true)} 
+      />
 
       <main className="flex-1 overflow-y-auto bg-slate-50">
            {viajeSel ? (
