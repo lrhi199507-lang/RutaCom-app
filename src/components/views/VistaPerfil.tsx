@@ -6,13 +6,12 @@ import { getAuth } from 'firebase/auth';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
-  Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign
+  Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight
 } from 'lucide-react';
 
 const auth = getAuth();
 
 export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva }: any) => {
-  // ESTADOS
   const [modalVisible, setModalVisible] = useState(false);
   const [pasoFoto, setPasoFoto] = useState(false); 
   const [fotoTemporal, setFotoTemporal] = useState<string | null>(null);
@@ -21,18 +20,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [nuevoValor, setNuevoValor] = useState("");
   const [cargando, setCargando] = useState(false);
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
+  
+  // ESTADOS ADMIN
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
-  const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); // NUEVO ESTADO PARA PAGOS
+  const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); 
   const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos'>('pendientes');
-  const [fotoZoom, setFotoZoom] = useState<string | null>(null);
-  const [modalInstruccionesSelfie, setModalInstruccionesSelfie] = useState(false);
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
-  const [bio, setBio] = useState(userData?.bio || "");
-  const [hablador, setHablador] = useState(userData?.hablador || false);
-  const [musica, setMusica] = useState(userData?.musica || false);
+  const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   
-  // ESTADO PARA EL TOAST
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
@@ -41,7 +37,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const ADMIN_EMAIL = "lrhi199507@gmail.com";
   const esAdmin = auth.currentUser?.email ? auth.currentUser.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
 
-  // --- LÓGICA DE RANGOS ---
   const viajesCond = userData.viajesRealizados || 0;
   const viajesPas = userData.viajesComoPasajero || 0;
   const totalTrayectoria = viajesCond + viajesPas;
@@ -90,19 +85,14 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
   const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
-    
     const fotoParaSubir = fotoTemporal;
     const userId = auth.currentUser?.uid || userData.id;
-
     setUserData({ ...userData, fotoPerfil: fotoParaSubir });
     setPasoFoto(false); 
     setFotoTemporal(null);
-    
     try {
       await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: fotoParaSubir });
-    } catch (e) { 
-      console.error("Error subiendo foto en segundo plano:", e);
-    }
+    } catch (e) { console.error("Error subiendo foto:", e); }
   };
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
@@ -154,7 +144,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
       setFotoDocTemporal(null); setPasoDocumento({ ...pasoDocumento, activa: false });
     } catch (e: any) {
-      setToast({ texto: "Retraso de red. Se subirá en segundo plano.", tipo: "error" });
+      setToast({ texto: "Error al subir documento.", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
       setFotoDocTemporal(null); setPasoDocumento({ ...pasoDocumento, activa: false });
     } finally { setCargando(false); }
@@ -169,14 +159,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const snapReports = await getDocs(collection(db, "Reportes"));
       setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // NUEVO: Cargar pagos pendientes
       const snapPagos = await getDocs(collection(db, "PagosPendientes"));
       setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter((p: any) => p.estado === 'pendiente'));
-
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-    // --- LÓGICA DE PAGOS Y RETIROS ---
+  // --- LÓGICA DE PAGOS ---
   const aprobarPago = async (pago: any) => {
     if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
     setCargando(true);
@@ -196,7 +184,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     if(!window.confirm(`¿Confirmas que ya transferiste a ${pago.nombre}?`)) return;
     setCargando(true);
     try {
-      // Solo actualizamos el estado, la plata ya se le descontó de la Wallet al solicitarlo
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
       setToast({ texto: "Retiro marcado como pagado", tipo: "exito" });
@@ -212,12 +199,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     setCargando(true);
     try {
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
-      
-      // DEVOLUCIÓN DE DINERO: Si tú rechazas el retiro, le regresamos la plata al chofer a su Wallet
       if (pago.tipo === 'retiro') {
         await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
       }
-
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
       setToast({ texto: "Movimiento rechazado", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
@@ -228,19 +212,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const resolverReporte = async (reporteId: string) => {
-    if(!window.confirm("¿Marcar este reporte como revisado? Se eliminará de la lista.")) return;
+    if(!window.confirm("¿Marcar este reporte como revisado?")) return;
     try {
       const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(doc(db, "Reportes", reporteId));
       setReportesAdmin(reportesAdmin.filter(r => r.id !== reporteId));
     } catch (e) { 
-      setToast({ texto: "Error al eliminar reporte", tipo: "error" });
+      setToast({ texto: "Error al eliminar", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     }
   };
 
   const aprobarUsuario = async (userId: string) => {
-    if (!userId) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "usuarios", userId), {
@@ -258,13 +241,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const rechazarDocumentos = async (userId: string) => {
-    if (!window.confirm("¿Rechazar fotos? El usuario deberá subirlas de nuevo y desaparecerá de esta lista.")) return;
+    if (!window.confirm("¿Rechazar fotos?")) return;
     try {
       await updateDoc(doc(db, "usuarios", userId), {
         kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false,
         fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false,
         kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null,
-        estadoRevision: "rechazado", mensajeAdmin: "Tus documentos fueron rechazados por falta de claridad. Por favor, asegúrate de que sean legibles y vuelve a intentarlo."
+        estadoRevision: "rechazado", mensajeAdmin: "Tus documentos fueron rechazados."
       });
       setToast({ texto: "Documentos eliminados", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
@@ -276,7 +259,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const suspenderUsuario = async (userId: string) => {
-    if (!window.confirm("¿SUSPENDER esta cuenta? No podrá usar la app.")) return;
+    if (!window.confirm("¿SUSPENDER esta cuenta?")) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "usuarios", userId), { cuentaSuspendida: true });
@@ -321,7 +304,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         setToast({ texto: "Correo de verificación enviado", tipo: "exito" });
         setTimeout(() => setToast(null), 3000);
       } catch (error) { 
-        setToast({ texto: "Error al enviar verificación", tipo: "error" });
+        setToast({ texto: "Error al enviar", tipo: "error" });
         setTimeout(() => setToast(null), 3000);
       }
     }
@@ -343,8 +326,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
 
+  // ==========================================
+  // RENDER PRINCIPAL
+  // ==========================================
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
+      {/* TOAST FLOTANTE */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -363,7 +350,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       </div>
 
       <div className="flex-1 overflow-y-auto pb-32">
+        
+        {/* ========================================== */}
         {/* VISTA PÚBLICA */}
+        {/* ========================================== */}
         {view === 'publico' && (
           <div className="p-5 space-y-6 animate-in fade-in duration-500">
             {auth.currentUser && !auth.currentUser.emailVerified && (
@@ -437,7 +427,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
 
+        {/* ========================================== */}
         {/* VISTA DE CUENTA */}
+        {/* ========================================== */}
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
             <div className="space-y-3">
@@ -519,7 +511,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
 
+        {/* ========================================== */}
         {/* PANEL ADMINISTRATIVO MAESTRO */}
+        {/* ========================================== */}
         {view === 'admin' && (
           <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
             <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
@@ -531,180 +525,168 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} /></button>
             </div>
 
-            {/* SELECTOR DE SUB-PESTAÑAS (AHORA SON 4) */}
+            {/* SELECTOR DE SUB-PESTAÑAS */}
             <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar">
-              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>
-                Cuentas
-              </button>
-              <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>
-                Pagos ({pagosAdmin.length})
-              </button>
-              <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>
-                Reportes
-              </button>
-              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>
-                Aprobados
-              </button>
+              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Cuentas</button>
+              <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
+              <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
+              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Aprobados</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
               {cargando ? (
                 <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
-
-               ) : subPestañaAdmin === 'pagos' ? (
-                /* VISTA DE PAGOS PENDIENTES (REPARADA Y BLINDADA) */
-                pagosAdmin.length === 0 ? (
-                  <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
-                ) : (
-                  pagosAdmin.map(pago => {
-                    const esRetiro = pago.tipo === 'retiro';
-                    // Blindaje: Forzamos a que siempre sea un número para que no rompa la pantalla
-                    const montoFijo = Number(pago.monto || 0); 
-                    
-                    return (
-                      <div key={pago.id} className={`bg-slate-900 border ${esRetiro ? 'border-amber-500/20' : 'border-blue-500/20'} rounded-[25px] p-5 space-y-4 text-white`}>
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 ${esRetiro ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'} rounded-full flex items-center justify-center`}>
-                              {esRetiro ? <ArrowUpRight size={20}/> : <DollarSign size={20}/>}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="text-xs font-black uppercase italic">{pago.nombre || "Usuario"}</p>
-                                <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${esRetiro ? 'bg-amber-500 text-amber-950' : 'bg-blue-500 text-white'}`}>
-                                  {esRetiro ? 'SOLICITUD RETIRO' : 'RECARGA SALDO'}
-                                </span>
-                              </div>
-                              <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">
-                                {esRetiro ? 'Saldo retenido en App' : `Ref: ${pago.referencia || "N/A"}`}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-xl font-black italic leading-none ${esRetiro ? 'text-amber-400' : 'text-blue-400'}`}>
-                              ${montoFijo.toFixed(2)}
-                            </p>
-                            <p className="text-[8px] text-slate-500 font-black mt-1 uppercase italic">
-                              BCV: {pago.tasaAplicada || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* DATOS BANCARIOS SI ES RETIRO */}
-                        {esRetiro && (
-                          <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 space-y-1 mt-2">
-                            <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-2">Datos para transferirle:</p>
-                            <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Banco:</span><span className="text-white uppercase">{pago.datosBancarios?.banco}</span></div>
-                            <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Teléfono:</span><span className="text-white">{pago.datosBancarios?.telefono}</span></div>
-                            <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Cédula:</span><span className="text-white">{pago.datosBancarios?.cedula}</span></div>
-                          </div>
-                        )}
-                        
-                        <div className="flex gap-2 pt-2 border-t border-white/5 mt-3">
-                          <button onClick={() => rechazarPago(pago)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">
-                            {esRetiro ? 'Rechazar y Devolver' : 'Rechazar'}
-                          </button>
-                          <button onClick={() => esRetiro ? marcarRetiroComoPagado(pago) : aprobarPago(pago)} className={`flex-[2] p-3 rounded-xl font-black text-[10px] uppercase shadow-lg transition-colors ${esRetiro ? 'bg-amber-500 text-amber-950 hover:bg-amber-400' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
-                            {esRetiro ? 'Ya transferí (OK)' : 'Aprobar y Acreditar'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )
-              ) : subPestañaAdmin === 'reportes' ? (
-                /* VISTA DE REPORTES */
-                reportesAdmin.length === 0 ? (
-                  <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay reportes activos</p>
-                ) : (
-                  reportesAdmin.map(r => (
-                    <div key={r.id} className="bg-slate-900 border border-red-500/20 rounded-[25px] p-5 space-y-3 text-white">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-red-500/10 rounded-full flex items-center justify-center text-red-500">
-                            <AlertCircle size={16} />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">Denunciado: {r.nombreReportado}</p>
-                            <p className="text-[8px] text-slate-500 font-bold uppercase">Por: {r.nombreReportador}</p>
-                          </div>
-                        </div>
-                        <button onClick={() => resolverReporte(r.id)} className="bg-slate-800 p-2 rounded-lg text-slate-400">
-                          <ShieldCheck size={16} />
-                        </button>
-                      </div>
-                      <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
-                        <p className="text-[10px] font-bold text-slate-400 italic leading-relaxed">"{r.motivo}"</p>
-                      </div>
-                    </div>
-                  ))
-                )
               ) : (
-                /* VISTA DE USUARIOS PENDIENTES/APROBADOS */
-                usuariosAdmin
-                  .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
-                  .map(u => {
-                    const estaExpandido = usuarioExpandidoAdmin === u.id;
-                    const estaSuspendido = u.cuentaSuspendida === true;
-                    
-                    return (
-                      <div key={u.id} className={`bg-slate-900 border ${estaSuspendido ? 'border-red-900' : 'border-white/5'} rounded-[25px] overflow-hidden transition-colors`}>
-                        <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white relative">
-                          {estaSuspendido && <div className="absolute top-0 right-0 bg-red-600 text-white text-[7px] font-black uppercase px-2 py-1 rounded-bl-xl">Suspendido</div>}
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 ${estaSuspendido ? 'bg-red-950/50 text-red-500' : 'bg-slate-800 text-white'} rounded-full flex items-center justify-center font-black text-xs`}>
-                              {u.nombre?.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="text-left">
-                              <p className={`font-black text-xs uppercase italic ${estaSuspendido ? 'text-slate-500 line-through' : 'text-white'}`}>{u.nombre}</p>
-                              <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
-                            </div>
-                          </div>
-                          <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
-                        </button>
+                <>
+                  {/* PESTAÑA DE PAGOS */}
+                  {subPestañaAdmin === 'pagos' && (
+                    pagosAdmin.length === 0 ? (
+                      <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
+                    ) : (
+                      pagosAdmin.map(pago => {
+                        const esRetiro = pago.tipo === 'retiro';
+                        const montoFijo = Number(pago.monto || 0); 
                         
-                        {estaExpandido && (
-                          <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
-                            <div className="grid grid-cols-3 gap-2">
-                              {[
-                                { img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' }, { img: u.fotoFrontal, label: 'Auto' }
-                              ].map((item, idx) => (
-                                <div key={idx} className="flex flex-col gap-1">
-                                  <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
-                                  <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
-                                    {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
-                                  </div>
+                        return (
+                          <div key={pago.id} className={`bg-slate-900 border ${esRetiro ? 'border-amber-500/20' : 'border-blue-500/20'} rounded-[25px] p-5 space-y-4 text-white`}>
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 ${esRetiro ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'} rounded-full flex items-center justify-center`}>
+                                  {esRetiro ? <ArrowUpRight size={20}/> : <DollarSign size={20}/>}
                                 </div>
-                              ))}
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs font-black uppercase italic">{pago.nombre || "Usuario"}</p>
+                                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${esRetiro ? 'bg-amber-500 text-amber-950' : 'bg-blue-500 text-white'}`}>
+                                      {esRetiro ? 'SOLICITUD RETIRO' : 'RECARGA SALDO'}
+                                    </span>
+                                  </div>
+                                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">
+                                    {esRetiro ? 'Saldo retenido en App' : `Ref: ${pago.referencia || "N/A"}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={`text-xl font-black italic leading-none ${esRetiro ? 'text-amber-400' : 'text-blue-400'}`}>
+                                  ${montoFijo.toFixed(2)}
+                                </p>
+                                <p className="text-[8px] text-slate-500 font-black mt-1 uppercase italic">
+                                  BCV: {pago.tasaAplicada || "N/A"}
+                                </p>
+                              </div>
                             </div>
+
+                            {esRetiro && (
+                              <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 space-y-1 mt-2">
+                                <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-2">Datos para transferirle:</p>
+                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Banco:</span><span className="text-white uppercase">{pago.datosBancarios?.banco}</span></div>
+                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Teléfono:</span><span className="text-white">{pago.datosBancarios?.telefono}</span></div>
+                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Cédula:</span><span className="text-white">{pago.datosBancarios?.cedula}</span></div>
+                              </div>
+                            )}
                             
-                            <div className="flex flex-col gap-2">
-                              {estaSuspendido ? (
-                                <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
-                              ) : (
-                                <>
-                                  {subPestañaAdmin === 'pendientes' && (
-                                    <div className="flex gap-2">
-                                      <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-                                      <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
-                                    </div>
-                                  )}
-                                  <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">Suspender Usuario</button>
-                                </>
-                              )}
+                            <div className="flex gap-2 pt-2 border-t border-white/5 mt-3">
+                              <button onClick={() => rechazarPago(pago)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">
+                                {esRetiro ? 'Rechazar y Devolver' : 'Rechazar'}
+                              </button>
+                              <button onClick={() => esRetiro ? marcarRetiroComoPagado(pago) : aprobarPago(pago)} className={`flex-[2] p-3 rounded-xl font-black text-[10px] uppercase shadow-lg transition-colors ${esRetiro ? 'bg-amber-500 text-amber-950 hover:bg-amber-400' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
+                                {esRetiro ? 'Ya transferí (OK)' : 'Aprobar y Acreditar'}
+                              </button>
                             </div>
                           </div>
-                        )}     
-                      </div>
-                    );
-                  })
+                        );
+                      })
+                    )
+                  )}
+
+                  {/* PESTAÑA DE REPORTES */}
+                  {subPestañaAdmin === 'reportes' && (
+                    reportesAdmin.length === 0 ? (
+                      <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay reportes activos</p>
+                    ) : (
+                      reportesAdmin.map(r => (
+                        <div key={r.id} className="bg-slate-900 border border-red-500/20 rounded-[25px] p-5 space-y-3 text-white">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><AlertCircle size={16} /></div>
+                              <div>
+                                <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">Denunciado: {r.nombreReportado}</p>
+                                <p className="text-[8px] text-slate-500 font-bold uppercase">Por: {r.nombreReportador}</p>
+                              </div>
+                            </div>
+                            <button onClick={() => resolverReporte(r.id)} className="bg-slate-800 p-2 rounded-lg text-slate-400"><ShieldCheck size={16} /></button>
+                          </div>
+                          <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                            <p className="text-[10px] font-bold text-slate-400 italic leading-relaxed">"{r.motivo}"</p>
+                          </div>
+                        </div>
+                      ))
+                    )
+                  )}
+
+                  {/* PESTAÑA DE CUENTAS (PENDIENTES O APROBADOS) */}
+                  {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
+                    usuariosAdmin
+                      .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
+                      .map(u => {
+                        const estaExpandido = usuarioExpandidoAdmin === u.id;
+                        const estaSuspendido = u.cuentaSuspendida === true;
+                        return (
+                          <div key={u.id} className={`bg-slate-900 border ${estaSuspendido ? 'border-red-900' : 'border-white/5'} rounded-[25px] overflow-hidden transition-colors`}>
+                            <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white relative">
+                              {estaSuspendido && <div className="absolute top-0 right-0 bg-red-600 text-white text-[7px] font-black uppercase px-2 py-1 rounded-bl-xl">Suspendido</div>}
+                              <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 ${estaSuspendido ? 'bg-red-950/50 text-red-500' : 'bg-slate-800 text-white'} rounded-full flex items-center justify-center font-black text-xs`}>{u.nombre?.charAt(0).toUpperCase()}</div>
+                                <div className="text-left">
+                                  <p className={`font-black text-xs uppercase italic ${estaSuspendido ? 'text-slate-500 line-through' : 'text-white'}`}>{u.nombre}</p>
+                                  <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
+                                </div>
+                              </div>
+                              <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
+                            </button>
+                            {estaExpandido && (
+                              <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
+                                <div className="grid grid-cols-3 gap-2">
+                                  {[{ img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' }, { img: u.fotoFrontal, label: 'Auto' }].map((item, idx) => (
+                                    <div key={idx} className="flex flex-col gap-1">
+                                      <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
+                                      <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
+                                        {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  {estaSuspendido ? (
+                                    <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
+                                  ) : (
+                                    <>
+                                      {subPestañaAdmin === 'pendientes' && (
+                                        <div className="flex gap-2">
+                                          <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+                                          <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
+                                        </div>
+                                      )}
+                                      <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">Suspender Usuario</button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}     
+                          </div>
+                        );
+                      })
+                  )}
+                </>
               )}
             </div>
           </div>
         )}
       </div>
-      
-      {/* MODALES DE EDICIÓN Y CÁMARA */}
+
+      {/* ========================================== */}
+      {/* MODALES FLOTANTES GLOBALES */}
+      {/* ========================================== */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
@@ -766,7 +748,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   );
 };
 
+// ==========================================
 // COMPONENTE DE BOTÓN (REUTILIZABLE)
+// ==========================================
 const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-blue-500";
