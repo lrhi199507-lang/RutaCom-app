@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { doc, updateDoc, collection, addDoc, increment } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, addDoc, increment } from "firebase/firestore";
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
   RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote
@@ -8,20 +8,38 @@ import {
 import Toast from "../ui/Toast";
 
 export const Wallet = ({ userData, onRegresar }) => {
+  // ESTADOS DE MODALES Y FORMULARIOS
   const [showModalRecarga, setShowModalRecarga] = useState(false);
   const [showModalRetiro, setShowModalRetiro] = useState(false);
-  
   const [montoRecarga, setMontoRecarga] = useState("");
   const [referencia, setReferencia] = useState("");
-  
   const [montoRetiro, setMontoRetiro] = useState("");
   const [datosBancarios, setDatosBancarios] = useState({ banco: "", telefono: "", cedula: "" });
 
+  // ESTADOS DE CONTROL
   const [enviando, setEnviando] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  
+  // ESTADO DE TASA DINÁMICA
+  const [tasaBCV, setTasaBCV] = useState(0);
 
-  const tasaBCV = 496.83; // Tasa de prueba (luego la haremos dinámica)
+  // EFECTO PARA CARGAR LA TASA DESDE FIREBASE AL ABRIR
+  useEffect(() => {
+    const obtenerTasa = async () => {
+      try {
+        const docRef = doc(db, "Configuracion", "Finanzas");
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          setTasaBCV(snap.data().tasaBCV || 0);
+        }
+      } catch (error) {
+        console.error("Error al obtener tasa:", error);
+      }
+    };
+    obtenerTasa();
+  }, []);
+
   const saldoUSD = userData?.saldo || 0;
   const saldoConvertido = (saldoUSD * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
 
@@ -70,10 +88,10 @@ export const Wallet = ({ userData, onRegresar }) => {
   const manejarRetiro = async (e) => {
     e.preventDefault();
     const monto = Number(montoRetiro);
-    const MINIMO_RETIRO = 10; // <--- Definimos el mínimo
+    const MINIMO_RETIRO = 10; 
 
     if (monto < MINIMO_RETIRO) {
-      setToastMsg(`El retiro mínimo es de $10`);
+      setToastMsg(`El retiro mínimo es de $${MINIMO_RETIRO}`);
       setShowToast(true);
       return;
     }
@@ -84,9 +102,15 @@ export const Wallet = ({ userData, onRegresar }) => {
       return;
     }
 
+    if (!datosBancarios.banco || !datosBancarios.telefono || !datosBancarios.cedula) {
+      setToastMsg("Completa tus datos de Pago Móvil");
+      setShowToast(true);
+      return;
+    }
+
     setEnviando(true);
     try {
-      // 1. DESCONTAR EL SALDO INMEDIATAMENTE
+      // 1. DESCONTAR EL SALDO INMEDIATAMENTE PARA EVITAR DOBLE GASTO
       await updateDoc(doc(db, "usuarios", userData.id), {
         saldo: increment(-monto)
       });
@@ -118,7 +142,7 @@ export const Wallet = ({ userData, onRegresar }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative">
+    <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-hidden">
       <Toast show={showToast} message={toastMsg} onClose={() => setShowToast(false)} />
 
       {/* HEADER */}
@@ -129,7 +153,9 @@ export const Wallet = ({ userData, onRegresar }) => {
         </button>
         <div className="text-right">
           <h2 className="text-xl font-black italic text-white uppercase tracking-tighter leading-none">Mi Billetera</h2>
-          <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest mt-1">BCV: {tasaBCV}</p>
+          <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest mt-1">
+            BCV: {tasaBCV > 0 ? tasaBCV : 'Cargando...'}
+          </p>
         </div>
       </div>
 
@@ -176,7 +202,7 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       </div>
 
-      {/* MODAL DE RECARGA (SIN CAMBIOS) */}
+      {/* MODAL DE RECARGA */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -211,7 +237,7 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       )}
 
-      {/* MODAL DE RETIRO (NUEVO) */}
+      {/* MODAL DE RETIRO */}
       {showModalRetiro && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -221,29 +247,26 @@ export const Wallet = ({ userData, onRegresar }) => {
             </div>
 
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
-              Introduce tus datos de Pago Móvil. El saldo se descontará y procesaremos la transferencia en breve.
+              Retiro mínimo: $10. Introduce tus datos de Pago Móvil.
             </p>
 
             <form onSubmit={manejarRetiro} className="space-y-4">
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Retirar ($)</label>
                 <input type="number" value={montoRetiro} onChange={(e) => setMontoRetiro(e.target.value)} placeholder={`Max: $${saldoUSD.toFixed(2)}`} className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
-                {montoRetiro && (
+                {montoRetiro && tasaBCV > 0 && (
                   <p className="text-[9px] font-black text-blue-400 uppercase mt-2 ml-1 italic">Recibirás ≈ Bs. {(Number(montoRetiro) * tasaBCV).toFixed(2)}</p>
                 )}
               </div>
 
               <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Banknote size={14}/> Mis Datos de Recibo</p>
-                
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Banknote size={14}/> Datos de Pago Móvil</p>
                 <input type="text" value={datosBancarios.banco} onChange={(e) => setDatosBancarios({...datosBancarios, banco: e.target.value})} placeholder="Banco (Ej: Mercantil)" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
-                
                 <input type="tel" value={datosBancarios.telefono} onChange={(e) => setDatosBancarios({...datosBancarios, telefono: e.target.value})} placeholder="Teléfono" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
-                
                 <input type="text" value={datosBancarios.cedula} onChange={(e) => setDatosBancarios({...datosBancarios, cedula: e.target.value})} placeholder="Cédula (Ej: V-12345678)" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
               </div>
 
-              <button type="submit" disabled={enviando || Number(montoRetiro) > saldoUSD} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
+              <button type="submit" disabled={enviando || Number(montoRetiro) > saldoUSD || Number(montoRetiro) < 10} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
                 {enviando ? "Procesando..." : "Solicitar Retiro"}
               </button>
             </form>
