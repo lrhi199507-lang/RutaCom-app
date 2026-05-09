@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, getDocs, collection, increment } from 'firebase/firestore';
+// IMPORTANTE: Aquí agregué getDoc que faltaba para leer la Caja Fuerte
+import { doc, updateDoc, getDocs, collection, increment, getDoc } from 'firebase/firestore';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -28,6 +29,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos'>('pendientes');
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
+  
+  // ESTADOS FINANCIEROS
+  const [tasaActual, setTasaActual] = useState(0); 
+  const [balanceApp, setBalanceApp] = useState(0);
   
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
@@ -150,6 +155,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
   
+  // --- CARGA DE DATOS ADMIN Y FINANZAS ---
   const cargarDatosAdmin = async () => {
     setCargando(true);
     try {
@@ -161,7 +167,34 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
       const snapPagos = await getDocs(collection(db, "PagosPendientes"));
       setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter((p: any) => p.estado === 'pendiente'));
-    } catch (e) { console.error(e); } finally { setCargando(false); }
+
+      // Leer Finanzas
+      const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
+      if (docFinanzas.exists()) {
+        const data = docFinanzas.data();
+        setTasaActual(data.tasaBCV || 0);
+        setBalanceApp(data.gananciasTotales || 0);
+      }
+    } catch (e) { 
+      console.error("Error cargando admin:", e); 
+    } finally { 
+      setCargando(false); 
+    }
+  };
+
+  const actualizarTasaBCV = async () => {
+    const nueva = prompt("Ingresa la nueva tasa BCV (Usa punto para los decimales):", tasaActual.toString());
+    if (!nueva || isNaN(Number(nueva))) return; 
+    
+    try {
+      await updateDoc(doc(db, "Configuracion", "Finanzas"), { tasaBCV: Number(nueva) });
+      setTasaActual(Number(nueva));
+      setToast({ texto: "Tasa BCV actualizada", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e) { 
+      setToast({ texto: "Error al actualizar tasa", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   // --- LÓGICA DE PAGOS ---
@@ -540,63 +573,89 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <>
                   {/* PESTAÑA DE PAGOS */}
                   {subPestañaAdmin === 'pagos' && (
-                    pagosAdmin.length === 0 ? (
-                      <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
-                    ) : (
-                      pagosAdmin.map(pago => {
-                        const esRetiro = pago.tipo === 'retiro';
-                        const montoFijo = Number(pago.monto || 0); 
-                        
-                        return (
-                          <div key={pago.id} className={`bg-slate-900 border ${esRetiro ? 'border-amber-500/20' : 'border-blue-500/20'} rounded-[25px] p-5 space-y-4 text-white`}>
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 ${esRetiro ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'} rounded-full flex items-center justify-center`}>
-                                  {esRetiro ? <ArrowUpRight size={20}/> : <DollarSign size={20}/>}
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-xs font-black uppercase italic">{pago.nombre || "Usuario"}</p>
-                                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${esRetiro ? 'bg-amber-500 text-amber-950' : 'bg-blue-500 text-white'}`}>
-                                      {esRetiro ? 'SOLICITUD RETIRO' : 'RECARGA SALDO'}
-                                    </span>
+                    <>
+                      {/* NUEVO: PANEL DE FINANZAS Y TASA BCV */}
+                      <div className="mb-6 space-y-4">
+                        {/* Caja Fuerte de la App */}
+                        <div className="bg-gradient-to-br from-blue-600 to-indigo-900 p-6 rounded-[30px] shadow-2xl border border-white/10">
+                          <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1 opacity-70">Ganancias Netas de la App (10%)</p>
+                          <div className="flex items-end gap-2">
+                            <span className="text-4xl font-black italic text-white">${balanceApp.toFixed(2)}</span>
+                            <span className="text-[10px] font-bold text-blue-200 mb-2 uppercase">Acumulado</span>
+                          </div>
+                        </div>
+
+                        {/* Tarjeta de Tasa BCV */}
+                        <div className="bg-slate-900 border border-white/5 p-5 rounded-[30px] flex justify-between items-center shadow-lg">
+                          <div>
+                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Oficial Actual</p>
+                            <p className="text-xl font-black text-white italic">Bs. {tasaActual}</p>
+                          </div>
+                          <button onClick={actualizarTasaBCV} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase italic active:scale-95 transition-all shadow-lg shadow-blue-900/50">
+                            Cambiar Tasa
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* LISTA DE PAGOS PENDIENTES */}
+                      {pagosAdmin.length === 0 ? (
+                        <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
+                      ) : (
+                        pagosAdmin.map(pago => {
+                          const esRetiro = pago.tipo === 'retiro';
+                          const montoFijo = Number(pago.monto || 0); 
+                          
+                          return (
+                            <div key={pago.id} className={`bg-slate-900 border ${esRetiro ? 'border-amber-500/20' : 'border-blue-500/20'} rounded-[25px] p-5 space-y-4 text-white`}>
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-10 h-10 ${esRetiro ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'} rounded-full flex items-center justify-center`}>
+                                    {esRetiro ? <ArrowUpRight size={20}/> : <DollarSign size={20}/>}
                                   </div>
-                                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">
-                                    {esRetiro ? 'Saldo retenido en App' : `Ref: ${pago.referencia || "N/A"}`}
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-black uppercase italic">{pago.nombre || "Usuario"}</p>
+                                      <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${esRetiro ? 'bg-amber-500 text-amber-950' : 'bg-blue-500 text-white'}`}>
+                                        {esRetiro ? 'SOLICITUD RETIRO' : 'RECARGA SALDO'}
+                                      </span>
+                                    </div>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">
+                                      {esRetiro ? 'Saldo retenido en App' : `Ref: ${pago.referencia || "N/A"}`}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`text-xl font-black italic leading-none ${esRetiro ? 'text-amber-400' : 'text-blue-400'}`}>
+                                    ${montoFijo.toFixed(2)}
+                                  </p>
+                                  <p className="text-[8px] text-slate-500 font-black mt-1 uppercase italic">
+                                    BCV: {pago.tasaAplicada || "N/A"}
                                   </p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className={`text-xl font-black italic leading-none ${esRetiro ? 'text-amber-400' : 'text-blue-400'}`}>
-                                  ${montoFijo.toFixed(2)}
-                                </p>
-                                <p className="text-[8px] text-slate-500 font-black mt-1 uppercase italic">
-                                  BCV: {pago.tasaAplicada || "N/A"}
-                                </p>
-                              </div>
-                            </div>
 
-                            {esRetiro && (
-                              <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 space-y-1 mt-2">
-                                <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-2">Datos para transferirle:</p>
-                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Banco:</span><span className="text-white uppercase">{pago.datosBancarios?.banco}</span></div>
-                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Teléfono:</span><span className="text-white">{pago.datosBancarios?.telefono}</span></div>
-                                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Cédula:</span><span className="text-white">{pago.datosBancarios?.cedula}</span></div>
+                              {esRetiro && (
+                                <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 space-y-1 mt-2">
+                                  <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-2">Datos para transferirle:</p>
+                                  <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Banco:</span><span className="text-white uppercase">{pago.datosBancarios?.banco}</span></div>
+                                  <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Teléfono:</span><span className="text-white">{pago.datosBancarios?.telefono}</span></div>
+                                  <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-500">Cédula:</span><span className="text-white">{pago.datosBancarios?.cedula}</span></div>
+                                </div>
+                              )}
+                              
+                              <div className="flex gap-2 pt-2 border-t border-white/5 mt-3">
+                                <button onClick={() => rechazarPago(pago)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">
+                                  {esRetiro ? 'Rechazar y Devolver' : 'Rechazar'}
+                                </button>
+                                <button onClick={() => esRetiro ? marcarRetiroComoPagado(pago) : aprobarPago(pago)} className={`flex-[2] p-3 rounded-xl font-black text-[10px] uppercase shadow-lg transition-colors ${esRetiro ? 'bg-amber-500 text-amber-950 hover:bg-amber-400' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
+                                  {esRetiro ? 'Ya transferí (OK)' : 'Aprobar y Acreditar'}
+                                </button>
                               </div>
-                            )}
-                            
-                            <div className="flex gap-2 pt-2 border-t border-white/5 mt-3">
-                              <button onClick={() => rechazarPago(pago)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">
-                                {esRetiro ? 'Rechazar y Devolver' : 'Rechazar'}
-                              </button>
-                              <button onClick={() => esRetiro ? marcarRetiroComoPagado(pago) : aprobarPago(pago)} className={`flex-[2] p-3 rounded-xl font-black text-[10px] uppercase shadow-lg transition-colors ${esRetiro ? 'bg-amber-500 text-amber-950 hover:bg-amber-400' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
-                                {esRetiro ? 'Ya transferí (OK)' : 'Aprobar y Acreditar'}
-                              </button>
                             </div>
-                          </div>
-                        );
-                      })
-                    )
+                          );
+                        })
+                      )}
+                    </>
                   )}
 
                   {/* PESTAÑA DE REPORTES */}
