@@ -145,7 +145,25 @@ export const WizardPublicar = ({
 
   const timerRef = useRef(null);
 
-  // --- NUEVA BÚSQUEDA CON GOOGLE PLACES API ---
+  const autocompleteService = useRef(null);
+  const placesService = useRef(null);
+
+  // NUEVO: Inicializador dinámico
+  const inicializarGooglePlaces = () => {
+    if (window.google && window.google.maps && window.google.maps.places) {
+      if (!autocompleteService.current) {
+        autocompleteService.current = new window.google.maps.places.AutocompleteService();
+      }
+      if (!placesService.current) {
+        const dummyDiv = document.createElement('div');
+        placesService.current = new window.google.maps.places.PlacesService(dummyDiv);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  // NUEVO: Búsqueda dinámica
   const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
         setViajeForm(prev => ({...prev, origen: texto}));
@@ -153,12 +171,17 @@ export const WizardPublicar = ({
         setViajeForm(prev => ({...prev, destino: texto}));
     }
 
-    if (texto.length > 2 && autocompleteService.current) {
+    if (texto.length > 2) {
+      // Intentamos inicializar Google al momento de teclear
+      if (!inicializarGooglePlaces()) {
+        console.error("Esperando a que Google Maps cargue...");
+        return;
+      }
+
       setCampoActivo(tipo);
-      
       const request = {
         input: texto,
-        componentRestrictions: { country: 've' }, // Restringimos la búsqueda a Venezuela
+        componentRestrictions: { country: 've' }, 
       };
 
       autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
