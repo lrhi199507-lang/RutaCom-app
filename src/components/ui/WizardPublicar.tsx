@@ -149,7 +149,7 @@ export const WizardPublicar = ({
     return false;
   };
 
-  // BÚSQUEDA DINÁMICA CON GOOGLE
+    // BÚSQUEDA DINÁMICA CON DETECTOR DE ERRORES EN PANTALLA
   const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
         setViajeForm(prev => ({...prev, origen: texto}));
@@ -158,10 +158,14 @@ export const WizardPublicar = ({
     }
 
     if (texto.length > 2) {
-      if (!inicializarGooglePlaces()) {
-        console.warn("Esperando a que Google Maps cargue...");
+      // 1er Control: Revisamos si el script de index.html siquiera cargó
+      if (!window.google || !window.google.maps || !window.google.maps.places) {
+        setToastMessage("Error: Google Maps no cargó. Revisa tu llave en index.html");
+        setShowToast(true);
         return;
       }
+
+      if (!inicializarGooglePlaces()) return;
 
       setCampoActivo(tipo);
       const request = {
@@ -179,13 +183,16 @@ export const WizardPublicar = ({
           }));
           setSugerencias(sugerenciasGoogle);
         } else {
+          // 2do Control: Si Google responde pero rechaza la petición
+          setToastMessage(`Bloqueo de Google: ${status}`);
+          setShowToast(true);
           setSugerencias([]);
         }
       });
     } else {
       setSugerencias([]);
     }
-  };
+  }
 
   const seleccionarSugerencia = (sugerencia) => {
     if (!inicializarGooglePlaces()) return;
