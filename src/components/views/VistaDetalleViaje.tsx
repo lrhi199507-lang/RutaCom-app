@@ -450,18 +450,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-  const enviarCalificacionesYFinalizar = async () => {
-    setCargando(true);
-    try {
-      // 1. Conexión con el Búnker en la nube
-      const functions = getFunctions(undefined, 'us-central1');
-      const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
+const enviarCalificacionesYFinalizar = async () => {
+  setCargando(true);
+  try {
+    // 1. IMPORTANTE: Especificar la región 'us-central1' aquí es obligatorio
+    const functions = getFunctions(undefined, 'us-central1'); 
+    const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
 
-      // 2. Le mandamos los datos mínimos necesarios
-      const resultado = await llamarBunker({ 
-        viajeId: viaje.id, 
-        ratingsChofer: ratingsChofer // Las estrellas que pusiste en el modal
-      });
+    const resultado = await llamarBunker({ 
+      viajeId: viaje.id, 
+      ratingsChofer: ratingsChofer 
+    });
 
       // 3. Si el Búnker responde éxito, limpiamos la pantalla
       if (resultado.data.success) {
