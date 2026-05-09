@@ -455,6 +455,12 @@ const enviarCalificacionesYFinalizar = async () => {
   try {
     // 1. IMPORTANTE: Especificar la región 'us-central1' aquí es obligatorio
     const functions = getFunctions(undefined, 'us-central1'); 
+Pégalo justo aquí, antes de llamar al búnker:
+      console.log("DATOS ENVIADOS AL BÚNKER:", {
+        viajeId: viaje.id,
+        ratings: ratingsChofer
+      });
+    
     const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
 
     const resultado = await llamarBunker({ 
