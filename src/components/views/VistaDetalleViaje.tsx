@@ -573,8 +573,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                <div className="absolute top-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
                   <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-slate-200 flex items-center gap-2 shadow-lg">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-                    <p className="text-slate-800 text-[11px] font-black uppercase tracking-widest">
-                       {viaje.latChofer ? `En ruta a ${obtenerEstado(viaje?.cD || "")}` : "Esperando Señal GPS..."}
+                    <p className="text-slate-800 text-[11px] font-black uppercase tracking-widest"> {viaje.latChofer ? `En ruta a ${viaje?.cD?.split(',')[0] || "Destino"}` : "Esperando Señal GPS..."}
                     </p>
                   </div>
                </div>
