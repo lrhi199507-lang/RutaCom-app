@@ -6,6 +6,7 @@ import Toast from "../ui/Toast";
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
 import MapaView from '../Map/MapaView';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
@@ -452,71 +453,29 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
-      const precioPorAsiento = Number(viaje.precio) || 0;
-      let gananciaTotalChofer = 0;
+      // 1. Conexión con el Búnker en la nube
+      const functions = getFunctions(undefined, 'us-central1');
+      const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
 
-      for (const p of pasajerosConfirmados) {
-        if (!p) continue;
-        const pid = p.id || p.uid;
-        const rat = ratingsChofer[pid];
-        
-        const puestosOcupados = Number(p.puestosSolicitados) || 1;
-        const cobroTotalPasajero = precioPorAsiento * puestosOcupados;
-        
-        const comisionApp = cobroTotalPasajero * 0.10;
-        const gananciaChoferNeta = cobroTotalPasajero * 0.90;
+      // 2. Le mandamos los datos mínimos necesarios
+      const resultado = await llamarBunker({ 
+        viajeId: viaje.id, 
+        ratingsChofer: ratingsChofer // Las estrellas que pusiste en el modal
+      });
 
-        if (rat && rat.estrellas > 0) {
-          try {
-            await addDoc(collection(db, "Resenas"), {
-              idViaje: viaje.id,
-              idConductor: pid, 
-              idPasajero: userData?.id || "Conductor", 
-              nombrePasajero: userData?.nombre || "Conductor",
-              estrellas: rat.estrellas,
-              comentario: String(rat.comentario || ""),
-              fecha: new Date().toISOString()
-            });
-          } catch (e) { console.error("Error al guardar reseña:", e); }
-        }
-
-        try {
-          await updateDoc(doc(db, "usuarios", pid), {
-            saldo: increment(-cobroTotalPasajero)
-          });
-        } catch (e) { console.error("Bloqueo de Firebase:", e); }
-
-        try {
-          const finanzasRef = doc(db, "Configuracion", "Finanzas");
-          await updateDoc(finanzasRef, {
-            gananciasTotales: increment(comisionApp),
-            viajesCompletados: increment(1)
-          });
-        } catch (e) { console.error("Bloqueo de Firebase Finanzas:", e); }
-
-        gananciaTotalChofer += gananciaChoferNeta;
-        
-        await enviarNotificacion(
-          pid,
-          "¡Llegaste a tu destino!",
-          `El viaje finalizó. Se descontaron $${cobroTotalPasajero.toFixed(2)} de tu Wallet. ¡Califica a tu conductor!`,
-          "alerta" 
-        );
+      // 3. Si el Búnker responde éxito, limpiamos la pantalla
+      if (resultado.data.success) {
+        setToastMessage("¡Viaje finalizado con éxito!");
+        setShowToast(true);
+        setModalCalificarPasajeros(false);
+        onRegresar(); // Volver a la pantalla de inicio
       }
-
-      if (userData?.id) {
-         try {
-           await updateDoc(doc(db, "usuarios", userData.id), {
-             viajesRealizados: increment(1),
-             saldo: increment(gananciaTotalChofer)
-           });
-         } catch (err) { console.error("Error al pagarle al chofer", err); }
-      }
-
-      await cambiarEstadoViaje('finalizado');
-      setModalCalificarPasajeros(false);
+      
     } catch (e) { 
-      console.error(e); 
+      // Si el Búnker detecta que no hay saldo o no eres el chofer, caerá aquí
+      console.error("Error de seguridad:", e);
+      setToastMessage("Error al cobrar: " + e.message);
+      setShowToast(true);
     } finally { 
       setCargando(false); 
     }
