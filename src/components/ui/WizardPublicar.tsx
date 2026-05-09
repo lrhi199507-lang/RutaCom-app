@@ -337,6 +337,8 @@ export const WizardPublicar = ({
                </div>
             </div>
         )}
+            {/* AGREGA ESTA LÍNEA AQUÍ, JUSTO ANTES DE QUE CIERRE EL PASO 1 */}
+        <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
     );
   }
