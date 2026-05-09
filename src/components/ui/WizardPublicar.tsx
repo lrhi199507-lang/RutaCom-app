@@ -134,6 +134,29 @@ export const WizardPublicar = ({
     }).catch(e => console.error("Error rating en wizard:", e));
   }, [userData?.id]);
 
+    // --- NUEVO: INYECTOR AUTOMÁTICO DE GOOGLE MAPS ---
+  useEffect(() => {
+    // Si ya cargó, no hacemos nada
+    if (window.google && window.google.maps) return;
+
+    // Si no ha cargado, lo inyectamos a la fuerza
+    const script = document.createElement('script');
+    script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyCUNgw1YBOVZKYAhTgcW00G1c09alI2kMs&libraries=places";
+    script.async = true;
+    script.defer = true;
+    
+    script.onload = () => {
+      console.log("¡Google Maps inyectado con éxito!");
+    };
+    
+    script.onerror = () => {
+      setToastMessage("Error crítico: Google bloqueó la descarga del script.");
+      setShowToast(true);
+    };
+
+    document.head.appendChild(script);
+  }, []);
+  
   // INICIALIZADOR DINÁMICO DE GOOGLE MAPS
   const inicializarGooglePlaces = () => {
     if (window.google && window.google.maps && window.google.maps.places) {
