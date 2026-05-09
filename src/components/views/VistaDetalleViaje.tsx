@@ -487,35 +487,52 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         const pid = p.id || p.uid;
         const rat = ratingsChofer[pid];
         
-        // Calcular cuánto se le va a cobrar a este pasajero
         const puestosOcupados = Number(p.puestosSolicitados) || 1;
         const cobroTotalPasajero = precioPorAsiento * puestosOcupados;
         
-        // A) Guardar reseña si la hay
+        // CÁLCULO DE COMISIÓN (10%)
+        const comisionApp = cobroTotalPasajero * 0.10;
+        const gananciaChoferNeta = cobroTotalPasajero * 0.90;
+
+        // A) GUARDAR RESEÑA (¡Te habías comido esta parte!)
         if (rat && rat.estrellas > 0) {
-          await addDoc(collection(db, "Resenas"), {
-            idViaje: viaje.id,
-            idConductor: pid, 
-            idPasajero: userData?.id || "Conductor", 
-            nombrePasajero: userData?.nombre || "Conductor",
-            estrellas: rat.estrellas,
-            comentario: String(rat.comentario || ""),
-            fecha: new Date().toISOString()
-          });
+          try {
+            await addDoc(collection(db, "Resenas"), {
+              idViaje: viaje.id,
+              idConductor: pid, 
+              idPasajero: userData?.id || "Conductor", 
+              nombrePasajero: userData?.nombre || "Conductor",
+              estrellas: rat.estrellas,
+              comentario: String(rat.comentario || ""),
+              fecha: new Date().toISOString()
+            });
+          } catch (e) { console.error("Error al guardar reseña:", e); }
         }
 
-        // B) MOVIMIENTO DE DINERO: Restarle al pasajero
+        // B) Restar al pasajero (Total)
         try {
           await updateDoc(doc(db, "usuarios", pid), {
-            viajesComoPasajero: increment(1),
-            saldo: increment(-cobroTotalPasajero) // El signo menos resta automáticamente
+            saldo: increment(-cobroTotalPasajero)
           });
-          
-          // Sumamos a la bolsa total del chofer
-          gananciaTotalChofer += cobroTotalPasajero;
-        } catch (err) { console.log("Error al cobrarle al pasajero", err); }
+        } catch (e) { 
+          console.error("Bloqueo de Firebase al cobrar al pasajero:", e); 
+        }
 
-        // C) Notificarle el cobro
+        // C) Sumar a la App (10%)
+        try {
+          const finanzasRef = doc(db, "Configuracion", "Finanzas");
+          await updateDoc(finanzasRef, {
+            gananciasTotales: increment(comisionApp),
+            viajesCompletados: increment(1)
+          });
+        } catch (e) { 
+          console.error("Bloqueo de Firebase al sumar a Finanzas:", e); 
+        }
+
+        // D) Acumular para pagar al Chofer (90%)
+        gananciaTotalChofer += gananciaChoferNeta;
+        
+        // E) Notificarle el cobro
         await enviarNotificacion(
           pid,
           "¡Llegaste a tu destino!",
@@ -524,17 +541,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         );
       }
 
-      // D) MOVIMIENTO DE DINERO: Pagarle al Chofer todo lo acumulado
+      // F) MOVIMIENTO DE DINERO: Pagarle al Chofer todo lo acumulado
       if (userData?.id) {
          try {
            await updateDoc(doc(db, "usuarios", userData.id), {
              viajesRealizados: increment(1),
-             saldo: increment(gananciaTotalChofer) // Le entra el dinero al chofer
+             saldo: increment(gananciaTotalChofer) // Le entra el dinero neto al chofer
            });
-         } catch (err) { console.log("Error al pagarle al chofer", err); }
+         } catch (err) { console.error("Error al pagarle al chofer", err); }
       }
 
-      // E) Cerrar el viaje
+      // G) Cerrar el viaje
       await cambiarEstadoViaje('finalizado');
       setModalCalificarPasajeros(false);
     } catch (e) { 
@@ -543,8 +560,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setCargando(false); 
     }
   };
-  
-  
   
   const cambiarEstadoViaje = async (nuevoEstado) => {
     setCargando(true);
