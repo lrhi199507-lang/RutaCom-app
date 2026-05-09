@@ -120,6 +120,19 @@ export const WizardPublicar = ({
 
   const [ratingCalculado, setRatingCalculado] = useState("0.0");
 
+  const autocompleteService = useRef(null);
+  const placesService = useRef(null);
+
+  useEffect(() => {
+    // Inicializar Google Places Services si el API cargó
+    if (window.google && window.google.maps && window.google.maps.places) {
+      autocompleteService.current = new window.google.maps.places.AutocompleteService();
+      // Creamos un div dummy porque PlacesService necesita un nodo DOM (aunque no lo muestre)
+      const dummyDiv = document.createElement('div');
+      placesService.current = new window.google.maps.places.PlacesService(dummyDiv);
+    }
+  }, []);
+
   useEffect(() => {
     if (!userData?.id) return;
     const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", userData.id));
@@ -132,52 +145,67 @@ export const WizardPublicar = ({
 
   const timerRef = useRef(null);
 
+  // --- NUEVA BÚSQUEDA CON GOOGLE PLACES API ---
   const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
-        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, origen: texto}));
+        setViajeForm(prev => ({...prev, origen: texto}));
     } else {
-        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, destino: texto}));
+        setViajeForm(prev => ({...prev, destino: texto}));
     }
 
-    if (texto.length > 2) {
+    if (texto.length > 2 && autocompleteService.current) {
       setCampoActivo(tipo);
-      if (timerRef.current) clearTimeout(timerRef.current);
       
-      timerRef.current = setTimeout(async () => {
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${texto}&countrycodes=ve&addressdetails=1&limit=5`);
-          const data = await response.json();
-          
-          const sugerenciasFiltradas = data.map(item => ({
-            ciudad: item.address?.city || item.address?.town || item.address?.village || item.name,
-            estado: item.address?.state || "Venezuela",
-            lat: parseFloat(item.lat),
-            lon: parseFloat(item.lon)
-          }));
-          
-          setSugerencias(sugerenciasFiltradas);
+      const request = {
+        input: texto,
+        componentRestrictions: { country: 've' }, // Restringimos la búsqueda a Venezuela
+      };
 
-          if (sugerenciasFiltradas.length > 0) {
-            const mejorOpcion = { lat: sugerenciasFiltradas[0].lat, lon: sugerenciasFiltradas[0].lon };
-            if (tipo === 'origen') {
-              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsOrigen: mejorOpcion}));
-            } else {
-              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsDestino: mejorOpcion}));
-            }
-          }
-        } catch (error) {
-          console.error("Error buscando ubicación:", error);
+      autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+          const sugerenciasGoogle = predictions.map(p => ({
+            descripcion: p.description,
+            place_id: p.place_id,
+            ciudad: p.structured_formatting.main_text,
+            estado: p.structured_formatting.secondary_text
+          }));
+          setSugerencias(sugerenciasGoogle);
+        } else {
+          setSugerencias([]);
         }
-      }, 600); 
+      });
     } else {
       setSugerencias([]);
     }
+  };
+
+  const seleccionarSugerencia = (sugerencia) => {
+    if (!placesService.current) return;
+
+    // Cuando el usuario toca una sugerencia, necesitamos obtener sus coordenadas (Lat/Lon)
+    placesService.current.getDetails({ placeId: sugerencia.place_id, fields: ['geometry', 'name', 'formatted_address'] }, (place, status) => {
+      if (status === window.google.maps.places.PlacesServiceStatus.OK && place.geometry) {
+        const coords = {
+          lat: place.geometry.location.lat(),
+          lon: place.geometry.location.lng()
+        };
+        const nombreMostrar = sugerencia.ciudad; 
+        
+        if (campoActivo === 'origen') {
+          setViajeForm({...viajeForm, origen: nombreMostrar, coordsOrigen: coords});
+        } else {
+          setViajeForm({...viajeForm, destino: nombreMostrar, coordsDestino: coords});
+        }
+        setSugerencias([]);
+      }
+    });
   };
 
   const confirmarUbicacionMapa = async () => {
     if (!coordsTemporales) return;
     setBuscandoDireccion(true);
     try {
+      // Dejamos OpenStreetMap para Reverse Geocoding manual si usa el "pin" del mapa, es gratis y funciona bien para pines.
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
       const data = await response.json();
       
@@ -247,20 +275,16 @@ export const WizardPublicar = ({
           </div>
 
           {sugerencias.length > 0 && (
-            <div className="absolute z-[110] w-full bg-white border border-slate-100 rounded-3xl shadow-2xl overflow-hidden mt-1 top-full">
+            <div className="absolute z-[110] w-full bg-white border border-slate-100 rounded-3xl shadow-2xl overflow-hidden mt-1 top-[135px]">
               {sugerencias.map((s, i) => (
-                <button key={i} type="button" onClick={() => {
-                    if (campoActivo === 'origen') {
-                      setViajeForm({...viajeForm, origen: `${s.ciudad}, ${s.estado}`, coordsOrigen: { lat: s.lat, lon: s.lon }});
-                    } else {
-                      setViajeForm({...viajeForm, destino: `${s.ciudad}, ${s.estado}`, coordsDestino: { lat: s.lat, lon: s.lon }});
-                    }
-                    setSugerencias([]);
-                  }} 
+                <button key={i} type="button" onClick={() => seleccionarSugerencia(s)} 
                   className="w-full text-left p-4 hover:bg-blue-50 border-b border-slate-50 last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3 transition-colors"
                 >
                   {campoActivo === 'origen' ? <MapPin size={14} className="text-blue-400 shrink-0"/> : <Navigation size={14} className="text-green-400 shrink-0"/>}
-                  <div><p className="text-slate-700">{s.ciudad}</p><p className="text-[9px] font-bold text-slate-400">{s.estado}</p></div>
+                  <div className="truncate">
+                    <p className="text-slate-700 truncate">{s.ciudad}</p>
+                    <p className="text-[9px] font-bold text-slate-400 truncate">{s.estado}</p>
+                  </div>
                 </button>
               ))}
             </div>
