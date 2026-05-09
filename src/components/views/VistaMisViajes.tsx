@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import Toast from "../Wizard/Toast"; // Ajustado según correcciones anteriores
+import Toast from "../ui/Toast";
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
   X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
