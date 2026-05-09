@@ -123,16 +123,7 @@ export const WizardPublicar = ({
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
-  useEffect(() => {
-    // Inicializar Google Places Services si el API cargó
-    if (window.google && window.google.maps && window.google.maps.places) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      // Creamos un div dummy porque PlacesService necesita un nodo DOM (aunque no lo muestre)
-      const dummyDiv = document.createElement('div');
-      placesService.current = new window.google.maps.places.PlacesService(dummyDiv);
-    }
-  }, []);
-
+  // Calcula rating del conductor
   useEffect(() => {
     if (!userData?.id) return;
     const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", userData.id));
@@ -143,12 +134,7 @@ export const WizardPublicar = ({
     }).catch(e => console.error("Error rating en wizard:", e));
   }, [userData?.id]);
 
-  const timerRef = useRef(null);
-
-  const autocompleteService = useRef(null);
-  const placesService = useRef(null);
-
-  // NUEVO: Inicializador dinámico
+  // INICIALIZADOR DINÁMICO DE GOOGLE MAPS
   const inicializarGooglePlaces = () => {
     if (window.google && window.google.maps && window.google.maps.places) {
       if (!autocompleteService.current) {
@@ -163,7 +149,7 @@ export const WizardPublicar = ({
     return false;
   };
 
-  // NUEVO: Búsqueda dinámica
+  // BÚSQUEDA DINÁMICA CON GOOGLE
   const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
         setViajeForm(prev => ({...prev, origen: texto}));
@@ -172,9 +158,8 @@ export const WizardPublicar = ({
     }
 
     if (texto.length > 2) {
-      // Intentamos inicializar Google al momento de teclear
       if (!inicializarGooglePlaces()) {
-        console.error("Esperando a que Google Maps cargue...");
+        console.warn("Esperando a que Google Maps cargue...");
         return;
       }
 
@@ -203,9 +188,8 @@ export const WizardPublicar = ({
   };
 
   const seleccionarSugerencia = (sugerencia) => {
-    if (!placesService.current) return;
+    if (!inicializarGooglePlaces()) return;
 
-    // Cuando el usuario toca una sugerencia, necesitamos obtener sus coordenadas (Lat/Lon)
     placesService.current.getDetails({ placeId: sugerencia.place_id, fields: ['geometry', 'name', 'formatted_address'] }, (place, status) => {
       if (status === window.google.maps.places.PlacesServiceStatus.OK && place.geometry) {
         const coords = {
@@ -228,7 +212,6 @@ export const WizardPublicar = ({
     if (!coordsTemporales) return;
     setBuscandoDireccion(true);
     try {
-      // Dejamos OpenStreetMap para Reverse Geocoding manual si usa el "pin" del mapa, es gratis y funciona bien para pines.
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
       const data = await response.json();
       
