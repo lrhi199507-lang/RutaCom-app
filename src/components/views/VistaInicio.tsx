@@ -6,7 +6,6 @@ import MapaView from '../Map/MapaView';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig'; 
-import Toast from '../Wizard/Toast';
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
   const [origen, setOrigen] = useState("");
@@ -553,7 +552,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
            </div>
         </div>
       )}
-      <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
     </div>
   );
 };
