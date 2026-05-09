@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, MapPin, Calendar, X, ChevronRight, Users, Plus, Minus, Map } from 'lucide-react';
 import { CardViajeOptimizada } from '../ui/CardViajeOptimizada';
 import { UBICACIONES } from '../../constants/ubicaciones';
@@ -6,6 +6,7 @@ import MapaView from '../Map/MapaView';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig'; 
+import Toast from '../Wizard/Toast';
 
 export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo }) => {
   const [origen, setOrigen] = useState("");
@@ -29,62 +30,94 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const [pasajeros, setPasajeros] = useState({ adultos: 1, niños: 0 });
   const totalPasajeros = pasajeros.adultos + pasajeros.niños;
 
-  const timerRef = useRef(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
-  // --- NUEVA BÚSQUEDA INTELIGENTE ---
+  const autocompleteService = useRef(null);
+  const placesService = useRef(null);
+
+  // --- INYECTOR DE GOOGLE MAPS ---
+  useEffect(() => {
+    if (window.google && window.google.maps) return;
+    const script = document.createElement('script');
+    script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyCUNgw1YBOVZKYAhTgcW00G1c09alI2kMs&libraries=places";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }, []);
+
+  const inicializarGooglePlaces = () => {
+    if (window.google && window.google.maps && window.google.maps.places) {
+      if (!autocompleteService.current) {
+        autocompleteService.current = new window.google.maps.places.AutocompleteService();
+      }
+      if (!placesService.current) {
+        const dummyDiv = document.createElement('div');
+        placesService.current = new window.google.maps.places.PlacesService(dummyDiv);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  // --- BÚSQUEDA INTELIGENTE CON GOOGLE PLACES ---
   const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
-        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, origen: texto}));
-        else setOrigen(texto); 
+        setOrigen(texto); 
     } else {
-        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, destino: texto}));
-        else setDestino(texto); 
+        setDestino(texto); 
     }
 
     if (texto.length > 2) {
-      setCampoActivo(tipo);
-      if (timerRef.current) clearTimeout(timerRef.current);
-      
-      timerRef.current = setTimeout(async () => {
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${texto}&countrycodes=ve&addressdetails=1&limit=5`
-          );
-          const data = await response.json();
-          
-          const sugerenciasFiltradas = data.map(item => ({
-            ciudad: item.address?.city || item.address?.town || item.address?.village || item.name,
-            estado: item.address?.state || "Venezuela",
-            lat: parseFloat(item.lat),
-            lon: parseFloat(item.lon)
-          }));
-          
-          setSugerencias(sugerenciasFiltradas);
+      if (!inicializarGooglePlaces()) return;
 
-          // 🔥 MAGIA: Auto-asignar las coordenadas de la mejor opción ocultamente
-          if (sugerenciasFiltradas.length > 0) {
-            const mejorOpcion = { lat: sugerenciasFiltradas[0].lat, lon: sugerenciasFiltradas[0].lon };
-            if (tipo === 'origen') {
-              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsOrigen: mejorOpcion}));
-              else setCoordsOrigen(mejorOpcion);
-            } else {
-              if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, coordsDestino: mejorOpcion}));
-              else setCoordsDestino(mejorOpcion);
-            }
-          }
-        } catch (error) {
-          console.error("Error buscando ubicación:", error);
+      setCampoActivo(tipo);
+      const request = {
+        input: texto,
+        componentRestrictions: { country: 've' }, 
+      };
+
+      autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+          const sugerenciasGoogle = predictions.map(p => ({
+            descripcion: p.description,
+            place_id: p.place_id,
+            ciudad: p.structured_formatting.main_text,
+            estado: p.structured_formatting.secondary_text
+          }));
+          setSugerencias(sugerenciasGoogle);
+        } else {
+          setSugerencias([]);
         }
-      }, 600); 
+      });
     } else {
       setSugerencias([]);
     }
   };
-  
-  const formatearFechaBusqueda = (date) => {
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'short', day: 'numeric', month: 'short' 
-    }).replace('.', '');
+
+  const seleccionarSugerencia = (sugerencia) => {
+    if (!inicializarGooglePlaces()) return;
+
+    placesService.current.getDetails({ 
+      placeId: sugerencia.place_id, 
+      fields: ['geometry', 'name'] 
+    }, (place, status) => {
+      if (status === window.google.maps.places.PlacesServiceStatus.OK && place.geometry) {
+        const coords = {
+          lat: place.geometry.location.lat(),
+          lon: place.geometry.location.lng()
+        };
+        
+        if (campoActivo === 'origen') {
+          setOrigen(sugerencia.ciudad);
+          setCoordsOrigen(coords);
+        } else {
+          setDestino(sugerencia.ciudad);
+          setCoordsDestino(coords);
+        }
+        setSugerencias([]);
+      }
+    });
   };
 
   const confirmarUbicacionMapa = async () => {
@@ -102,11 +135,11 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       const textoCompleto = [...new Set(partes)].join(", ");
 
       if (tipoMapa === 'origen') {
-        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, origen: textoCompleto, coordsOrigen: coordsTemporales}));
-        else { setOrigen(textoCompleto); setCoordsOrigen(coordsTemporales); }
+        setOrigen(textoCompleto); 
+        setCoordsOrigen(coordsTemporales);
       } else {
-        if (typeof setViajeForm !== 'undefined') setViajeForm(prev => ({...prev, destino: textoCompleto, coordsDestino: coordsTemporales}));
-        else { setDestino(textoCompleto); setCoordsDestino(coordsTemporales); }
+        setDestino(textoCompleto); 
+        setCoordsDestino(coordsTemporales);
       }
       
       setShowMapaModal(false);
@@ -130,7 +163,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     return R * c; 
   };
 
-  // NORMALIZADOR DE TEXTOS BLINDADO
   const normalizar = (str) => {
     if (!str) return "";
     return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -139,7 +171,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   // --- FILTRO INTELIGENTE ---
   const viajesFiltrados = useMemo(() => {
     const lista = Array.isArray(viajes) ? viajes : [];
-    const RADIO_KM = 20; // 20 km de tolerancia
+    const RADIO_KM = 25; 
     
     const fechaBusquedaBase = new Date(fechaSeleccionada);
     const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
@@ -147,16 +179,12 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     const filtrados = lista.filter(v => {
       if (v.estado && v.estado !== 'disponible') return false;
 
-      // 1. EVALUAR ORIGEN
       let coincideOrigen = true;
       if (origen.trim() !== "") {
         const origenNorm = normalizar(origen);
         const textoViajeOrigen = normalizar(`${v.cO || ""} ${v.eO || ""} ${v.origen || ""}`);
-        
-        // Coincidencia de texto crudo (Ideal si busca "Carabobo" o "Isabelica")
         const matchTexto = textoViajeOrigen.includes(origenNorm) || origenNorm.includes(textoViajeOrigen);
         
-        // Coincidencia kilométrica (Ideal si busca "Valencia" y el viaje es de "Los Guayos")
         let matchDist = false;
         if (coordsOrigen && v.coordsOrigen) {
           const dist = calcularDistancia(coordsOrigen.lat, coordsOrigen.lon, v.coordsOrigen.lat, v.coordsOrigen.lon);
@@ -165,12 +193,10 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         coincideOrigen = matchTexto || matchDist;
       }
 
-      // 2. EVALUAR DESTINO
       let coincideDestino = true;
       if (destino.trim() !== "") {
         const destinoNorm = normalizar(destino);
         const textoViajeDest = normalizar(`${v.cD || ""} ${v.eD || ""} ${v.destino || ""}`);
-        
         const matchTexto = textoViajeDest.includes(destinoNorm) || destinoNorm.includes(textoViajeDest);
         
         let matchDist = false;
@@ -181,7 +207,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         coincideDestino = matchTexto || matchDist;
       }
 
-      // 3. FECHA Y CUPOS
       const esRutaSoloVuelta = v.tipoRuta === "vuelta_de_ruta";
       const fechaRaw = esRutaSoloVuelta ? (v.fechaRegreso || v.fecha) : v.fecha;
       const fechaViajeStr = fechaRaw ? String(fechaRaw).split('T')[0] : "";
@@ -202,11 +227,10 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     });
   }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros, coordsOrigen, coordsDestino]);
 
-    // --- ACTIVAR NOTIFICACIONES NATIVAS (CAPACITOR) ---
+  // --- ACTIVAR NOTIFICACIONES NATIVAS (CAPACITOR) ---
   const activarNotificacionesNativas = async () => {
     try {
       console.log("Verificando permisos nativos de Android...");
-      // 1. Preguntarle a Android si tenemos permiso
       let permStatus = await PushNotifications.checkPermissions();
 
       if (permStatus.receive === 'prompt') {
@@ -218,14 +242,11 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         return;
       }
 
-      // 2. Conectarse a los servidores de Google FCM
       await PushNotifications.register();
 
-      // 3. Escuchar cuando Android nos entregue el Token
       PushNotifications.addListener('registration', async (token) => {
         console.log('¡Token Nativo generado!:', token.value);
         
-        // 4. Guardarlo en el perfil de este usuario en Firestore
         if (userData?.id) {
           await updateDoc(doc(db, "usuarios", userData.id), {
             fcmTokenNativo: token.value
@@ -234,33 +255,34 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         }
       });
 
-      // Manejo de errores
       PushNotifications.addListener('registrationError', (error) => {
         console.error('Error al registrar el dispositivo:', error);
       });
 
-      // Escuchar si llega una notificación MIENTRAS la app está abierta
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         console.log('Notificación recibida con la app abierta:', notification);
-        // Aquí más adelante conectaremos esto con tu campanita
       });
 
     } catch (error) {
       console.error("Error crítico con Capacitor Push:", error);
     }
   };
+
+  const formatearFechaBusqueda = (date) => {
+    return date.toLocaleDateString('es-ES', { 
+      weekday: 'short', day: 'numeric', month: 'short' 
+    }).replace('.', '');
+  };
   
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <div className="p-4 space-y-6">
-                {/* BOTÓN TEMPORAL DE REGISTRO PUSH */}
         <button 
           onClick={activarNotificacionesNativas} 
           className="w-full bg-slate-900 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 transition-all mb-4"
         >
           Activar Notificaciones (Prueba)
         </button>
-        
         
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
@@ -333,22 +355,13 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
           {sugerencias.length > 0 && (
             <div className="absolute left-4 right-4 top-[45%] bg-white shadow-2xl rounded-3xl border border-slate-100 z-[110] overflow-hidden">
               {sugerencias.map((s, i) => ( 
-              <button  key={i} onClick={() => {
-                if (campoActivo === 'origen') {
-                  setOrigen(s.ciudad); 
-                  setCoordsOrigen({ lat: s.lat, lon: s.lon }); 
-                } else {
-                  setDestino(s.ciudad); 
-                  setCoordsDestino({ lat: s.lat, lon: s.lon }); 
-                }   
-                setSugerencias([]);  
-              }}
+              <button  key={i} onClick={() => seleccionarSugerencia(s)}
               className="w-full p-4 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-50 last:border-none"
               >
                   <MapPin size={14} className="text-slate-300" />
-                  <div>
-                    <p className="text-xs font-black text-slate-700">{s.ciudad}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">{s.estado}</p>
+                  <div className="truncate">
+                    <p className="text-xs font-black text-slate-700 truncate">{s.ciudad}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase truncate">{s.estado}</p>
                   </div>
                 </button>
               ))}
@@ -540,6 +553,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
            </div>
         </div>
       )}
+      <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
     </div>
   );
 };
