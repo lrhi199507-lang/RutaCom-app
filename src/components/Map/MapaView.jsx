@@ -1,121 +1,92 @@
 import React, { useEffect, useRef } from 'react';
 import { MapPin } from 'lucide-react';
 
-const MapaView = ({ origen, destino, interactivo = false, onMarkerDragEnd }) => {
+const MapaView = ({ origen, destino, posicionChofer, interactivo = false, onMarkerDragEnd }) => {
   const mapRef = useRef(null);
   const googleMap = useRef(null);
-  const markers = useRef([]);
+  const markers = useRef({});
   const directionsRenderer = useRef(null);
 
   useEffect(() => {
     if (!window.google || !mapRef.current || googleMap.current) return;
 
-    // Si tenemos origen, iniciamos ahí. Si no, en Valencia.
     const centroInicial = origen ? { lat: origen.lat, lng: origen.lon } : { lat: 10.1620, lng: -67.9567 };
 
     googleMap.current = new window.google.maps.Map(mapRef.current, {
       center: centroInicial,
       zoom: 16,
       disableDefaultUI: true, 
-      zoomControl: !interactivo, // Solo mostramos zoom si NO es interactivo
-      gestureHandling: 'greedy', // Permite mover el mapa con un solo dedo sin que Google moleste
-      styles: [
-        { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
-      ]
+      zoomControl: !interactivo,
+      gestureHandling: 'greedy',
+      styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
     });
 
     directionsRenderer.current = new window.google.maps.DirectionsRenderer({
       map: googleMap.current,
-      suppressMarkers: true, // Nosotros pintamos nuestros propios marcadores
+      suppressMarkers: true,
       polylineOptions: { strokeColor: "#2563eb", strokeWeight: 5 }
     });
+  }, [interactivo]);
 
-    // LÓGICA PROFESIONAL: Escuchar cuando el usuario arrastra el mapa entero
-    if (interactivo) {
-      googleMap.current.addListener('dragend', () => {
-        const center = googleMap.current.getCenter();
-        if (onMarkerDragEnd) {
-          onMarkerDragEnd({ lat: center.lat(), lon: center.lng() });
-        }
-      });
-    }
-  }, [interactivo, origen, onMarkerDragEnd]);
-
-  // Lógica para pintar la ruta cuando NO es interactivo (ej: resumen del viaje)
+  // VIGÍA DE REDIMENSIONAMIENTO (Evita el mapa en blanco)
   useEffect(() => {
-    if (!googleMap.current || !window.google || interactivo) return;
+    if (!mapRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (googleMap.current && window.google) {
+        window.google.maps.event.trigger(googleMap.current, 'resize');
+      }
+    });
+    observer.observe(mapRef.current);
+    return () => observer.disconnect();
+  }, []);
 
-    // Limpiar rastro viejo
-    markers.current.forEach(m => m.setMap(null));
-    markers.current = [];
-    const bounds = new window.google.maps.LatLngBounds();
+  // ACTUALIZACIÓN DE MARCADORES Y RUTA
+  useEffect(() => {
+    if (!googleMap.current || !window.google) return;
 
-    if (origen) {
-      const pos = { lat: origen.lat, lng: origen.lon };
-      const markerO = new window.google.maps.Marker({
-        position: pos,
+    // 1. Limpiar marcador de chofer viejo si existe
+    if (markers.current.chofer) markers.current.chofer.setMap(null);
+
+    // 2. Dibujar Chofer (El Carrito)
+    if (posicionChofer) {
+      markers.current.chofer = new window.google.maps.Marker({
+        position: { lat: posicionChofer.lat, lng: posicionChofer.lon },
         map: googleMap.current,
+        zIndex: 100,
         icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
+          path: "M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2",
           fillColor: '#2563eb',
           fillOpacity: 1,
           strokeColor: '#ffffff',
           strokeWeight: 2,
-          scale: 8
+          scale: 1.5,
+          anchor: new window.google.maps.Point(12, 12)
         }
       });
-      markers.current.push(markerO);
-      bounds.extend(pos);
+      // Si el viaje está en curso, el mapa sigue al chofer
+      if (!interactivo) googleMap.current.panTo(markers.current.chofer.getPosition());
     }
 
-    if (destino) {
-      const pos = { lat: destino.lat, lng: destino.lon };
-      const markerD = new window.google.maps.Marker({
-        position: pos,
-        map: googleMap.current,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          fillColor: '#10b981',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-          scale: 8
-        }
-      });
-      markers.current.push(markerD);
-      bounds.extend(pos);
-    }
-
-    if (origen && destino) {
+    // 3. Trazar Ruta
+    if (origen && destino && !interactivo) {
       const directionsService = new window.google.maps.DirectionsService();
       directionsService.route({
         origin: { lat: origen.lat, lng: origen.lon },
         destination: { lat: destino.lat, lng: destino.lon },
         travelMode: window.google.maps.TravelMode.DRIVING,
       }, (result, status) => {
-        if (status === 'OK') {
-          directionsRenderer.current.setDirections(result);
-        }
+        if (status === 'OK') directionsRenderer.current.setDirections(result);
       });
-    } else if (origen || destino) {
-      googleMap.current.fitBounds(bounds);
-      googleMap.current.setZoom(15);
     }
-  }, [origen, destino, interactivo]);
+  }, [origen, destino, posicionChofer, interactivo]);
 
   return (
     <div className="relative w-full h-full min-h-[300px] bg-slate-100 rounded-inherit">
-      {/* Contenedor del mapa de Google */}
       <div ref={mapRef} className="absolute inset-0" style={{ borderRadius: 'inherit' }} />
-
-      {/* PIN FIJO EN EL CENTRO (SOLO MODO INTERACTIVO) */}
       {interactivo && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 flex flex-col items-center">
-          <div className="bg-slate-900 text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-full mb-1 shadow-lg tracking-widest">
-            Mover Mapa
-          </div>
+          <div className="bg-slate-900 text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-full mb-1 shadow-lg tracking-widest">Fijar Punto</div>
           <MapPin size={36} className="text-blue-600 drop-shadow-md" fill="currentColor" />
-          <div className="w-2 h-1 bg-black/30 rounded-full mt-[-4px] blur-[1px]" />
         </div>
       )}
     </div>
