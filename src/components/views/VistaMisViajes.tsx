@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import Toast from "../ui/Toast"; 
+import Toast from "../Wizard/Toast"; // Ajustado según correcciones anteriores
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
   X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
 } from 'lucide-react';
+import MapaView from '../Map/MapaView'; // <-- INYECTADO
 
 // --- FUNCIONES FORMATEADORAS VISUALES ---
 const formatearHora12h = (hora24) => {
@@ -29,7 +30,7 @@ const formatearFechaCorta = (fechaString) => {
   }).replace('.', ''); 
 };
 
-// COMPONENTE: Modal para Confirmar Eliminación
+// COMPONENTE: Modal para Confirmar Eliminación (Se mantiene igual)
 const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
@@ -52,7 +53,7 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
-// COMPONENTE: Modal para Editar Viaje
+// COMPONENTE: Modal para Editar Viaje (Se mantiene igual)
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
   const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
@@ -132,25 +133,33 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${estadoLabel === 'EN CURSO' ? 'bg-green-50 border-green-200 text-green-600 animate-pulse' : estadoLabel === 'FINALIZADO' ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estadoLabel === 'EN CURSO' ? 'bg-green-50 border-green-200 text-green-600 animate-pulse' : estadoLabel === 'FINALIZADO' ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
           {estadoLabel}
       </div>
 
       {esRetorno && (
-        <div className="absolute top-6 left-6 text-emerald-600 flex items-center gap-1.5">
+        <div className="absolute top-6 left-6 text-emerald-600 flex items-center gap-1.5 z-20">
             <Repeat size={14} className='-rotate-90'/>
             <span className="text-[9px] font-black uppercase tracking-widest">RETORNO</span>
         </div>
       )}
 
-      <div className="flex justify-between items-start">
-        <div className={esRetorno ? 'mt-6' : ''}>
+      {/* Mini Mapa Inyectado */}
+      {(viaje.coordsOrigen || viaje.coordsDestino) && (
+        <div className="h-32 rounded-2xl overflow-hidden mb-2 relative pointer-events-none">
+           <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent z-10" />
+           <MapaView origen={viaje.coordsOrigen} destino={viaje.coordsDestino} interactivo={false} />
+        </div>
+      )}
+
+      <div className="flex justify-between items-start pt-2">
+        <div>
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo ($)</p>
           <p className="text-4xl font-black italic text-blue-600 leading-none">${viaje.precio}</p>
         </div>
         
         {estadoLabel !== 'FINALIZADO' && (
-          <div className="flex gap-2.5 mt-8">
+          <div className="flex gap-2.5">
             <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500 hover:text-blue-600 transition-colors">
               <Edit2 size={16} />
             </button>
@@ -163,12 +172,12 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
 
       <div className="flex items-center gap-4 text-center">
         <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic">{viaje.cO || viaje.origen?.split(',')[0]}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || viaje.origen?.split(',')[0]}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase">Salida</p>
         </div>
-        <ArrowLeftRight className='text-slate-300' size={18}/>
+        <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
         <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic">{viaje.cD || viaje.destino?.split(',')[0]}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || viaje.destino?.split(',')[0]}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase">Llegada</p>
         </div>
       </div>
@@ -217,23 +226,31 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
   const yaCalifico = miReserva?.calificado === true;
 
   return (
-    <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
+    <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative overflow-hidden ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
       
-      <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+      {/* Mini Mapa Inyectado como Fondo */}
+      {(viaje.coordsOrigen || viaje.coordsDestino) && (
+        <div className="absolute inset-0 pointer-events-none opacity-40 z-0">
+           <MapaView origen={viaje.coordsOrigen} destino={viaje.coordsDestino} interactivo={false} />
+           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px]" />
+        </div>
+      )}
+
+      <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
           {tipo === 'activo' ? 'ACTIVO' : 'FINALIZADO'}
       </div>
       
-      <div className="flex items-center gap-4 pt-1 pr-20">
+      <div className="flex items-center gap-4 pt-1 pr-20 relative z-10">
         <div className="w-12 h-12 rounded-[14px] bg-blue-600 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0">
           {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black italic text-white text-xl'>D</div>}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-black italic text-slate-800 uppercase truncate">{viaje.cN || viaje.conductor || "Conductor"}</p>
-          <p className="text-[8px] font-black text-blue-600 uppercase tracking-wider mt-0.5">Chofer Designado</p>
+          <p className="text-base font-black italic text-slate-800 uppercase truncate bg-white/80 rounded px-1 -ml-1 inline-block">{viaje.cN || viaje.conductor || "Conductor"}</p>
+          <p className="text-[8px] font-black text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5 inline-block">Chofer Designado</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-center">
+      <div className="flex items-center gap-4 text-center relative z-10 bg-white/90 p-3 rounded-2xl border border-slate-100/50 backdrop-blur-md">
         <div className='flex-1 min-w-0'>
             <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || viaje.origen?.split(',')[0]}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Recogida</p>
@@ -245,7 +262,7 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-between gap-4">
+      <div className="bg-slate-50/90 backdrop-blur-md p-4 rounded-2xl border border-slate-100 flex justify-between gap-4 relative z-10">
         <div className="flex items-center gap-2">
           <Calendar size={16} className="text-blue-500 shrink-0"/>
           <p className="text-xs font-bold text-slate-700 capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p>
@@ -259,10 +276,10 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
       {tipo === 'activo' ? (
         <button 
             onClick={() => onClickGestionar(viaje)}
-            className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
+            className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg relative z-10 ${
               esConfirmado 
               ? 'bg-blue-600 text-white shadow-blue-500/30' 
-              : 'bg-slate-100 text-slate-500 border border-slate-200'
+              : 'bg-white text-slate-500 border border-slate-200'
             }`}
           >
             {esConfirmado ? <><Check size={16} /> ¡Viaje Confirmado! Ver PIN</> : <><Info size={16} /> Esperando Confirmación</>}
@@ -270,7 +287,7 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
       ) : (
         <button 
             onClick={() => onClickGestionar(viaje)}
-            className={`w-full mt-4 rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
+            className={`w-full mt-4 rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg relative z-10 ${
               yaCalifico 
               ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' 
               : 'bg-amber-400 text-amber-950 shadow-amber-500/30 border border-amber-300 animate-pulse'
@@ -298,6 +315,16 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [viajeAEliminar, setViajeAEliminar] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
+
+  // --- INYECTOR DE GOOGLE MAPS ---
+  useEffect(() => {
+    if (window.google && window.google.maps) return;
+    const script = document.createElement('script');
+    script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyCUNgw1YBOVZKYAhTgcW00G1c09alI2kMs&libraries=places";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }, []);
 
   const handleEditSave = async (updatedViaje) => {
     try {
