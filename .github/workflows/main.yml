@@ -72,8 +72,8 @@ jobs:
           # 6. Sincronizamos
           npx cap sync android
 
-          # 7. INYECTAR PERMISOS DE GPS Y OBLIGAR A ANDROID A PEDIRLOS
-          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
+          # 7. INYECTAR PERMISOS (GPS Y NOTIFICACIONES PUSH PARA ANDROID 13+)
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
 
           # 8. MAGIA DEL ÍCONO PROFESIONAL
           # Crea la carpeta, mete tu imagen y genera las versiones de Android
