@@ -35,7 +35,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
-    // --- ACTIVACIÓN AUTOMÁTICA DE NOTIFICACIONES ---
+  // --- ACTIVACIÓN AUTOMÁTICA DE NOTIFICACIONES ---
   useEffect(() => {
     const registrarDispositivo = async () => {
       try {
@@ -48,7 +48,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
 
         if (permStatus.receive !== 'granted') {
           console.log("Permisos denegados por el usuario.");
-          return; // Si dice que no, lo dejamos quieto
+          return; 
         }
 
         await PushNotifications.register();
@@ -60,7 +60,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
             await updateDoc(doc(db, "usuarios", userData.id), {
               fcmTokenNativo: token.value
             });
-            // Borré el "alert" de éxito para que no moleste al usuario cada vez que entra
           }
         });
 
@@ -282,12 +281,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <div className="p-4 space-y-6">
-        <button 
-          onClick={activarNotificacionesNativas} 
-          className="w-full bg-slate-900 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 transition-all mb-4"
-        >
-          Activar Notificaciones (Prueba)
-        </button>
         
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
