@@ -544,8 +544,9 @@ export const WizardPublicar = ({
                 return; 
               }
 
-              const [ciudadOri] = (viajeForm.origen || "").split(', ');
-              const [ciudadDest] = (viajeForm.destino || "").split(', ');
+                            // Quitamos el espacio después de la coma para que el mapa no diga "Venezuela"
+              const [ciudadOri] = (viajeForm.origen || "").split(',');
+              const [ciudadDest] = (viajeForm.destino || "").split(',');
 
               const datosBase = {
                 ...viajeForm,
@@ -566,9 +567,14 @@ export const WizardPublicar = ({
                 coordsOrigen: viajeForm.coordsOrigen || null,   
                 coordsDestino: viajeForm.coordsDestino || null, 
                 estado: "disponible",
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                
+                // --- PARCHE DE SEGURIDAD PARA EL BÚNKER ---
+                pasajeros: [], // Lista vacía lista para recibir gente
+                reservasPendientes: [], // Lista vacía para solicitudes
+                precio: Number(viajeForm.precio) || 0 // Forzamos a que el precio sea NÚMERO
               };
-
+              
               try {
                 if (viajeAEditar) {
                   await publicarRuta(datosBase, true); 
