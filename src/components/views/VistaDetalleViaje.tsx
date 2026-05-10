@@ -456,7 +456,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
-      const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
+      const llamarBunker = httpsCallable(functions, 'finalizar-viaje-v2');
 
       console.log("Intentando cobrar viaje:", viaje.id);
 
