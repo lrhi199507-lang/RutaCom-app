@@ -6,8 +6,8 @@ import Toast from "../ui/Toast";
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
 import MapaView from '../Map/MapaView';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-
+import { functions } from '../../firebaseConfig'; 
+import { httpsCallable } from 'firebase/functions';
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock
@@ -453,28 +453,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 const enviarCalificacionesYFinalizar = async () => {
   setCargando(true);
   try {
-    // 1. IMPORTANTE: Especificar la región 'us-central1' aquí es obligatorio
-    const functions = getFunctions(undefined, 'us-central1'); 
-Pégalo justo aquí, antes de llamar al búnker:
-      console.log("DATOS ENVIADOS AL BÚNKER:", {
-        viajeId: viaje.id,
-        ratings: ratingsChofer
-      });
-    
+    // Usamos el 'functions' que ya tiene la región us-central1 configurada
     const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
+
+    console.log("Intentando cobrar viaje:", viaje.id);
 
     const resultado = await llamarBunker({ 
       viajeId: viaje.id, 
       ratingsChofer: ratingsChofer 
     });
-
-      // 3. Si el Búnker responde éxito, limpiamos la pantalla
-      if (resultado.data.success) {
-        setToastMessage("¡Viaje finalizado con éxito!");
-        setShowToast(true);
-        setModalCalificarPasajeros(false);
-        onRegresar(); // Volver a la pantalla de inicio
-      }
       
     } catch (e) { 
       // Si el Búnker detecta que no hay saldo o no eres el chofer, caerá aquí
