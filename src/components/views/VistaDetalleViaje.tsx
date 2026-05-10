@@ -409,7 +409,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  const procesarAbordajeEIniciar = async () => {
+    const procesarAbordajeEIniciar = async () => {
     setCargando(true);
     try {
       const pasajerosActualizados = pasajerosConfirmados.map(p => {
@@ -432,11 +432,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setToastMessage("¡Viaje Iniciado!"); setShowToast(true);
     } catch (e) { 
       console.error(e); 
-      setToastMessage("Error técnico. Reintenta."); setShowToast(true);
+      // 👇 ESTO ES LO QUE CAMBIA PARA VER LA VERDAD 👇
+      setToastMessage(`Error: ${e.code || e.message}`); 
+      setShowToast(true);
     } finally { 
       setCargando(false); 
     }
   };
+  
 
   const iniciarFinalizacion = () => {
     setModalFinalizar(false);
