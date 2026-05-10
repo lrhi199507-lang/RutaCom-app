@@ -462,6 +462,12 @@ const enviarCalificacionesYFinalizar = async () => {
       viajeId: viaje.id, 
       ratingsChofer: ratingsChofer 
     });
+
+    console.log("RESULTADO EXITOSO:", resultado.data);
+
+  } catch (e) {
+    // ESTA LÍNEA ES LA CLAVE:
+    alert(`CÓDIGO: ${e.code}\nMENSAJE: ${e.message}\nDETALLES: ${JSON.stringify(e.details || "sin detalles")}`);
       
     } catch (e) { 
       // Si el Búnker detecta que no hay saldo o no eres el chofer, caerá aquí
