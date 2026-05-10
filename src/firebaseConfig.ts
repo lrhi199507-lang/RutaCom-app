@@ -2,7 +2,8 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getMessaging } from "firebase/messaging"; // <-- Importación para notificaciones
+import { getMessaging } from "firebase/messaging";
+import { getFunctions } from "firebase/functions"; // <--- NUEVA IMPORTACIÓN
 
 const firebaseConfig = {
   apiKey: "AIzaSyCXBs3-Z4-SC2UUAtZhjMgMZ74sD9rqq9Y",
@@ -18,6 +19,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const messaging = getMessaging(app); // <-- Inicializar mensajería
+const messaging = getMessaging(app);
+const functions = getFunctions(app, "us-central1"); // <--- INICIALIZAR AQUÍ
 
-export { auth, db, storage, messaging }; // <-- Exportar todo junto
+export { auth, db, storage, messaging, functions }; // <--- EXPORTAR functions
