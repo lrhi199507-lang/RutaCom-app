@@ -450,28 +450,28 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-const enviarCalificacionesYFinalizar = async () => {
-  setCargando(true);
-  try {
-    // Usamos el 'functions' que ya tiene la región us-central1 configurada
-    const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
+  const enviarCalificacionesYFinalizar = async () => {
+    setCargando(true);
+    try {
+      const llamarBunker = httpsCallable(functions, 'finalizarViajeSeguro');
 
-    console.log("Intentando cobrar viaje:", viaje.id);
+      console.log("Intentando cobrar viaje:", viaje.id);
 
-    const resultado = await llamarBunker({ 
-      viajeId: viaje.id, 
-      ratingsChofer: ratingsChofer 
-    });
+      const resultado = await llamarBunker({ 
+        viajeId: viaje.id, 
+        ratingsChofer: ratingsChofer 
+      });
 
-    console.log("RESULTADO EXITOSO:", resultado.data);
-
-  } catch (e) {
-    // ESTA LÍNEA ES LA CLAVE:
-    alert(`CÓDIGO: ${e.code}\nMENSAJE: ${e.message}\nDETALLES: ${JSON.stringify(e.details || "sin detalles")}`);
-      
+      if (resultado.data.success) {
+        setToastMessage("¡Viaje finalizado con éxito!");
+        setShowToast(true);
+        setModalCalificarPasajeros(false);
+        onRegresar();
+      }
     } catch (e) { 
-      // Si el Búnker detecta que no hay saldo o no eres el chofer, caerá aquí
-      console.error("Error de seguridad:", e);
+      console.error("Error completo:", e);
+      // El alert que te pedí para ver el código real
+      alert(`CÓDIGO: ${e.code}\nMSG: ${e.message}`); 
       setToastMessage("Error al cobrar: " + e.message);
       setShowToast(true);
     } finally { 
