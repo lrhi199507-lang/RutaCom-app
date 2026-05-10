@@ -7,7 +7,7 @@ import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
 import MapaView from '../Map/MapaView';
 import { functions } from '../../firebaseConfig'; 
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallableFromURL } from 'firebase/functions';
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock
@@ -454,12 +454,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
   const enviarCalificacionesYFinalizar = async () => {
-    setCargando(true);
-    try {
-      const llamarBunker = httpsCallable(functions, 'finalizar-viaje-v2');
+  setCargando(true);
+  try {
+    // DISPARO DIRECTO A LA URL REAL:
+    const llamarBunker = httpsCallableFromURL(functions, 'https://finalizar-viaje-v2-1080063705561.us-central1.run.app');
 
-      console.log("Intentando cobrar viaje:", viaje.id);
-
+    console.log("Intentando cobrar viaje:", viaje.id);
       const resultado = await llamarBunker({ 
         viajeId: viaje.id, 
         ratingsChofer: ratingsChofer 
