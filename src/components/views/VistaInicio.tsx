@@ -35,6 +35,53 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
+    // --- ACTIVACIÓN AUTOMÁTICA DE NOTIFICACIONES ---
+  useEffect(() => {
+    const registrarDispositivo = async () => {
+      try {
+        console.log("Verificando permisos nativos de Android...");
+        let permStatus = await PushNotifications.checkPermissions();
+
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') {
+          console.log("Permisos denegados por el usuario.");
+          return; // Si dice que no, lo dejamos quieto
+        }
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', async (token) => {
+          console.log('¡Token Nativo generado!:', token.value);
+          
+          if (userData?.id) {
+            await updateDoc(doc(db, "usuarios", userData.id), {
+              fcmTokenNativo: token.value
+            });
+            // Borré el "alert" de éxito para que no moleste al usuario cada vez que entra
+          }
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          console.error('Error al registrar el dispositivo:', error);
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('Notificación recibida con la app abierta:', notification);
+        });
+
+      } catch (error) {
+        console.error("Error crítico con Capacitor Push:", error);
+      }
+    };
+
+    if (userData?.id) {
+      registrarDispositivo();
+    }
+  }, [userData?.id]);
+
   // --- INYECTOR DE GOOGLE MAPS ---
   useEffect(() => {
     if (window.google && window.google.maps) return;
@@ -225,47 +272,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
     });
   }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros, coordsOrigen, coordsDestino]);
-
-  // --- ACTIVAR NOTIFICACIONES NATIVAS (CAPACITOR) ---
-  const activarNotificacionesNativas = async () => {
-    try {
-      console.log("Verificando permisos nativos de Android...");
-      let permStatus = await PushNotifications.checkPermissions();
-
-      if (permStatus.receive === 'prompt') {
-        permStatus = await PushNotifications.requestPermissions();
-      }
-
-      if (permStatus.receive !== 'granted') {
-        alert("Necesitas aceptar los permisos para recibir alertas de viajes.");
-        return;
-      }
-
-      await PushNotifications.register();
-
-      PushNotifications.addListener('registration', async (token) => {
-        console.log('¡Token Nativo generado!:', token.value);
-        
-        if (userData?.id) {
-          await updateDoc(doc(db, "usuarios", userData.id), {
-            fcmTokenNativo: token.value
-          });
-          alert("¡Teléfono registrado para notificaciones!");
-        }
-      });
-
-      PushNotifications.addListener('registrationError', (error) => {
-        console.error('Error al registrar el dispositivo:', error);
-      });
-
-      PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('Notificación recibida con la app abierta:', notification);
-      });
-
-    } catch (error) {
-      console.error("Error crítico con Capacitor Push:", error);
-    }
-  };
 
   const formatearFechaBusqueda = (date) => {
     return date.toLocaleDateString('es-ES', { 
