@@ -35,7 +35,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
-  // --- ACTIVACIÓN AUTOMÁTICA DE NOTIFICACIONES ---
+    // --- ACTIVACIÓN AUTOMÁTICA DE NOTIFICACIONES ---
   useEffect(() => {
     const registrarDispositivo = async () => {
       try {
@@ -51,17 +51,26 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
           return; 
         }
 
+        // 🔥 EL ANTÍDOTO ANDROID: CREAMOS EL CANAL OFICIAL ANTES DE REGISTRAR 🔥
+        await PushNotifications.createChannel({
+          id: 'alertas_viajes', // El ID secreto que usará el Búnker
+          name: 'Alertas de Viajes',
+          description: 'Avisos urgentes sobre tus viajes y reservas',
+          importance: 5, // 5 = Máxima prioridad (Suena y sale en pantalla)
+          visibility: 1, // Visible en la pantalla de bloqueo
+        });
+
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', async (token) => {
           console.log('¡Token Nativo generado!:', token.value);
-          
           if (userData?.id) {
             await updateDoc(doc(db, "usuarios", userData.id), {
               fcmTokenNativo: token.value
             });
           }
         });
+        
 
         PushNotifications.addListener('registrationError', (error) => {
           console.error('Error al registrar el dispositivo:', error);
