@@ -474,36 +474,40 @@ const solicitarCola = async () => {
     }
   };
   
-  
-  const cambiarEstadoViaje = async (nuevoEstado) => {
-  setCargando(true);
-  try {
-    await updateDoc(doc(db, "Viajes", viaje.id), { estado: nuevoEstado });
-    
-    // 🔥 NOTIFICACIÓN AUTOMÁTICA PROFESIONAL
-    if (nuevoEstado === 'buscando') {
-      pasajerosConfirmados.forEach(p => {
-        if (p.id || p.uid) {
-          enviarNotificacion(
-            p.id || p.uid, 
-            "¡Chofer en camino!", 
-            `${userData.nombre} ha iniciado la ruta para recogerte. ¡Atento al mapa!`, 
-            "viaje"
-          );
-        }
-      });
-      setToastMessage("Pasajeros notificados. ¡Buena ruta!");
+    const cambiarEstadoViaje = async (nuevoEstado) => {
+    setCargando(true);
+    try {
+      const viajeRef = doc(db, "Viajes", viaje.id);
+      await updateDoc(viajeRef, { estado: nuevoEstado });
+      
+      // 🔥 NOTIFICACIÓN AUTOMÁTICA PROFESIONAL
+      if (nuevoEstado === 'buscando') {
+        const promesas = pasajerosConfirmados.map(p => {
+          if (p.id || p.uid) {
+            return enviarNotificacion(
+              p.id || p.uid,
+              "¡Chofer en camino!",
+              `${userData.nombre} ha iniciado la ruta de recogida. ¡Mantente atento!`,
+              "viaje"
+            );
+          }
+          return null;
+        });
+        await Promise.all(promesas.filter(p => p !== null));
+        setToastMessage("¡Ruta iniciada! Pasajeros notificados.");
+      }
+      
+      if (nuevoEstado === 'finalizado') onRegresar();
+      setShowToast(true);
+    } catch (e) {
+      console.error(e);
+      setToastMessage("Error al actualizar estado");
+      setShowToast(true);
+    } finally {
+      setCargando(false);
     }
-
-    if (nuevoEstado === 'finalizado') onRegresar(); 
-    setShowToast(true);
-  } catch (e) { 
-    console.error(e); 
-  } finally { 
-    setCargando(false); 
-  }
-};
-
+  };
+  
   const enviarCalificacion = async () => {
     if (estrellas === 0) {
       setToastMessage("Selecciona al menos 1 estrella"); setShowToast(true); return;
@@ -775,6 +779,7 @@ const solicitarCola = async () => {
               </div>
             </div>
 
+                     {/* SOLICITUDES NARANJA (PARA EL CHOFER) */}
             {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
               <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom mb-10">
                 <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
@@ -803,61 +808,61 @@ const solicitarCola = async () => {
         )}
       </div>
 
+      {/* FOOTER FIJO CON BOTONES INTELIGENTES */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
-  <div className="flex gap-3 h-14">
-    
-    {estadoViaje === 'en_curso' ? (
-      <>
-        <button onClick={activarSOS} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">
-          <AlertTriangle size={16} /> SOS
-        </button>
-        {soyConductor ? (
-           <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-slate-900/30 active:scale-95 transition-all">
-             Finalizar Viaje
-           </button>
-        ) : (
-           <div className="flex-[2] bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-             <Navigation size={16} /> En Ruta a Destino
-           </div>
-        )}
-      </>
-    ) : (
-      <>
-        <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
-          <MessageCircle size={16} /> Chat
-        </button>
+        <div className="flex gap-3 h-14">
+          
+          {estadoViaje === 'en_curso' ? (
+            <>
+              <button onClick={activarSOS} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">
+                <AlertTriangle size={16} /> SOS
+              </button>
+              {soyConductor ? (
+                 <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-slate-900/30 active:scale-95 transition-all">
+                   Finalizar Viaje
+                 </button>
+              ) : (
+                 <div className="flex-[2] bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                   <Navigation size={16} /> En Ruta a Destino
+                 </div>
+              )}
+            </>
+          ) : (
+            <>
+              <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+                <MessageCircle size={16} /> Chat
+              </button>
 
-        {soyConductor ? (
-           // --- LÓGICA DE ESTADOS PARA EL CHOFER ---
-           estadoViaje === 'disponible' ? (
-              <div className="flex-[2] flex gap-2">
-                <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
-                  Cancelar
-                </button>
-                <button 
-                  disabled={cargando || pasajerosConfirmados.length === 0} 
-                  onClick={() => cambiarEstadoViaje('buscando')} // <--- PASO 1: Notifica que va en camino
-                  className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300"
-                >
-                  {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
-                </button>
-              </div>
-           ) : estadoViaje === 'buscando' ? (
-              <div className="flex-[2] flex gap-2">
-                <button 
-                  disabled={cargando} 
-                  onClick={() => setModalAbordaje(true)} // <--- PASO 2: Aquí es donde pide el PIN al llegar
-                  className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all"
-                >
-                  Ya llegué (Pedir PIN)
-                </button>
-              </div>
-           ) : (
-              <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
-                Viaje Finalizado
-              </div>
-           )
-        ) : (
+              {soyConductor ? (
+                 estadoViaje === 'disponible' ? (
+                    <div className="flex-[2] flex gap-2">
+                      <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
+                        Cancelar
+                      </button>
+                      <button 
+                        disabled={cargando || pasajerosConfirmados.length === 0} 
+                        onClick={() => cambiarEstadoViaje('buscando')} 
+                        className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300"
+                      >
+                        {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
+                      </button>
+                    </div>
+                 ) : estadoViaje === 'buscando' ? (
+                    <div className="flex-[2] flex gap-2">
+                      <button 
+                        disabled={cargando} 
+                        onClick={() => setModalAbordaje(true)} 
+                        className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                      >
+                        <MapPin size={16} /> ¡Ya llegué! (Validar PIN)
+                      </button>
+                    </div>
+                 ) : (
+                    <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
+                      Viaje Terminado
+                    </div>
+                 )
+              ) : (
                 yaSoyPasajero ? (
                   estadoViaje === 'finalizado' ? (
                      yaCalifico ? (
@@ -878,7 +883,7 @@ const solicitarCola = async () => {
                   <button disabled={cargando} onClick={cancelarSolicitud} className="flex-[2] bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
                 ) : cuposRestantes > 0 ? (
                   <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
-                    ) : (
+                ) : (
                   <button disabled className="flex-[2] bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
                 )
               )}
@@ -886,6 +891,7 @@ const solicitarCola = async () => {
           )}
         </div>
       </div>
+      
 
       {/* MODAL FINALIZAR VIAJE */}
       {modalFinalizar && (
