@@ -208,7 +208,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  const solicitarCola = async () => {
+const solicitarCola = async () => {
   const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
   const miSaldoActual = Number(userData?.saldo || 0);
 
@@ -228,10 +228,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   try {
     const idConductor = viaje?.uidConductor || viaje?.idCreador;
     const viajeRef = doc(db, "Viajes", viaje.id);
+    const nombreUsuario = userData?.nombre || "Usuario";
     
     const datosPasajeroBase = {
       id: userData?.id || userData?.uid, 
-      nombre: userData?.nombre || "Usuario", 
+      nombre: nombreUsuario, 
       fotoPerfil: userData?.fotoPerfil || null, 
       puestosSolicitados: puestosQueQuiero,
       adultosExtra: adultosExtra,           
@@ -240,11 +241,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     const esAutoAceptar = viaje.autoAceptar === true;
 
-    // 1. EL DISPARADOR: Creamos el documento en Solicitudes
-    // Esto es lo que va a despertar a tu Cloud Function
+    // 1. DISPARADOR PARA CLOUD FUNCTION (Push)
     await addDoc(collection(db, "Solicitudes"), {
-      idConductor: idConductor,                  // OBLIGATORIO para la Cloud Function
-      nombrePasajero: userData?.nombre || "Usuario", // OBLIGATORIO para la Cloud Function
+      idConductor: idConductor,
+      nombrePasajero: nombreUsuario,
       idViaje: viaje.id,
       idPasajero: userData?.id || userData?.uid,
       estado: esAutoAceptar ? "aprobada" : "pendiente",
@@ -252,38 +252,34 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       fecha: serverTimestamp()
     });
 
-    // 2. Mantenemos tu lógica para actualizar el documento del viaje
+    // 2. LÓGICA DE VIAJE Y CAMPAÑITA
     if (esAutoAceptar) {
       const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
-      
       await updateDoc(viajeRef, {
-        pasajeros: arrayUnion({ 
-          ...datosPasajeroBase, 
-          estado: 'confirmado', 
-          pin: pinGenerado, 
-          abordado: false, 
-          calificado: false 
-        })
+        pasajeros: arrayUnion({ ...datosPasajeroBase, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
       });
-      setToastMessage("¡Reserva confirmada al instante!");
+
+      if (idConductor) {
+        await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se ha unido a tu viaje.`, "exito");
+      }
+      setToastMessage("¡Reserva confirmada!");
     } else {
       await updateDoc(viajeRef, {
-        reservasPendientes: arrayUnion({ 
-          ...datosPasajeroBase, 
-          estado: 'pendiente' 
-        })
+        reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
       });
-      setToastMessage("Solicitud enviada al conductor");
+      
+      if (idConductor) {
+        const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
+        await enviarNotificacion(idConductor, "¡Nueva Solicitud!", `${nombreUsuario} quiere unirse a tu viaje${extraTexto}.`, "viaje");
+      }
+      setToastMessage("Solicitud enviada");
     }
-    
-    // ELIMINAMOS los 'enviarNotificacion' manuales del frontend
-    // porque tu Cloud Function ahora hace ese trabajo automáticamente de forma segura.
     
     setModalAcompanantes(false); 
     setShowToast(true);
   } catch (e) { 
     console.error("Error en reserva:", e);
-    setToastMessage("Error al procesar la reserva");
+    setToastMessage("Error al procesar");
     setShowToast(true);
   } finally { 
     setCargando(false); 
