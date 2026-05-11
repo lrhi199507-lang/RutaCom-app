@@ -79,37 +79,54 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   }, [chatIdReal]);
 
   const enviar = async (e, textoSugerido = null) => {
-    if (e) e.preventDefault();
+  if (e) e.preventDefault();
+  
+  const texto = textoSugerido || nuevoMsg.trim();
+  if (!texto) return;
+
+  try {
+    setNuevoMsg(""); 
     
-    const texto = textoSugerido || nuevoMsg.trim();
-    if (!texto) return;
+    // 1. Guardamos el mensaje en la subcolección para que aparezca en pantalla
+    await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+      texto: texto,
+      uidRemitente: userData.id,
+      timestamp: serverTimestamp()
+    });
 
-    try {
-      setNuevoMsg(""); 
-      
-      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-        texto: texto,
-        uidRemitente: userData.id,
-        timestamp: serverTimestamp()
+    // 2. Actualizamos el documento principal del Chat (Inbox)
+    await setDoc(doc(db, "Chats", chatIdReal), {
+      ultimoMensaje: texto,
+      ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      mensajesSinLeer: 1, 
+      remitenteUltimoMensaje: userData.id,
+      ...(isSoporte && {
+          esSoporte: true,
+          uidPasajero: userData.id,
+          nombrePasajero: userData.nombre,
+          ruta: "Soporte Técnico"
+      })
+    }, { merge: true });
+
+    // 3. 🔥 ¡DISPARADOR DE PUSH Y CAMPAÑITA!
+    // Si no es soporte, notificamos al otro usuario
+    if (!isSoporte) {
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: idOtroUsuario,        // El ID que ya calculaste arriba
+        idEmisor: userData.id,           // Tu ID
+        titulo: `Mensaje de ${userData.nombre}`,
+        mensaje: texto,                  // El contenido del mensaje
+        tipo: "chat",                    // Para que la app sepa qué abrir
+        idReferencia: chat.id,           // El ID del chat
+        leido: false,
+        fecha: serverTimestamp()
       });
-
-      await setDoc(doc(db, "Chats", chatIdReal), {
-        ultimoMensaje: texto,
-        ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        mensajesSinLeer: 1, 
-        remitenteUltimoMensaje: userData.id,
-        ...(isSoporte && {
-            esSoporte: true,
-            uidPasajero: userData.id,
-            nombrePasajero: userData.nombre,
-            ruta: "Soporte Técnico"
-        })
-      }, { merge: true });
-
-    } catch (error) {
-      console.error("Error al enviar:", error);
     }
-  };
+
+  } catch (error) {
+    console.error("Error al enviar:", error);
+  }
+};
 
   const abrirWhatsApp = () => {
     if (!pasajeroConfirmado) {
