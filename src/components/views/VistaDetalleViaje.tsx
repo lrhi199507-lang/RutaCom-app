@@ -445,19 +445,31 @@ const solicitarCola = async () => {
     }
   };
 
-  const enviarCalificacionesYFinalizar = async () => {
-  setCargando(true);
-  try {
-    // DISPARO DIRECTO A LA URL REAL:
-    const llamarBunker = httpsCallableFromURL(functions, 'https://finalizar-viaje-v2-1080063705561.us-central1.run.app');
+     const enviarCalificacionesYFinalizar = async () => {
+    setCargando(true);
+    try {
+      const llamarBunker = httpsCallableFromURL(functions, 'https://finalizar-viaje-v2-1080063705561.us-central1.run.app');
 
-    console.log("Intentando cobrar viaje:", viaje.id);
+      console.log("Intentando cobrar viaje:", viaje.id);
       const resultado = await llamarBunker({ 
         viajeId: viaje.id, 
         ratingsChofer: ratingsChofer 
       });
 
       if (resultado.data.success) {
+        
+        // 🔥 INYECCIÓN CRÍTICA: Notificar a los pasajeros para que califiquen
+        pasajerosConfirmados.forEach(p => {
+          if (p && (p.id || p.uid)) {
+            enviarNotificacion(
+              p.id || p.uid,
+              "¡Llegaste a tu destino!",
+              `El viaje ha finalizado. Por favor, recuerda calificar a ${userData.nombre} en la app.`,
+              "viaje"
+            );
+          }
+        });
+
         setToastMessage("¡Viaje finalizado con éxito!");
         setShowToast(true);
         setModalCalificarPasajeros(false);
@@ -465,7 +477,6 @@ const solicitarCola = async () => {
       }
     } catch (e) { 
       console.error("Error completo:", e);
-      // El alert que te pedí para ver el código real
       alert(`CÓDIGO: ${e.code}\nMSG: ${e.message}`); 
       setToastMessage("Error al cobrar: " + e.message);
       setShowToast(true);
