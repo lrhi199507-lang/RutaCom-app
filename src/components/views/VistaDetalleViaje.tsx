@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import Toast from "../ui/Toast";
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
