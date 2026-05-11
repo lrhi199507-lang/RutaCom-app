@@ -674,14 +674,22 @@ const solicitarCola = async () => {
               </div>
             )}
 
-            {yaSoyPasajero && !soyConductor && estadoViaje === 'disponible' && (
-              <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
-                <div className="bg-blue-500/20 p-3 rounded-full mb-3"><Key size={24} className="text-blue-400" /></div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Tu PIN de abordaje</p>
-                <p className="text-5xl font-black italic text-white tracking-[5px] leading-none mb-4">{String(miReserva?.pin || "0000")}</p>
-                <div className="bg-slate-800 text-slate-300 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">Dáselo al chofer al subir al vehículo</div>
-              </div>
-            )}
+            {yaSoyPasajero && !soyConductor && (estadoViaje === 'disponible' || estadoViaje === 'buscando') && (
+  <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
+    <div className="bg-blue-500/20 p-3 rounded-full mb-3">
+      <Key size={24} className="text-blue-400" />
+    </div>
+    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
+      Tu PIN de abordaje
+    </p>
+    <p className="text-5xl font-black italic text-white tracking-[5px] leading-none mb-4">
+      {String(miReserva?.pin || "0000")}
+    </p>
+    <div className="bg-slate-800 text-slate-300 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">
+      Dáselo al chofer al subir al vehículo
+    </div>
+  </div>
+)}
 
             <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm">
               <div className="flex items-center gap-4">
