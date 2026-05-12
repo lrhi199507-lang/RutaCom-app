@@ -418,8 +418,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         );
       }
     } catch (e) { 
-      console.error(e); 
-      setToastMessage("Error al procesar la solicitud");
+      console.error("ERROR REAL:", e); 
+      setToastMessage(`Fallo: ${e.code || e.message}`);
       setShowToast(true);
     } finally { 
       setCargando(false); 
