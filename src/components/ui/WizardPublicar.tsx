@@ -562,6 +562,8 @@ export const WizardPublicar = ({
                   viajesRealizados: userData?.viajesRealizados || 0,
                   bio: userData?.bio || ""
                 },
+              // 🔥 AQUÍ CAPTURAMOS EL VEHÍCULO (El Snapshot)
+                vehiculo: userData?.vehiculo || { marca: "No especificado", modelo: "", color: "", placa: "S/N" },
                 cO: ciudadOri || "S/N", 
                 cD: ciudadDest || "S/N",
                 coordsOrigen: viajeForm.coordsOrigen || null,   
