@@ -209,8 +209,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       console.error("Error al crear documento:", error);
     }
   };
-  
-const solicitarCola = async () => {
+
+  const solicitarCola = async () => {
   const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
   const miSaldoActual = Number(userData?.saldo || 0);
 
@@ -225,20 +225,28 @@ const solicitarCola = async () => {
     setShowToast(true);
     return;
   }
-  
+
   setCargando(true);
   try {
+    // 1. Capturamos la ubicación real del pasajero al momento de pedir
+    const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+    
     const idConductor = viaje?.uidConductor || viaje?.idCreador;
     const viajeRef = doc(db, "Viajes", viaje.id);
     const nombreUsuario = userData?.nombre || "Usuario";
     
+    // 2. Creamos UN SOLO objeto con toda la información (GPS + Acompañantes)
     const datosPasajeroBase = {
       id: userData?.id || userData?.uid, 
       nombre: nombreUsuario, 
       fotoPerfil: userData?.fotoPerfil || null, 
       puestosSolicitados: puestosQueQuiero,
       adultosExtra: adultosExtra,           
-      ninosExtra: ninosExtra
+      ninosExtra: ninosExtra,
+      lat: position.coords.latitude,   // Coordenada para el mapa del chofer
+      lng: position.coords.longitude,  // Coordenada para el mapa del chofer
+      abordado: false,
+      estado: 'confirmado' // Si es auto-aceptar, o se cambia luego
     };
 
     const esAutoAceptar = viaje.autoAceptar === true;
