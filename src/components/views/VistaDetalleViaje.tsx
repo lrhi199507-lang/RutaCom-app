@@ -631,6 +631,24 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
             </button>
 
+              {/* 🔥 PEGA EL PIN AQUÍ, EN LA PARTE DE ARRIBA 🔥 */}
+            {yaSoyPasajero && !soyConductor && (estadoViaje === 'buscando') && (
+              <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center mb-6 animate-in zoom-in duration-300">
+                <div className="bg-blue-500/20 p-3 rounded-full mb-3">
+                  <Key size={24} className="text-blue-400" />
+                </div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  Tu PIN de abordaje
+                </p>
+                <p className="text-5xl font-black italic text-white tracking-[5px] leading-none mb-4">
+                  {String(miReserva?.pin || "0000")}
+                </p>
+                <div className="bg-slate-800 text-slate-300 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">
+                  Dáselo al chofer al subir
+                </div>
+              </div>
+            )}
+
             {/* LISTA DE PASAJEROS HUD */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5 shadow-sm">
               <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center flex items-center justify-center gap-2">
@@ -701,23 +719,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 </div>
               </div>
             )}
-
-            {yaSoyPasajero && !soyConductor && (estadoViaje === 'disponible' || estadoViaje === 'buscando') && (
-  <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
-    <div className="bg-blue-500/20 p-3 rounded-full mb-3">
-      <Key size={24} className="text-blue-400" />
-    </div>
-    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-      Tu PIN de abordaje
-    </p>
-    <p className="text-5xl font-black italic text-white tracking-[5px] leading-none mb-4">
-      {String(miReserva?.pin || "0000")}
-    </p>
-    <div className="bg-slate-800 text-slate-300 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">
-      Dáselo al chofer al subir al vehículo
-    </div>
-  </div>
-)}
 
             <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm">
               <div className="flex items-center gap-4">
