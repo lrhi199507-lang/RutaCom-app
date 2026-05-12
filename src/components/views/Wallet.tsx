@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { doc, getDoc, updateDoc, collection, addDoc, increment } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, addDoc, increment, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
   RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote
@@ -20,6 +20,31 @@ export const Wallet = ({ userData, onRegresar }) => {
   const [enviando, setEnviando] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  
+    // ESTADOS DEL HISTORIAL
+  const [transacciones, setTransacciones] = useState([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(true);
+
+  // EFECTO PARA TRAER EL HISTORIAL EN TIEMPO REAL
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const q = query(
+      collection(db, "Transacciones"),
+      where("uid", "==", userData.id),
+      orderBy("fecha", "desc")
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const historial = [];
+      snap.forEach(documento => historial.push({ id: documento.id, ...documento.data() }));
+      setTransacciones(historial);
+      setCargandoHistorial(false);
+    });
+
+    return () => unsub();
+  }, [userData?.id]);
+  
   
   // ESTADO DE TASA DINÁMICA
   const [tasaBCV, setTasaBCV] = useState(0);
@@ -195,12 +220,43 @@ export const Wallet = ({ userData, onRegresar }) => {
           </button>
         </div>
 
-        {/* HISTORIAL VACÍO */}
-        <div className="pt-2 text-center py-10">
-          <History size={40} className="mx-auto text-slate-800 mb-3" />
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest leading-loose">No hay movimientos recientes que mostrar</p>
+                {/* HISTORIAL DINÁMICO DE TRANSACCIONES */}
+        <div className="pt-2">
+          <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-1">Movimientos Recientes</h3>
+          
+          {cargandoHistorial ? (
+            <p className="text-center text-xs font-bold text-slate-500 py-10 animate-pulse">Cargando movimientos...</p>
+          ) : transacciones.length === 0 ? (
+            <div className="text-center py-10 bg-slate-900/50 rounded-3xl border border-slate-800">
+              <History size={40} className="mx-auto text-slate-700 mb-3" />
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-loose">No hay movimientos recientes</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {transacciones.map((tx) => {
+                const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga';
+                return (
+                  <div key={tx.id} className="bg-slate-900/80 p-5 rounded-[25px] border border-slate-800 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${esIngreso ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                        {esIngreso ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-slate-300 uppercase">{tx.descripcion}</p>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5 tracking-widest">
+                          {new Date(tx.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                    <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : 'text-slate-300'}`}>
+                      {esIngreso ? '+' : '-'}${Number(tx.monto).toFixed(2)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
 
       {/* MODAL DE RECARGA */}
       {showModalRecarga && (
