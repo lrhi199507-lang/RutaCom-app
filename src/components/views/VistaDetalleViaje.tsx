@@ -618,9 +618,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
                     <p className="text-slate-800 text-[11px] font-black uppercase tracking-widest"> 
                       {estadoViaje === 'buscando' 
-                        ? "Chofer en camino a buscarte" 
+                       ? (soyConductor ? "En ruta para recoger pasajeros" : "Chofer en camino a buscarte")
                         : (viaje.latChofer ? `En ruta a ${viaje?.cD?.split(',')[0] || "Destino"}` : "Esperando Señal GPS...")}
-                    </p>
+                       </p>
                   </div>
                </div>
             </div>
