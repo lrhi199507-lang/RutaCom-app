@@ -265,21 +265,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     if (esAutoAceptar) {
       const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
 
-      // 🔥 COBRO REAL: Descontar saldo del perfil del pasajero
-      await updateDoc(doc(db, "usuarios", userData.id), {
-        saldo: increment(-costoTotalPeticion)
-      });
-
-      // 🔥 RECIBO: Crear registro en el historial de transacciones
-      await addDoc(collection(db, "Transacciones"), {
-        uid: userData.id,
-        monto: costoTotalPeticion,
-        descripcion: `Pago de cola a ${viaje.conductor}`,
-        tipo: 'gasto',
-        fecha: new Date().toISOString(),
-        viajeId: viaje.id
-      });
-
       // ACTUALIZAR DOCUMENTO DEL VIAJE
       await updateDoc(viajeRef, {
         pasajeros: arrayUnion({ 
@@ -407,21 +392,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         const idPasajero = solicitud.id || solicitud.uid;
-
-        // 🔥 1. COBRO REAL: Descontamos el dinero al perfil del pasajero
-        await updateDoc(doc(db, "usuarios", idPasajero), {
-          saldo: increment(-costoAceptar)
-        });
-
-        // 🔥 2. RECIBO: Registramos el gasto en el historial del pasajero
-        await addDoc(collection(db, "Transacciones"), {
-          uid: idPasajero,
-          monto: costoAceptar,
-          descripcion: `Pago de cola a ${userData?.nombre || "Chofer"}`,
-          tipo: 'gasto',
-          fecha: new Date().toISOString(),
-          viajeId: viaje.id
-        });
         
         // 3. ACTUALIZAR VIAJE: Movemos la solicitud a confirmados
         await updateDoc(viajeRef, {
@@ -513,15 +483,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       });
 
             if (resultado.data.success) {
-        // 🔥 REGISTRO CONTABLE PARA EL CHOFER
-        await addDoc(collection(db, "Transacciones"), {
-          uid: userData.id,
-          monto: viaje.precio * pasajerosConfirmados.length, // Lo que ganó en total
-          descripcion: `Viaje finalizado: ${viaje.cO} -> ${viaje.cD}`,
-          tipo: 'ingreso',
-          fecha: new Date().toISOString(),
-          viajeId: viaje.id
-        });
         
         // 🔥 INYECCIÓN CRÍTICA: Notificar a los pasajeros para que califiquen
         pasajerosConfirmados.forEach(p => {
