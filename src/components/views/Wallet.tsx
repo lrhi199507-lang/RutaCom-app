@@ -25,7 +25,7 @@ export const Wallet = ({ userData, onRegresar }) => {
   const [transacciones, setTransacciones] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
 
-  // EFECTO PARA TRAER EL HISTORIAL EN TIEMPO REAL
+    // EFECTO PARA TRAER EL HISTORIAL EN TIEMPO REAL
   useEffect(() => {
     if (!userData?.id) return;
 
@@ -40,11 +40,17 @@ export const Wallet = ({ userData, onRegresar }) => {
       snap.forEach(documento => historial.push({ id: documento.id, ...documento.data() }));
       setTransacciones(historial);
       setCargandoHistorial(false);
+    }, (error) => {
+      // 🔥 AHORA SÍ VEREMOS EL ERROR EN PANTALLA
+      console.error("Error en Billetera:", error);
+      setToastMsg(`Error de lectura: ${error.message}`);
+      setShowToast(true);
+      setCargandoHistorial(false); 
     });
 
     return () => unsub();
   }, [userData?.id]);
-  
+
   // ESTADO DE TASA DINÁMICA
   const [tasaBCV, setTasaBCV] = useState(0);
 
