@@ -127,10 +127,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         } catch (error) {
           console.error("Error al obtener GPS:", error);
         }
-      }, 10000); // 10 Segundos para que se vea más fluido
+      }, 10000); // 10 Segundos para fluidez
     };
 
-    if (soyConductor && estadoViaje === 'en_curso') {
+    // 🔥 EL CAMBIO CLAVE: Ahora transmite en 'buscando' y en 'en_curso'
+    if (soyConductor && (estadoViaje === 'en_curso' || estadoViaje === 'buscando')) {
       iniciarTransmision();
     }
 
@@ -138,6 +139,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       if (intervaloGps) clearInterval(intervaloGps);
     };
   }, [soyConductor, estadoViaje, viaje?.id]);
+  
   // ----------------------------------------------
 
   useEffect(() => {
@@ -586,7 +588,7 @@ const solicitarCola = async () => {
           )}
         </div>
 
-        {estadoViaje === 'en_curso' ? (
+      {(estadoViaje === 'en_curso' || estadoViaje === 'buscando') ? (
           
           <div className="px-5 space-y-6 animate-in zoom-in-95 duration-500">
             
@@ -603,11 +605,15 @@ const solicitarCola = async () => {
                <div className="absolute top-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
                   <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-slate-200 flex items-center gap-2 shadow-lg">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-                    <p className="text-slate-800 text-[11px] font-black uppercase tracking-widest"> {viaje.latChofer ? `En ruta a ${viaje?.cD?.split(',')[0] || "Destino"}` : "Esperando Señal GPS..."}
+                    <p className="text-slate-800 text-[11px] font-black uppercase tracking-widest"> 
+                      {estadoViaje === 'buscando' 
+                        ? "Chofer en camino a buscarte" 
+                        : (viaje.latChofer ? `En ruta a ${viaje?.cD?.split(',')[0] || "Destino"}` : "Esperando Señal GPS...")}
                     </p>
                   </div>
                </div>
             </div>
+            
 
             <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
                <Share2 size={20} />
