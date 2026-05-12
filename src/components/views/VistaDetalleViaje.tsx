@@ -750,6 +750,36 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
+                        {/* DATOS DEL VEHÍCULO (SOLO SE MUESTRA SI EXISTEN) */}
+            {viaje?.vehiculo && (
+              <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm flex flex-col gap-3">
+                <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
+                  Vehículo Asignado
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 p-3.5 rounded-[20px] border border-slate-100">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Modelo</p>
+                    <p className="text-xs font-black italic text-slate-700 uppercase truncate">
+                      {viaje.vehiculo.marca} {viaje.vehiculo.modelo}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-3.5 rounded-[20px] border border-slate-100">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Color</p>
+                    <p className="text-xs font-black italic text-slate-700 uppercase truncate">
+                      {viaje.vehiculo.color}
+                    </p>
+                  </div>
+                  <div className="col-span-2 bg-slate-900 p-4 rounded-[20px] flex items-center justify-between shadow-inner">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Placa / Patente</p>
+                    <p className="text-base font-black italic text-white tracking-[3px] uppercase">
+                      {viaje.vehiculo.placa}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PUESTOS ({asientosOcupados}/{puestosTotales})</p>
@@ -815,6 +845,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 </div>
               </div>
             </div>
+
+            
 
                      {/* SOLICITUDES NARANJA (PARA EL CHOFER) */}
             {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
