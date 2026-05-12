@@ -603,11 +603,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             {/* NUEVO MAPA GOOGLE VIVO */}
             <div className="bg-white rounded-[40px] h-72 relative overflow-hidden border-4 border-slate-100 shadow-xl z-0">
                <MapaView 
-                 origen={viaje.coordsOrigen} 
-                 destino={viaje.coordsDestino} 
-                 posicionChofer={viaje.latChofer && viaje.lngChofer ? { lat: viaje.latChofer, lon: viaje.lngChofer } : null}
-                 interactivo={false} 
-               />
+              origen={viaje.coordsOrigen} 
+              destino={viaje.coordsDestino} 
+              posicionChofer={viaje.latChofer && viaje.lngChofer ? { lat: viaje.latChofer, lon: viaje.lngChofer } : null}
+              pasajeros={pasajerosConfirmados} // <--- Nueva Prop
+              estadoViaje={estadoViaje}       // <--- Nueva Prop para saber qué mostrar
+              interactivo={false} 
+              />
+      
                
                {/* Overlay flotante informativo */}
                <div className="absolute top-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
