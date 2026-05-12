@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { MapPin } from 'lucide-react';
 
-const MapaView = ({ origen, destino, posicionChofer, interactivo = false, onMarkerDragEnd }) => {
+const MapaView = ({ origen, destino, posicionChofer, pasajeros = [], estadoViaje, interactivo = false }) => {
   const mapRef = useRef(null);
   const googleMap = useRef(null);
-  const markers = useRef({});
+  const markers = useRef({ chofer: null, pasajeros: [] });
   const directionsRenderer = useRef(null);
 
   useEffect(() => {
@@ -14,10 +14,9 @@ const MapaView = ({ origen, destino, posicionChofer, interactivo = false, onMark
 
     googleMap.current = new window.google.maps.Map(mapRef.current, {
       center: centroInicial,
-      zoom: 16,
-      disableDefaultUI: true, 
+      zoom: 15,
+      disableDefaultUI: true,
       zoomControl: !interactivo,
-      gestureHandling: 'greedy',
       styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
     });
 
@@ -28,26 +27,11 @@ const MapaView = ({ origen, destino, posicionChofer, interactivo = false, onMark
     });
   }, [interactivo]);
 
-  // VIGÍA DE REDIMENSIONAMIENTO (Evita el mapa en blanco)
-  useEffect(() => {
-    if (!mapRef.current) return;
-    const observer = new ResizeObserver(() => {
-      if (googleMap.current && window.google) {
-        window.google.maps.event.trigger(googleMap.current, 'resize');
-      }
-    });
-    observer.observe(mapRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // ACTUALIZACIÓN DE MARCADORES Y RUTA
   useEffect(() => {
     if (!googleMap.current || !window.google) return;
 
-    // 1. Limpiar marcador de chofer viejo si existe
+    // 1. GESTIÓN DEL CHOFER
     if (markers.current.chofer) markers.current.chofer.setMap(null);
-
-    // 2. Dibujar Chofer (El Carrito)
     if (posicionChofer) {
       markers.current.chofer = new window.google.maps.Marker({
         position: { lat: posicionChofer.lat, lng: posicionChofer.lon },
@@ -63,12 +47,36 @@ const MapaView = ({ origen, destino, posicionChofer, interactivo = false, onMark
           anchor: new window.google.maps.Point(12, 12)
         }
       });
-      // Si el viaje está en curso, el mapa sigue al chofer
       if (!interactivo) googleMap.current.panTo(markers.current.chofer.getPosition());
     }
 
-    // 3. Trazar Ruta
-    if (origen && destino && !interactivo) {
+    // 2. GESTIÓN DE PASAJEROS (Solo en estado 'buscando')
+    markers.current.pasajeros.forEach(m => m.setMap(null));
+    markers.current.pasajeros = [];
+
+    if (estadoViaje === 'buscando' && pasajeros.length > 0) {
+      pasajeros.forEach(p => {
+        if (p.lat && p.lng && !p.abordado) {
+          const pMarker = new window.google.maps.Marker({
+            position: { lat: p.lat, lng: p.lng },
+            map: googleMap.current,
+            label: { text: p.nombre[0], color: "white", fontWeight: "bold" },
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: "#f59e0b",
+              fillOpacity: 1,
+              strokeWeight: 2,
+              strokeColor: "white",
+            }
+          });
+          markers.current.pasajeros.push(pMarker);
+        }
+      });
+    }
+
+    // 3. GESTIÓN DE RUTA (Solo en estado 'en_curso')
+    if (estadoViaje === 'en_curso' && origen && destino) {
       const directionsService = new window.google.maps.DirectionsService();
       directionsService.route({
         origin: { lat: origen.lat, lng: origen.lon },
@@ -77,18 +85,15 @@ const MapaView = ({ origen, destino, posicionChofer, interactivo = false, onMark
       }, (result, status) => {
         if (status === 'OK') directionsRenderer.current.setDirections(result);
       });
+    } else {
+      directionsRenderer.current.setDirections({ routes: [] });
     }
-  }, [origen, destino, posicionChofer, interactivo]);
+
+  }, [posicionChofer, pasajeros, estadoViaje, origen, destino]);
 
   return (
     <div className="relative w-full h-full min-h-[300px] bg-slate-100 rounded-inherit">
       <div ref={mapRef} className="absolute inset-0" style={{ borderRadius: 'inherit' }} />
-      {interactivo && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 flex flex-col items-center">
-          <div className="bg-slate-900 text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-full mb-1 shadow-lg tracking-widest">Fijar Punto</div>
-          <MapPin size={36} className="text-blue-600 drop-shadow-md" fill="currentColor" />
-        </div>
-      )}
     </div>
   );
 };
