@@ -214,12 +214,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
   const miSaldoActual = Number(userData?.saldo || 0);
 
+  // 1. Verificación de seguridad: ¿Tiene plata suficiente?
   if (miSaldoActual < costoTotalPeticion) {
     setToastMessage(`Saldo insuficiente. Necesitas $${costoTotalPeticion.toFixed(2)}`);
     setShowToast(true);
     return;
   }
 
+  // 2. Verificación de seguridad: ¿Hay puestos?
   if (puestosQueQuiero > cuposRestantes) {
     setToastMessage("No hay suficientes puestos disponibles");
     setShowToast(true);
@@ -228,14 +230,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   setCargando(true);
   try {
-    // 1. Capturamos la ubicación real del pasajero al momento de pedir
+    // Capturamos ubicación para el mapa del chofer
     const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
     
     const idConductor = viaje?.uidConductor || viaje?.idCreador;
     const viajeRef = doc(db, "Viajes", viaje.id);
     const nombreUsuario = userData?.nombre || "Usuario";
     
-    // 2. Creamos UN SOLO objeto con toda la información (GPS + Acompañantes)
     const datosPasajeroBase = {
       id: userData?.id || userData?.uid, 
       nombre: nombreUsuario, 
@@ -243,15 +244,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       puestosSolicitados: puestosQueQuiero,
       adultosExtra: adultosExtra,           
       ninosExtra: ninosExtra,
-      lat: position.coords.latitude,   // Coordenada para el mapa del chofer
-      lng: position.coords.longitude,  // Coordenada para el mapa del chofer
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
       abordado: false,
-      estado: 'confirmado' // Si es auto-aceptar, o se cambia luego
     };
 
     const esAutoAceptar = viaje.autoAceptar === true;
 
-    // 1. DISPARADOR PARA CLOUD FUNCTION (Push)
+    // A. DISPARADOR PARA NOTIFICACIONES PUSH
     await addDoc(collection(db, "Solicitudes"), {
       idConductor: idConductor,
       nombrePasajero: nombreUsuario,
@@ -262,11 +262,33 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       fecha: serverTimestamp()
     });
 
-    // 2. LÓGICA DE VIAJE Y CAMPAÑITA
     if (esAutoAceptar) {
       const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
+
+      // 🔥 COBRO REAL: Descontar saldo del perfil del pasajero
+      await updateDoc(doc(db, "usuarios", userData.id), {
+        saldo: increment(-costoTotalPeticion)
+      });
+
+      // 🔥 RECIBO: Crear registro en el historial de transacciones
+      await addDoc(collection(db, "Transacciones"), {
+        uid: userData.id,
+        monto: costoTotalPeticion,
+        descripcion: `Pago de cola a ${viaje.conductor}`,
+        tipo: 'gasto',
+        fecha: new Date().toISOString(),
+        viajeId: viaje.id
+      });
+
+      // ACTUALIZAR DOCUMENTO DEL VIAJE
       await updateDoc(viajeRef, {
-        pasajeros: arrayUnion({ ...datosPasajeroBase, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
+        pasajeros: arrayUnion({ 
+          ...datosPasajeroBase, 
+          estado: 'confirmado', 
+          pin: pinGenerado, 
+          abordado: false, 
+          calificado: false 
+        })
       });
 
       if (idConductor) {
@@ -274,6 +296,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       }
       setToastMessage("¡Reserva confirmada!");
     } else {
+      // SI NO ES AUTO-ACEPTAR: Solo mandamos la solicitud (No se cobra todavía)
       await updateDoc(viajeRef, {
         reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
       });
@@ -365,14 +388,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setCargando(false);
     }
   };
-  
-  const gestionarSolicitud = async (solicitud, accion) => {
+
+    const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
       
       if (accion === 'aceptar') {
         const puestosQuePidio = Number(solicitud.puestosSolicitados) || 1;
+        const costoAceptar = Number(viaje?.precio || 0) * puestosQuePidio;
+
         if (puestosQuePidio > cuposRestantes) { 
           setToastMessage("Sin puestos disponibles para esta solicitud"); 
           setShowToast(true); 
@@ -381,20 +406,38 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         }
         
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
+        const idPasajero = solicitud.id || solicitud.uid;
+
+        // 🔥 1. COBRO REAL: Descontamos el dinero al perfil del pasajero
+        await updateDoc(doc(db, "usuarios", idPasajero), {
+          saldo: increment(-costoAceptar)
+        });
+
+        // 🔥 2. RECIBO: Registramos el gasto en el historial del pasajero
+        await addDoc(collection(db, "Transacciones"), {
+          uid: idPasajero,
+          monto: costoAceptar,
+          descripcion: `Pago de cola a ${userData?.nombre || "Chofer"}`,
+          tipo: 'gasto',
+          fecha: new Date().toISOString(),
+          viajeId: viaje.id
+        });
         
+        // 3. ACTUALIZAR VIAJE: Movemos la solicitud a confirmados
         await updateDoc(viajeRef, {
           reservasPendientes: arrayRemove(solicitud),
           pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
         });
 
         await enviarNotificacion(
-          solicitud.id || solicitud.uid,
+          idPasajero,
           "¡Cola Aceptada!",
           `${userData?.nombre} te ha confirmado en su viaje. ¡Revisa tu PIN de abordaje!`,
           "exito"
         );
 
       } else {
+        // LÓGICA DE RECHAZO (No se cobra ni se crea recibo)
         await updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) });
 
         await enviarNotificacion(
@@ -406,10 +449,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       }
     } catch (e) { 
       console.error(e); 
+      setToastMessage("Error al procesar la solicitud");
+      setShowToast(true);
     } finally { 
       setCargando(false); 
     }
   };
+  
   
     const procesarAbordajeEIniciar = async () => {
     setCargando(true);
@@ -466,7 +512,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         ratingsChofer: ratingsChofer 
       });
 
-      if (resultado.data.success) {
+            if (resultado.data.success) {
+        // 🔥 REGISTRO CONTABLE PARA EL CHOFER
+        await addDoc(collection(db, "Transacciones"), {
+          uid: userData.id,
+          monto: viaje.precio * pasajerosConfirmados.length, // Lo que ganó en total
+          descripcion: `Viaje finalizado: ${viaje.cO} -> ${viaje.cD}`,
+          tipo: 'ingreso',
+          fecha: new Date().toISOString(),
+          viajeId: viaje.id
+        });
         
         // 🔥 INYECCIÓN CRÍTICA: Notificar a los pasajeros para que califiquen
         pasajerosConfirmados.forEach(p => {
