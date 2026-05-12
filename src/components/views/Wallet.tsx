@@ -21,7 +21,7 @@ export const Wallet = ({ userData, onRegresar }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   
-    // ESTADOS DEL HISTORIAL
+  // ESTADOS DEL HISTORIAL
   const [transacciones, setTransacciones] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
 
@@ -44,7 +44,6 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     return () => unsub();
   }, [userData?.id]);
-  
   
   // ESTADO DE TASA DINÁMICA
   const [tasaBCV, setTasaBCV] = useState(0);
@@ -220,7 +219,7 @@ export const Wallet = ({ userData, onRegresar }) => {
           </button>
         </div>
 
-                {/* HISTORIAL DINÁMICO DE TRANSACCIONES */}
+        {/* HISTORIAL DINÁMICO DE TRANSACCIONES */}
         <div className="pt-2">
           <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-1">Movimientos Recientes</h3>
           
@@ -257,6 +256,7 @@ export const Wallet = ({ userData, onRegresar }) => {
             </div>
           )}
         </div>
+      </div> {/* <-- ESTE ERA EL DIV QUE FALTABA Y ROMPÍA TODO */}
 
       {/* MODAL DE RECARGA */}
       {showModalRecarga && (
