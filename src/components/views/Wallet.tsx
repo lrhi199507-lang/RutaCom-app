@@ -24,8 +24,9 @@ export const Wallet = ({ userData, onRegresar }) => {
   // ESTADOS DEL HISTORIAL
   const [transacciones, setTransacciones] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
+  const [filtroTx, setFiltroTx] = useState("todos"); // 'todos', 'ingreso', 'gasto'
 
-    // EFECTO PARA TRAER EL HISTORIAL EN TIEMPO REAL
+  // EFECTO PARA TRAER EL HISTORIAL EN TIEMPO REAL
   useEffect(() => {
     if (!userData?.id) return;
 
@@ -41,7 +42,6 @@ export const Wallet = ({ userData, onRegresar }) => {
       setTransacciones(historial);
       setCargandoHistorial(false);
     }, (error) => {
-      // 🔥 AHORA SÍ VEREMOS EL ERROR EN PANTALLA
       console.error("Error en Billetera:", error);
       setToastMsg(`Error de lectura: ${error.message}`);
       setShowToast(true);
@@ -50,7 +50,7 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     return () => unsub();
   }, [userData?.id]);
-
+  
   // ESTADO DE TASA DINÁMICA
   const [tasaBCV, setTasaBCV] = useState(0);
 
@@ -171,8 +171,17 @@ export const Wallet = ({ userData, onRegresar }) => {
     }
   };
 
+  // LÓGICA DE FILTRADO
+  const transaccionesFiltradas = transacciones.filter(tx => {
+    if (filtroTx === 'todos') return true;
+    if (filtroTx === 'ingreso') return tx.tipo === 'ingreso' || tx.tipo === 'recarga';
+    if (filtroTx === 'gasto') return tx.tipo === 'gasto' || tx.tipo === 'retiro';
+    return true;
+  });
+
   return (
-    <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-hidden">
+    // 🔥 CAMBIO CRÍTICO: overflow-x-hidden en lugar de overflow-hidden para permitir scroll
+    <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-x-hidden">
       <Toast show={showToast} message={toastMsg} onClose={() => setShowToast(false)} />
 
       {/* HEADER */}
@@ -227,18 +236,42 @@ export const Wallet = ({ userData, onRegresar }) => {
 
         {/* HISTORIAL DINÁMICO DE TRANSACCIONES */}
         <div className="pt-2">
-          <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-1">Movimientos Recientes</h3>
+          {/* 🔥 BOTONES DE FILTRADO AGREGADOS */}
+          <div className="flex items-center justify-between mb-4 ml-1">
+            <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Movimientos</h3>
+            
+            <div className="flex gap-1 bg-slate-900/50 p-1 rounded-full border border-slate-800">
+              <button 
+                onClick={() => setFiltroTx('todos')} 
+                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'todos' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
+              >
+                Todos
+              </button>
+              <button 
+                onClick={() => setFiltroTx('ingreso')} 
+                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'ingreso' ? 'bg-emerald-500/20 text-emerald-400 shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
+              >
+                Ingresos
+              </button>
+              <button 
+                onClick={() => setFiltroTx('gasto')} 
+                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'gasto' ? 'bg-red-500/20 text-red-400 shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
+              >
+                Gastos
+              </button>
+            </div>
+          </div>
           
           {cargandoHistorial ? (
             <p className="text-center text-xs font-bold text-slate-500 py-10 animate-pulse">Cargando movimientos...</p>
-          ) : transacciones.length === 0 ? (
+          ) : transaccionesFiltradas.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/50 rounded-3xl border border-slate-800">
               <History size={40} className="mx-auto text-slate-700 mb-3" />
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-loose">No hay movimientos recientes</p>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-loose">No hay movimientos aquí</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {transacciones.map((tx) => {
+              {transaccionesFiltradas.map((tx) => {
                 const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga';
                 return (
                   <div key={tx.id} className="bg-slate-900/80 p-5 rounded-[25px] border border-slate-800 flex items-center justify-between shadow-sm">
@@ -253,7 +286,7 @@ export const Wallet = ({ userData, onRegresar }) => {
                         </p>
                       </div>
                     </div>
-                    <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : 'text-slate-300'}`}>
+                    <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : 'text-red-400'}`}>
                       {esIngreso ? '+' : '-'}${Number(tx.monto).toFixed(2)}
                     </p>
                   </div>
@@ -262,7 +295,7 @@ export const Wallet = ({ userData, onRegresar }) => {
             </div>
           )}
         </div>
-      </div> {/* <-- ESTE ERA EL DIV QUE FALTABA Y ROMPÍA TODO */}
+      </div>
 
       {/* MODAL DE RECARGA */}
       {showModalRecarga && (
