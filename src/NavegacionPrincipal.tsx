@@ -3,6 +3,8 @@ import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
 import { AlertCircle } from 'lucide-react';
 import { Wallet } from './components/views/Wallet'; 
+import { App } from '@capacitor/app';
+
 
 import { 
   doc, onSnapshot, collection, query, orderBy, 
@@ -87,6 +89,31 @@ export default function NavegacionPrincipal({ user }) {
 
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
+
+    useEffect(() => {
+    // Escucha el gesto de atrás o botón físico
+    const backListener = App.addListener('backButton', () => {
+      
+      // Si estás viendo el detalle de un viaje, vuelve al inicio
+      if (viajeSeleccionado) {
+        setViajeSeleccionado(null);
+        return;
+      }
+
+      // Si no estás en la pestaña de inicio (ej: estás en Wallet o Perfil)
+      if (pestañaActiva !== 'inicio') {
+        setPestañaActiva('inicio');
+        return;
+      }
+
+      // Si ya estás en el inicio puro, cierra la app
+      App.exitApp();
+    });
+
+    return () => {
+      backListener.remove();
+    };
+  }, [pestañaActiva, viajeSeleccionado]);
 
   const iniciarChat = async (viaje) => {
     if (!userData?.id || !viaje?.id) return;
