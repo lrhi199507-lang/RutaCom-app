@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { db } from '../../firebaseConfig';
-// IMPORTANTE: Aquí agregué getDoc que faltaba para leer la Caja Fuerte
-import { doc, updateDoc, getDocs, collection, increment, getDoc } from 'firebase/firestore';
+// IMPORTANTE: Aquí agregué getDoc que faltaba para leer la Caja Fuerte y las queries para el historial
+import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy } from 'firebase/firestore';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth } from 'firebase/auth';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
-  Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight
+  Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight, 
+  TrendingUp, History, Landmark // Agregados iconos para el historial
 } from 'lucide-react';
 
 const auth = getAuth();
@@ -26,7 +27,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
   const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); 
-  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos'>('pendientes');
+  const [transaccionesAdmin, setTransaccionesAdmin] = useState<any[]>([]); // ESTADO NUEVO PARA EL HISTORIAL APP
+  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos' | 'historial'>('pendientes');
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   
@@ -168,7 +170,16 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const snapPagos = await getDocs(collection(db, "PagosPendientes"));
       setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter((p: any) => p.estado === 'pendiente'));
 
-      // Leer Finanzas
+      // 🔥 CARGAR HISTORIAL DE LA APP (COMISIONES DEL 10%)
+      const qAdmin = query(
+        collection(db, "Transacciones"),
+        where("uid", "==", "ADMIN_APP"),
+        orderBy("fecha", "desc")
+      );
+      const snapAdmin = await getDocs(qAdmin);
+      setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      // Leer Finanzas y Tasa Actual
       const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
       if (docFinanzas.exists()) {
         const data = docFinanzas.data();
@@ -555,15 +566,16 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
                 <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
               </div>
-              <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} /></button>
+              <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} className={cargando ? 'animate-spin' : ''}/></button>
             </div>
 
             {/* SELECTOR DE SUB-PESTAÑAS */}
-            <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar">
-              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Cuentas</button>
-              <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
-              <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
-              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Aprobados</button>
+            <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
+              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Cuentas</button>
+              <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
+              <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
+              <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
+              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Aprobados</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
@@ -571,30 +583,59 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
               ) : (
                 <>
+                  {/* PESTAÑA DE HISTORIAL FINANCIERO (ADMIN) */}
+                  {subPestañaAdmin === 'historial' && (
+                    <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
+                      <div className="bg-gradient-to-br from-indigo-600 to-slate-900 p-6 rounded-[35px] border border-white/10 shadow-2xl relative overflow-hidden">
+                          <Landmark className="absolute -right-4 -bottom-4 text-white/5" size={120} />
+                          <p className="text-[9px] font-black text-indigo-200 uppercase tracking-widest mb-1 relative z-10">Caja Fuerte App</p>
+                          <h3 className="text-4xl font-black italic text-white leading-none relative z-10">${balanceApp.toFixed(2)}</h3>
+                          <div className="mt-4 inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full border border-white/10 relative z-10">
+                            <TrendingUp size={12} className="text-green-400" />
+                            <span className="text-[9px] font-black text-white uppercase italic">10% de Comisión</span>
+                          </div>
+                      </div>
+
+                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mt-6">Ingresos App</h4>
+
+                      {transaccionesAdmin.length === 0 ? (
+                        <div className="bg-slate-900/50 p-10 rounded-[30px] border border-white/5 text-center">
+                            <History size={40} className="text-slate-800 mx-auto mb-3" />
+                            <p className="text-[10px] font-black text-slate-600 uppercase italic">Sin comisiones aún</p>
+                        </div>
+                      ) : (
+                        transaccionesAdmin.map((tx) => (
+                          <div key={tx.id} className="bg-slate-900 border border-white/5 p-5 rounded-[28px] flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400">
+                                  <DollarSign size={18} />
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-black text-slate-200 uppercase leading-none mb-1">{tx.descripcion}</p>
+                                  <p className="text-[8px] font-bold text-slate-500 uppercase">
+                                    {new Date(tx.fecha).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-sm font-black italic text-indigo-400">+${Number(tx.monto).toFixed(2)}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
                   {/* PESTAÑA DE PAGOS */}
                   {subPestañaAdmin === 'pagos' && (
                     <>
-                      {/* NUEVO: PANEL DE FINANZAS Y TASA BCV */}
-                      <div className="mb-6 space-y-4">
-                        {/* Caja Fuerte de la App */}
-                        <div className="bg-gradient-to-br from-blue-600 to-indigo-900 p-6 rounded-[30px] shadow-2xl border border-white/10">
-                          <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1 opacity-70">Ganancias Netas de la App (10%)</p>
-                          <div className="flex items-end gap-2">
-                            <span className="text-4xl font-black italic text-white">${balanceApp.toFixed(2)}</span>
-                            <span className="text-[10px] font-bold text-blue-200 mb-2 uppercase">Acumulado</span>
-                          </div>
+                      {/* Tarjeta de Tasa BCV */}
+                      <div className="bg-slate-900 border border-white/5 p-5 rounded-[30px] flex justify-between items-center shadow-lg mb-6">
+                        <div>
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Oficial Actual</p>
+                          <p className="text-xl font-black text-white italic">Bs. {tasaActual}</p>
                         </div>
-
-                        {/* Tarjeta de Tasa BCV */}
-                        <div className="bg-slate-900 border border-white/5 p-5 rounded-[30px] flex justify-between items-center shadow-lg">
-                          <div>
-                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Oficial Actual</p>
-                            <p className="text-xl font-black text-white italic">Bs. {tasaActual}</p>
-                          </div>
-                          <button onClick={actualizarTasaBCV} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase italic active:scale-95 transition-all shadow-lg shadow-blue-900/50">
-                            Cambiar Tasa
-                          </button>
-                        </div>
+                        <button onClick={actualizarTasaBCV} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase italic active:scale-95 transition-all shadow-lg shadow-blue-900/50">
+                          Cambiar Tasa
+                        </button>
                       </div>
 
                       {/* LISTA DE PAGOS PENDIENTES */}
