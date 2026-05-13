@@ -3,7 +3,7 @@ import { db } from "../../firebaseConfig";
 import { doc, getDoc, updateDoc, collection, addDoc, increment, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote
+  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote, Copy
 } from "lucide-react";
 import Toast from "../ui/Toast";
 
@@ -87,7 +87,17 @@ export const Wallet = ({ userData, onRegresar }) => {
 
   const saldoUSD = userData?.saldo || 0;
   const saldoConvertido = (saldoUSD * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
-
+  // Lógica para copiar al portapapeles
+  const copiarDato = async (texto, campo) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setToastMsg(`${campo} copiado al portapapeles`);
+      setShowToast(true);
+    } catch (err) {
+      console.error("Error al copiar", err);
+    }
+  };
+  
   const manejarRecarga = async (e) => {
     e.preventDefault();
     if (!montoRecarga || !referencia) {
@@ -311,14 +321,45 @@ export const Wallet = ({ userData, onRegresar }) => {
               <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white"><X size={18} /></button>
             </div>
 
-            <div className="space-y-4 mb-8 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
+                        <div className="space-y-4 mb-8 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
               <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400">Banco:</span><span className="text-xs font-black text-white uppercase">{datosPagoAdmin.banco}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400">Teléfono:</span><span className="text-xs font-black text-white">{datosPagoAdmin.telefono}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-bold text-slate-400">Cédula:</span><span className="text-xs font-black text-white">{datosPagoAdmin.cedula}</span></div>
+              <div className="space-y-3">
+                
+                {/* BANCO */}
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-400">Banco:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-white uppercase">{datosPagoAdmin.banco}</span>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* TELÉFONO */}
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-400">Teléfono:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-white">{datosPagoAdmin.telefono}</span>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* CÉDULA */}
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-400">Cédula:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-white">{datosPagoAdmin.cedula}</span>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+            
 
             <form onSubmit={manejarRecarga} className="space-y-4">
               <div>
