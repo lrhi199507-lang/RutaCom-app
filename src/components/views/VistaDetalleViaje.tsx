@@ -766,7 +766,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
-                        {/* DATOS DEL VEHÍCULO (SOLO SE MUESTRA SI EXISTEN) */}
+            {/* DATOS DEL VEHÍCULO (SOLO SE MUESTRA SI EXISTEN) */}
             {viaje?.vehiculo && (
               <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm flex flex-col gap-3">
                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
@@ -795,7 +795,33 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
             
+            {/* 🔥 SOLICITUDES NARANJA (MOVIDO AQUÍ ARRIBA) 🔥 */}
+            {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
+              <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom">
+                <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
+                {solicitudesPendientes.map((solicitud, index) => {
+                  if (!solicitud) return null;
+                  const puestosPedidos = Number(solicitud.puestosSolicitados) || 1;
+                  return (
+                    <div key={`sol-${index}`} className="bg-white p-4 rounded-[25px] flex items-center gap-3 border border-orange-100 shadow-sm">
+                      <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
+                         {solicitud.fotoPerfil ? <img src={solicitud.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-300" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-black uppercase text-slate-800 truncate">{String(solicitud.nombre || "Usuario")}</p>
+                        <p className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Pide <span className="text-orange-600 font-black">{puestosPedidos}</span> asiento(s)</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'rechazar')} className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all"><X size={16} strokeWidth={3} /></button>
+                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'aceptar')} className="w-10 h-10 bg-green-500 text-white shadow-lg shadow-green-200 rounded-full flex items-center justify-center active:scale-90 transition-all"><Check size={16} strokeWidth={3} /></button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
+            {/* PUESTOS */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PUESTOS ({asientosOcupados}/{puestosTotales})</p>
@@ -831,6 +857,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
+            {/* PREFERENCIAS DEL VIAJE */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
               <div className="grid grid-cols-2 gap-3">
@@ -862,33 +889,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
-            
-
-                     {/* SOLICITUDES NARANJA (PARA EL CHOFER) */}
-            {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
-              <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom mb-10">
-                <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
-                {solicitudesPendientes.map((solicitud, index) => {
-                  if (!solicitud) return null;
-                  const puestosPedidos = Number(solicitud.puestosSolicitados) || 1;
-                  return (
-                    <div key={`sol-${index}`} className="bg-white p-4 rounded-[25px] flex items-center gap-3 border border-orange-100 shadow-sm">
-                      <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
-                         {solicitud.fotoPerfil ? <img src={solicitud.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-300" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black uppercase text-slate-800 truncate">{String(solicitud.nombre || "Usuario")}</p>
-                        <p className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Pide <span className="text-orange-600 font-black">{puestosPedidos}</span> asiento(s)</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'rechazar')} className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all"><X size={16} strokeWidth={3} /></button>
-                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'aceptar')} className="w-10 h-10 bg-green-500 text-white shadow-lg shadow-green-200 rounded-full flex items-center justify-center active:scale-90 transition-all"><Check size={16} strokeWidth={3} /></button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -1234,4 +1234,3 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
     </div>
   );
-};
