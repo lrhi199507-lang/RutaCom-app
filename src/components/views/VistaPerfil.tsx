@@ -8,7 +8,7 @@ import {
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
   Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight, 
-  TrendingUp, History, Landmark // Agregados iconos para el historial
+  TrendingUp, History, Landmark, Settings
 } from 'lucide-react';
 
 const auth = getAuth();
@@ -35,6 +35,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   // ESTADOS FINANCIEROS
   const [tasaActual, setTasaActual] = useState(0); 
   const [balanceApp, setBalanceApp] = useState(0);
+  const [bancoAdmin, setBancoAdmin] = useState({ banco: "", telefono: "", cedula: "" });
+  
   
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
@@ -185,6 +187,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         const data = docFinanzas.data();
         setTasaActual(data.tasaBCV || 0);
         setBalanceApp(data.gananciasTotales || 0);
+        if (data.bancoAdmin) setBancoAdmin(data.bancoAdmin);
       }
     } catch (e) { 
       console.error("Error cargando admin:", e); 
@@ -206,6 +209,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setToast({ texto: "Error al actualizar tasa", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     }
+  };
+  
+  const guardarDatosBancarios = async () => {
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "Configuracion", "Finanzas"), { bancoAdmin: bancoAdmin });
+      setToast({ texto: "Datos de cobro guardados", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e) {
+      setToast({ texto: "Error al guardar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
   };
 
   // --- LÓGICA DE PAGOS ---
@@ -637,6 +652,30 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                           Cambiar Tasa
                         </button>
                       </div>
+                                            {/* 🔥 CONFIGURACIÓN DE COBRO (NUEVO) 🔥 */}
+                      <div className="bg-slate-900 border border-white/5 p-6 rounded-[35px] space-y-4 mb-6">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="bg-blue-600/10 p-2 rounded-xl text-blue-400"><Settings size={18} /></div>
+                          <p className="text-[10px] font-black text-white uppercase tracking-widest italic">Datos de Cobro (Wallet)</p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-slate-500 uppercase ml-1">Banco</label>
+                            <input value={bancoAdmin.banco} onChange={(e) => setBancoAdmin({...bancoAdmin, banco: e.target.value})} className="w-full bg-slate-950 border border-white/5 rounded-xl p-3 text-xs text-white font-bold outline-none focus:border-blue-500" placeholder="Ej: Banco de Venezuela" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-slate-500 uppercase ml-1">Teléfono</label>
+                            <input value={bancoAdmin.telefono} onChange={(e) => setBancoAdmin({...bancoAdmin, telefono: e.target.value})} className="w-full bg-slate-950 border border-white/5 rounded-xl p-3 text-xs text-white font-bold outline-none focus:border-blue-500" placeholder="Ej: 04121234567" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-slate-500 uppercase ml-1">Cédula</label>
+                            <input value={bancoAdmin.cedula} onChange={(e) => setBancoAdmin({...bancoAdmin, cedula: e.target.value})} className="w-full bg-slate-950 border border-white/5 rounded-xl p-3 text-xs text-white font-bold outline-none focus:border-blue-500" placeholder="Ej: V-12345678" />
+                          </div>
+                        </div>
+                        <button onClick={guardarDatosBancarios} className="w-full bg-blue-600 text-white p-3 rounded-2xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all mt-2">Guardar Datos de Cobro</button>
+                      </div>
+                      
 
                       {/* LISTA DE PAGOS PENDIENTES */}
                       {pagosAdmin.length === 0 ? (
