@@ -134,12 +134,10 @@ export const WizardPublicar = ({
     }).catch(e => console.error("Error rating en wizard:", e));
   }, [userData?.id]);
 
-    // --- NUEVO: INYECTOR AUTOMÁTICO DE GOOGLE MAPS ---
+  // --- NUEVO: INYECTOR AUTOMÁTICO DE GOOGLE MAPS ---
   useEffect(() => {
-    // Si ya cargó, no hacemos nada
     if (window.google && window.google.maps) return;
 
-    // Si no ha cargado, lo inyectamos a la fuerza
     const script = document.createElement('script');
     script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyCUNgw1YBOVZKYAhTgcW00G1c09alI2kMs&libraries=places";
     script.async = true;
@@ -172,7 +170,7 @@ export const WizardPublicar = ({
     return false;
   };
 
-    // BÚSQUEDA DINÁMICA CON DETECTOR DE ERRORES EN PANTALLA
+  // BÚSQUEDA DINÁMICA CON DETECTOR DE ERRORES EN PANTALLA
   const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
         setViajeForm(prev => ({...prev, origen: texto}));
@@ -181,7 +179,6 @@ export const WizardPublicar = ({
     }
 
     if (texto.length > 2) {
-      // 1er Control: Revisamos si el script de index.html siquiera cargó
       if (!window.google || !window.google.maps || !window.google.maps.places) {
         setToastMessage("Error: Google Maps no cargó. Revisa tu llave en index.html");
         setShowToast(true);
@@ -206,7 +203,6 @@ export const WizardPublicar = ({
           }));
           setSugerencias(sugerenciasGoogle);
         } else {
-          // 2do Control: Si Google responde pero rechaza la petición
           setToastMessage(`Bloqueo de Google: ${status}`);
           setShowToast(true);
           setSugerencias([]);
@@ -277,10 +273,10 @@ export const WizardPublicar = ({
     return `${horas}:${m} ${ampm}`;
   };
 
-  // PASO 1: UBICACIONES
+  // PASO 1: UBICACIONES (🔥 CORREGIDO RESPONSIVE)
   if (pasoWizard === 1) {
     return (
-      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative">
+      <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
         <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">
           {viajeAEditar ? <>Edita tu<br/>Ruta Actual</> : <>¿Hacia dónde<br/>vas a manejar?</>}
         </h2>
@@ -330,7 +326,7 @@ export const WizardPublicar = ({
         {(viajeForm.coordsOrigen || viajeForm.coordsDestino) && (
           <div className="pt-2 animate-in fade-in zoom-in duration-300">
             <h3 className="text-[10px] font-black uppercase text-slate-400 mb-2 italic">📍 Ruta a publicar:</h3>
-            <div className="rounded-[25px] overflow-hidden border border-slate-100">
+            <div className="rounded-[25px] overflow-hidden border border-slate-100 h-56 relative shrink-0">
                 <MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} />
             </div>
           </div>
@@ -355,23 +351,22 @@ export const WizardPublicar = ({
                </div>
                <div className="p-6 bg-white shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-10">
                   <button onClick={confirmarUbicacionMapa} disabled={buscandoDireccion} className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:opacity-50">
-                    {buscandoDireccion ? 'Traduciendo Dirección...' : 'Confirmar Ubicación'}
+                    {buscandoDireccion ? 'Traduciendo...' : 'Confirmar Ubicación'}
                   </button>
                </div>
             </div>
         )}
-            {/* AGREGA ESTA LÍNEA AQUÍ, JUSTO ANTES DE QUE CIERRE EL PASO 1 */}
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
     );
   }
 
-  // PASO 2: DETALLES
+  // PASO 2: DETALLES (🔥 CORREGIDO RESPONSIVE)
   if (pasoWizard === 2) {
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
 
     return (
-      <div className="bg-white p-7 pb-32 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
+      <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
         <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del<br/>Viaje</h2>
         
         <div className="space-y-3">
@@ -495,144 +490,138 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 3: AJUSTES FINALES
+  // PASO 3: AJUSTES FINALES (🔥 CORREGIDO RESPONSIVE)
   if (pasoWizard === 3) {
     return (
-      <>
-        <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right">
-          <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
-          
-          <div className="space-y-1">
-            <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro / Referencia</p>
-            <textarea rows={2} placeholder="Ej: Frente al Farmatodo de la redoma..." className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none focus:border-blue-400 focus:bg-blue-50/30 transition-colors" value={viajeForm.referencia} onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} />
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Equipaje permitido</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[{id:'ligero', i:'🎒'}, {id:'medio', i:'🧳'}, {id:'pesado', i:'📦'}].map(eq => (
-                <button key={eq.id} type="button" onClick={() => setViajeForm({...viajeForm, equipaje: eq.id})} className={`p-3 rounded-[20px] border-2 transition-all ${viajeForm.equipaje === eq.id ? 'border-blue-600 bg-blue-50' : 'border-slate-50 bg-white hover:border-slate-100'}`}>
-                  <span className="text-xl">{eq.i}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between p-5 bg-slate-50 rounded-[25px] border border-slate-100">
-            <div>
-              <p className="text-[10px] font-black uppercase text-slate-700">Reserva Automática</p>
-              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-1">Aceptar cola sin preguntar</p>
-            </div>
-            <button type="button" onClick={() => setViajeForm({...viajeForm, autoAceptar: !viajeForm.autoAceptar})} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${viajeForm.autoAceptar ? 'bg-green-500' : 'bg-slate-300'}`}>
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${viajeForm.autoAceptar ? 'left-7' : 'left-1'}`} />
-            </button>
-          </div>
-
-          <button 
-            onClick={async () => {
-              if (!userData?.id) {
-                setToastMessage("Sesión no detectada. Reinicia la aplicación.");
-                setShowToast(true);
-                return;
-              }
-
-              const estaVerificado = userData?.kycVerificado === true || userData?.identidadVerificada === true;
-              
-              if (!estaVerificado) {
-                setToastMessage("Verifica tu identidad en 'Mi Cuenta' para publicar.");
-                setShowToast(true);
-                return; 
-              }
-
-                            // Quitamos el espacio después de la coma para que el mapa no diga "Venezuela"
-              const [ciudadOri] = (viajeForm.origen || "").split(',');
-              const [ciudadDest] = (viajeForm.destino || "").split(',');
-
-              const datosBase = {
-                ...viajeForm,
-                idCreador: userData.id,
-                uidConductor: userData.id,
-                fotoPerfil: userData?.fotoPerfil || "",
-                conductor: userData?.nombre || "Usuario",
-                identidadVerificada: true,
-                datosConductor: {
-                  nombre: userData?.nombre || "Usuario",
-                  foto: userData?.fotoPerfil || "",
-                  rating: ratingCalculado, 
-                  viajesRealizados: userData?.viajesRealizados || 0,
-                  bio: userData?.bio || ""
-                },
-              // 🔥 AQUÍ CAPTURAMOS EL VEHÍCULO (El Snapshot)
-                vehiculo: userData?.vehiculo || { marca: "No especificado", modelo: "", color: "", placa: "S/N" },
-                cO: ciudadOri || "S/N", 
-                cD: ciudadDest || "S/N",
-                coordsOrigen: viajeForm.coordsOrigen || null,   
-                coordsDestino: viajeForm.coordsDestino || null, 
-                estado: "disponible",
-                timestamp: Date.now(),
-                
-                // --- PARCHE DE SEGURIDAD PARA EL BÚNKER ---
-                pasajeros: [], // Lista vacía lista para recibir gente
-                reservasPendientes: [], // Lista vacía para solicitudes
-                precio: Number(viajeForm.precio) || 0 // Forzamos a que el precio sea NÚMERO
-              };
-              
-              try {
-                if (viajeAEditar) {
-                  await publicarRuta(datosBase, true); 
-                  setToastMessage("Guardado con éxito");
-                } else {
-                  const objetoIda = {
-                    ...datosBase,
-                    conRetornoProgramado: !!viajeForm.publicarRegreso,
-                    tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
-                    fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
-                    horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
-                  };
-                  
-                  await publicarRuta(objetoIda, true); 
-
-                  if (viajeForm.publicarRegreso) {
-                    await publicarRuta({
-                      ...objetoIda,
-                      origen: viajeForm.destino,
-                      destino: viajeForm.origen,
-                      cO: ciudadDest || "S/N",
-                      cD: ciudadOri || "S/N",
-                      coordsOrigen: viajeForm.coordsDestino || null, 
-                      coordsDestino: viajeForm.coordsOrigen || null, 
-                      fecha: viajeForm.fechaRegreso,
-                      hora: viajeForm.horaRegreso || viajeForm.hora,
-                      tipoRuta: "vuelta_de_ruta",
-                      conRetornoProgramado: false
-                    }, true);
-                  }
-                  setToastMessage("¡Publicado con éxito!");
-                }
-
-                setShowToast(true);
-                setTimeout(() => { 
-                    setShowToast(false); 
-                    setVista("inicio"); 
-                    setPasoWizard(1);
-                }, 2000);
-
-              } catch (e) {
-                console.error("ERROR CRÍTICO AL PUBLICAR:", e);
-                setToastMessage("Ocurrió un error de conexión al publicar.");
-                setShowToast(true);
-              }
-            }}
-            className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
-          >
-            <ShieldCheck size={20} /> 
-            <span className="text-sm">{viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}</span>
-          </button>
-                
-          <button onClick={() => setPasoWizard(2)} className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4">Atrás</button>
+      <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
+        
+        <div className="space-y-1">
+          <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro / Referencia</p>
+          <textarea rows={2} placeholder="Ej: Frente al Farmatodo de la redoma..." className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none focus:border-blue-400 focus:bg-blue-50/30 transition-colors" value={viajeForm.referencia} onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} />
         </div>
+
+        <div className="space-y-2">
+          <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Equipaje permitido</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[{id:'ligero', i:'🎒'}, {id:'medio', i:'🧳'}, {id:'pesado', i:'📦'}].map(eq => (
+              <button key={eq.id} type="button" onClick={() => setViajeForm({...viajeForm, equipaje: eq.id})} className={`p-3 rounded-[20px] border-2 transition-all ${viajeForm.equipaje === eq.id ? 'border-blue-600 bg-blue-50' : 'border-slate-50 bg-white hover:border-slate-100'}`}>
+                <span className="text-xl">{eq.i}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between p-5 bg-slate-50 rounded-[25px] border border-slate-100">
+          <div>
+            <p className="text-[10px] font-black uppercase text-slate-700">Reserva Automática</p>
+            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-1">Aceptar cola sin preguntar</p>
+          </div>
+          <button type="button" onClick={() => setViajeForm({...viajeForm, autoAceptar: !viajeForm.autoAceptar})} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${viajeForm.autoAceptar ? 'bg-green-500' : 'bg-slate-300'}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${viajeForm.autoAceptar ? 'left-7' : 'left-1'}`} />
+          </button>
+        </div>
+
+        <button 
+          onClick={async () => {
+            if (!userData?.id) {
+              setToastMessage("Sesión no detectada. Reinicia la aplicación.");
+              setShowToast(true);
+              return;
+            }
+
+            const estaVerificado = userData?.kycVerificado === true || userData?.identidadVerificada === true;
+            
+            if (!estaVerificado) {
+              setToastMessage("Verifica tu identidad en 'Mi Cuenta' para publicar.");
+              setShowToast(true);
+              return; 
+            }
+
+            const [ciudadOri] = (viajeForm.origen || "").split(',');
+            const [ciudadDest] = (viajeForm.destino || "").split(',');
+
+            const datosBase = {
+              ...viajeForm,
+              idCreador: userData.id,
+              uidConductor: userData.id,
+              fotoPerfil: userData?.fotoPerfil || "",
+              conductor: userData?.nombre || "Usuario",
+              identidadVerificada: true,
+              datosConductor: {
+                nombre: userData?.nombre || "Usuario",
+                foto: userData?.fotoPerfil || "",
+                rating: ratingCalculado, 
+                viajesRealizados: userData?.viajesRealizados || 0,
+                bio: userData?.bio || ""
+              },
+              vehiculo: userData?.vehiculo || { marca: "No especificado", modelo: "", color: "", placa: "S/N" },
+              cO: ciudadOri || "S/N", 
+              cD: ciudadDest || "S/N",
+              coordsOrigen: viajeForm.coordsOrigen || null,   
+              coordsDestino: viajeForm.coordsDestino || null, 
+              estado: "disponible",
+              timestamp: Date.now(),
+              pasajeros: [], 
+              reservasPendientes: [], 
+              precio: Number(viajeForm.precio) || 0 
+            };
+            
+            try {
+              if (viajeAEditar) {
+                await publicarRuta(datosBase, true); 
+                setToastMessage("Guardado con éxito");
+              } else {
+                const objetoIda = {
+                  ...datosBase,
+                  conRetornoProgramado: !!viajeForm.publicarRegreso,
+                  tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
+                  fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
+                  horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
+                };
+                
+                await publicarRuta(objetoIda, true); 
+
+                if (viajeForm.publicarRegreso) {
+                  await publicarRuta({
+                    ...objetoIda,
+                    origen: viajeForm.destino,
+                    destino: viajeForm.origen,
+                    cO: ciudadDest || "S/N",
+                    cD: ciudadOri || "S/N",
+                    coordsOrigen: viajeForm.coordsDestino || null, 
+                    coordsDestino: viajeForm.coordsOrigen || null, 
+                    fecha: viajeForm.fechaRegreso,
+                    hora: viajeForm.horaRegreso || viajeForm.hora,
+                    tipoRuta: "vuelta_de_ruta",
+                    conRetornoProgramado: false
+                  }, true);
+                }
+                setToastMessage("¡Publicado con éxito!");
+              }
+
+              setShowToast(true);
+              setTimeout(() => { 
+                  setShowToast(false); 
+                  setVista("inicio"); 
+                  setPasoWizard(1);
+              }, 2000);
+
+            } catch (e) {
+              console.error("ERROR CRÍTICO AL PUBLICAR:", e);
+              setToastMessage("Ocurrió un error de conexión al publicar.");
+              setShowToast(true);
+            }
+          }}
+          className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
+        >
+          <ShieldCheck size={20} /> 
+          <span className="text-sm">{viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}</span>
+        </button>
+              
+        <button onClick={() => setPasoWizard(2)} className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4">Atrás</button>
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
-      </>
+      </div>
     );
   } 
 
