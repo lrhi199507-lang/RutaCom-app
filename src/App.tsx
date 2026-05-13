@@ -28,53 +28,59 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 2. GUARDIÁN DE NOTIFICACIONES PUSH 🔥
-  // Este efecto se dispara cada vez que la variable "usuario" detecta a alguien logueado
+    // 🔥 GUARDIÁN DE NOTIFICACIONES PUSH (VERSIÓN AGRESIVA) 🔥
   useEffect(() => {
-    if (!usuario) return; // Si no hay nadie logueado, no hace nada
+    if (!usuario) return;
 
-    const forzarTokenFCM = async () => {
+    const inicializarPush = async () => {
       try {
-        // A. Revisamos si el celular ya nos dio permiso
+        // 1. LIMPIEZA: Quitamos cualquier oído viejo para que no se confunda
+        await PushNotifications.removeAllListeners();
+
+        // 2. OÍDO MAESTRO: Nos quedamos escuchando ANTES de registrar
+        await PushNotifications.addListener('registration', async (token) => {
+          const tokenGenerado = token.value;
+          
+          // ESTA ALERTA ES PARA PRUEBAS: Si sale en el teléfono, coronamos
+          alert("¡TOKEN ATRAPADO! Guardando en base de datos...");
+
+          try {
+            await updateDoc(doc(db, "usuarios", usuario.uid), {
+              fcmTokenNativo: tokenGenerado,
+              ultimaActualizacionToken: new Date().toISOString()
+            });
+            console.log("Token guardado con éxito");
+          } catch (e) {
+            alert("Error escribiendo en Firebase: " + e.message);
+          }
+        });
+
+        // 3. OÍDO DE ERROR
+        await PushNotifications.addListener('registrationError', (err) => {
+          alert("Error de Registro Google: " + JSON.stringify(err));
+        });
+
+        // 4. PEDIR PERMISOS
         let permStatus = await PushNotifications.checkPermissions();
-        
-        // B. Si no ha dado permiso, le lanzamos la alerta en pantalla
         if (permStatus.receive === 'prompt') {
           permStatus = await PushNotifications.requestPermissions();
         }
 
-        // C. Si el usuario le dio a "Permitir", lo conectamos a Google
+        // 5. REGISTRAR A JURO
         if (permStatus.receive === 'granted') {
           await PushNotifications.register();
-
-          // D. Atrapamos el Token apenas Google lo escupa
-          PushNotifications.addListener('registration', async (token) => {
-            const tokenGenerado = token.value;
-            
-            // E. Guardamos o actualizamos la llave a juro en la base de datos
-            await updateDoc(doc(db, "usuarios", usuario.uid), {
-              fcmTokenNativo: tokenGenerado
-            });
-            console.log("¡Token FCM atrapado y guardado en Firebase!");
-          });
-
-          // Si el celular o Google fallan, capturamos el error sin romper la app
-          PushNotifications.addListener('registrationError', (error) => {
-            console.error('Error al registrar token FCM:', error);
-          });
+        } else {
+          alert("El usuario denegó los permisos de notificación.");
         }
+
       } catch (error) {
-        console.error("Error forzando los permisos Push:", error);
+        console.error("Error en sistema Push:", error);
       }
     };
 
-    forzarTokenFCM();
+    inicializarPush();
 
-    // Limpieza para no duplicar procesos si recarga la app
-    return () => {
-      PushNotifications.removeAllListeners();
-    };
-  }, [usuario]); // Se ejecuta cuando el usuario inicia sesión o entra a la app
+  }, [usuario]);
 
   const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
