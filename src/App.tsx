@@ -5,7 +5,10 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+// 🔥 IMPORTANTE: Agregamos updateDoc aquí
+import { doc, setDoc, updateDoc } from 'firebase/firestore'; 
+// 🔥 IMPORTAMOS EL PLUGIN DE CAPACITOR
+import { PushNotifications } from '@capacitor/push-notifications';
 
 // Importamos la navegación principal
 import NavegacionPrincipal from './NavegacionPrincipal';
@@ -17,12 +20,61 @@ export default function App() {
   const [cargando, setCargando] = useState(false);
   const [usuario, setUsuario] = useState<any>(null);
 
+  // 1. EFECTO DE AUTENTICACIÓN
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
     });
     return () => unsubscribe();
   }, []);
+
+  // 🔥 2. GUARDIÁN DE NOTIFICACIONES PUSH 🔥
+  // Este efecto se dispara cada vez que la variable "usuario" detecta a alguien logueado
+  useEffect(() => {
+    if (!usuario) return; // Si no hay nadie logueado, no hace nada
+
+    const forzarTokenFCM = async () => {
+      try {
+        // A. Revisamos si el celular ya nos dio permiso
+        let permStatus = await PushNotifications.checkPermissions();
+        
+        // B. Si no ha dado permiso, le lanzamos la alerta en pantalla
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+
+        // C. Si el usuario le dio a "Permitir", lo conectamos a Google
+        if (permStatus.receive === 'granted') {
+          await PushNotifications.register();
+
+          // D. Atrapamos el Token apenas Google lo escupa
+          PushNotifications.addListener('registration', async (token) => {
+            const tokenGenerado = token.value;
+            
+            // E. Guardamos o actualizamos la llave a juro en la base de datos
+            await updateDoc(doc(db, "usuarios", usuario.uid), {
+              fcmTokenNativo: tokenGenerado
+            });
+            console.log("¡Token FCM atrapado y guardado en Firebase!");
+          });
+
+          // Si el celular o Google fallan, capturamos el error sin romper la app
+          PushNotifications.addListener('registrationError', (error) => {
+            console.error('Error al registrar token FCM:', error);
+          });
+        }
+      } catch (error) {
+        console.error("Error forzando los permisos Push:", error);
+      }
+    };
+
+    forzarTokenFCM();
+
+    // Limpieza para no duplicar procesos si recarga la app
+    return () => {
+      PushNotifications.removeAllListeners();
+    };
+  }, [usuario]); // Se ejecuta cuando el usuario inicia sesión o entra a la app
 
   const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
@@ -34,7 +86,6 @@ export default function App() {
         const uid = res.user.uid;
 
         // 2. CREACIÓN AUTOMÁTICA DEL PERFIL EN FIRESTORE
-        // Esto garantiza que el nivel y la confianza funcionen desde el día 1
         await setDoc(doc(db, "usuarios", uid), {
           nombre: email.split('@')[0], // Nombre temporal basado en el correo
           email: email,
