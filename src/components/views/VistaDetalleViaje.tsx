@@ -1234,3 +1234,4 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
     </div>
   );
+};
