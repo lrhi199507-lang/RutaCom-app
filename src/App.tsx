@@ -28,51 +28,40 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-    // 🔥 GUARDIÁN DE NOTIFICACIONES PUSH (VERSIÓN AGRESIVA) 🔥
+  // 🔥 GUARDIÁN DE NOTIFICACIONES PUSH (VERSIÓN LIMPIA) 🔥
   useEffect(() => {
     if (!usuario) return;
 
     const inicializarPush = async () => {
       try {
-        // 1. LIMPIEZA: Quitamos cualquier oído viejo para que no se confunda
         await PushNotifications.removeAllListeners();
 
-        // 2. OÍDO MAESTRO: Nos quedamos escuchando ANTES de registrar
+        // Escuchamos el token sin interrumpir al usuario
         await PushNotifications.addListener('registration', async (token) => {
           const tokenGenerado = token.value;
-          
-          // ESTA ALERTA ES PARA PRUEBAS: Si sale en el teléfono, coronamos
-          alert("¡TOKEN ATRAPADO! Guardando en base de datos...");
-
           try {
             await updateDoc(doc(db, "usuarios", usuario.uid), {
               fcmTokenNativo: tokenGenerado,
               ultimaActualizacionToken: new Date().toISOString()
             });
-            console.log("Token guardado con éxito");
           } catch (e) {
-            alert("Error escribiendo en Firebase: " + e.message);
+            console.error("Error guardando token:", e);
           }
         });
 
-        // 3. OÍDO DE ERROR
+        // Los errores ahora solo van a la consola
         await PushNotifications.addListener('registrationError', (err) => {
-          alert("Error de Registro Google: " + JSON.stringify(err));
+          console.error("Error de Registro Google:", err);
         });
 
-        // 4. PEDIR PERMISOS
         let permStatus = await PushNotifications.checkPermissions();
         if (permStatus.receive === 'prompt') {
           permStatus = await PushNotifications.requestPermissions();
         }
 
-        // 5. REGISTRAR A JURO
         if (permStatus.receive === 'granted') {
           await PushNotifications.register();
-        } else {
-          alert("El usuario denegó los permisos de notificación.");
         }
-
       } catch (error) {
         console.error("Error en sistema Push:", error);
       }
@@ -80,8 +69,11 @@ export default function App() {
 
     inicializarPush();
 
+    return () => {
+      PushNotifications.removeAllListeners();
+    };
   }, [usuario]);
-
+  
   const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
     setCargando(true);
