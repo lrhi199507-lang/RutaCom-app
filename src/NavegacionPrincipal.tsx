@@ -51,7 +51,7 @@ export default function NavegacionPrincipal({ user }) {
     "Apure": ["San Fernando", "Guasdualito"], 
     "Aragua": ["Maracay", "Turmero", "La Victoria", "Cagua"],
     "Barinas": ["Barinas", "Socopó"], 
-    "Bolívar": ["Ciudadconst [verWallet, setVerWallet] = useState(false); Guayana", "Ciudad Bolívar", "Upata", "Santa Elena de Uairén"],
+    "Bolívar": ["Guayana", "Ciudad Bolívar", "Upata", "Santa Elena de Uairén"],
     "Carabobo": ["Valencia", "Naguanagua", "Guacara", "San Diego", "Puerto Cabello", "Mariara", "Los Guayos"],
     "Cojedes": ["San Carlos", "Tinaquillo"], 
     "Delta Amacuro": ["Tucupita"],
@@ -90,30 +90,30 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
 
-    useEffect(() => {
+      useEffect(() => {
     // Escucha el gesto de atrás o botón físico
     const backListener = App.addListener('backButton', () => {
       
-      // Si estás viendo el detalle de un viaje, vuelve al inicio
-      if (viajeSeleccionado) {
-        setViajeSeleccionado(null);
+      // 1. Si estás viendo el detalle de un viaje, quita el detalle (vuelve a la lista)
+      if (viajeSel) {
+        setViajeSel(null);
         return;
       }
 
-      // Si no estás en la pestaña de inicio (ej: estás en Wallet o Perfil)
-      if (pestañaActiva !== 'inicio') {
-        setPestañaActiva('inicio');
+      // 2. Si estás en Wallet, Perfil o Inbox, vuelve a la pestaña de Inicio
+      if (vista !== 'inicio') {
+        setVista('inicio');
         return;
       }
 
-      // Si ya estás en el inicio puro, cierra la app
+      // 3. Si ya estás en el inicio puro, cierra la app
       App.exitApp();
     });
 
     return () => {
       backListener.remove();
     };
-  }, [pestañaActiva, viajeSeleccionado]);
+  }, [vista, viajeSel]); // Usamos tus variables reales
 
   const iniciarChat = async (viaje) => {
     if (!userData?.id || !viaje?.id) return;
