@@ -24,7 +24,41 @@ export const Wallet = ({ userData, onRegresar }) => {
   // ESTADOS DEL HISTORIAL
   const [transacciones, setTransacciones] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
-  const [filtroTx, setFiltroTx] = useState("todos"); // 'todos', 'ingreso', 'gasto'
+  const [filtroTx, setFiltroTx] = useState("todos"); 
+
+  // ESTADO DE TASA Y DATOS BANCARIOS DINÁMICOS DEL ADMIN
+  const [tasaBCV, setTasaBCV] = useState(0);
+  const [datosPagoAdmin, setDatosPagoAdmin] = useState({
+    banco: "Cargando...",
+    telefono: "Cargando...",
+    cedula: "Cargando..."
+  });
+
+  // EFECTO PARA CARGAR DATOS DESDE FIREBASE (TASA Y BANCO DEL ADMIN)
+  useEffect(() => {
+    const obtenerDatosFinanzas = async () => {
+      try {
+        const docRef = doc(db, "Configuracion", "Finanzas");
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setTasaBCV(data.tasaBCV || 0);
+          
+          // 🔥 AQUÍ CAPTURAMOS TUS DATOS DINÁMICOS 🔥
+          if (data.bancoAdmin) {
+            setDatosPagoAdmin({
+              banco: data.bancoAdmin.banco || "No definido",
+              telefono: data.bancoAdmin.telefono || "No definido",
+              cedula: data.bancoAdmin.cedula || "No definido"
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error al obtener datos financieros:", error);
+      }
+    };
+    obtenerDatosFinanzas();
+  }, []);
 
   // EFECTO PARA TRAER EL HISTORIAL EN TIEMPO REAL
   useEffect(() => {
@@ -50,35 +84,9 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     return () => unsub();
   }, [userData?.id]);
-  
-  // ESTADO DE TASA DINÁMICA
-  const [tasaBCV, setTasaBCV] = useState(0);
-
-  // EFECTO PARA CARGAR LA TASA DESDE FIREBASE AL ABRIR
-  useEffect(() => {
-    const obtenerTasa = async () => {
-      try {
-        const docRef = doc(db, "Configuracion", "Finanzas");
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          setTasaBCV(snap.data().tasaBCV || 0);
-        }
-      } catch (error) {
-        console.error("Error al obtener tasa:", error);
-      }
-    };
-    obtenerTasa();
-  }, []);
 
   const saldoUSD = userData?.saldo || 0;
   const saldoConvertido = (saldoUSD * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
-
-  // DATOS DE PAGO DEL ADMIN (Para que te recarguen)
-  const datosPagoAdmin = {
-    banco: "Banco de Venezuela",
-    telefono: "04121234567",
-    cedula: "V-12345678"
-  };
 
   const manejarRecarga = async (e) => {
     e.preventDefault();
@@ -140,7 +148,7 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     setEnviando(true);
     try {
-      // 1. DESCONTAR EL SALDO INMEDIATAMENTE PARA EVITAR DOBLE GASTO
+      // 1. DESCONTAR EL SALDO INMEDIATAMENTE
       await updateDoc(doc(db, "usuarios", userData.id), {
         saldo: increment(-monto)
       });
@@ -171,7 +179,6 @@ export const Wallet = ({ userData, onRegresar }) => {
     }
   };
 
-  // LÓGICA DE FILTRADO
   const transaccionesFiltradas = transacciones.filter(tx => {
     if (filtroTx === 'todos') return true;
     if (filtroTx === 'ingreso') return tx.tipo === 'ingreso' || tx.tipo === 'recarga';
@@ -180,7 +187,6 @@ export const Wallet = ({ userData, onRegresar }) => {
   });
 
   return (
-    // 🔥 CAMBIO CRÍTICO: overflow-x-hidden en lugar de overflow-hidden para permitir scroll
     <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-x-hidden">
       <Toast show={showToast} message={toastMsg} onClose={() => setShowToast(false)} />
 
@@ -236,7 +242,6 @@ export const Wallet = ({ userData, onRegresar }) => {
 
         {/* HISTORIAL DINÁMICO DE TRANSACCIONES */}
         <div className="pt-2">
-          {/* 🔥 BOTONES DE FILTRADO AGREGADOS */}
           <div className="flex items-center justify-between mb-4 ml-1">
             <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Movimientos</h3>
             
