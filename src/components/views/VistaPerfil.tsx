@@ -549,7 +549,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Básica</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
-                <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero} onClick={() => { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); }} />
+                <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero}  onClick={() => {  if (userData.kycVerificado) {   setToast({ texto: "Por seguridad, no puedes cambiar la cédula de una cuenta verificada.", tipo: "error" });
+      setTimeout(() => setToast(null), 4000);
+    } else {
+      setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); 
+      setNuevoValor(userData.cedulaNumero); 
+      setModalVisible(true); 
+    }
+  }} 
+/>
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
                 <MenuButton icon={UserCog} label="Sobre mí (Bio)" value={userData?.bio || "Escribe algo sobre ti..."} onClick={() => { setTipoEdicion({id: 'bio', label: 'Biografía', valor: userData?.bio}); setNuevoValor(userData?.bio || ""); setModalVisible(true); }} />
                 <MenuButton icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => alert("El correo no se puede cambiar por ahora por seguridad.")} />
