@@ -4,7 +4,12 @@ import { CampanaNotificaciones } from "./CampanaNotificaciones";
 
 export const Header = ({ userData, modo, onAbrirWallet }) => {
   const nombre = userData?.nombre || "Cargando...";
-  const saldo = typeof userData?.saldo === 'number' ? userData.saldo.toFixed(2) : "0.00";
+  
+  // 🔥 CORRECCIÓN: Calculamos el saldo disponible real (Saldo Total - Saldo Retenido)
+  const saldoTotal = typeof userData?.saldo === 'number' ? userData.saldo : 0;
+  const saldoRetenido = typeof userData?.saldoRetenido === 'number' ? userData.saldoRetenido : 0;
+  const saldoDisponible = saldoTotal - saldoRetenido;
+  const saldoFormateado = saldoDisponible.toFixed(2);
 
   return (
     <header className="bg-white px-6 pt-6 pb-4 flex items-center justify-between sticky top-0 z-50 border-b border-slate-50">
@@ -37,7 +42,7 @@ export const Header = ({ userData, modo, onAbrirWallet }) => {
         >
           <Wallet size={14} className="text-blue-400" />
           <p className="text-xs font-black italic">
-            ${saldo}
+            ${saldoFormateado}
           </p>
         </div>
       </div>
