@@ -67,9 +67,14 @@ export default function App() {
   }, [usuario]);
   
   // INICIAR SESIÓN O REGISTRAR
-  const manejarAutenticacion = async (e: any) => {
+    const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
-    if (esRegistro && !passwordValida) return;
+    
+    // Bloqueo de seguridad: el nombre no puede estar vacío en el registro
+    if (esRegistro && (!nombre.trim() || !passwordValida)) {
+      alert("Por favor, ingresa tu nombre completo para continuar.");
+      return;
+    }
     
     setCargando(true);
     try {
@@ -100,7 +105,6 @@ export default function App() {
         await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       }
     } catch (error: any) {
-      // 🔥 MANEJO DE ERRORES PROFESIONAL 🔥
       if (error.code === 'auth/email-already-in-use') {
         alert("Este correo ya está registrado. Te pasaremos al inicio de sesión.");
         setEsRegistro(false); 
@@ -113,6 +117,7 @@ export default function App() {
       setCargando(false);
     }
   };
+ 
 
   const slides = [
     {
