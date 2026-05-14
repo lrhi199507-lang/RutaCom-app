@@ -8,11 +8,10 @@ const MapaView = ({
   pasajeros = [], 
   estadoViaje, 
   interactivo = false,
-  onMarkerDragEnd // 🔥 NUEVO: Necesario para que el Wizard pueda arrastrar el pin
+  onMarkerDragEnd 
 }) => {
   const mapRef = useRef(null);
   const googleMap = useRef(null);
-  // 🔥 NUEVO: Agregamos origen, destino e interactivo al control de marcadores
   const markers = useRef({ chofer: null, pasajeros: [], origen: null, destino: null, interactivo: null });
   const directionsRenderer = useRef(null);
 
@@ -32,7 +31,7 @@ const MapaView = ({
 
     directionsRenderer.current = new window.google.maps.DirectionsRenderer({
       map: googleMap.current,
-      suppressMarkers: true, // Ocultamos los de Google para usar los nuestros personalizados
+      suppressMarkers: true, 
       polylineOptions: { strokeColor: "#2563eb", strokeWeight: 5 }
     });
   }, [interactivo]);
@@ -50,24 +49,24 @@ const MapaView = ({
     // MODO A: MAPA INTERACTIVO (Arrastrar Pin en el Wizard)
     // ==========================================
     if (interactivo) {
-      const coord = origen || destino; // El wizard pasa uno de los dos
+      const coord = origen || destino; 
       if (coord) {
         markers.current.interactivo = new window.google.maps.Marker({
           position: { lat: coord.lat, lng: coord.lon },
           map: googleMap.current,
-          draggable: true, // 🔥 PERMITE ARRASTRAR
+          draggable: true, 
           icon: {
             path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
             scale: 7,
-            fillColor: origen ? "#2563eb" : "#22c55e", // Azul si ajusta origen, Verde si ajusta destino
+            fillColor: origen ? "#2563eb" : "#22c55e", 
             fillOpacity: 1,
             strokeWeight: 2,
             strokeColor: "white",
           }
         });
 
-        // Evento que le avisa a tu formulario dónde soltó el pin el usuario
-        window.google.maps.event.addListener(markers.current.interactivo, 'dragend', (evt: any) => {
+        // 🔥 ERROR CORREGIDO: SE QUITÓ EL "evt: any" 🔥
+        window.google.maps.event.addListener(markers.current.interactivo, 'dragend', (evt) => {
           if (onMarkerDragEnd) {
             onMarkerDragEnd({ lat: evt.latLng.lat(), lon: evt.latLng.lng() });
           }
@@ -75,8 +74,8 @@ const MapaView = ({
         
         googleMap.current.setCenter({ lat: coord.lat, lng: coord.lon });
       }
-      directionsRenderer.current.setDirections({ routes: [] }); // Oculta la ruta mientras arrastra
-      return; // Detiene la ejecución aquí (no pinta lo demás)
+      directionsRenderer.current.setDirections({ routes: [] }); 
+      return; 
     }
 
     // ==========================================
@@ -92,7 +91,7 @@ const MapaView = ({
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 8,
-          fillColor: "#2563eb", // Color Azul
+          fillColor: "#2563eb", 
           fillOpacity: 1,
           strokeWeight: 3,
           strokeColor: "white",
@@ -109,7 +108,7 @@ const MapaView = ({
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 8,
-          fillColor: "#ef4444", // Color Rojo
+          fillColor: "#ef4444", 
           fillOpacity: 1,
           strokeWeight: 3,
           strokeColor: "white",
@@ -135,7 +134,7 @@ const MapaView = ({
     // MODO C: VIAJE EN CURSO (Chofer y Pasajeros)
     // ==========================================
     
-    // GESTIÓN DEL CHOFER (Ícono de Carrito o Flecha)
+    // GESTIÓN DEL CHOFER
     if (markers.current.chofer) markers.current.chofer.setMap(null);
     if (posicionChofer) {
       markers.current.chofer = new window.google.maps.Marker({
@@ -155,7 +154,7 @@ const MapaView = ({
       if (!interactivo) googleMap.current.panTo(markers.current.chofer.getPosition());
     }
 
-    // GESTIÓN DE PASAJEROS (Naranjas)
+    // GESTIÓN DE PASAJEROS
     markers.current.pasajeros.forEach(m => m.setMap(null));
     markers.current.pasajeros = [];
 
