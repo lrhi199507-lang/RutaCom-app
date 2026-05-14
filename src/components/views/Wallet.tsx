@@ -34,7 +34,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     cedula: "Cargando..."
   });
 
-  // EFECTO PARA CARGAR DATOS DESDE FIREBASE (TASA Y BANCO DEL ADMIN)
+  // EFECTO PARA CARGAR DATOS DESDE FIREBASE
   useEffect(() => {
     const obtenerDatosFinanzas = async () => {
       try {
@@ -44,7 +44,6 @@ export const Wallet = ({ userData, onRegresar }) => {
           const data = snap.data();
           setTasaBCV(data.tasaBCV || 0);
           
-          // 🔥 AQUÍ CAPTURAMOS TUS DATOS DINÁMICOS 🔥
           if (data.bancoAdmin) {
             setDatosPagoAdmin({
               banco: data.bancoAdmin.banco || "No definido",
@@ -85,9 +84,12 @@ export const Wallet = ({ userData, onRegresar }) => {
     return () => unsub();
   }, [userData?.id]);
 
-  const saldoUSD = userData?.saldo || 0;
-  const saldoConvertido = (saldoUSD * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
-  // Lógica para copiar al portapapeles
+  // 🔥 NUEVA LÓGICA DE SALDO DISPONIBLE 🔥
+  const saldoTotal = userData?.saldo || 0;
+  const saldoRetenido = userData?.saldoRetenido || 0;
+  const saldoDisponible = saldoTotal - saldoRetenido;
+  const saldoConvertido = (saldoDisponible * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+
   const copiarDato = async (texto, campo) => {
     try {
       await navigator.clipboard.writeText(texto);
@@ -144,7 +146,8 @@ export const Wallet = ({ userData, onRegresar }) => {
       return;
     }
 
-    if (monto > saldoUSD) {
+    // Comparamos contra el Saldo Disponible, no el total
+    if (monto > saldoDisponible) {
       setToastMsg("Saldo insuficiente para retirar");
       setShowToast(true);
       return;
@@ -158,9 +161,9 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     setEnviando(true);
     try {
-      // 1. DESCONTAR EL SALDO INMEDIATAMENTE
+      // 1. CONGELAMOS EL SALDO EN VEZ DE RESTARLO (Evita el bloqueo de seguridad)
       await updateDoc(doc(db, "usuarios", userData.id), {
-        saldo: increment(-monto)
+        saldoRetenido: increment(monto)
       });
 
       // 2. CREAR LA SOLICITUD DE RETIRO
@@ -200,7 +203,6 @@ export const Wallet = ({ userData, onRegresar }) => {
     <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-x-hidden">
       <Toast show={showToast} message={toastMsg} onClose={() => setShowToast(false)} />
 
-      {/* HEADER */}
       <div className="p-6 pt-10 flex justify-between items-center sticky top-0 bg-[#0b1120]/80 backdrop-blur-lg z-50">
         <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
             <ArrowDownLeft className="rotate-90" size={20} />
@@ -215,17 +217,23 @@ export const Wallet = ({ userData, onRegresar }) => {
       </div>
 
       <div className="px-5 space-y-8">
-        {/* TARJETA DE SALDO */}
         <div className="relative overflow-hidden rounded-[35px] p-8 border border-white/10 bg-gradient-to-br from-blue-900/40 to-slate-900/80 backdrop-blur-xl shadow-lg mt-2">
           <div className="absolute -top-20 -right-20 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
           <div className="relative z-10 flex flex-col items-center text-center">
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-300/80 mb-2">Saldo Neto</p>
+            <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-300/80 mb-2">Saldo Disponible</p>
             <div className="flex items-start justify-center gap-1">
               <span className="text-3xl font-black italic text-blue-400 mt-2">$</span>
-              <span className="text-7xl font-black italic text-white tracking-tighter leading-none">{saldoUSD.toFixed(2)}</span>
+              <span className="text-7xl font-black italic text-white tracking-tighter leading-none">{saldoDisponible.toFixed(2)}</span>
             </div>
+            
+            {saldoRetenido > 0 && (
+              <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mt-2 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                ${saldoRetenido.toFixed(2)} Retenidos (En proceso)
+              </p>
+            )}
+
             <div className="mt-6 flex items-center gap-2 bg-slate-950/50 px-5 py-2.5 rounded-full border border-slate-800/50">
               <RefreshCcw size={12} className="text-green-400" />
               <p className="text-[11px] font-bold text-slate-300 tracking-wide">≈ Bs. {saldoConvertido}</p>
@@ -233,7 +241,6 @@ export const Wallet = ({ userData, onRegresar }) => {
           </div>
         </div>
 
-        {/* BOTONES PRINCIPALES */}
         <div className="grid grid-cols-2 gap-4">
           <button onClick={() => setShowModalRecarga(true)} className="bg-emerald-600 p-5 rounded-[28px] shadow-lg flex flex-col items-center gap-3 active:scale-95 transition-all border border-emerald-500">
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
@@ -250,30 +257,14 @@ export const Wallet = ({ userData, onRegresar }) => {
           </button>
         </div>
 
-        {/* HISTORIAL DINÁMICO DE TRANSACCIONES */}
         <div className="pt-2">
           <div className="flex items-center justify-between mb-4 ml-1">
             <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Movimientos</h3>
             
             <div className="flex gap-1 bg-slate-900/50 p-1 rounded-full border border-slate-800">
-              <button 
-                onClick={() => setFiltroTx('todos')} 
-                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'todos' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
-              >
-                Todos
-              </button>
-              <button 
-                onClick={() => setFiltroTx('ingreso')} 
-                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'ingreso' ? 'bg-emerald-500/20 text-emerald-400 shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
-              >
-                Ingresos
-              </button>
-              <button 
-                onClick={() => setFiltroTx('gasto')} 
-                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'gasto' ? 'bg-red-500/20 text-red-400 shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
-              >
-                Gastos
-              </button>
+              <button onClick={() => setFiltroTx('todos')} className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'todos' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-500 hover:text-slate-400'}`}>Todos</button>
+              <button onClick={() => setFiltroTx('ingreso')} className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'ingreso' ? 'bg-emerald-500/20 text-emerald-400 shadow-md' : 'text-slate-500 hover:text-slate-400'}`}>Ingresos</button>
+              <button onClick={() => setFiltroTx('gasto')} className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${filtroTx === 'gasto' ? 'bg-red-500/20 text-red-400 shadow-md' : 'text-slate-500 hover:text-slate-400'}`}>Gastos</button>
             </div>
           </div>
           
@@ -312,7 +303,6 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       </div>
 
-      {/* MODAL DE RECARGA */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -321,45 +311,32 @@ export const Wallet = ({ userData, onRegresar }) => {
               <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white"><X size={18} /></button>
             </div>
 
-                        <div className="space-y-4 mb-8 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
+            <div className="space-y-4 mb-8 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
               <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
               <div className="space-y-3">
-                
-                {/* BANCO */}
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-slate-400">Banco:</span>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-black text-white uppercase">{datosPagoAdmin.banco}</span>
-                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all">
-                      <Copy size={14} />
-                    </button>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={14} /></button>
                   </div>
                 </div>
-
-                {/* TELÉFONO */}
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-slate-400">Teléfono:</span>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-black text-white">{datosPagoAdmin.telefono}</span>
-                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all">
-                      <Copy size={14} />
-                    </button>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={14} /></button>
                   </div>
                 </div>
-
-                {/* CÉDULA */}
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-slate-400">Cédula:</span>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-black text-white">{datosPagoAdmin.cedula}</span>
-                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all">
-                      <Copy size={14} />
-                    </button>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={14} /></button>
                   </div>
                 </div>
               </div>
             </div>
-            
 
             <form onSubmit={manejarRecarga} className="space-y-4">
               <div>
@@ -378,7 +355,6 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       )}
 
-      {/* MODAL DE RETIRO */}
       {showModalRetiro && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -394,7 +370,7 @@ export const Wallet = ({ userData, onRegresar }) => {
             <form onSubmit={manejarRetiro} className="space-y-4">
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Retirar ($)</label>
-                <input type="number" value={montoRetiro} onChange={(e) => setMontoRetiro(e.target.value)} placeholder={`Max: $${saldoUSD.toFixed(2)}`} className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
+                <input type="number" value={montoRetiro} onChange={(e) => setMontoRetiro(e.target.value)} placeholder={`Max: $${saldoDisponible.toFixed(2)}`} className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
                 {montoRetiro && tasaBCV > 0 && (
                   <p className="text-[9px] font-black text-blue-400 uppercase mt-2 ml-1 italic">Recibirás ≈ Bs. {(Number(montoRetiro) * tasaBCV).toFixed(2)}</p>
                 )}
@@ -407,7 +383,7 @@ export const Wallet = ({ userData, onRegresar }) => {
                 <input type="text" value={datosBancarios.cedula} onChange={(e) => setDatosBancarios({...datosBancarios, cedula: e.target.value})} placeholder="Cédula (Ej: V-12345678)" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
               </div>
 
-              <button type="submit" disabled={enviando || Number(montoRetiro) > saldoUSD || Number(montoRetiro) < 10} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
+              <button type="submit" disabled={enviando || Number(montoRetiro) > saldoDisponible || Number(montoRetiro) < 10} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
                 {enviando ? "Procesando..." : "Solicitar Retiro"}
               </button>
             </form>
