@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-// 🔥 IMPORTAMOS STORAGE DE TU CONFIGURACIÓN
 import { db, storage } from '../../firebaseConfig';
-// 🔥 SE AGREGÓ addDoc A LA IMPORTACIÓN
 import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -25,7 +23,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [cargando, setCargando] = useState(false);
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
   
-  // ESTADOS ADMIN
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
   const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); 
@@ -34,11 +31,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   
-  // ESTADOS FINANCIEROS
   const [tasaActual, setTasaActual] = useState(0); 
   const [balanceApp, setBalanceApp] = useState(0);
   const [bancoAdmin, setBancoAdmin] = useState({ banco: "", telefono: "", cedula: "" });
-  
   
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
@@ -253,7 +248,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
 
-  // 🔥 LÓGICA DE PAGOS ACTUALIZADA CON HISTORIAL AUTOMÁTICO 🔥
+  // 🔥 LÓGICA DE PAGOS MATEMÁTICAMENTE CORREGIDA 🔥
   const aprobarPago = async (pago: any) => {
     if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
     setCargando(true);
@@ -261,7 +256,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
       
-      // Crear movimiento de ingreso en la Wallet del usuario
       await addDoc(collection(db, "Transacciones"), {
         uid: pago.uid,
         tipo: "ingreso",
@@ -285,10 +279,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     try {
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
       
-      // Quitar el saldo de "retenido" (el saldo disponible ya se había restado en la app)
-      await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
+      // 🔥 APROBADO: Aquí SÍ descontamos el saldo real, y quitamos la retención
+      await updateDoc(doc(db, "usuarios", pago.uid), { 
+        saldo: increment(-pago.monto),
+        saldoRetenido: increment(-pago.monto) 
+      });
 
-      // Crear movimiento de gasto en la Wallet del usuario
       await addDoc(collection(db, "Transacciones"), {
         uid: pago.uid,
         tipo: "gasto",
@@ -313,13 +309,11 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
       
       if (pago.tipo === 'retiro') {
-        // Devolver el saldo disponible y quitar la retención
+        // 🔥 RECHAZADO: Solo quitamos la retención. El saldo real nunca se tocó.
         await updateDoc(doc(db, "usuarios", pago.uid), { 
-          saldo: increment(pago.monto),
           saldoRetenido: increment(-pago.monto)
         });
 
-        // Crear movimiento de devolución en la Wallet del usuario
         await addDoc(collection(db, "Transacciones"), {
           uid: pago.uid,
           tipo: "ingreso",
