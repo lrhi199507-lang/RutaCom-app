@@ -32,7 +32,8 @@ const MapaView = ({
     directionsRenderer.current = new window.google.maps.DirectionsRenderer({
       map: googleMap.current,
       suppressMarkers: true, 
-      polylineOptions: { strokeColor: "#2563eb", strokeWeight: 5 }
+      // 🔥 CAMBIO DE COLOR DE LÍNEA AQUÍ 🔥
+      polylineOptions: { strokeColor: "#000000", strokeWeight: 5 } // Ahora es Negro Puro
     });
   }, [interactivo]);
 
@@ -107,7 +108,7 @@ const MapaView = ({
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 8,
-          fillColor: "#22c55e", // 🔥 AHORA ES VERDE PARA HACER MATCH CON EL FORMULARIO
+          fillColor: "#22c55e", 
           fillOpacity: 1,
           strokeWeight: 3,
           strokeColor: "white",
@@ -115,7 +116,7 @@ const MapaView = ({
       });
     }
 
-    // 🛣️ DIBUJAR LA LÍNEA AZUL
+    // 🛣️ DIBUJAR LA RUTA (La línea ahora será negra)
     if (origen && destino) {
       const directionsService = new window.google.maps.DirectionsService();
       directionsService.route({
