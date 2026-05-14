@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { db } from '../../firebaseConfig';
-// IMPORTANTE: Aquí agregué getDoc que faltaba para leer la Caja Fuerte y las queries para el historial
+// 🔥 IMPORTAMOS STORAGE DE TU CONFIGURACIÓN
+import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy } from 'firebase/firestore';
+// 🔥 IMPORTAMOS LAS FUNCIONES DE GOOGLE CLOUD STORAGE
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -27,7 +29,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
   const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); 
-  const [transaccionesAdmin, setTransaccionesAdmin] = useState<any[]>([]); // ESTADO NUEVO PARA EL HISTORIAL APP
+  const [transaccionesAdmin, setTransaccionesAdmin] = useState<any[]>([]); 
   const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos' | 'historial'>('pendientes');
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
@@ -92,16 +94,38 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
+  // 🔥 LÓGICA PROFESIONAL PARA SUBIR FOTO DE PERFIL A STORAGE 🔥
   const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
-    const fotoParaSubir = fotoTemporal;
+    setCargando(true);
     const userId = auth.currentUser?.uid || userData.id;
-    setUserData({ ...userData, fotoPerfil: fotoParaSubir });
-    setPasoFoto(false); 
-    setFotoTemporal(null);
+
     try {
-      await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: fotoParaSubir });
-    } catch (e) { console.error("Error subiendo foto:", e); }
+      // 1. Creamos la ruta en Storage
+      const nombreArchivo = `perfiles/${userId}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, nombreArchivo);
+
+      // 2. Subimos el archivo a la nube
+      await uploadString(storageRef, fotoTemporal, 'data_url');
+
+      // 3. Obtenemos el link cortito de descarga
+      const urlDescarga = await getDownloadURL(storageRef);
+
+      // 4. Guardamos el link en Firestore y actualizamos la app
+      await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: urlDescarga });
+      setUserData({ ...userData, fotoPerfil: urlDescarga });
+
+      setPasoFoto(false); 
+      setFotoTemporal(null);
+      setToast({ texto: "Foto de perfil actualizada", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e) { 
+      console.error("Error subiendo foto a Storage:", e); 
+      setToast({ texto: "Error al subir foto", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setCargando(false);
+    }
   };
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
@@ -137,11 +161,14 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
   
+  // 🔥 LÓGICA PROFESIONAL PARA SUBIR DOCUMENTOS Y AUTOS A STORAGE 🔥
   const subirDocumentoFinal = async () => {
     if (!fotoDocTemporal) return;
     setCargando(true);
+    const userId = userData.uid || userData.id;
+
     try {
-      const userRef = doc(db, "usuarios", userData.uid || userData.id);
+      const userRef = doc(db, "usuarios", userId);
       const fieldMap: any = {
         cedula: { f: 'kycFoto', v: 'kycVerificado' }, selfie: { f: 'selfieFoto', v: 'selfieVerificada' },
         licencia: { f: 'licenciaFoto', v: 'licenciaVerificada' }, rcv: { f: 'rcvFoto', v: 'rcvVerificado' },
@@ -149,13 +176,31 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         fotoLatIzq: { f: 'fotoLatIzq', v: 'fotoLatIzqVerificada' }, fotoLatDer: { f: 'fotoLatDer', v: 'fotoLatDerVerificada' }
       };
       const { f, v } = fieldMap[pasoDocumento.tipo];
-      await updateDoc(userRef, { [f]: fotoDocTemporal, [v]: false, estadoRevision: "pendiente" });
-      setUserData({ ...userData, [f]: fotoDocTemporal, [v]: false });
-      setFotoDocTemporal(null); setPasoDocumento({ ...pasoDocumento, activa: false });
+
+      // 1. Creamos la ruta organizada en Storage (Carpeta documentos/UsuarioID/foto.jpg)
+      const nombreArchivo = `documentos/${userId}/${f}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, nombreArchivo);
+
+      // 2. Subimos a la nube
+      await uploadString(storageRef, fotoDocTemporal, 'data_url');
+
+      // 3. Obtenemos el Link
+      const urlDescarga = await getDownloadURL(storageRef);
+
+      // 4. Guardamos solo el Link en Firestore
+      await updateDoc(userRef, { [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
+      setUserData({ ...userData, [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
+
+      setToast({ texto: "Documento enviado para revisión", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+      setFotoDocTemporal(null); 
+      setPasoDocumento({ ...pasoDocumento, activa: false });
     } catch (e: any) {
+      console.error("Error subiendo documento:", e);
       setToast({ texto: "Error al subir documento.", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
-      setFotoDocTemporal(null); setPasoDocumento({ ...pasoDocumento, activa: false });
+      setFotoDocTemporal(null); 
+      setPasoDocumento({ ...pasoDocumento, activa: false });
     } finally { setCargando(false); }
   };
   
@@ -172,7 +217,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const snapPagos = await getDocs(collection(db, "PagosPendientes"));
       setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter((p: any) => p.estado === 'pendiente'));
 
-      // 🔥 CARGAR HISTORIAL DE LA APP (COMISIONES DEL 10%)
       const qAdmin = query(
         collection(db, "Transacciones"),
         where("uid", "==", "ADMIN_APP"),
@@ -181,7 +225,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const snapAdmin = await getDocs(qAdmin);
       setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // Leer Finanzas y Tasa Actual
       const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
       if (docFinanzas.exists()) {
         const data = docFinanzas.data();
@@ -390,7 +433,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   // ==========================================
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
-      {/* TOAST FLOTANTE */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -400,7 +442,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
 
-      {/* NAV SUPERIOR */}
       <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100">
         <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
           <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
@@ -410,9 +451,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
       <div className="flex-1 overflow-y-auto pb-32">
         
-        {/* ========================================== */}
-        {/* VISTA PÚBLICA */}
-        {/* ========================================== */}
         {view === 'publico' && (
           <div className="p-5 space-y-6 animate-in fade-in duration-500">
             {auth.currentUser && !auth.currentUser.emailVerified && (
@@ -486,9 +524,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* VISTA DE CUENTA */}
-        {/* ========================================== */}
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
             <div className="space-y-3">
@@ -570,9 +605,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* PANEL ADMINISTRATIVO MAESTRO */}
-        {/* ========================================== */}
         {view === 'admin' && (
           <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
             <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
@@ -584,7 +616,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} className={cargando ? 'animate-spin' : ''}/></button>
             </div>
 
-            {/* SELECTOR DE SUB-PESTAÑAS */}
             <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
               <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Cuentas</button>
               <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
@@ -598,7 +629,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
               ) : (
                 <>
-                  {/* PESTAÑA DE HISTORIAL FINANCIERO (ADMIN) */}
                   {subPestañaAdmin === 'historial' && (
                     <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
                       <div className="bg-gradient-to-br from-indigo-600 to-slate-900 p-6 rounded-[35px] border border-white/10 shadow-2xl relative overflow-hidden">
@@ -639,10 +669,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                     </div>
                   )}
 
-                  {/* PESTAÑA DE PAGOS */}
                   {subPestañaAdmin === 'pagos' && (
                     <>
-                      {/* Tarjeta de Tasa BCV */}
                       <div className="bg-slate-900 border border-white/5 p-5 rounded-[30px] flex justify-between items-center shadow-lg mb-6">
                         <div>
                           <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Oficial Actual</p>
@@ -652,7 +680,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                           Cambiar Tasa
                         </button>
                       </div>
-                                            {/* 🔥 CONFIGURACIÓN DE COBRO (NUEVO) 🔥 */}
+                      
                       <div className="bg-slate-900 border border-white/5 p-6 rounded-[35px] space-y-4 mb-6">
                         <div className="flex items-center gap-3 mb-2">
                           <div className="bg-blue-600/10 p-2 rounded-xl text-blue-400"><Settings size={18} /></div>
@@ -673,11 +701,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             <input value={bancoAdmin.cedula} onChange={(e) => setBancoAdmin({...bancoAdmin, cedula: e.target.value})} className="w-full bg-slate-950 border border-white/5 rounded-xl p-3 text-xs text-white font-bold outline-none focus:border-blue-500" placeholder="Ej: V-12345678" />
                           </div>
                         </div>
-                        <button onClick={guardarDatosBancarios} className="w-full bg-blue-600 text-white p-3 rounded-2xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all mt-2">Guardar Datos de Cobro</button>
+                        <button disabled={cargando} onClick={guardarDatosBancarios} className="w-full bg-blue-600 disabled:opacity-50 text-white p-3 rounded-2xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all mt-2">Guardar Datos de Cobro</button>
                       </div>
                       
 
-                      {/* LISTA DE PAGOS PENDIENTES */}
                       {pagosAdmin.length === 0 ? (
                         <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
                       ) : (
@@ -724,10 +751,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                               )}
                               
                               <div className="flex gap-2 pt-2 border-t border-white/5 mt-3">
-                                <button onClick={() => rechazarPago(pago)} className="flex-1 bg-red-500/10 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">
+                                <button disabled={cargando} onClick={() => rechazarPago(pago)} className="flex-1 bg-red-500/10 disabled:opacity-50 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500/20 transition-colors">
                                   {esRetiro ? 'Rechazar y Devolver' : 'Rechazar'}
                                 </button>
-                                <button onClick={() => esRetiro ? marcarRetiroComoPagado(pago) : aprobarPago(pago)} className={`flex-[2] p-3 rounded-xl font-black text-[10px] uppercase shadow-lg transition-colors ${esRetiro ? 'bg-amber-500 text-amber-950 hover:bg-amber-400' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
+                                <button disabled={cargando} onClick={() => esRetiro ? marcarRetiroComoPagado(pago) : aprobarPago(pago)} className={`flex-[2] p-3 disabled:opacity-50 rounded-xl font-black text-[10px] uppercase shadow-lg transition-colors ${esRetiro ? 'bg-amber-500 text-amber-950 hover:bg-amber-400' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
                                   {esRetiro ? 'Ya transferí (OK)' : 'Aprobar y Acreditar'}
                                 </button>
                               </div>
@@ -738,7 +765,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                     </>
                   )}
 
-                  {/* PESTAÑA DE REPORTES */}
                   {subPestañaAdmin === 'reportes' && (
                     reportesAdmin.length === 0 ? (
                       <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay reportes activos</p>
@@ -763,7 +789,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                     )
                   )}
 
-                  {/* PESTAÑA DE CUENTAS (PENDIENTES O APROBADOS) */}
                   {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
                     usuariosAdmin
                       .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
@@ -797,16 +822,16 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                                 </div>
                                 <div className="flex flex-col gap-2">
                                   {estaSuspendido ? (
-                                    <button onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
+                                    <button disabled={cargando} onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 disabled:opacity-50 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
                                   ) : (
                                     <>
                                       {subPestañaAdmin === 'pendientes' && (
                                         <div className="flex gap-2">
-                                          <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-                                          <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
+                                          <button disabled={cargando} onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 disabled:opacity-50 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+                                          <button disabled={cargando} onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 disabled:opacity-50 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
                                         </div>
                                       )}
-                                      <button onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">Suspender Usuario</button>
+                                      <button disabled={cargando} onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 disabled:opacity-50 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">Suspender Usuario</button>
                                     </>
                                   )}
                                 </div>
@@ -823,9 +848,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         )}
       </div>
 
-      {/* ========================================== */}
-      {/* MODALES FLOTANTES GLOBALES */}
-      {/* ========================================== */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
@@ -836,7 +858,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             ) : (
               <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg mb-8 outline-none border-2 border-slate-100 uppercase text-center" autoFocus />
             )}
-            <button onClick={guardarCambios} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs shadow-lg active:scale-95 transition-transform">Guardar Cambios</button>
+            <button disabled={cargando} onClick={guardarCambios} className="w-full bg-blue-600 text-white p-5 rounded-[25px] disabled:opacity-50 font-black uppercase text-xs shadow-lg active:scale-95 transition-transform">Guardar Cambios</button>
           </div>
         </div>
       )}
@@ -853,8 +875,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           ) : (
             <>
               <div className="w-full aspect-video rounded-3xl overflow-hidden border-4 border-blue-500"><img src={fotoDocTemporal} className="w-full h-full object-cover" /></div>
-              <button onClick={subirDocumentoFinal} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">Enviar Documento</button>
-              <button onClick={() => setFotoDocTemporal(null)} className="text-white font-black uppercase text-[10px]">Repetir</button>
+              <button disabled={cargando} onClick={subirDocumentoFinal} className="w-full disabled:opacity-50 bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">{cargando ? "SUBIENDO..." : "Enviar Documento"}</button>
+              <button disabled={cargando} onClick={() => setFotoDocTemporal(null)} className="text-white disabled:opacity-50 font-black uppercase text-[10px]">Repetir</button>
             </>
           )}
         </div>
@@ -877,8 +899,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           ) : (
             <>
               <div className="w-64 h-64 rounded-full overflow-hidden border-8 border-blue-50 mb-10"><img src={fotoTemporal} className="w-full h-full object-cover" /></div>
-              <button onClick={subirFotoConfirmada} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">Confirmar Foto</button>
-              <button onClick={() => setFotoTemporal(null)} className="text-slate-400 font-black uppercase text-[10px] mt-6">Elegir otra</button>
+              <button disabled={cargando} onClick={subirFotoConfirmada} className="w-full bg-blue-600 disabled:opacity-50 text-white p-6 rounded-[25px] font-black uppercase text-xs">{cargando ? "SUBIENDO..." : "Confirmar Foto"}</button>
+              <button disabled={cargando} onClick={() => setFotoTemporal(null)} className="text-slate-400 disabled:opacity-50 font-black uppercase text-[10px] mt-6">Elegir otra</button>
             </>
           )}
         </div>
@@ -887,9 +909,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   );
 };
 
-// ==========================================
-// COMPONENTE DE BOTÓN (REUTILIZABLE)
-// ==========================================
 const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-blue-500";
