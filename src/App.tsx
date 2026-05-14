@@ -1,17 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebaseConfig'; 
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   onAuthStateChanged,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail 
 } from 'firebase/auth';
-// 🔥 IMPORTAMOS LAS NUEVAS QUERIES DE FIRESTORE
 import { doc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore'; 
 import { PushNotifications } from '@capacitor/push-notifications';
-// 🔥 IMPORTAMOS ICONOS PARA EL ONBOARDING Y CHECKLIST
-import { Check, ArrowRight, ShieldCheck, Leaf, MapPin, Car, ChevronRight } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation'; // 🔥 IMPORTAMOS EL GPS
+import { Check, ArrowRight, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff } from 'lucide-react'; // 🔥 IMPORTAMOS LOS OJITOS
 
 import NavegacionPrincipal from './NavegacionPrincipal';
 
@@ -21,6 +19,7 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [nombre, setNombre] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false); // 🔥 ESTADO PARA EL OJITO
   const [cargando, setCargando] = useState(false);
   const [usuario, setUsuario] = useState<any>(null);
   
@@ -34,7 +33,7 @@ export default function App() {
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
-  // 1. EFECTO DE AUTENTICACIÓN
+  // EFECTO DE AUTENTICACIÓN
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
@@ -42,7 +41,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 GUARDIÁN DE NOTIFICACIONES PUSH 🔥
+  // GUARDIÁN DE NOTIFICACIONES PUSH
   useEffect(() => {
     if (!usuario) return;
 
@@ -70,19 +69,18 @@ export default function App() {
     return () => { PushNotifications.removeAllListeners(); };
   }, [usuario]);
   
-  // 🔥 PASO 1: DETECCIÓN INTELIGENTE DEL CORREO (VERSIÓN SEGURA) 🔥
+  // DETECCIÓN INTELIGENTE DEL CORREO
   const verificarCorreo = async (e: any) => {
     e.preventDefault();
     if (!email) return;
     setCargando(true);
     try {
-      // Le preguntamos a Firebase Auth si el correo ya está registrado
       const metodos = await fetchSignInMethodsForEmail(auth, email.toLowerCase().trim());
       
       if (metodos.length === 0) {
-        setPaso('registro'); // Correo nuevo -> Vamos a crear cuenta
+        setPaso('registro'); 
       } else {
-        setPaso('login');    // Correo existe -> Vamos a pedir contraseña
+        setPaso('login');    
       }
     } catch (error: any) {
       alert("Error verificando conexión: " + error.message);
@@ -91,7 +89,7 @@ export default function App() {
     }
   };
 
-  // 🔥 PASO 2: INICIAR SESIÓN O REGISTRAR 🔥
+  // INICIAR SESIÓN O REGISTRAR
   const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
     if (paso === 'registro' && !passwordValida) return;
@@ -99,6 +97,9 @@ export default function App() {
     setCargando(true);
     try {
       if (paso === 'registro') {
+        // 🔥 PREVENIMOS EL FLICKER VISUAL ACTIVANDO ESTO ANTES DE CREAR EL USUARIO
+        setMostrarOnboarding(true);
+
         const res = await createUserWithEmailAndPassword(auth, email, password);
         const uid = res.user.uid;
 
@@ -119,13 +120,11 @@ export default function App() {
           vehiculo: { marca: "", modelo: "", placa: "", color: "" }
         });
 
-        // DISPARAMOS EL ONBOARDING PARA USUARIOS NUEVOS
-        setMostrarOnboarding(true);
-
       } else if (paso === 'login') {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (error: any) {
+      setMostrarOnboarding(false); // Por si falla, apagamos el onboarding
       if (error.code === 'auth/wrong-password') alert("Contraseña incorrecta");
       else alert("Error: " + error.message);
     } finally {
@@ -157,14 +156,11 @@ export default function App() {
     }
   ];
 
-  // ==============================================
-  // RENDER 1: EL ONBOARDING (Si acaba de registrarse)
-  // ==============================================
+  // RENDER 1: EL ONBOARDING
   if (usuario && mostrarOnboarding) {
     return (
       <div className="flex flex-col items-center justify-between min-h-screen bg-[#0f172a] p-8 text-center text-white font-sans animate-in fade-in duration-500">
         <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto">
-          {/* Animación suave entre slides */}
           <div key={slideActual} className="animate-in slide-in-from-right fade-in duration-500 flex flex-col items-center">
             <div className="bg-slate-900 p-8 rounded-full shadow-2xl border border-white/5 mb-8">
               {slides[slideActual].icono}
@@ -174,7 +170,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Controles del Onboarding */}
         <div className="w-full max-w-sm pb-10">
           <div className="flex justify-center gap-2 mb-8">
             {slides.map((_, i) => (
@@ -182,35 +177,38 @@ export default function App() {
             ))}
           </div>
           <button 
-            onClick={() => {
-              if (slideActual < slides.length - 1) setSlideActual(slideActual + 1);
-              else setMostrarOnboarding(false); // Fin del onboarding, entra a la app
+            onClick={async () => {
+              if (slideActual < slides.length - 1) {
+                setSlideActual(slideActual + 1);
+              } else {
+                // 🔥 AQUÍ PEDIMOS EL GPS NATIVO AL FINALIZAR EL ONBOARDING 🔥
+                try {
+                  await Geolocation.requestPermissions();
+                } catch (e) {
+                  console.log("Error solicitando GPS:", e);
+                }
+                setMostrarOnboarding(false);
+              }
             }}
             className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg flex items-center justify-center gap-2"
           >
-            {slideActual === slides.length - 1 ? "Comenzar el Viaje" : "Siguiente"} <ChevronRight size={18} />
+            {slideActual === slides.length - 1 ? "Permitir GPS y Comenzar" : "Siguiente"} <ChevronRight size={18} />
           </button>
         </div>
       </div>
     );
   }
 
-  // ==============================================
-  // RENDER 2: LA APP PRINCIPAL (Si ya está logueado)
-  // ==============================================
-  if (usuario && !mostrarOnboarding) {
+  // RENDER 2: LA APP PRINCIPAL (🔥 EL !cargando EVITA EL FLICKER VISUAL 🔥)
+  if (usuario && !mostrarOnboarding && !cargando) {
     return <NavegacionPrincipal user={usuario} />;
   }
 
-  // ==============================================
   // RENDER 3: LOGIN / REGISTRO
-  // ==============================================
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f172a] px-8 text-center text-white font-sans relative overflow-hidden">
-      {/* Decoración de fondo */}
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
       
-      {/* LOGO DINÁMICO Y BOTÓN ATRÁS */}
       <div className="w-full max-w-xs flex justify-between items-center mb-8">
         {paso !== 'email' ? (
           <button onClick={() => setPaso('email')} className="text-slate-400 hover:text-white p-2">
@@ -236,7 +234,6 @@ export default function App() {
 
       <form onSubmit={paso === 'email' ? verificarCorreo : manejarAutenticacion} className="w-full max-w-xs space-y-4 animate-in fade-in duration-300">
         
-        {/* EMAIL (Siempre visible, bloqueado en pasos 2 y 3) */}
         <input 
           type="email" 
           placeholder="Correo Electrónico" 
@@ -247,7 +244,6 @@ export default function App() {
           required
         />
 
-        {/* CAMPOS DE REGISTRO */}
         {paso === 'registro' && (
           <input 
             type="text" 
@@ -260,20 +256,27 @@ export default function App() {
           />
         )}
 
-        {/* CAMPO DE CONTRASEÑA (Login y Registro) */}
         {paso !== 'email' && (
-          <div className="animate-in slide-in-from-bottom-4">
+          <div className="animate-in slide-in-from-bottom-4 relative">
             <input 
-              type="password" 
+              type={verPassword ? "text" : "password"} // 🔥 TIPO DINÁMICO PARA EL OJITO
               placeholder="Contraseña" 
-              className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white transition-all"
+              className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white transition-all pr-12"
               value={password}
               onChange={(e) => setPassword(e.target.value)} 
               disabled={cargando}
               required
             />
+            
+            {/* 🔥 BOTÓN DEL OJITO 🔥 */}
+            <button
+              type="button"
+              onClick={() => setVerPassword(!verPassword)}
+              className="absolute right-4 top-[18px] text-slate-400 hover:text-white transition-colors"
+            >
+              {verPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
 
-            {/* 🔥 CHECKLIST DE SEGURIDAD (Solo en registro) 🔥 */}
             {paso === 'registro' && (
               <div className="text-left mt-3 space-y-2 bg-slate-900/50 p-4 rounded-xl border border-white/5">
                 <p className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-colors ${tieneSeis ? 'text-green-400' : 'text-slate-500'}`}>
@@ -299,7 +302,6 @@ export default function App() {
           </div>
         )}
         
-        {/* BOTÓN MAESTRO */}
         <button 
           disabled={cargando || (paso === 'registro' && !passwordValida)}
           className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg disabled:opacity-50 mt-4"
