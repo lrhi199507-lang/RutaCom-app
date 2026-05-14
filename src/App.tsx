@@ -156,18 +156,30 @@ export default function App() {
               <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === slideActual ? 'w-8 bg-blue-500' : 'w-2 bg-slate-700'}`} />
             ))}
           </div>
-          <button 
-            onClick={async () => {
+         <button onClick={async () => {
               if (slideActual < slides.length - 1) {
                 setSlideActual(slideActual + 1);
               } else {
-                try { await Geolocation.requestPermissions(); } catch (e) { console.log(e); }
-                setMostrarOnboarding(false);
+                // 🔥 SOLICITUD DE PERMISOS MAESTRA 🔥
+                try {
+                  // 1. Pedimos GPS
+                  await Geolocation.requestPermissions();
+                  
+                  // 2. Pedimos Notificaciones Push
+                  const permPush = await PushNotifications.requestPermissions();
+                  if (permPush.receive === 'granted') {
+                    await PushNotifications.register();
+                  }
+                } catch (e) {
+                  console.log("Error solicitando permisos:", e);
+                }
+                
+                setMostrarOnboarding(false); // Entramos a la app
               }
             }}
             className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg flex items-center justify-center gap-2"
           >
-            {slideActual === slides.length - 1 ? "Permitir GPS y Comenzar" : "Siguiente"} <ChevronRight size={18} />
+            {slideActual === slides.length - 1 ? "Permitir todo y Comenzar" : "Siguiente"} <ChevronRight size={18} />
           </button>
         </div>
       </div>
