@@ -1,12 +1,22 @@
 import React, { useEffect, useRef } from 'react';
 import { MapPin } from 'lucide-react';
 
-const MapaView = ({ origen, destino, posicionChofer, pasajeros = [], estadoViaje, interactivo = false }) => {
+const MapaView = ({ 
+  origen, 
+  destino, 
+  posicionChofer, 
+  pasajeros = [], 
+  estadoViaje, 
+  interactivo = false,
+  onMarkerDragEnd // 🔥 NUEVO: Necesario para que el Wizard pueda arrastrar el pin
+}) => {
   const mapRef = useRef(null);
   const googleMap = useRef(null);
-  const markers = useRef({ chofer: null, pasajeros: [] });
+  // 🔥 NUEVO: Agregamos origen, destino e interactivo al control de marcadores
+  const markers = useRef({ chofer: null, pasajeros: [], origen: null, destino: null, interactivo: null });
   const directionsRenderer = useRef(null);
 
+  // 1. INICIALIZAR MAPA
   useEffect(() => {
     if (!window.google || !mapRef.current || googleMap.current) return;
 
@@ -22,15 +32,110 @@ const MapaView = ({ origen, destino, posicionChofer, pasajeros = [], estadoViaje
 
     directionsRenderer.current = new window.google.maps.DirectionsRenderer({
       map: googleMap.current,
-      suppressMarkers: true,
+      suppressMarkers: true, // Ocultamos los de Google para usar los nuestros personalizados
       polylineOptions: { strokeColor: "#2563eb", strokeWeight: 5 }
     });
   }, [interactivo]);
 
+  // 2. ACTUALIZACIÓN EN TIEMPO REAL (RUTAS Y MARCADORES)
   useEffect(() => {
     if (!googleMap.current || !window.google) return;
 
-    // 1. GESTIÓN DEL CHOFER
+    // --- LIMPIEZA PREVIA DE MARCADORES BASE ---
+    if (markers.current.origen) { markers.current.origen.setMap(null); markers.current.origen = null; }
+    if (markers.current.destino) { markers.current.destino.setMap(null); markers.current.destino = null; }
+    if (markers.current.interactivo) { markers.current.interactivo.setMap(null); markers.current.interactivo = null; }
+
+    // ==========================================
+    // MODO A: MAPA INTERACTIVO (Arrastrar Pin en el Wizard)
+    // ==========================================
+    if (interactivo) {
+      const coord = origen || destino; // El wizard pasa uno de los dos
+      if (coord) {
+        markers.current.interactivo = new window.google.maps.Marker({
+          position: { lat: coord.lat, lng: coord.lon },
+          map: googleMap.current,
+          draggable: true, // 🔥 PERMITE ARRASTRAR
+          icon: {
+            path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+            scale: 7,
+            fillColor: origen ? "#2563eb" : "#22c55e", // Azul si ajusta origen, Verde si ajusta destino
+            fillOpacity: 1,
+            strokeWeight: 2,
+            strokeColor: "white",
+          }
+        });
+
+        // Evento que le avisa a tu formulario dónde soltó el pin el usuario
+        window.google.maps.event.addListener(markers.current.interactivo, 'dragend', (evt: any) => {
+          if (onMarkerDragEnd) {
+            onMarkerDragEnd({ lat: evt.latLng.lat(), lon: evt.latLng.lng() });
+          }
+        });
+        
+        googleMap.current.setCenter({ lat: coord.lat, lng: coord.lon });
+      }
+      directionsRenderer.current.setDirections({ routes: [] }); // Oculta la ruta mientras arrastra
+      return; // Detiene la ejecución aquí (no pinta lo demás)
+    }
+
+    // ==========================================
+    // MODO B: MAPA NORMAL (Línea + Origen/Destino)
+    // ==========================================
+
+    // 📍 DIBUJAR ORIGEN (Círculo Azul)
+    if (origen) {
+      markers.current.origen = new window.google.maps.Marker({
+        position: { lat: origen.lat, lng: origen.lon },
+        map: googleMap.current,
+        zIndex: 50,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#2563eb", // Color Azul
+          fillOpacity: 1,
+          strokeWeight: 3,
+          strokeColor: "white",
+        }
+      });
+    }
+
+    // 📍 DIBUJAR DESTINO (Círculo Rojo)
+    if (destino) {
+      markers.current.destino = new window.google.maps.Marker({
+        position: { lat: destino.lat, lng: destino.lon },
+        map: googleMap.current,
+        zIndex: 50,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#ef4444", // Color Rojo
+          fillOpacity: 1,
+          strokeWeight: 3,
+          strokeColor: "white",
+        }
+      });
+    }
+
+    // 🛣️ DIBUJAR LA LÍNEA AZUL
+    if (origen && destino) {
+      const directionsService = new window.google.maps.DirectionsService();
+      directionsService.route({
+        origin: { lat: origen.lat, lng: origen.lon },
+        destination: { lat: destino.lat, lng: destino.lon },
+        travelMode: window.google.maps.TravelMode.DRIVING,
+      }, (result, status) => {
+        if (status === 'OK') directionsRenderer.current.setDirections(result);
+      });
+    } else {
+      directionsRenderer.current.setDirections({ routes: [] });
+    }
+
+    // ==========================================
+    // MODO C: VIAJE EN CURSO (Chofer y Pasajeros)
+    // ==========================================
+    
+    // GESTIÓN DEL CHOFER (Ícono de Carrito o Flecha)
     if (markers.current.chofer) markers.current.chofer.setMap(null);
     if (posicionChofer) {
       markers.current.chofer = new window.google.maps.Marker({
@@ -39,7 +144,7 @@ const MapaView = ({ origen, destino, posicionChofer, pasajeros = [], estadoViaje
         zIndex: 100,
         icon: {
           path: "M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2",
-          fillColor: '#2563eb',
+          fillColor: '#1e293b',
           fillOpacity: 1,
           strokeColor: '#ffffff',
           strokeWeight: 2,
@@ -50,7 +155,7 @@ const MapaView = ({ origen, destino, posicionChofer, pasajeros = [], estadoViaje
       if (!interactivo) googleMap.current.panTo(markers.current.chofer.getPosition());
     }
 
-    // 2. GESTIÓN DE PASAJEROS (Solo en estado 'buscando')
+    // GESTIÓN DE PASAJEROS (Naranjas)
     markers.current.pasajeros.forEach(m => m.setMap(null));
     markers.current.pasajeros = [];
 
@@ -75,21 +180,7 @@ const MapaView = ({ origen, destino, posicionChofer, pasajeros = [], estadoViaje
       });
     }
 
-    // 3. GESTIÓN DE RUTA (Solo en estado 'en_curso')
-    if (estadoViaje === 'en_curso' && origen && destino) {
-      const directionsService = new window.google.maps.DirectionsService();
-      directionsService.route({
-        origin: { lat: origen.lat, lng: origen.lon },
-        destination: { lat: destino.lat, lng: destino.lon },
-        travelMode: window.google.maps.TravelMode.DRIVING,
-      }, (result, status) => {
-        if (status === 'OK') directionsRenderer.current.setDirections(result);
-      });
-    } else {
-      directionsRenderer.current.setDirections({ routes: [] });
-    }
-
-  }, [posicionChofer, pasajeros, estadoViaje, origen, destino]);
+  }, [posicionChofer, pasajeros, estadoViaje, origen, destino, interactivo, onMarkerDragEnd]);
 
   return (
     <div className="relative w-full h-full min-h-[300px] bg-slate-100 rounded-inherit">
