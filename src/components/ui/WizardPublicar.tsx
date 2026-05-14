@@ -170,8 +170,7 @@ export const WizardPublicar = ({
     return false;
   };
 
-  // BÚSQUEDA DINÁMICA CON DETECTOR DE ERRORES EN PANTALLA
-  const manejarBusqueda = (texto, tipo) => {
+    const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
         setViajeForm(prev => ({...prev, origen: texto}));
     } else {
@@ -203,15 +202,19 @@ export const WizardPublicar = ({
           }));
           setSugerencias(sugerenciasGoogle);
         } else {
-          setToastMessage(`Bloqueo de Google: ${status}`);
-          setShowToast(true);
+          // 🔥 AQUÍ ESTÁ LA MAGIA: Vaciamos sugerencias en silencio.
           setSugerencias([]);
+          
+          // Solo mostramos error en consola si es un bloqueo real de facturación o de API, NO molestamos al usuario.
+          if (status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+            console.warn(`Aviso interno de Google Maps: ${status}`);
+          }
         }
       });
     } else {
       setSugerencias([]);
     }
-  }
+    }
 
   const seleccionarSugerencia = (sugerencia) => {
     if (!inicializarGooglePlaces()) return;
