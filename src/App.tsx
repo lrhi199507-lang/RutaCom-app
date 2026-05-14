@@ -4,7 +4,8 @@ import { auth, db } from './firebaseConfig';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  fetchSignInMethodsForEmail
 } from 'firebase/auth';
 // 🔥 IMPORTAMOS LAS NUEVAS QUERIES DE FIRESTORE
 import { doc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore'; 
@@ -69,16 +70,16 @@ export default function App() {
     return () => { PushNotifications.removeAllListeners(); };
   }, [usuario]);
   
-  // 🔥 PASO 1: DETECCIÓN INTELIGENTE DEL CORREO 🔥
+  // 🔥 PASO 1: DETECCIÓN INTELIGENTE DEL CORREO (VERSIÓN SEGURA) 🔥
   const verificarCorreo = async (e: any) => {
     e.preventDefault();
     if (!email) return;
     setCargando(true);
     try {
-      const q = query(collection(db, "usuarios"), where("email", "==", email.toLowerCase().trim()));
-      const snap = await getDocs(q);
+      // Le preguntamos a Firebase Auth si el correo ya está registrado
+      const metodos = await fetchSignInMethodsForEmail(auth, email.toLowerCase().trim());
       
-      if (snap.empty) {
+      if (metodos.length === 0) {
         setPaso('registro'); // Correo nuevo -> Vamos a crear cuenta
       } else {
         setPaso('login');    // Correo existe -> Vamos a pedir contraseña
