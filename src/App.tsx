@@ -3,23 +3,22 @@ import { auth, db } from './firebaseConfig';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  onAuthStateChanged,
-  fetchSignInMethodsForEmail 
+  onAuthStateChanged 
 } from 'firebase/auth';
-import { doc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore'; 
+import { doc, setDoc, updateDoc } from 'firebase/firestore'; 
 import { PushNotifications } from '@capacitor/push-notifications';
-import { Geolocation } from '@capacitor/geolocation'; // 🔥 IMPORTAMOS EL GPS
-import { Check, ArrowRight, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff } from 'lucide-react'; // 🔥 IMPORTAMOS LOS OJITOS
+import { Geolocation } from '@capacitor/geolocation'; 
+import { Check, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff } from 'lucide-react'; 
 
 import NavegacionPrincipal from './NavegacionPrincipal';
 
 export default function App() {
   // ESTADOS DE AUTENTICACIÓN Y FLUJO
-  const [paso, setPaso] = useState<'email' | 'login' | 'registro'>('email');
+  const [esRegistro, setEsRegistro] = useState(false);
   const [email, setEmail] = useState('');
   const [nombre, setNombre] = useState('');
   const [password, setPassword] = useState('');
-  const [verPassword, setVerPassword] = useState(false); // 🔥 ESTADO PARA EL OJITO
+  const [verPassword, setVerPassword] = useState(false); 
   const [cargando, setCargando] = useState(false);
   const [usuario, setUsuario] = useState<any>(null);
   
@@ -33,7 +32,6 @@ export default function App() {
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
-  // EFECTO DE AUTENTICACIÓN
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
@@ -41,7 +39,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // GUARDIÁN DE NOTIFICACIONES PUSH
   useEffect(() => {
     if (!usuario) return;
 
@@ -69,38 +66,15 @@ export default function App() {
     return () => { PushNotifications.removeAllListeners(); };
   }, [usuario]);
   
-  // DETECCIÓN INTELIGENTE DEL CORREO
-  const verificarCorreo = async (e: any) => {
-    e.preventDefault();
-    if (!email) return;
-    setCargando(true);
-    try {
-      const metodos = await fetchSignInMethodsForEmail(auth, email.toLowerCase().trim());
-      
-      if (metodos.length === 0) {
-        setPaso('registro'); 
-      } else {
-        setPaso('login');    
-      }
-    } catch (error: any) {
-      alert("Error verificando conexión: " + error.message);
-    } finally {
-      setCargando(false);
-    }
-  };
-
   // INICIAR SESIÓN O REGISTRAR
   const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
-    if (paso === 'registro' && !passwordValida) return;
+    if (esRegistro && !passwordValida) return;
     
     setCargando(true);
     try {
-      if (paso === 'registro') {
-        // 🔥 PREVENIMOS EL FLICKER VISUAL ACTIVANDO ESTO ANTES DE CREAR EL USUARIO
-        setMostrarOnboarding(true);
-
-        const res = await createUserWithEmailAndPassword(auth, email, password);
+      if (esRegistro) {
+        const res = await createUserWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
         const uid = res.user.uid;
 
         await setDoc(doc(db, "usuarios", uid), {
@@ -120,19 +94,26 @@ export default function App() {
           vehiculo: { marca: "", modelo: "", placa: "", color: "" }
         });
 
-      } else if (paso === 'login') {
-        await signInWithEmailAndPassword(auth, email, password);
+        setMostrarOnboarding(true);
+
+      } else {
+        await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       }
     } catch (error: any) {
-      setMostrarOnboarding(false); // Por si falla, apagamos el onboarding
-      if (error.code === 'auth/wrong-password') alert("Contraseña incorrecta");
-      else alert("Error: " + error.message);
+      // 🔥 MANEJO DE ERRORES PROFESIONAL 🔥
+      if (error.code === 'auth/email-already-in-use') {
+        alert("Este correo ya está registrado. Te pasaremos al inicio de sesión.");
+        setEsRegistro(false); 
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        alert("Correo o contraseña incorrectos.");
+      } else {
+        alert("Error: " + error.message);
+      }
     } finally {
       setCargando(false);
     }
   };
 
-  // DIAPOSITIVAS DEL ONBOARDING
   const slides = [
     {
       icono: <Car size={80} className="text-blue-500 mb-6" />,
@@ -156,7 +137,6 @@ export default function App() {
     }
   ];
 
-  // RENDER 1: EL ONBOARDING
   if (usuario && mostrarOnboarding) {
     return (
       <div className="flex flex-col items-center justify-between min-h-screen bg-[#0f172a] p-8 text-center text-white font-sans animate-in fade-in duration-500">
@@ -181,12 +161,7 @@ export default function App() {
               if (slideActual < slides.length - 1) {
                 setSlideActual(slideActual + 1);
               } else {
-                // 🔥 AQUÍ PEDIMOS EL GPS NATIVO AL FINALIZAR EL ONBOARDING 🔥
-                try {
-                  await Geolocation.requestPermissions();
-                } catch (e) {
-                  console.log("Error solicitando GPS:", e);
-                }
+                try { await Geolocation.requestPermissions(); } catch (e) { console.log(e); }
                 setMostrarOnboarding(false);
               }
             }}
@@ -199,56 +174,40 @@ export default function App() {
     );
   }
 
-  // RENDER 2: LA APP PRINCIPAL (🔥 EL !cargando EVITA EL FLICKER VISUAL 🔥)
   if (usuario && !mostrarOnboarding && !cargando) {
     return <NavegacionPrincipal user={usuario} />;
   }
 
-  // RENDER 3: LOGIN / REGISTRO
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f172a] px-8 text-center text-white font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
-      
-      <div className="w-full max-w-xs flex justify-between items-center mb-8">
-        {paso !== 'email' ? (
-          <button onClick={() => setPaso('email')} className="text-slate-400 hover:text-white p-2">
-            <ArrowRight className="rotate-180" size={24} />
-          </button>
-        ) : <div className="w-10"></div>}
-      </div>
 
-      <div className="bg-blue-600 w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-blue-900/50 transform -skew-x-6 border-b-4 border-blue-800">
+      <div className="bg-blue-600 w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-blue-900/50 transform -skew-x-6 border-b-4 border-blue-800 mt-8">
         <span className="text-5xl font-black italic">D</span>
       </div>
       
       <h1 className="text-4xl font-black italic mb-2 tracking-tighter">DameLaCola</h1>
       
-      {paso === 'email' && (
-        <p className="text-blue-400 font-bold tracking-[3px] text-[10px] mb-10 uppercase italic">
-          LA FORMA MÁS SEGURA DE PEDIR LA COLA
-        </p>
-      )}
+      {!esRegistro && <p className="text-blue-400 font-bold tracking-[3px] text-[10px] mb-8 uppercase italic">LA FORMA MÁS SEGURA DE PEDIR LA COLA</p>}
+      {esRegistro && <p className="text-slate-400 text-xs mb-8">Crea tu cuenta en segundos</p>}
 
-      {paso === 'login' && <p className="text-slate-400 text-xs mb-8">¡Qué bueno verte de nuevo!</p>}
-      {paso === 'registro' && <p className="text-slate-400 text-xs mb-8">Crea tu cuenta en segundos</p>}
-
-      <form onSubmit={paso === 'email' ? verificarCorreo : manejarAutenticacion} className="w-full max-w-xs space-y-4 animate-in fade-in duration-300">
+      <form onSubmit={manejarAutenticacion} className="w-full max-w-xs space-y-4 animate-in fade-in duration-300">
         
         <input 
           type="email" 
           placeholder="Correo Electrónico" 
-          className={`w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm transition-all ${paso !== 'email' ? 'text-slate-500 bg-black/20' : 'text-white'}`}
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white transition-all"
           value={email}
           onChange={(e) => setEmail(e.target.value)} 
-          disabled={paso !== 'email' || cargando}
+          disabled={cargando}
           required
         />
 
-        {paso === 'registro' && (
+        {esRegistro && (
           <input 
             type="text" 
             placeholder="Nombre Completo" 
-            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white transition-all animate-in slide-in-from-bottom-4"
+            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white transition-all animate-in slide-in-from-top-2"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)} 
             disabled={cargando}
@@ -256,59 +215,66 @@ export default function App() {
           />
         )}
 
-        {paso !== 'email' && (
-          <div className="animate-in slide-in-from-bottom-4 relative">
-            <input 
-              type={verPassword ? "text" : "password"} // 🔥 TIPO DINÁMICO PARA EL OJITO
-              placeholder="Contraseña" 
-              className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white transition-all pr-12"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)} 
-              disabled={cargando}
-              required
-            />
-            
-            {/* 🔥 BOTÓN DEL OJITO 🔥 */}
-            <button
-              type="button"
-              onClick={() => setVerPassword(!verPassword)}
-              className="absolute right-4 top-[18px] text-slate-400 hover:text-white transition-colors"
-            >
-              {verPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
+        <div className="relative animate-in slide-in-from-top-2">
+          <input 
+            type={verPassword ? "text" : "password"} 
+            placeholder="Contraseña" 
+            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 font-bold text-sm text-white transition-all pr-12"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)} 
+            disabled={cargando}
+            required
+          />
+          
+          <button
+            type="button"
+            onClick={() => setVerPassword(!verPassword)}
+            className="absolute right-4 top-[18px] text-slate-400 hover:text-white transition-colors"
+          >
+            {verPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
 
-            {paso === 'registro' && (
-              <div className="text-left mt-3 space-y-2 bg-slate-900/50 p-4 rounded-xl border border-white/5">
-                <p className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-colors ${tieneSeis ? 'text-green-400' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${tieneSeis ? 'bg-green-500/20' : 'bg-slate-800'}`}>
-                    {tieneSeis && <Check size={10} />}
-                  </div>
-                  Mínimo 6 caracteres
-                </p>
-                <p className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-colors ${tieneMayus ? 'text-green-400' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${tieneMayus ? 'bg-green-500/20' : 'bg-slate-800'}`}>
-                    {tieneMayus && <Check size={10} />}
-                  </div>
-                  Al menos una Mayúscula
-                </p>
-                <p className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${tieneNum ? 'text-green-400' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${tieneNum ? 'bg-green-500/20' : 'bg-slate-800'}`}>
-                    {tieneNum && <Check size={10} />}
-                  </div>
-                  Al menos un Número
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+          {esRegistro && (
+            <div className="text-left mt-3 space-y-2 bg-slate-900/50 p-4 rounded-xl border border-white/5">
+              <p className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-colors ${tieneSeis ? 'text-green-400' : 'text-slate-500'}`}>
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${tieneSeis ? 'bg-green-500/20' : 'bg-slate-800'}`}>
+                  {tieneSeis && <Check size={10} />}
+                </div>
+                Mínimo 6 caracteres
+              </p>
+              <p className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-colors ${tieneMayus ? 'text-green-400' : 'text-slate-500'}`}>
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${tieneMayus ? 'bg-green-500/20' : 'bg-slate-800'}`}>
+                  {tieneMayus && <Check size={10} />}
+                </div>
+                Al menos una Mayúscula
+              </p>
+              <p className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${tieneNum ? 'text-green-400' : 'text-slate-500'}`}>
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${tieneNum ? 'bg-green-500/20' : 'bg-slate-800'}`}>
+                  {tieneNum && <Check size={10} />}
+                </div>
+                Al menos un Número
+              </p>
+            </div>
+          )}
+        </div>
         
         <button 
-          disabled={cargando || (paso === 'registro' && !passwordValida)}
+          disabled={cargando || (esRegistro && !passwordValida)}
           className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg disabled:opacity-50 mt-4"
         >
-          {cargando ? "PROCESANDO..." : (paso === 'email' ? "Continuar" : (paso === 'registro' ? "Crear Cuenta" : "Entrar a la App"))}
+          {cargando ? "PROCESANDO..." : (esRegistro ? "Crear Cuenta" : "Entrar a la App")}
         </button>
       </form>
+
+      <button 
+        onClick={() => {
+          setEsRegistro(!esRegistro);
+          setPassword(''); // Limpiamos contraseña al cambiar de modo
+        }} 
+        className="mt-6 text-slate-400 text-xs font-bold underline hover:text-white transition-colors"
+      >
+        {esRegistro ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí"}
+      </button>
     </div>
   );
 }
