@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 // 🔥 IMPORTAMOS STORAGE DE TU CONFIGURACIÓN
 import { db, storage } from '../../firebaseConfig';
-import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy } from 'firebase/firestore';
-// 🔥 IMPORTAMOS LAS FUNCIONES DE GOOGLE CLOUD STORAGE
+// 🔥 SE AGREGÓ addDoc A LA IMPORTACIÓN
+import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth } from 'firebase/auth';
@@ -94,24 +94,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
-  // 🔥 LÓGICA PROFESIONAL PARA SUBIR FOTO DE PERFIL A STORAGE 🔥
   const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
     setCargando(true);
     const userId = auth.currentUser?.uid || userData.id;
 
     try {
-      // 1. Creamos la ruta en Storage
       const nombreArchivo = `perfiles/${userId}_${Date.now()}.jpg`;
       const storageRef = ref(storage, nombreArchivo);
 
-      // 2. Subimos el archivo a la nube
       await uploadString(storageRef, fotoTemporal, 'data_url');
-
-      // 3. Obtenemos el link cortito de descarga
       const urlDescarga = await getDownloadURL(storageRef);
 
-      // 4. Guardamos el link en Firestore y actualizamos la app
       await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: urlDescarga });
       setUserData({ ...userData, fotoPerfil: urlDescarga });
 
@@ -161,7 +155,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
   
-  // 🔥 LÓGICA PROFESIONAL PARA SUBIR DOCUMENTOS Y AUTOS A STORAGE 🔥
   const subirDocumentoFinal = async () => {
     if (!fotoDocTemporal) return;
     setCargando(true);
@@ -177,17 +170,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       };
       const { f, v } = fieldMap[pasoDocumento.tipo];
 
-      // 1. Creamos la ruta organizada en Storage (Carpeta documentos/UsuarioID/foto.jpg)
       const nombreArchivo = `documentos/${userId}/${f}_${Date.now()}.jpg`;
       const storageRef = ref(storage, nombreArchivo);
 
-      // 2. Subimos a la nube
       await uploadString(storageRef, fotoDocTemporal, 'data_url');
-
-      // 3. Obtenemos el Link
       const urlDescarga = await getDownloadURL(storageRef);
 
-      // 4. Guardamos solo el Link en Firestore
       await updateDoc(userRef, { [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
       setUserData({ ...userData, [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
 
@@ -204,7 +192,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
   
-  // --- CARGA DE DATOS ADMIN Y FINANZAS ---
   const cargarDatosAdmin = async () => {
     setCargando(true);
     try {
@@ -266,13 +253,23 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
 
-  // --- LÓGICA DE PAGOS ---
+  // 🔥 LÓGICA DE PAGOS ACTUALIZADA CON HISTORIAL AUTOMÁTICO 🔥
   const aprobarPago = async (pago: any) => {
     if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+      
+      // Crear movimiento de ingreso en la Wallet del usuario
+      await addDoc(collection(db, "Transacciones"), {
+        uid: pago.uid,
+        tipo: "ingreso",
+        monto: pago.monto,
+        descripcion: "Recarga de saldo aprobada",
+        fecha: new Date().toISOString()
+      });
+
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
       setToast({ texto: `¡$${pago.monto} acreditados!`, tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
@@ -287,6 +284,19 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     setCargando(true);
     try {
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+      
+      // Quitar el saldo de "retenido" (el saldo disponible ya se había restado en la app)
+      await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
+
+      // Crear movimiento de gasto en la Wallet del usuario
+      await addDoc(collection(db, "Transacciones"), {
+        uid: pago.uid,
+        tipo: "gasto",
+        monto: pago.monto,
+        descripcion: "Retiro de dinero procesado",
+        fecha: new Date().toISOString()
+      });
+
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
       setToast({ texto: "Retiro marcado como pagado", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
@@ -301,9 +311,24 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     setCargando(true);
     try {
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
+      
       if (pago.tipo === 'retiro') {
-        await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
+        // Devolver el saldo disponible y quitar la retención
+        await updateDoc(doc(db, "usuarios", pago.uid), { 
+          saldo: increment(pago.monto),
+          saldoRetenido: increment(-pago.monto)
+        });
+
+        // Crear movimiento de devolución en la Wallet del usuario
+        await addDoc(collection(db, "Transacciones"), {
+          uid: pago.uid,
+          tipo: "ingreso",
+          monto: pago.monto,
+          descripcion: "Devolución por retiro rechazado",
+          fecha: new Date().toISOString()
+        });
       }
+
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
       setToast({ texto: "Movimiento rechazado", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
