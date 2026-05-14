@@ -65,7 +65,6 @@ const MapaView = ({
           }
         });
 
-        // 🔥 ERROR CORREGIDO: SE QUITÓ EL "evt: any" 🔥
         window.google.maps.event.addListener(markers.current.interactivo, 'dragend', (evt) => {
           if (onMarkerDragEnd) {
             onMarkerDragEnd({ lat: evt.latLng.lat(), lon: evt.latLng.lng() });
@@ -99,7 +98,7 @@ const MapaView = ({
       });
     }
 
-    // 📍 DIBUJAR DESTINO (Círculo Rojo)
+    // 📍 DIBUJAR DESTINO (Círculo Verde)
     if (destino) {
       markers.current.destino = new window.google.maps.Marker({
         position: { lat: destino.lat, lng: destino.lon },
@@ -108,7 +107,7 @@ const MapaView = ({
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 8,
-          fillColor: "#ef4444", 
+          fillColor: "#22c55e", // 🔥 AHORA ES VERDE PARA HACER MATCH CON EL FORMULARIO
           fillOpacity: 1,
           strokeWeight: 3,
           strokeColor: "white",
