@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { MapPin } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { MapPin, Navigation } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation'; // 🔥 RECUERDA: Ten instalado @capacitor/geolocation
 
 const MapaView = ({ 
   origen, 
@@ -14,6 +15,7 @@ const MapaView = ({
   const googleMap = useRef(null);
   const markers = useRef({ chofer: null, pasajeros: [], origen: null, destino: null });
   const directionsRenderer = useRef(null);
+  const [localizando, setLocalizando] = useState(false);
 
   // 1. INICIALIZAR MAPA
   useEffect(() => {
@@ -23,7 +25,7 @@ const MapaView = ({
 
     googleMap.current = new window.google.maps.Map(mapRef.current, {
       center: centroInicial,
-      zoom: 17, // Un poco más de zoom para precisión al mover
+      zoom: 17,
       disableDefaultUI: true,
       zoomControl: false,
       styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
@@ -35,7 +37,7 @@ const MapaView = ({
       polylineOptions: { strokeColor: "#000000", strokeWeight: 5 }
     });
 
-    // 🔥 LOGICA DE PUNTERO FIJO: Escuchamos cuando el mapa deja de moverse
+    // Escuchamos cuando el mapa se detiene para avisar la ubicación al Wizard
     if (interactivo) {
       googleMap.current.addListener('idle', () => {
         const centro = googleMap.current.getCenter();
@@ -46,7 +48,32 @@ const MapaView = ({
     }
   }, [interactivo]);
 
-  // 2. ACTUALIZACIÓN DE MARCADORES (MODO NORMAL)
+  // 2. FUNCIÓN PARA DETECTAR UBICACIÓN ACTUAL GPS
+  const obtenerUbicacionActual = async () => {
+    setLocalizando(true);
+    try {
+      const coordinates = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true
+      });
+      
+      const miPos = {
+        lat: coordinates.coords.latitude,
+        lng: coordinates.coords.longitude
+      };
+
+      if (googleMap.current) {
+        googleMap.current.panTo(miPos); // Desliza el mapa suavemente
+        googleMap.current.setZoom(18); // Zoom de precisión
+      }
+    } catch (error) {
+      console.error("Error obteniendo ubicación:", error);
+      alert("Asegúrate de tener el GPS encendido y dar permisos a la app.");
+    } finally {
+      setLocalizando(false);
+    }
+  };
+
+  // 3. ACTUALIZACIÓN DE MARCADORES (MODO NORMAL)
   useEffect(() => {
     if (!googleMap.current || !window.google || interactivo) return;
 
@@ -100,17 +127,28 @@ const MapaView = ({
       {/* EL MAPA */}
       <div ref={mapRef} className="absolute inset-0" style={{ borderRadius: 'inherit' }} />
 
-      {/* 🔥 EL PUNTERO FIJO (Solo se ve en modo interactivo) */}
+      {/* PUNTERO FIJO CENTRAL */}
       {interactivo && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="flex flex-col items-center mb-[35px]"> {/* Ajuste para que la punta del pin sea el centro */}
+          <div className="flex flex-col items-center mb-[35px]">
             <div className="bg-slate-900 text-white text-[8px] font-black px-2 py-1 rounded-md mb-1 uppercase tracking-tighter shadow-xl">
-              Soltar aquí
+              Fijar punto aquí
             </div>
             <MapPin size={35} className={origen ? "text-blue-600" : "text-green-600"} fill="currentColor" stroke="white" strokeWidth={2} />
-            <div className="w-1 h-1 bg-black/20 rounded-full blur-[1px] mt-1" />
+            <div className="w-1.5 h-1.5 bg-black/30 rounded-full blur-[1px] mt-1" />
           </div>
         </div>
+      )}
+
+      {/* 🔥 BOTÓN FLOTANTE GPS (Solo en interactivo) 🔥 */}
+      {interactivo && (
+        <button 
+          onClick={obtenerUbicacionActual}
+          disabled={localizando}
+          className={`absolute bottom-6 right-6 w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl transition-all active:scale-90 ${localizando ? 'bg-slate-100 text-slate-300' : 'bg-white text-blue-600'}`}
+        >
+          <Navigation size={22} className={localizando ? 'animate-pulse' : ''} fill={localizando ? 'none' : 'currentColor'} />
+        </button>
       )}
     </div>
   );
