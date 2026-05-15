@@ -665,13 +665,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} className={cargando ? 'animate-spin' : ''}/></button>
             </div>
 
-            <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
-              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Cuentas</button>
+                        <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
+              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Pendientes</button>
+              
+              {/* 🔥 AQUÍ ESTÁ LA PESTAÑA QUE FALTABA 🔥 */}
+              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Usuarios</button>
+              
               <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
               <button onClick={() => setSubPestañaAdmin('soporte')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'soporte' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-600'}`}>Soporte ({chatsSoporteAdmin.length})</button>
               <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
               <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
             </div>
+            
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
               {cargando ? (
@@ -884,9 +889,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                     )
                   )}
 
-                  {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
+          {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
                     usuariosAdmin
-                      .filter(u => subPestañaAdmin === 'pendientes' ? ((u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada)) : u.kycVerificado)
+                      .filter(u => {
+                        // Detectamos si tiene documentos pendientes de revisión
+                        const esPendiente = (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada);
+                        // Si estamos en 'pendientes', mostramos los que necesitan revisión.
+                        // Si estamos en 'Usuarios' (aprobados), mostramos a TODOS los demás (para poder suspenderlos).
+                        return subPestañaAdmin === 'pendientes' ? esPendiente : !esPendiente;
+                      })
                       .map(u => {
                         const estaExpandido = usuarioExpandidoAdmin === u.id;
                         const estaSuspendido = u.cuentaSuspendida === true;
