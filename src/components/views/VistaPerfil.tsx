@@ -944,21 +944,61 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
             <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">Editar {tipoEdicion?.label}</h4>
             
-            {/* 🔥 MENSAJE DE ALERTA SOLO PARA LA CÉDULA 🔥 */}
+             {/* 🔥 MENSAJE DE ALERTA SOLO PARA LA CÉDULA 🔥 */}
             {tipoEdicion?.id === 'cedulaNumero' && (
                <div className="bg-orange-50 border border-orange-200 p-3 rounded-2xl mb-5 flex gap-3 items-start">
                  <AlertTriangle size={18} className="text-orange-500 shrink-0 mt-0.5" />
                  <p className="text-[9px] font-bold text-orange-700 uppercase tracking-wider leading-relaxed">
-                   Verifica bien los números. Por razones de seguridad, una vez confirmada, <span className="font-black">no podrás cambiarla.</span>
+                   Verifica bien los números. Por razones de seguridad, una vez verificada, <span className="font-black">no podrás cambiarla.</span>
                  </p>
                </div>
             )}
+            
             {tipoEdicion?.id === 'bio' ? (
               <textarea value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-6 rounded-3xl font-medium text-sm mb-8 outline-none border-2 border-slate-100 min-h-[150px] resize-none text-slate-600 leading-relaxed" placeholder="Ej: Hola, soy Luis..." autoFocus />
             ) : (
               <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg mb-8 outline-none border-2 border-slate-100 uppercase text-center" autoFocus />
             )}
             <button disabled={cargando} onClick={guardarCambios} className="w-full bg-blue-600 text-white p-5 rounded-[25px] disabled:opacity-50 font-black uppercase text-xs shadow-lg active:scale-95 transition-transform">Guardar Cambios</button>
+          </div>
+        </div>
+      )}
+        {confirmacionCedula && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => !cargando && setConfirmacionCedula(false)} />
+          <div className="relative bg-white w-full max-w-sm rounded-[40px] p-8 text-center animate-in zoom-in-95 shadow-2xl">
+            
+            <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-orange-100">
+              <AlertTriangle size={30} />
+            </div>
+            
+            <h3 className="text-lg font-black text-slate-800 uppercase italic tracking-tight mb-2">
+              Confirmación de Cédula
+            </h3>
+            
+            <p className="text-xs font-bold text-slate-500 mb-6 leading-relaxed">
+              ¿Estás <span className="text-orange-500 font-black">100% seguro</span> de que tu cédula es <span className="text-slate-800 font-black text-sm">{nuevoValor}</span>?
+              <br/><br/>
+              Verifica que no tenga errores, ya que por razones de seguridad, una vez verificada, no podrás modificarla más adelante.
+            </p>
+            
+            <div className="flex gap-3">
+              <button 
+                disabled={cargando}
+                onClick={() => setConfirmacionCedula(false)} 
+                className="flex-1 bg-slate-100 text-slate-500 font-black uppercase text-[10px] py-4 rounded-2xl active:scale-95 transition-all"
+              >
+                Corregir
+              </button>
+              <button 
+                disabled={cargando}
+                onClick={() => guardarCambios(true)} 
+                className="flex-[1.5] bg-orange-500 text-white font-black uppercase text-[10px] py-4 rounded-2xl shadow-lg shadow-orange-500/40 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                {cargando ? 'Guardando...' : 'Sí, Confirmar'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
