@@ -9,7 +9,6 @@ const IconoWhatsApp = ({ size = 20, className = "" }) => (
   </svg>
 );
 
-// 👇 SE AGREGÓ LA PROPIEDAD onVerViaje 👇
 export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => {
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMsg, setNuevoMsg] = useState("");
@@ -17,13 +16,18 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const scrollRef = useRef(null);
 
   const [toast, setToast] = useState(null); 
-
   const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
   const [motivoReporte, setMotivoReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
+  // 🔥 LÓGICA INTELIGENTE: Detectamos si TÚ eres el admin leyendo este chat
+  const ADMIN_EMAIL = "damelacola2026@gmail.com";
+  const esAdmin = userData?.email?.toLowerCase().trim() === ADMIN_EMAIL || userData?.correo?.toLowerCase().trim() === ADMIN_EMAIL;
+
   const isSoporte = chat.esSoporte;
-  const chatIdReal = isSoporte ? `soporte_${userData.id}` : chat.id;
+  
+  // Si el usuario abre soporte, usa su ID. Si el admin abre soporte, usa el ID del pasajero que está en el chat.
+  const chatIdReal = isSoporte ? (esAdmin ? chat.id : `soporte_${userData.id}`) : chat.id;
 
   const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
   const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
@@ -32,9 +36,10 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const soyConductor = !isSoporte && chat.uidConductor === userData.id;
   const idOtroUsuario = soyConductor ? chat.uidPasajero : chat.uidConductor;
   
-  const sugerencias = isSoporte ? sugerenciasSoporte : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
-  const nombreContacto = isSoporte ? "Soporte Dame la cola" : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
+  // Si es soporte y eres Admin, ves el nombre del usuario. Si eres usuario, ves "Soporte".
+  const nombreContacto = isSoporte ? (esAdmin ? (chat.nombrePasajero || "Usuario") : "Soporte Oficial") : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
   const fotoContacto = isSoporte ? null : (soyConductor ? chat.fotoPasajero : chat.fotoConductor);
+  const sugerencias = isSoporte ? (esAdmin ? [] : sugerenciasSoporte) : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
 
   const mensajeBienvenidaSoporte = {
     id: 'msg-bienvenida-bot',
@@ -79,54 +84,59 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   }, [chatIdReal]);
 
   const enviar = async (e, textoSugerido = null) => {
-  if (e) e.preventDefault();
-  
-  const texto = textoSugerido || nuevoMsg.trim();
-  if (!texto) return;
-
-  try {
-    setNuevoMsg(""); 
+    if (e) e.preventDefault();
     
-    // 1. Guardamos el mensaje en la subcolección para que aparezca en pantalla
-    await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-      texto: texto,
-      uidRemitente: userData.id,
-      timestamp: serverTimestamp()
-    });
+    const texto = textoSugerido || nuevoMsg.trim();
+    if (!texto) return;
 
-    // 2. Actualizamos el documento principal del Chat (Inbox)
-    await setDoc(doc(db, "Chats", chatIdReal), {
-      ultimoMensaje: texto,
-      ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      mensajesSinLeer: 1, 
-      remitenteUltimoMensaje: userData.id,
-      ...(isSoporte && {
-          esSoporte: true,
-          uidPasajero: userData.id,
-          nombrePasajero: userData.nombre,
-          ruta: "Soporte Técnico"
-      })
-    }, { merge: true });
-
-    // 3. 🔥 ¡DISPARADOR DE PUSH Y CAMPAÑITA!
-    // Si no es soporte, notificamos al otro usuario
-    if (!isSoporte) {
-      await addDoc(collection(db, "Notificaciones"), {
-        idDestino: idOtroUsuario,        // El ID que ya calculaste arriba
-        idEmisor: userData.id,           // Tu ID
-        titulo: `Mensaje de ${userData.nombre}`,
-        mensaje: texto,                  // El contenido del mensaje
-        tipo: "chat",                    // Para que la app sepa qué abrir
-        idReferencia: chat.id,           // El ID del chat
-        leido: false,
-        fecha: serverTimestamp()
+    try {
+      setNuevoMsg(""); 
+      
+      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: texto,
+        uidRemitente: userData.id,
+        timestamp: serverTimestamp()
       });
-    }
 
-  } catch (error) {
-    console.error("Error al enviar:", error);
-  }
-};
+      await setDoc(doc(db, "Chats", chatIdReal), {
+        ultimoMensaje: texto,
+        ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        mensajesSinLeer: 1, 
+        remitenteUltimoMensaje: userData.id,
+        // 🔥 Si es el usuario escribiendo a soporte, guardamos sus datos para que tú lo identifiques
+        ...(isSoporte && !esAdmin ? {
+            esSoporte: true,
+            uidPasajero: userData.id,
+            nombrePasajero: userData.nombre,
+            ruta: "Soporte Técnico"
+        } : {})
+      }, { merge: true });
+
+      // 🔥 LÓGICA DE NOTIFICACIONES CORREGIDA 🔥
+      let idDestinoNotif = null;
+      if (!isSoporte) {
+        idDestinoNotif = idOtroUsuario; // Chat normal
+      } else if (isSoporte && esAdmin) {
+        idDestinoNotif = chat.uidPasajero; // Tú (Admin) le respondes al usuario
+      }
+
+      if (idDestinoNotif) {
+        await addDoc(collection(db, "Notificaciones"), {
+          idDestino: idDestinoNotif,
+          idEmisor: userData.id,
+          titulo: isSoporte ? "Soporte Dame la cola" : `Mensaje de ${userData.nombre}`,
+          mensaje: texto,
+          tipo: "chat",
+          idReferencia: chatIdReal,
+          leido: false,
+          fecha: serverTimestamp()
+        });
+      }
+
+    } catch (error) {
+      console.error("Error al enviar:", error);
+    }
+  };
 
   const abrirWhatsApp = () => {
     if (!pasajeroConfirmado) {
@@ -184,7 +194,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     }
   };
   
-  const mensajesAMostrar = isSoporte ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
+  const mensajesAMostrar = isSoporte && !esAdmin ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
 
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
@@ -203,15 +213,12 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             {nombreContacto} {isSoporte ? <ShieldCheck size={14} className="text-blue-400" /> : <ShieldCheck size={14} className="text-green-500" />}
           </h3>
           <p className={`text-[10px] font-bold truncate uppercase tracking-widest ${isSoporte ? 'text-blue-300' : 'text-slate-400'}`}>
-            {isSoporte ? 'Atención 24/7' : chat.ruta}
+            {isSoporte ? (esAdmin ? 'Usuario pidiendo ayuda' : 'Atención 24/7') : chat.ruta}
           </p>
         </div>
 
-        {/* BOTONES DE ACCIÓN */}
         {!isSoporte && (
           <div className="flex items-center gap-1 pr-1">
-            
-            {/* 👇 NUEVO BOTÓN: PUENTE HACIA EL VIAJE 👇 */}
             {onVerViaje && (
               <button 
                 onClick={onVerViaje}
@@ -221,7 +228,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
                 <span className="text-[9px] font-black uppercase tracking-widest">Viaje</span>
               </button>
             )}
-
             <button 
               onClick={abrirWhatsApp}
               type="button"
@@ -243,7 +249,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         <div className="flex justify-center mb-6 mt-2">
           <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-2xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
-            <Info size={12} /> {isSoporte ? 'Conexión Segura con Soporte' : 'Inicio del chat seguro'}
+            <Info size={12} /> {isSoporte ? (esAdmin ? 'Respondiendo como Soporte' : 'Conexión Segura con Soporte') : 'Inicio del chat seguro'}
           </div>
         </div>
 
@@ -270,7 +276,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
       {/* ZONA INFERIOR */}
       <div className="bg-white border-t border-slate-100 pb-safe">
-        {mensajes.length < (isSoporte ? 5 : 4) && (
+        {mensajes.length < (isSoporte ? 5 : 4) && sugerencias.length > 0 && (
           <div className="flex overflow-x-auto gap-2 px-4 py-3 no-scrollbar border-b border-slate-50">
             {sugerencias.map((sug, idx) => (
               <button 
@@ -303,15 +309,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </form>
       </div>
 
-      {/* TOAST FLOTANTE LÍNEAL Y ESTÉTICO */}
+      {/* TOAST FLOTANTE */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
-            {toast.tipo === 'exito' ? (
-              <ShieldCheck size={18} className="text-green-400 shrink-0" />
-            ) : (
-              <AlertTriangle size={18} className="shrink-0" />
-            )}
+            {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="truncate whitespace-nowrap">{toast.texto}</span>
           </div>
         </div>
@@ -321,29 +323,20 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       {mostrarModalReporte && (
         <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[30px] p-6 w-full max-w-sm shadow-2xl relative">
-            <button 
-              onClick={() => setMostrarModalReporte(false)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full"
-            >
-              <X size={20} />
-            </button>
-            
+            <button onClick={() => setMostrarModalReporte(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full"><X size={20} /></button>
             <div className="flex items-center gap-3 mb-4 text-red-500">
               <AlertTriangle size={24} strokeWidth={2.5} />
               <h3 className="font-black italic uppercase tracking-tighter">Reportar Usuario</h3>
             </div>
-            
             <p className="text-xs font-medium text-slate-500 mb-4">
               ¿Por qué estás reportando a <span className="font-bold text-slate-800">{nombreContacto}</span>? Tu reporte es anónimo y nos ayuda a mantener la comunidad segura.
             </p>
-
             <textarea
               value={motivoReporte}
               onChange={(e) => setMotivoReporte(e.target.value)}
               placeholder="Explica brevemente lo sucedido..."
               className="w-full bg-slate-50 border border-slate-200 rounded-[20px] p-4 text-sm font-medium outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all resize-none h-28 mb-4"
             ></textarea>
-
             <button
               onClick={manejarReporte}
               disabled={!motivoReporte.trim() || enviandoReporte}
@@ -358,4 +351,3 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     </div>
   );
 };
-                 
