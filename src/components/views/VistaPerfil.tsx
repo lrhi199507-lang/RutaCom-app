@@ -94,7 +94,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
-  const subirFotoConfirmada = async () => {
+    const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
     setCargando(true);
     const userId = auth.currentUser?.uid || userData.id;
@@ -106,21 +106,35 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await uploadString(storageRef, fotoTemporal, 'data_url');
       const urlDescarga = await getDownloadURL(storageRef);
 
+      // 1. Actualiza el perfil del usuario
       await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: urlDescarga });
+
+      // 🔥 2. MAGIA: Buscar todos los viajes de este conductor y actualizarles la foto 🔥
+      const qViajes = query(collection(db, "Viajes"), where("uidConductor", "==", userId));
+      const snapViajes = await getDocs(qViajes);
+      
+      // Creamos un arreglo de actualizaciones y las ejecutamos todas al mismo tiempo
+      const promesasViajes = snapViajes.docs.map(docViaje => 
+        updateDoc(doc(db, "Viajes", docViaje.id), { fotoPerfil: urlDescarga })
+      );
+      await Promise.all(promesasViajes); // Esperamos a que todos los viajes se actualicen
+
+      // 3. Actualizamos el estado visual en la app
       setUserData({ ...userData, fotoPerfil: urlDescarga });
 
       setPasoFoto(false); 
       setFotoTemporal(null);
-      setToast({ texto: "Foto de perfil actualizada", tipo: "exito" });
-      setTimeout(() => setToast(null), 3000);
+      setToast({ texto: "Foto actualizada en tu perfil y en tus viajes activos", tipo: "exito" });
+      setTimeout(() => setToast(null), 4000);
     } catch (e) { 
       console.error("Error subiendo foto a Storage:", e); 
-      setToast({ texto: "Error al subir foto", tipo: "error" });
+      setToast({ texto: "Error al actualizar la foto", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally {
       setCargando(false);
     }
   };
+  
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
     try {
