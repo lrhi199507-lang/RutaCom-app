@@ -1,46 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, orderBy } from 'firebase/firestore';
-import { Bell, CheckCircle, Info, Car, X, Trash2, CheckCheck } from 'lucide-react';
+import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { Bell, CheckCircle, Info, Car, X, Trash2, CheckCheck, MessageCircle } from 'lucide-react'; // 🔥 Agregamos MessageCircle
 
 export const CampanaNotificaciones = ({ userData }) => {
-  const [notificaciones, setNotificaciones] = useState<any[]>([]);
+  const [notificaciones, setNotificaciones] = useState([]);
   const [abierto, setAbierto] = useState(false);
 
-    useEffect(() => {
-    // BLINDAJE TOTAL: Intentamos todas las formas posibles de capturar tu ID
+  useEffect(() => {
     const miId = userData?.id || userData?.uid || userData?.idUsuario;
     
-    if (!miId) {
-      console.log("Campana: Esperando ID de usuario...");
-      return;
-    }
-    
-    console.log("Campana escuchando para el ID:", miId);
+    if (!miId) return;
 
-        const q = query(
+    const q = query(
       collection(db, "Notificaciones"), 
-      where("idDestino", "==", String(miId)) // Forzamos que sea String
+      where("idDestino", "==", String(miId)) 
     );
       
-    // ... resto del onSnapshot igual
     const unsub = onSnapshot(q, (snap) => {
-      let lista: any[] = [];
+      let lista = [];
       snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
-      // Ordenamos por fecha (las más nuevas primero)
-      lista.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      
+      // 🔥 CORRECCIÓN: Manejo seguro de fechas de Firebase
+      lista.sort((a, b) => {
+        const fechaA = a.fecha?.toDate ? a.fecha.toDate().getTime() : new Date(a.fecha || 0).getTime();
+        const fechaB = b.fecha?.toDate ? b.fecha.toDate().getTime() : new Date(b.fecha || 0).getTime();
+        return fechaB - fechaA;
+      });
+      
       setNotificaciones(lista);
     });
 
     return () => unsub();
   }, [userData]);
   
-
-  const noLeidas = notificaciones.filter(n => !n.leida).length;
+  // 🔥 CORRECCIÓN: Cambiamos 'leida' por 'leido' para que haga match con el envío
+  const noLeidas = notificaciones.filter(n => !n.leido).length;
 
   const marcarComoLeida = async (id) => {
     try {
-      await updateDoc(doc(db, "Notificaciones", id), { leida: true });
+      await updateDoc(doc(db, "Notificaciones", id), { leido: true });
     } catch (error) { console.error("Error al marcar leída", error); }
   };
 
@@ -52,7 +51,7 @@ export const CampanaNotificaciones = ({ userData }) => {
 
   const marcarTodasLeidas = async () => {
     notificaciones.forEach(async (n) => {
-      if (!n.leida) await updateDoc(doc(db, "Notificaciones", n.id), { leida: true });
+      if (!n.leido) await updateDoc(doc(db, "Notificaciones", n.id), { leido: true });
     });
   };
 
@@ -61,8 +60,16 @@ export const CampanaNotificaciones = ({ userData }) => {
       case 'exito': return <CheckCircle size={16} className="text-green-500" />;
       case 'viaje': return <Car size={16} className="text-blue-500" />;
       case 'alerta': return <Info size={16} className="text-amber-500" />;
+      case 'chat': return <MessageCircle size={16} className="text-blue-600" />; // 🔥 NUEVO ÍCONO PARA SOPORTE/CHATS
       default: return <Bell size={16} className="text-slate-500" />;
     }
+  };
+
+  // Función para mostrar la fecha de forma segura
+  const formatearFecha = (fechaFirebase) => {
+    if (!fechaFirebase) return '';
+    const fechaReal = fechaFirebase.toDate ? fechaFirebase.toDate() : new Date(fechaFirebase);
+    return fechaReal.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' });
   };
 
   return (
@@ -83,7 +90,6 @@ export const CampanaNotificaciones = ({ userData }) => {
       {/* MODAL / DROPDOWN DE NOTIFICACIONES */}
       {abierto && (
         <div className="fixed inset-0 z-[400] flex justify-end bg-slate-900/20 backdrop-blur-sm sm:relative sm:inset-auto sm:bg-transparent sm:backdrop-blur-none">
-          {/* Fondo clickeable para cerrar en móvil */}
           <div className="absolute inset-0 sm:hidden" onClick={() => setAbierto(false)}></div>
           
           <div className="absolute top-16 right-4 w-[90vw] max-w-[350px] bg-white rounded-[30px] shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-4 duration-200 sm:top-12 sm:right-0">
@@ -103,13 +109,13 @@ export const CampanaNotificaciones = ({ userData }) => {
                 </div>
               ) : (
                 notificaciones.map(notif => (
-                  <div key={notif.id} className={`p-4 rounded-[20px] flex gap-3 relative transition-colors ${!notif.leida ? 'bg-white border-l-4 border-blue-500 shadow-sm' : 'bg-slate-100 opacity-70'}`} onClick={() => !notif.leida && marcarComoLeida(notif.id)}>
+                  <div key={notif.id} className={`p-4 rounded-[20px] flex gap-3 relative transition-colors ${!notif.leido ? 'bg-white border-l-4 border-blue-500 shadow-sm' : 'bg-slate-100 opacity-70'}`} onClick={() => !notif.leido && marcarComoLeida(notif.id)}>
                     <div className="shrink-0 mt-0.5">{obtenerIcono(notif.tipo)}</div>
                     <div className="flex-1 min-w-0 pr-6">
-                      <p className={`text-[10px] uppercase tracking-wider truncate ${!notif.leida ? 'font-black text-slate-800' : 'font-bold text-slate-500'}`}>{notif.titulo}</p>
+                      <p className={`text-[10px] uppercase tracking-wider truncate ${!notif.leido ? 'font-black text-slate-800' : 'font-bold text-slate-500'}`}>{notif.titulo}</p>
                       <p className="text-xs font-medium text-slate-600 mt-0.5 leading-snug">{notif.mensaje}</p>
                       <p className="text-[8px] font-black text-slate-400 mt-2 uppercase">
-                        {new Date(notif.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' })}
+                        {formatearFecha(notif.fecha)}
                       </p>
                     </div>
                     {/* Botón de eliminar */}
@@ -134,4 +140,3 @@ export const CampanaNotificaciones = ({ userData }) => {
     </div>
   );
 };
-                    
