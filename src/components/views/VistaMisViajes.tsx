@@ -4,11 +4,10 @@ import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import Toast from "../ui/Toast";
 import { 
   ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
-  X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star 
+  X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star, Navigation 
 } from 'lucide-react';
-import MapaView from '../Map/MapaView'; // <-- INYECTADO
+import MapaView from '../Map/MapaView'; 
 
-// --- FUNCIONES FORMATEADORAS VISUALES ---
 const formatearHora12h = (hora24) => {
   if (!hora24) return "";
   const [horas, minutos] = hora24.split(':');
@@ -30,7 +29,6 @@ const formatearFechaCorta = (fechaString) => {
   }).replace('.', ''); 
 };
 
-// COMPONENTE: Modal para Confirmar Eliminación (Se mantiene igual)
 const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
@@ -53,7 +51,6 @@ const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
-// COMPONENTE: Modal para Editar Viaje (Se mantiene igual)
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   const fechaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
   const horaActual = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
@@ -124,17 +121,24 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   );
 };
 
-// COMPONENTE: Tarjeta de Viaje - Chofer
-const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabel }) => {
+const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
   const solicitudes = viaje.reservasPendientes?.length || 0;
+  const estadoActual = viaje.estado || 'disponible';
+  
+  const estaEnCurso = estadoActual === 'en_curso' || estadoActual === 'buscando';
+  const esFinalizado = estadoActual === 'finalizado';
+
+  // 🔥 LÓGICA DE COLOR NARANJA: 
+  // Si hay solicitudes pendientes O el viaje está en curso, mantenlo naranja.
+  const botonNaranja = !esFinalizado && (solicitudes > 0 || estaEnCurso);
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estadoLabel === 'EN CURSO' ? 'bg-green-50 border-green-200 text-green-600 animate-pulse' : estadoLabel === 'FINALIZADO' ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
-          {estadoLabel}
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : 'DISPONIBLE'}
       </div>
 
       {esRetorno && (
@@ -144,7 +148,6 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
         </div>
       )}
 
-      {/* Mini Mapa Inyectado */}
       {(viaje.coordsOrigen || viaje.coordsDestino) && (
         <div className="h-32 rounded-2xl overflow-hidden mb-2 relative pointer-events-none">
            <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent z-10" />
@@ -158,7 +161,7 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
           <p className="text-4xl font-black italic text-blue-600 leading-none">${viaje.precio}</p>
         </div>
         
-        {estadoLabel !== 'FINALIZADO' && (
+        {!esFinalizado && (
           <div className="flex gap-2.5">
             <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500 hover:text-blue-600 transition-colors">
               <Edit2 size={16} />
@@ -197,19 +200,22 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
         </div>
       </div>
 
+      {/* 🔥 BOTÓN INTELIGENTE: NARANJA PERSISTENTE 🔥 */}
       <button 
         onClick={() => onClickGestionar(viaje)}
         className={`w-full mt-4 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
-          solicitudes > 0 && estadoLabel !== 'FINALIZADO' 
+          botonNaranja 
             ? 'bg-orange-500 shadow-orange-500/40 animate-pulse' 
-            : estadoLabel === 'FINALIZADO'
+            : esFinalizado
             ? 'bg-slate-800 shadow-slate-900/30'
             : 'bg-green-500 shadow-green-500/30'
         }`}
       >
-        {solicitudes > 0 && estadoLabel !== 'FINALIZADO' ? (
+        {solicitudes > 0 && !esFinalizado ? (
           <><Info size={18} /> ¡Tienes {solicitudes} solicitud{solicitudes > 1 ? 'es' : ''}!</>
-        ) : estadoLabel === 'FINALIZADO' ? (
+        ) : estaEnCurso ? (
+          <><Navigation size={16} /> VIAJE ACTIVO - GESTIONAR</>
+        ) : esFinalizado ? (
           <><Star size={16} className="fill-white" /> Ver Resumen del Viaje</>
         ) : (
           <><Settings size={16} /> Gestionar Viaje</>
@@ -219,7 +225,6 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar, estadoLabe
   );
 };
 
-// COMPONENTE: Tarjeta de Viaje - Pasajero
 const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
   const miReserva = viaje.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
   const esConfirmado = !!miReserva;
@@ -227,8 +232,6 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
 
   return (
     <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative overflow-hidden ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
-      
-      {/* Mini Mapa Inyectado como Fondo */}
       {(viaje.coordsOrigen || viaje.coordsDestino) && (
         <div className="absolute inset-0 pointer-events-none opacity-40 z-0">
            <MapaView origen={viaje.coordsOrigen} destino={viaje.coordsDestino} interactivo={false} />
@@ -300,7 +303,6 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
   );
 };
 
-// COMPONENTE PRINCIPAL
 export const VistaMisViajes = ({ 
   viajesChofer = [], 
   viajesPasajeroActivos = [], 
@@ -316,7 +318,6 @@ export const VistaMisViajes = ({
   const [viajeAEliminar, setViajeAEliminar] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-  // --- INYECTOR DE GOOGLE MAPS ---
   useEffect(() => {
     if (window.google && window.google.maps) return;
     const script = document.createElement('script');
@@ -329,7 +330,6 @@ export const VistaMisViajes = ({
   const handleEditSave = async (updatedViaje) => {
     try {
       const viajeRef = doc(db, "Viajes", updatedViaje.id);
-      
       const datosNuevos = {
         precio: Number(updatedViaje.precio),
         asientos: Number(updatedViaje.asientos),
@@ -343,14 +343,12 @@ export const VistaMisViajes = ({
 
       await updateDoc(viajeRef, datosNuevos);
 
-      if (onActualizarViajeFBD) {
-        await onActualizarViajeFBD({ ...updatedViaje, ...datosNuevos });
-      }
+      if (onActualizarViajeFBD) await onActualizarViajeFBD({ ...updatedViaje, ...datosNuevos });
       
       setEditingViaje(null);
       setToastData({ show: true, message: '¡Viaje actualizado en todo el sistema!' });
     } catch (error) {
-      console.error("Error al actualizar viaje:", error);
+      console.error("Error al actualizar:", error);
       setToastData({ show: true, message: 'Error de conexión al guardar' });
     }
   };
@@ -360,10 +358,7 @@ export const VistaMisViajes = ({
     const tieneSolicitudes = viaje.reservasPendientes?.length > 0;
 
     if (tienePasajeros || tieneSolicitudes) {
-      setToastData({ 
-        show: true, 
-        message: 'Hay reservas. Usa "Gestionar Viaje" para cancelar.' 
-      });
+      setToastData({ show: true, message: 'Hay reservas. Usa "Gestionar Viaje" para cancelar.' });
     } else {
       setViajeAEliminar(viaje.id);
     }
@@ -373,43 +368,48 @@ export const VistaMisViajes = ({
     if (viajeAEliminar) {
       try {
         await deleteDoc(doc(db, "Viajes", viajeAEliminar));
-        
-        if (onEliminarViajeFBD) {
-          await onEliminarViajeFBD(viajeAEliminar);
-        }
-        
+        if (onEliminarViajeFBD) await onEliminarViajeFBD(viajeAEliminar);
         setViajeAEliminar(null);
         setToastData({ show: true, message: 'Viaje eliminado correctamente' });
       } catch (error) {
-        console.error("Error de Firebase al borrar:", error);
         setViajeAEliminar(null);
         setToastData({ show: true, message: 'No tienes permisos para borrarlo' });
       }
     }
   };
 
-    return (
+  // 🔥 LÓGICA DE GRAVEDAD CERO: Ordenar los viajes para que los activos salgan de primeros 🔥
+  const ordenarViajesChofer = (viajes) => {
+    return [...viajes].sort((a, b) => {
+      const estadoA = a.estado || 'disponible';
+      const estadoB = b.estado || 'disponible';
+      
+      const enCursoA = estadoA === 'en_curso' || estadoA === 'buscando' ? 2 : 0;
+      const enCursoB = estadoB === 'en_curso' || estadoB === 'buscando' ? 2 : 0;
+      
+      const solA = a.reservasPendientes?.length > 0 ? 1 : 0;
+      const solB = b.reservasPendientes?.length > 0 ? 1 : 0;
+
+      // Prioridad 1: En curso/buscando
+      if (enCursoA !== enCursoB) return enCursoB - enCursoA;
+      // Prioridad 2: Solicitudes pendientes
+      if (solA !== solB) return solB - solA;
+      // Prioridad 3: Fecha (Los más nuevos primero)
+      return (b.timestamp || 0) - (a.timestamp || 0);
+    });
+  };
+
+  const viajesActivosChoferOrdenados = ordenarViajesChofer(viajesChofer.filter(v => v.estado !== 'finalizado'));
+
+  return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
-      <Toast 
-        show={toastData.show} 
-        message={toastData.message} 
-        onClose={() => setToastData({ show: false, message: '' })} 
-      />
+      <Toast show={toastData.show} message={toastData.message} onClose={() => setToastData({ show: false, message: '' })} />
       
       {editingViaje && (
-        <ModalEditarViaje 
-          viaje={editingViaje} 
-          isOpen={true} 
-          onClose={() => setEditingViaje(null)} 
-          onSave={handleEditSave}
-        />
+        <ModalEditarViaje viaje={editingViaje} isOpen={true} onClose={() => setEditingViaje(null)} onSave={handleEditSave}/>
       )}
 
-      <ModalConfirmarEliminar 
-        isOpen={!!viajeAEliminar}
-        onClose={() => setViajeAEliminar(null)}
-        onConfirm={handleConfirmarEliminar}
-      />
+      <ModalConfirmarEliminar isOpen={!!viajeAEliminar} onClose={() => setViajeAEliminar(null)} onConfirm={handleConfirmarEliminar}/>
 
       <div className="p-4 pt-8 bg-white">
         <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
@@ -441,13 +441,7 @@ export const VistaMisViajes = ({
                         </div>
                     ) : (
                       viajesPasajeroActivos.map(viaje => (
-                        <ViajeCardPasajero 
-                          key={viaje.id} 
-                          viaje={viaje} 
-                          tipo="activo" 
-                          onClickGestionar={onVerDetalles} 
-                          userData={userData} 
-                        />
+                        <ViajeCardPasajero key={viaje.id} viaje={viaje} tipo="activo" onClickGestionar={onVerDetalles} userData={userData} />
                       ))
                     )}
                 </div>
@@ -456,13 +450,7 @@ export const VistaMisViajes = ({
                   <div className="space-y-6">
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Rutas</p>
                       {viajesPasajeroHistorial.map(viaje => (
-                          <ViajeCardPasajero 
-                            key={viaje.id} 
-                            viaje={viaje} 
-                            tipo="finalizado" 
-                            onClickGestionar={onVerDetalles} 
-                            userData={userData} 
-                          />
+                          <ViajeCardPasajero key={viaje.id} viaje={viaje} tipo="finalizado" onClickGestionar={onVerDetalles} userData={userData} />
                       ))}
                   </div>
                 )}
@@ -472,20 +460,13 @@ export const VistaMisViajes = ({
                 <div className="space-y-6">
                     <p className="text-[11px] font-semibold text-blue-500 uppercase tracking-widest px-1">Mis Publicaciones Activas</p>
                     
-                    {viajesChofer.filter(v => v.estado !== 'finalizado').length === 0 ? (
+                    {viajesActivosChoferOrdenados.length === 0 ? (
                         <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
                             <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>No tienes viajes activos.</p>
                         </div>
                     ) : (
-                      viajesChofer.filter(v => v.estado !== 'finalizado').map(viaje => (
-                        <ViajeCardChofer 
-                            key={viaje.id} 
-                            viaje={viaje} 
-                            onEdit={() => setEditingViaje(viaje)}
-                            onDelete={() => handleIntentarEliminar(viaje)} 
-                            onClickGestionar={onVerDetalles} 
-                            estadoLabel={viaje.estado === 'en_curso' ? 'EN CURSO' : 'DISPONIBLE'}
-                        />
+                      viajesActivosChoferOrdenados.map(viaje => (
+                        <ViajeCardChofer key={viaje.id} viaje={viaje} onEdit={() => setEditingViaje(viaje)} onDelete={() => handleIntentarEliminar(viaje)} onClickGestionar={onVerDetalles} />
                       ))
                     )}
                 </div>
@@ -494,14 +475,7 @@ export const VistaMisViajes = ({
                   <div className="space-y-6 opacity-80">
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Viajes Finalizados</p>
                       {viajesChofer.filter(v => v.estado === 'finalizado').map(viaje => (
-                        <ViajeCardChofer 
-                            key={viaje.id} 
-                            viaje={viaje} 
-                            onEdit={() => {}} 
-                            onDelete={() => {}} 
-                            onClickGestionar={onVerDetalles} 
-                            estadoLabel="FINALIZADO"
-                        />
+                        <ViajeCardChofer key={viaje.id} viaje={viaje} onEdit={() => {}} onDelete={() => {}} onClickGestionar={onVerDetalles} />
                       ))}
                   </div>
                 )}
