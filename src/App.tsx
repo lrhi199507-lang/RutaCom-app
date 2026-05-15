@@ -20,7 +20,9 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [verPassword, setVerPassword] = useState(false); 
   const [cargando, setCargando] = useState(false);
-  const [usuario, setUsuario] = useState<any>(null);
+  
+  // 🔥 CAMBIO CLAVE: Inicializamos en 'undefined' para saber cuándo Firebase está pensando
+  const [usuario, setUsuario] = useState<any>(undefined); 
   
   // ESTADOS DEL ONBOARDING
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
@@ -32,12 +34,34 @@ export default function App() {
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
+  // ESTADO PARA EL MENSAJE DE LA PANTALLA DE CARGA
+  const [mensajeCarga, setMensajeCarga] = useState("Conectando...");
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUsuario(user);
+      setUsuario(user); // Será null si no hay sesión, o el objeto user si la hay
     });
     return () => unsubscribe();
   }, []);
+
+  // Efecto para los textos dinámicos de carga
+  useEffect(() => {
+    if (!cargando && usuario !== undefined) return;
+    
+    const mensajes = [
+      "Calentando motores...", 
+      "Buscando rutas...", 
+      "Preparando la calle...",
+      "Casi listos..."
+    ];
+    let i = 0;
+    const intervalo = setInterval(() => {
+      setMensajeCarga(mensajes[i]);
+      i = (i + 1) % mensajes.length;
+    }, 1500);
+
+    return () => clearInterval(intervalo);
+  }, [cargando, usuario]);
 
   useEffect(() => {
     if (!usuario) return;
@@ -67,7 +91,7 @@ export default function App() {
   }, [usuario]);
   
   // INICIAR SESIÓN O REGISTRAR
-    const manejarAutenticacion = async (e: any) => {
+  const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
     
     // Bloqueo de seguridad: el nombre no puede estar vacío en el registro
@@ -117,12 +141,11 @@ export default function App() {
       setCargando(false);
     }
   };
- 
 
   const slides = [
     {
       icono: <Car size={80} className="text-blue-500 mb-6" />,
-      titulo: `¡Hola, ${nombre.split(' ')[0]}!`,
+      titulo: `¡Hola, ${nombre.split(' ')[0] || 'Viajero'}!`,
       texto: "Bienvenido a DameLaCola, la comunidad donde conectamos a personas para compartir viajes de forma inteligente y segura."
     },
     {
@@ -141,6 +164,46 @@ export default function App() {
       texto: "En el siguiente paso, te pediremos acceso a tu GPS para poder conectar tu ubicación con las mejores rutas en tiempo real."
     }
   ];
+
+  // 🔥 NUEVA PANTALLA DE CARGA (SPLASH SCREEN) 🔥
+  // Se muestra mientras Firebase verifica la sesión o cuando le das a "Entrar" (cargando === true)
+  if (usuario === undefined || cargando) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
+        {/* Luces de fondo estilo neón */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] animate-pulse delay-700"></div>
+
+        {/* Logo animado */}
+        <div className="relative z-10 flex flex-col items-center animate-in zoom-in duration-700">
+          <div className="bg-blue-600 w-28 h-28 rounded-[35px] flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.4)] transform -skew-x-6 border-b-[6px] border-blue-800 animate-bounce">
+            <span className="text-6xl font-black italic text-white drop-shadow-md">D</span>
+          </div>
+          
+          <h1 className="text-3xl font-black italic mt-8 tracking-tighter bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+            DameLaCola
+          </h1>
+
+          {/* Barra de progreso visual */}
+          <div className="w-48 h-1.5 bg-slate-800 rounded-full mt-10 overflow-hidden relative">
+            <div className="absolute top-0 left-0 h-full w-1/2 bg-gradient-to-r from-blue-600 to-emerald-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
+          </div>
+
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] mt-4 animate-pulse">
+            {mensajeCarga}
+          </p>
+        </div>
+
+        {/* Clave de animación personalizada metida directo para Tailwind */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+          }
+        `}} />
+      </div>
+    );
+  }
 
   if (usuario && mostrarOnboarding) {
     return (
@@ -165,12 +228,8 @@ export default function App() {
               if (slideActual < slides.length - 1) {
                 setSlideActual(slideActual + 1);
               } else {
-                // 🔥 SOLICITUD DE PERMISOS MAESTRA 🔥
                 try {
-                  // 1. Pedimos GPS
                   await Geolocation.requestPermissions();
-                  
-                  // 2. Pedimos Notificaciones Push
                   const permPush = await PushNotifications.requestPermissions();
                   if (permPush.receive === 'granted') {
                     await PushNotifications.register();
@@ -179,7 +238,7 @@ export default function App() {
                   console.log("Error solicitando permisos:", e);
                 }
                 
-                setMostrarOnboarding(false); // Entramos a la app
+                setMostrarOnboarding(false);
               }
             }}
             className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg flex items-center justify-center gap-2"
@@ -191,7 +250,7 @@ export default function App() {
     );
   }
 
-  if (usuario && !mostrarOnboarding && !cargando) {
+  if (usuario && !mostrarOnboarding) {
     return <NavegacionPrincipal user={usuario} />;
   }
 
@@ -279,14 +338,14 @@ export default function App() {
           disabled={cargando || (esRegistro && !passwordValida)}
           className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg disabled:opacity-50 mt-4"
         >
-          {cargando ? "PROCESANDO..." : (esRegistro ? "Crear Cuenta" : "Entrar a la App")}
+          {esRegistro ? "Crear Cuenta" : "Entrar a la App"}
         </button>
       </form>
 
       <button 
         onClick={() => {
           setEsRegistro(!esRegistro);
-          setPassword(''); // Limpiamos contraseña al cambiar de modo
+          setPassword(''); 
         }} 
         className="mt-6 text-slate-400 text-xs font-bold underline hover:text-white transition-colors"
       >
