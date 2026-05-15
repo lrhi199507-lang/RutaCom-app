@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCcw } from 'lucide-react'; // 🔥 Añadí RefreshCcw aquí
 import { Wallet } from './components/views/Wallet'; 
 import { App } from '@capacitor/app';
-
 
 import { 
   doc, onSnapshot, collection, query, orderBy, 
@@ -90,36 +89,28 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
 
-      useEffect(() => {
-    // Escucha el gesto de atrás o botón físico
+  useEffect(() => {
     const backListener = App.addListener('backButton', () => {
-      
-      // 1. Si estás viendo el detalle de un viaje, quita el detalle (vuelve a la lista)
       if (viajeSel) {
         setViajeSel(null);
         return;
       }
-
-      // 2. Si estás en Wallet, Perfil o Inbox, vuelve a la pestaña de Inicio
       if (vista !== 'inicio') {
         setVista('inicio');
         return;
       }
-
-      // 3. Si ya estás en el inicio puro, cierra la app
       App.exitApp();
     });
 
     return () => {
       backListener.remove();
     };
-  }, [vista, viajeSel]); // Usamos tus variables reales
+  }, [vista, viajeSel]);
 
   const iniciarChat = async (viaje) => {
     if (!userData?.id || !viaje?.id) return;
     
     try {
-      // Blindaje: Para soportar viajes viejos y nuevos
       const conductorId = viaje.uidConductor || viaje.idCreador;
       const soyConductor = conductorId === userData.id;
 
@@ -267,7 +258,26 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-    if (!userData) return <div className="h-screen flex items-center justify-center font-black text-blue-600 italic uppercase">Cargando...</div>;
+  // 🔥 NUEVA PANTALLA DE CARGA SECUNDARIA 🔥 (Sincronización de Perfil)
+  if (!userData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
+        {/* Luces de neón de fondo */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
+        
+        <div className="relative z-10 flex flex-col items-center animate-in fade-in duration-500">
+          {/* Spinner moderno estilo tarjeta */}
+          <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 flex items-center justify-center shadow-xl">
+            <RefreshCcw size={28} className="text-blue-500 animate-spin" />
+          </div>
+          
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] mt-6 animate-pulse">
+            Sincronizando perfil...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // MURO DE BLOQUEO (SOFT BAN)
   if (userData.cuentaSuspendida === true) {
@@ -301,19 +311,16 @@ export default function NavegacionPrincipal({ user }) {
   const listaViajes = viajes || [];
   const listaChats = chats || [];
 
-  // Solo calculamos si hay un usuario logueado para evitar falsos positivos
   let totalAlertasViajes = 0;
   let tieneMensajesNuevos = false;
 
   if (userData?.id) {
-    // 1. Chofer: Solo viajes DISPONIBLES con gente esperando
     const alertasChofer = listaViajes.filter(v => 
       v.uidConductor === userData.id && 
       v.estado === 'disponible' && 
       v.reservasPendientes?.length > 0
     ).reduce((total, v) => total + v.reservasPendientes.length, 0);
 
-    // 2. Pasajero: Solo viajes que NO han terminado donde me aceptaron y no me he subido
     const alertasPasajero = listaViajes.filter(v => 
       v.estado !== 'finalizado' && 
       v.pasajeros?.some(p => p.id === userData.id && p.estado === 'confirmado' && p.abordado === false)
@@ -321,15 +328,13 @@ export default function NavegacionPrincipal({ user }) {
 
     totalAlertasViajes = alertasChofer + alertasPasajero;
 
-    // 3. Mensajes: Solo si hay chats nuevos donde yo no fui el último en escribir
     const misChats = listaChats.filter(c => c.uidConductor === userData.id || c.uidPasajero === userData.id);
     tieneMensajesNuevos = misChats.some(c => 
       c.mensajesSinLeer > 0 && c.remitenteUltimoMensaje !== userData.id
     );
   }
 
-  
-      // 👇 INYECCIÓN DE LA WALLET 👇
+  // 👇 INYECCIÓN DE LA WALLET 👇
   if (verWallet) {
     return (
       <div className="w-full max-w-md mx-auto h-screen bg-[#0b1120] flex flex-col relative overflow-hidden z-[100]">
@@ -340,7 +345,6 @@ export default function NavegacionPrincipal({ user }) {
 
   return (
     <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden border-x">
-      {/* 👇 LE PASAMOS LA ORDEN AL HEADER 👇 */}
       <Header 
         userData={userData} 
         modo={modo} 
@@ -392,7 +396,7 @@ export default function NavegacionPrincipal({ user }) {
           />
         )}   
 
-                {/* CHAT PRIVADO */}
+        {/* CHAT PRIVADO */}
         {vista === "chat_individual" && chatActivo && (
           <VistaChatPrivado 
             chat={chatActivo} 
@@ -401,7 +405,6 @@ export default function NavegacionPrincipal({ user }) {
               setChatActivo(null);
               setVista("inbox");
             }} 
-            // 👇 ESTE ES EL CABLE QUE FALTA CONECTAR 👇
             onVerViaje={() => {
               const viajeAsociado = listaViajes.find(v => v.id === chatActivo.idViaje);
               if (viajeAsociado) {
@@ -439,7 +442,7 @@ export default function NavegacionPrincipal({ user }) {
         )}
       </main>
 
-            <Navbar 
+      <Navbar 
         vista={vista} 
         modo={modo} 
         setVista={setVista} 
@@ -450,5 +453,4 @@ export default function NavegacionPrincipal({ user }) {
       />
     </div>
   );
-    }
-            
+}
