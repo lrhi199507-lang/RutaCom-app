@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../../firebaseConfig";
+import { db, storage } from "../../firebaseConfig"; 
 import { doc, getDoc, updateDoc, collection, addDoc, increment, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage"; 
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'; 
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote, Copy, Lock
+  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote, Copy, Lock, Image as ImageIcon, AlertTriangle
 } from "lucide-react";
 import Toast from "../ui/Toast";
 
@@ -14,11 +16,12 @@ export const Wallet = ({ userData, onRegresar }) => {
   const [referencia, setReferencia] = useState("");
   const [montoRetiro, setMontoRetiro] = useState("");
   
-  // 🔥 LÓGICA NUEVA: Precargar datos guardados y forzar la cédula del usuario 🔥
+  const [fotoRecarga, setFotoRecarga] = useState(null);
+
   const [datosBancarios, setDatosBancarios] = useState({ 
     banco: userData?.datosBancarios?.banco || "", 
     telefono: userData?.datosBancarios?.telefono || "", 
-    cedula: userData?.cedulaNumero || "" // Forzamos su cédula registrada
+    cedula: userData?.cedulaNumero || "" 
   });
 
   const [enviando, setEnviando] = useState(false);
@@ -83,19 +86,57 @@ export const Wallet = ({ userData, onRegresar }) => {
     } catch (err) { console.error("Error al copiar", err); }
   };
   
+  const capturarComprobante = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 50,
+        width: 800,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos 
+      });
+      if (image.dataUrl) {
+        setFotoRecarga(image.dataUrl);
+      }
+    } catch (e) { console.log("Selección de imagen cancelada"); }
+  };
+
   const manejarRecarga = async (e) => {
     e.preventDefault();
-    if (!montoRecarga || !referencia) { setToastMsg("Completa todos los campos"); setShowToast(true); return; }
+    if (!montoRecarga || !referencia || !fotoRecarga) { 
+      setToastMsg("Debes completar los datos y subir el capture"); 
+      setShowToast(true); 
+      return; 
+    }
+
     setEnviando(true);
     try {
+      const nombreArchivo = `comprobantes/${userData.id}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, nombreArchivo);
+      await uploadString(storageRef, fotoRecarga, 'data_url');
+      const urlComprobante = await getDownloadURL(storageRef);
+
       await addDoc(collection(db, "PagosPendientes"), {
-        uid: userData.id, nombre: userData.nombre, monto: Number(montoRecarga), referencia: referencia,
-        tasaAplicada: tasaBCV, fecha: new Date().toISOString(), estado: "pendiente", tipo: "recarga"
+        uid: userData.id, 
+        nombre: userData.nombre, 
+        monto: Number(montoRecarga), 
+        referencia: referencia,
+        comprobanteUrl: urlComprobante, 
+        tasaAplicada: tasaBCV, 
+        fecha: new Date().toISOString(), 
+        estado: "pendiente", 
+        tipo: "recarga"
       });
-      setToastMsg("Solicitud enviada. Espera la validación."); setShowToast(true);
-      setShowModalRecarga(false); setMontoRecarga(""); setReferencia("");
+
+      setToastMsg("Solicitud enviada. Espera la validación."); 
+      setShowToast(true);
+      setShowModalRecarga(false); 
+      setMontoRecarga(""); 
+      setReferencia("");
+      setFotoRecarga(null);
     } catch (error) {
-      console.error(error); setToastMsg("Error al enviar solicitud"); setShowToast(true);
+      console.error(error); 
+      setToastMsg("Error al enviar solicitud. Revisa tu conexión."); 
+      setShowToast(true);
     } finally { setEnviando(false); }
   };
 
@@ -110,7 +151,6 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     setEnviando(true);
     try {
-      // 1. CONGELAMOS EL SALDO Y GUARDAMOS EL BANCO PARA LA PRÓXIMA VEZ 🔥
       await updateDoc(doc(db, "usuarios", userData.id), {
         saldoRetenido: increment(monto),
         datosBancarios: {
@@ -120,7 +160,6 @@ export const Wallet = ({ userData, onRegresar }) => {
         }
       });
 
-      // 2. CREAMOS LA SOLICITUD DE RETIRO
       await addDoc(collection(db, "PagosPendientes"), {
         uid: userData.id, nombre: userData.nombre, monto: monto, datosBancarios: datosBancarios,
         tasaAplicada: tasaBCV, fecha: new Date().toISOString(), estado: "pendiente", tipo: "retiro"
@@ -236,13 +275,13 @@ export const Wallet = ({ userData, onRegresar }) => {
 
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300 overflow-y-auto max-h-[90vh]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-black italic uppercase text-white">Recargar Saldo</h3>
               <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white"><X size={18} /></button>
             </div>
 
-            <div className="space-y-4 mb-8 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
+            <div className="space-y-4 mb-6 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
               <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -269,7 +308,29 @@ export const Wallet = ({ userData, onRegresar }) => {
               </div>
             </div>
 
+            {/* 🔥 BANNER DE ADVERTENCIA PARA EL USUARIO 🔥 */}
+            <div className="bg-orange-500/10 border border-orange-500/30 p-3.5 rounded-2xl mb-6 flex items-start gap-3">
+              <AlertTriangle size={18} className="text-orange-500 shrink-0 mt-0.5" />
+              <p className="text-[9px] font-bold text-orange-200 uppercase tracking-widest leading-relaxed">
+                <span className="text-orange-400 font-black">IMPORTANTE:</span> Es obligatorio subir el capture (comprobante) del pago. ¡Tómale captura antes de cerrar tu banco!
+              </p>
+            </div>
+
             <form onSubmit={manejarRecarga} className="space-y-4">
+              <div 
+                onClick={capturarComprobante}
+                className={`w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${fotoRecarga ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-900'}`}
+              >
+                {fotoRecarga ? (
+                  <img src={fotoRecarga} className="w-full h-full object-cover rounded-2xl" />
+                ) : (
+                  <>
+                    <ImageIcon size={30} className="text-slate-500" />
+                    <p className="text-[10px] font-black text-slate-500 uppercase">Toca para subir Capture</p>
+                  </>
+                )}
+              </div>
+
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($)</label>
                 <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 10.00" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
@@ -278,7 +339,8 @@ export const Wallet = ({ userData, onRegresar }) => {
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Nro de Referencia (Últimos 4-6)</label>
                 <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="0000" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
               </div>
-              <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50">
+              
+              <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50 mt-2">
                 {enviando ? "Notificando..." : "Notificar Pago"}
               </button>
             </form>
@@ -312,7 +374,6 @@ export const Wallet = ({ userData, onRegresar }) => {
                 <input type="text" value={datosBancarios.banco} onChange={(e) => setDatosBancarios({...datosBancarios, banco: e.target.value})} placeholder="Banco (Ej: Mercantil)" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
                 <input type="tel" value={datosBancarios.telefono} onChange={(e) => setDatosBancarios({...datosBancarios, telefono: e.target.value})} placeholder="Teléfono" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
                 
-                {/* 🔥 CANDADO: CÉDULA BLOQUEADA 🔥 */}
                 <div className="relative">
                   <input 
                     type="text" 
