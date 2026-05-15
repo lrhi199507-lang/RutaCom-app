@@ -135,8 +135,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Error al guardar preferencia:", e); }
   };
   
-  const guardarCambios = async () => {
+    const guardarCambios = async () => {
     if (!tipoEdicion || !nuevoValor) return;
+
+    // 🔥 NUEVA LÓGICA: DOBLE CONFIRMACIÓN PARA LA CÉDULA 🔥
+    if (tipoEdicion.id === 'cedulaNumero') {
+      const confirmar = window.confirm(`ATENCIÓN:\n\n¿Estás 100% seguro de que tu cédula es ${nuevoValor}?\n\nVerifica que no tenga errores, ya que por razones de seguridad no podrás modificarla más adelante.`);
+      if (!confirmar) return; // Si el usuario le da a cancelar, detenemos el guardado
+    }
+
     setModalVisible(false); 
     setCargando(true);
     try {
@@ -144,13 +151,21 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const esVehiculo = ['placa', 'modelo', 'color', 'marca'].includes(tipoEdicion.id);
       const field = esVehiculo ? `vehiculo.${tipoEdicion.id}` : tipoEdicion.id;
       const valorFinal = esVehiculo ? nuevoValor.toUpperCase() : nuevoValor;
+      
       await updateDoc(doc(db, "usuarios", uid), { [field]: valorFinal });
+      
       if (esVehiculo) {
         setUserData({ ...userData, vehiculo: { ...userData.vehiculo, [tipoEdicion.id]: valorFinal } });
       } else {
         setUserData({ ...userData, [tipoEdicion.id]: valorFinal });
       }
-    } catch (e) { console.log("Error:", e); } finally { setCargando(false); }
+    } catch (e) { 
+      console.log("Error:", e); 
+      setToast({ texto: "Error al guardar los cambios.", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { 
+      setCargando(false); 
+    }
   };
   
   const capturarDocumento = async () => {
@@ -923,11 +938,21 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         )}
       </div>
 
-      {modalVisible && (
+            {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
           <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
             <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">Editar {tipoEdicion?.label}</h4>
+            
+            {/* 🔥 MENSAJE DE ALERTA SOLO PARA LA CÉDULA 🔥 */}
+            {tipoEdicion?.id === 'cedulaNumero' && (
+               <div className="bg-orange-50 border border-orange-200 p-3 rounded-2xl mb-5 flex gap-3 items-start">
+                 <AlertTriangle size={18} className="text-orange-500 shrink-0 mt-0.5" />
+                 <p className="text-[9px] font-bold text-orange-700 uppercase tracking-wider leading-relaxed">
+                   Verifica bien los números. Por razones de seguridad, una vez confirmada, <span className="font-black">no podrás cambiarla.</span>
+                 </p>
+               </div>
+            )}
             {tipoEdicion?.id === 'bio' ? (
               <textarea value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-6 rounded-3xl font-medium text-sm mb-8 outline-none border-2 border-slate-100 min-h-[150px] resize-none text-slate-600 leading-relaxed" placeholder="Ej: Hola, soy Luis..." autoFocus />
             ) : (
