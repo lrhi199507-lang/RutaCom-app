@@ -8,12 +8,13 @@ import {
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
   Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight, 
-  TrendingUp, History, Landmark, Settings
+  TrendingUp, History, Landmark, Settings, Headset, MessageCircle
 } from 'lucide-react';
 
 const auth = getAuth();
 
-export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva }: any) => {
+// 🔥 SE AGREGÓ onAbrirChat a las propiedades
+export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [pasoFoto, setPasoFoto] = useState(false); 
   const [fotoTemporal, setFotoTemporal] = useState<string | null>(null);
@@ -23,11 +24,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [cargando, setCargando] = useState(false);
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
   
+  // ESTADOS ADMIN
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
   const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); 
   const [transaccionesAdmin, setTransaccionesAdmin] = useState<any[]>([]); 
-  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos' | 'historial'>('pendientes');
+  const [chatsSoporteAdmin, setChatsSoporteAdmin] = useState<any[]>([]); // 🔥 NUEVO ESTADO PARA SOPORTE
+  
+  // 🔥 NUEVA PESTAÑA 'soporte'
+  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos' | 'historial' | 'soporte'>('pendientes');
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   
@@ -199,13 +204,17 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const snapPagos = await getDocs(collection(db, "PagosPendientes"));
       setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter((p: any) => p.estado === 'pendiente'));
 
-      const qAdmin = query(
-        collection(db, "Transacciones"),
-        where("uid", "==", "ADMIN_APP"),
-        orderBy("fecha", "desc")
-      );
+      const qAdmin = query(collection(db, "Transacciones"), where("uid", "==", "ADMIN_APP"), orderBy("fecha", "desc"));
       const snapAdmin = await getDocs(qAdmin);
       setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      // 🔥 BUSCAMOS TODOS LOS CHATS DE SOPORTE 🔥
+      const qSoporte = query(collection(db, "Chats"), where("esSoporte", "==", true));
+      const snapSoporte = await getDocs(qSoporte);
+      setChatsSoporteAdmin(
+        snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.ultimaHora || "").localeCompare(a.ultimaHora || ""))
+      );
 
       const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
       if (docFinanzas.exists()) {
@@ -248,7 +257,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
 
-  // 🔥 LÓGICA DE PAGOS MATEMÁTICAMENTE CORREGIDA 🔥
   const aprobarPago = async (pago: any) => {
     if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
     setCargando(true);
@@ -257,11 +265,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
       
       await addDoc(collection(db, "Transacciones"), {
-        uid: pago.uid,
-        tipo: "ingreso",
-        monto: pago.monto,
-        descripcion: "Recarga de saldo aprobada",
-        fecha: new Date().toISOString()
+        uid: pago.uid, tipo: "ingreso", monto: pago.monto,
+        descripcion: "Recarga de saldo aprobada", fecha: new Date().toISOString()
       });
 
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
@@ -278,19 +283,11 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     setCargando(true);
     try {
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
-      
-      // 🔥 APROBADO: Aquí SÍ descontamos el saldo real, y quitamos la retención
-      await updateDoc(doc(db, "usuarios", pago.uid), { 
-        saldo: increment(-pago.monto),
-        saldoRetenido: increment(-pago.monto) 
-      });
+      await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(-pago.monto), saldoRetenido: increment(-pago.monto) });
 
       await addDoc(collection(db, "Transacciones"), {
-        uid: pago.uid,
-        tipo: "gasto",
-        monto: pago.monto,
-        descripcion: "Retiro de dinero procesado",
-        fecha: new Date().toISOString()
+        uid: pago.uid, tipo: "gasto", monto: pago.monto,
+        descripcion: "Retiro de dinero procesado", fecha: new Date().toISOString()
       });
 
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
@@ -309,17 +306,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
       
       if (pago.tipo === 'retiro') {
-        // 🔥 RECHAZADO: Solo quitamos la retención. El saldo real nunca se tocó.
-        await updateDoc(doc(db, "usuarios", pago.uid), { 
-          saldoRetenido: increment(-pago.monto)
-        });
-
+        await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
         await addDoc(collection(db, "Transacciones"), {
-          uid: pago.uid,
-          tipo: "ingreso",
-          monto: pago.monto,
-          descripcion: "Devolución por retiro rechazado",
-          fecha: new Date().toISOString()
+          uid: pago.uid, tipo: "ingreso", monto: pago.monto,
+          descripcion: "Devolución por retiro rechazado", fecha: new Date().toISOString()
         });
       }
 
@@ -447,9 +437,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
 
-  // ==========================================
-  // RENDER PRINCIPAL
-  // ==========================================
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
       {toast && (
@@ -549,15 +536,21 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Básica</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
-                <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero}  onClick={() => {  if (userData.kycVerificado) {   setToast({ texto: "Por seguridad, no puedes cambiar la cédula de una cuenta verificada.", tipo: "error" });
-      setTimeout(() => setToast(null), 4000);
-    } else {
-      setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); 
-      setNuevoValor(userData.cedulaNumero); 
-      setModalVisible(true); 
-    }
-  }} 
-/>
+                <MenuButton 
+                  icon={Hash} 
+                  label="Cédula (Número)" 
+                  value={userData.cedulaNumero} 
+                  onClick={() => { 
+                    if (userData.kycVerificado) {
+                      setToast({ texto: "Por seguridad, no puedes cambiar la cédula de una cuenta verificada.", tipo: "error" });
+                      setTimeout(() => setToast(null), 4000);
+                    } else {
+                      setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); 
+                      setNuevoValor(userData.cedulaNumero); 
+                      setModalVisible(true); 
+                    }
+                  }} 
+                />
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
                 <MenuButton icon={UserCog} label="Sobre mí (Bio)" value={userData?.bio || "Escribe algo sobre ti..."} onClick={() => { setTipoEdicion({id: 'bio', label: 'Biografía', valor: userData?.bio}); setNuevoValor(userData?.bio || ""); setModalVisible(true); }} />
                 <MenuButton icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => alert("El correo no se puede cambiar por ahora por seguridad.")} />
@@ -646,9 +639,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
               <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Cuentas</button>
               <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
+              {/* 🔥 NUEVA PESTAÑA: SOPORTE 🔥 */}
+              <button onClick={() => setSubPestañaAdmin('soporte')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'soporte' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-600'}`}>Soporte ({chatsSoporteAdmin.length})</button>
               <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
               <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
-              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Aprobados</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
@@ -656,6 +650,35 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
               ) : (
                 <>
+                  {/* 🔥 INTERFAZ DE SOPORTE ADMIN 🔥 */}
+                  {subPestañaAdmin === 'soporte' && (
+                    <div className="space-y-3 animate-in slide-in-from-bottom duration-400">
+                      {chatsSoporteAdmin.length === 0 ? (
+                        <div className="bg-slate-900/50 p-10 rounded-[30px] border border-white/5 text-center">
+                            <Headset size={40} className="text-slate-800 mx-auto mb-3" />
+                            <p className="text-[10px] font-black text-slate-600 uppercase italic">No hay tickets de soporte</p>
+                        </div>
+                      ) : (
+                        chatsSoporteAdmin.map((chat) => (
+                          <div 
+                            key={chat.id} 
+                            onClick={() => onAbrirChat && onAbrirChat(chat)} 
+                            className="bg-slate-900 border border-blue-500/20 p-5 rounded-[25px] flex items-center gap-4 cursor-pointer hover:bg-slate-800 transition-colors"
+                          >
+                              <div className="w-12 h-12 bg-blue-600/20 rounded-full flex items-center justify-center text-blue-400 shrink-0">
+                                <MessageCircle size={20} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-black text-white text-sm uppercase truncate">{chat.nombrePasajero || 'Usuario Desconocido'}</h4>
+                                <p className="text-[10px] text-blue-400 font-bold truncate mt-0.5">{chat.ultimoMensaje}</p>
+                              </div>
+                              <ChevronRight size={18} className="text-slate-600" />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
                   {subPestañaAdmin === 'historial' && (
                     <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
                       <div className="bg-gradient-to-br from-indigo-600 to-slate-900 p-6 rounded-[35px] border border-white/10 shadow-2xl relative overflow-hidden">
@@ -915,31 +938,21 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
 
-            {pasoFoto && (
+      {pasoFoto && (
         <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
           {!fotoTemporal ? (
             <>
               <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center mb-10">
                 <User size={80} className="text-orange-200" />
               </div>
-              
               <div className="w-full space-y-3">
-                <button 
-                  onClick={() => seleccionarImagen(CameraSource.Camera)} 
-                  className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all"
-                >
+                <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all">
                   <Camera size={18} /> Tomar Foto Ahora
                 </button>
-
-                {/* 🔥 NUEVO BOTÓN: ABRIR GALERÍA 🔥 */}
-                <button 
-                  onClick={() => seleccionarImagen(CameraSource.Photos)} 
-                  className="w-full bg-slate-900 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all"
-                >
+                <button onClick={() => seleccionarImagen(CameraSource.Photos)} className="w-full bg-slate-900 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all">
                   <FileText size={18} className="text-blue-400" /> Elegir de la Galería
                 </button>
               </div>
-
               <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-8 tracking-widest">
                 Tal vez luego
               </button>
