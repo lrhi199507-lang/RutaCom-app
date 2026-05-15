@@ -8,12 +8,11 @@ import {
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
   Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight, 
-  TrendingUp, History, Landmark, Settings, Headset, MessageCircle
+  TrendingUp, History, Landmark, Settings, Headset, MessageCircle, Image as ImageIcon
 } from 'lucide-react';
 
 const auth = getAuth();
 
-// 🔥 SE AGREGÓ onAbrirChat a las propiedades
 export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [pasoFoto, setPasoFoto] = useState(false); 
@@ -24,14 +23,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [cargando, setCargando] = useState(false);
   const [pasoDocumento, setPasoDocumento] = useState<{tipo: string, activa: boolean, reglas?: string}>({tipo: 'cedula', activa: false});
   
-  // ESTADOS ADMIN
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
   const [reportesAdmin, setReportesAdmin] = useState<any[]>([]);
   const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); 
   const [transaccionesAdmin, setTransaccionesAdmin] = useState<any[]>([]); 
-  const [chatsSoporteAdmin, setChatsSoporteAdmin] = useState<any[]>([]); // 🔥 NUEVO ESTADO PARA SOPORTE
+  const [chatsSoporteAdmin, setChatsSoporteAdmin] = useState<any[]>([]); 
   
-  // 🔥 NUEVA PESTAÑA 'soporte'
   const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos' | 'historial' | 'soporte'>('pendientes');
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
@@ -94,7 +91,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
 
-    const subirFotoConfirmada = async () => {
+  const subirFotoConfirmada = async () => {
     if (!fotoTemporal) return;
     setCargando(true);
     const userId = auth.currentUser?.uid || userData.id;
@@ -106,35 +103,29 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await uploadString(storageRef, fotoTemporal, 'data_url');
       const urlDescarga = await getDownloadURL(storageRef);
 
-      // 1. Actualiza el perfil del usuario
       await updateDoc(doc(db, "usuarios", userId), { fotoPerfil: urlDescarga });
-
-      // 🔥 2. MAGIA: Buscar todos los viajes de este conductor y actualizarles la foto 🔥
+      
       const qViajes = query(collection(db, "Viajes"), where("uidConductor", "==", userId));
       const snapViajes = await getDocs(qViajes);
-      
-      // Creamos un arreglo de actualizaciones y las ejecutamos todas al mismo tiempo
       const promesasViajes = snapViajes.docs.map(docViaje => 
         updateDoc(doc(db, "Viajes", docViaje.id), { fotoPerfil: urlDescarga })
       );
-      await Promise.all(promesasViajes); // Esperamos a que todos los viajes se actualicen
+      await Promise.all(promesasViajes);
 
-      // 3. Actualizamos el estado visual en la app
       setUserData({ ...userData, fotoPerfil: urlDescarga });
 
       setPasoFoto(false); 
       setFotoTemporal(null);
-      setToast({ texto: "Foto actualizada en tu perfil y en tus viajes activos", tipo: "exito" });
-      setTimeout(() => setToast(null), 4000);
+      setToast({ texto: "Foto de perfil actualizada en tus viajes", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
     } catch (e) { 
-      console.error("Error subiendo foto a Storage:", e); 
-      setToast({ texto: "Error al actualizar la foto", tipo: "error" });
+      console.error("Error subiendo foto:", e); 
+      setToast({ texto: "Error al subir foto", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally {
       setCargando(false);
     }
   };
-  
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
     try {
@@ -222,7 +213,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const snapAdmin = await getDocs(qAdmin);
       setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // 🔥 BUSCAMOS TODOS LOS CHATS DE SOPORTE 🔥
       const qSoporte = query(collection(db, "Chats"), where("esSoporte", "==", true));
       const snapSoporte = await getDocs(qSoporte);
       setChatsSoporteAdmin(
@@ -453,7 +443,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
-            {/* TOAST FLOTANTE CORREGIDO PARA MULTIPLES LÍNEAS */}
+      {/* TOAST FLOTANTE MULTILÍNEA */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-4 rounded-[20px] shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -466,7 +456,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           </div>
         </div>
       )}
-      
+
       <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100">
         <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
           <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
@@ -658,7 +648,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
               <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Cuentas</button>
               <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
-              {/* 🔥 NUEVA PESTAÑA: SOPORTE 🔥 */}
               <button onClick={() => setSubPestañaAdmin('soporte')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'soporte' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-600'}`}>Soporte ({chatsSoporteAdmin.length})</button>
               <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
               <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
@@ -669,7 +658,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
               ) : (
                 <>
-                  {/* 🔥 INTERFAZ DE SOPORTE ADMIN 🔥 */}
                   {subPestañaAdmin === 'soporte' && (
                     <div className="space-y-3 animate-in slide-in-from-bottom duration-400">
                       {chatsSoporteAdmin.length === 0 ? (
@@ -809,6 +797,24 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                                   </p>
                                 </div>
                               </div>
+
+                              {/* 🔥 CAJA PARA MOSTRAR EL CAPTURE AL ADMIN 🔥 */}
+                              {!esRetiro && pago.comprobanteUrl && (
+                                <div className="mt-3 p-3 bg-slate-950/50 rounded-2xl border border-white/5">
+                                  <p className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                    <ImageIcon size={10} /> Capture Adjunto
+                                  </p>
+                                  <div 
+                                    onClick={() => setFotoZoom(pago.comprobanteUrl)}
+                                    className="w-full h-24 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden relative cursor-zoom-in group"
+                                  >
+                                    <img src={pago.comprobanteUrl} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <span className="text-[9px] font-black text-white uppercase tracking-widest bg-black/60 px-2 py-1 rounded-lg">Ver Completo</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               {esRetiro && (
                                 <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5 space-y-1 mt-2">
@@ -951,6 +957,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
 
+      {/* VISOR DE FOTOS A PANTALLA COMPLETA */}
       {fotoZoom && (
         <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setFotoZoom(null)}>
           <img src={fotoZoom} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl" />
