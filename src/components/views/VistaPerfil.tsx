@@ -15,6 +15,10 @@ const auth = getAuth();
 
 export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
+  
+  // 🔥 AQUÍ FALTABA ESTA VARIABLE QUE CAUSABA LA PANTALLA BLANCA 🔥
+  const [confirmacionCedula, setConfirmacionCedula] = useState(false); 
+  
   const [pasoFoto, setPasoFoto] = useState(false); 
   const [fotoTemporal, setFotoTemporal] = useState<string | null>(null);
   const [fotoDocTemporal, setFotoDocTemporal] = useState<string | null>(null);
@@ -135,15 +139,16 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Error al guardar preferencia:", e); }
   };
   
-    const guardarCambios = async () => {
+  // 🔥 LÓGICA DE GUARDADO CORREGIDA (Ya no usa window.confirm) 🔥
+  const guardarCambios = async (forzar = false) => {
     if (!tipoEdicion || !nuevoValor) return;
 
-    // 🔥 NUEVA LÓGICA: DOBLE CONFIRMACIÓN PARA LA CÉDULA 🔥
-    if (tipoEdicion.id === 'cedulaNumero') {
-      const confirmar = window.confirm(`ATENCIÓN:\n\n¿Estás 100% seguro de que tu cédula es ${nuevoValor}?\n\nVerifica que no tenga errores, ya que por razones de seguridad no podrás modificarla más adelante.`);
-      if (!confirmar) return; // Si el usuario le da a cancelar, detenemos el guardado
+    if (tipoEdicion.id === 'cedulaNumero' && forzar !== true) {
+      setConfirmacionCedula(true);
+      return;
     }
 
+    setConfirmacionCedula(false);
     setModalVisible(false); 
     setCargando(true);
     try {
@@ -938,7 +943,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         )}
       </div>
 
-            {modalVisible && (
+      {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
           <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
@@ -959,11 +964,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             ) : (
               <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)} className="w-full bg-slate-50 p-5 rounded-2xl font-black text-lg mb-8 outline-none border-2 border-slate-100 uppercase text-center" autoFocus />
             )}
-            <button disabled={cargando} onClick={guardarCambios} className="w-full bg-blue-600 text-white p-5 rounded-[25px] disabled:opacity-50 font-black uppercase text-xs shadow-lg active:scale-95 transition-transform">Guardar Cambios</button>
+            <button disabled={cargando} onClick={() => guardarCambios()} className="w-full bg-blue-600 text-white p-5 rounded-[25px] disabled:opacity-50 font-black uppercase text-xs shadow-lg active:scale-95 transition-transform">Guardar Cambios</button>
           </div>
         </div>
       )}
-        {confirmacionCedula && (
+
+      {/* 🔥 NUEVO MODAL DE CONFIRMACIÓN DE CÉDULA 🔥 */}
+      {confirmacionCedula && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => !cargando && setConfirmacionCedula(false)} />
           <div className="relative bg-white w-full max-w-sm rounded-[40px] p-8 text-center animate-in zoom-in-95 shadow-2xl">
