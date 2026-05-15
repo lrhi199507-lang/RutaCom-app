@@ -95,7 +95,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  // --- INYECTOR DE GOOGLE MAPS ---
   useEffect(() => {
     if (window.google && window.google.maps) return;
     const script = document.createElement('script');
@@ -105,16 +104,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     document.head.appendChild(script);
   }, []);
 
-  // --- LÓGICA DE TRANSMISIÓN GPS (SOLO CHOFER) ---
   useEffect(() => {
     let intervaloGps;
-    
     const iniciarTransmision = async () => {
       try {
         await Geolocation.requestPermissions();
-      } catch (e) {
-        console.error("Permiso GPS denegado", e);
-      }
+      } catch (e) { console.error("Permiso GPS denegado", e); }
 
       intervaloGps = setInterval(async () => {
         try {
@@ -124,23 +119,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             lngChofer: position.coords.longitude,
             ultimaActualizacion: new Date().toISOString()
           });
-        } catch (error) {
-          console.error("Error al obtener GPS:", error);
-        }
-      }, 10000); // 10 Segundos para fluidez
+        } catch (error) { console.error("Error al obtener GPS:", error); }
+      }, 10000); 
     };
 
-    // 🔥 EL CAMBIO CLAVE: Ahora transmite en 'buscando' y en 'en_curso'
     if (soyConductor && (estadoViaje === 'en_curso' || estadoViaje === 'buscando')) {
       iniciarTransmision();
     }
 
-    return () => {
-      if (intervaloGps) clearInterval(intervaloGps);
-    };
+    return () => { if (intervaloGps) clearInterval(intervaloGps); };
   }, [soyConductor, estadoViaje, viaje?.id]);
   
-  // ----------------------------------------------
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
@@ -205,104 +194,127 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         leida: false,
         fecha: new Date().toISOString()
       });
-    } catch (error) {
-      console.error("Error al crear documento:", error);
-    }
+    } catch (error) { console.error("Error al crear documento:", error); }
   };
 
   const solicitarCola = async () => {
-  const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
-  const miSaldoActual = Number(userData?.saldo || 0);
+    const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
+    const miSaldoActual = Number(userData?.saldo || 0);
 
-  // 1. Verificación de seguridad: ¿Tiene plata suficiente?
-  if (miSaldoActual < costoTotalPeticion) {
-    setToastMessage(`Saldo insuficiente. Necesitas $${costoTotalPeticion.toFixed(2)}`);
-    setShowToast(true);
-    return;
-  }
-
-  // 2. Verificación de seguridad: ¿Hay puestos?
-  if (puestosQueQuiero > cuposRestantes) {
-    setToastMessage("No hay suficientes puestos disponibles");
-    setShowToast(true);
-    return;
-  }
-
-  setCargando(true);
-  try {
-    // Capturamos ubicación para el mapa del chofer
-    const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-    
-    const idConductor = viaje?.uidConductor || viaje?.idCreador;
-    const viajeRef = doc(db, "Viajes", viaje.id);
-    const nombreUsuario = userData?.nombre || "Usuario";
-    
-    const datosPasajeroBase = {
-      id: userData?.id || userData?.uid, 
-      nombre: nombreUsuario, 
-      fotoPerfil: userData?.fotoPerfil || null, 
-      puestosSolicitados: puestosQueQuiero,
-      adultosExtra: adultosExtra,           
-      ninosExtra: ninosExtra,
-      lat: position.coords.latitude,
-      lng: position.coords.longitude,
-      abordado: false,
-    };
-
-    const esAutoAceptar = viaje.autoAceptar === true;
-
-    // A. DISPARADOR PARA NOTIFICACIONES PUSH
-    await addDoc(collection(db, "Solicitudes"), {
-      idConductor: idConductor,
-      nombrePasajero: nombreUsuario,
-      idViaje: viaje.id,
-      idPasajero: userData?.id || userData?.uid,
-      estado: esAutoAceptar ? "aprobada" : "pendiente",
-      puestosSolicitados: puestosQueQuiero,
-      fecha: serverTimestamp()
-    });
-
-    if (esAutoAceptar) {
-      const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
-
-      // ACTUALIZAR DOCUMENTO DEL VIAJE
-      await updateDoc(viajeRef, {
-        pasajeros: arrayUnion({ 
-          ...datosPasajeroBase, 
-          estado: 'confirmado', 
-          pin: pinGenerado, 
-          abordado: false, 
-          calificado: false 
-        })
-      });
-
-      if (idConductor) {
-        await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se ha unido a tu viaje.`, "exito");
-      }
-      setToastMessage("¡Reserva confirmada!");
-    } else {
-      // SI NO ES AUTO-ACEPTAR: Solo mandamos la solicitud (No se cobra todavía)
-      await updateDoc(viajeRef, {
-        reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
-      });
-      
-      if (idConductor) {
-        const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
-        await enviarNotificacion(idConductor, "¡Nueva Solicitud!", `${nombreUsuario} quiere unirse a tu viaje${extraTexto}.`, "viaje");
-      }
-      setToastMessage("Solicitud enviada");
+    // 1. Verificación de seguridad: ¿Tiene plata suficiente?
+    if (miSaldoActual < costoTotalPeticion) {
+      setToastMessage(`Saldo insuficiente. Necesitas $${costoTotalPeticion.toFixed(2)}`);
+      setShowToast(true);
+      return;
     }
-    
-    setModalAcompanantes(false); 
-    setShowToast(true);
-  } catch (e) { 
-    console.error("Error en reserva:", e);
-    setToastMessage("Error al procesar");
-    setShowToast(true);
-  } finally { 
-    setCargando(false); 
-  }
-};
+
+    // 2. Verificación de seguridad: ¿Hay puestos?
+    if (puestosQueQuiero > cuposRestantes) {
+      setToastMessage("No hay suficientes puestos disponibles");
+      setShowToast(true);
+      return;
+    }
+
+    setCargando(true);
+    try {
+      // 🔥 3. NUEVA VERIFICACIÓN CRÍTICA: ¿Ya tiene otro viaje activo? 🔥
+      const miId = userData?.id || userData?.uid;
+      const qActivos = query(
+        collection(db, "Viajes"),
+        where("estado", "in", ["disponible", "buscando", "en_curso"])
+      );
+      
+      const snapActivos = await getDocs(qActivos);
+      let enOtroViaje = false;
+
+      snapActivos.forEach(d => {
+        if (d.id !== viaje.id) { // Solo revisamos OTROS viajes
+          const data = d.data();
+          const esChofer = data.uidConductor === miId || data.idCreador === miId;
+          const esPasajero = obtenerArraySeguro(data.pasajeros).some(p => p && (p.id === miId || p.uid === miId));
+          const esPendiente = obtenerArraySeguro(data.reservasPendientes).some(p => p && (p.id === miId || p.uid === miId));
+          
+          if (esChofer || esPasajero || esPendiente) {
+            enOtroViaje = true;
+          }
+        }
+      });
+
+      if (enOtroViaje) {
+        setModalAcompanantes(false);
+        setToastMessage("Ya tienes un viaje en curso o pendiente. Finalízalo para pedir otro.");
+        setShowToast(true);
+        setCargando(false);
+        return;
+      }
+      // 🔥 FIN DE LA NUEVA VERIFICACIÓN 🔥
+
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+      const idConductor = viaje?.uidConductor || viaje?.idCreador;
+      const viajeRef = doc(db, "Viajes", viaje.id);
+      const nombreUsuario = userData?.nombre || "Usuario";
+      
+      const datosPasajeroBase = {
+        id: miId, 
+        nombre: nombreUsuario, 
+        fotoPerfil: userData?.fotoPerfil || null, 
+        puestosSolicitados: puestosQueQuiero,
+        adultosExtra: adultosExtra,           
+        ninosExtra: ninosExtra,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        abordado: false,
+      };
+
+      const esAutoAceptar = viaje.autoAceptar === true;
+
+      await addDoc(collection(db, "Solicitudes"), {
+        idConductor: idConductor,
+        nombrePasajero: nombreUsuario,
+        idViaje: viaje.id,
+        idPasajero: miId,
+        estado: esAutoAceptar ? "aprobada" : "pendiente",
+        puestosSolicitados: puestosQueQuiero,
+        fecha: serverTimestamp()
+      });
+
+      if (esAutoAceptar) {
+        const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
+
+        await updateDoc(viajeRef, {
+          pasajeros: arrayUnion({ 
+            ...datosPasajeroBase, 
+            estado: 'confirmado', 
+            pin: pinGenerado, 
+            abordado: false, 
+            calificado: false 
+          })
+        });
+
+        if (idConductor) await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se ha unido a tu viaje.`, "exito");
+        setToastMessage("¡Reserva confirmada!");
+      } else {
+        await updateDoc(viajeRef, {
+          reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
+        });
+        
+        if (idConductor) {
+          const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
+          await enviarNotificacion(idConductor, "¡Nueva Solicitud!", `${nombreUsuario} quiere unirse a tu viaje${extraTexto}.`, "viaje");
+        }
+        setToastMessage("Solicitud enviada");
+      }
+      
+      setModalAcompanantes(false); 
+      setShowToast(true);
+    } catch (e) { 
+      console.error("Error en reserva:", e);
+      setToastMessage("Error al procesar");
+      setShowToast(true);
+    } finally { 
+      setCargando(false); 
+    }
+  };
   
   const cancelarSolicitud = async () => {
     setCargando(true);
@@ -374,14 +386,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-    const gestionarSolicitud = async (solicitud, accion) => {
+  const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
       
       if (accion === 'aceptar') {
         const puestosQuePidio = Number(solicitud.puestosSolicitados) || 1;
-        const costoAceptar = Number(viaje?.precio || 0) * puestosQuePidio;
 
         if (puestosQuePidio > cuposRestantes) { 
           setToastMessage("Sin puestos disponibles para esta solicitud"); 
@@ -393,7 +404,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         const idPasajero = solicitud.id || solicitud.uid;
         
-        // 3. ACTUALIZAR VIAJE: Movemos la solicitud a confirmados
         await updateDoc(viajeRef, {
           reservasPendientes: arrayRemove(solicitud),
           pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
@@ -407,9 +417,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         );
 
       } else {
-        // LÓGICA DE RECHAZO (No se cobra ni se crea recibo)
         await updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) });
-
         await enviarNotificacion(
           solicitud.id || solicitud.uid,
           "Solicitud no confirmada",
@@ -426,8 +434,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  
-    const procesarAbordajeEIniciar = async () => {
+  const procesarAbordajeEIniciar = async () => {
     setCargando(true);
     try {
       const pasajerosActualizados = pasajerosConfirmados.map(p => {
@@ -450,14 +457,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setToastMessage("¡Viaje Iniciado!"); setShowToast(true);
     } catch (e) { 
       console.error(e); 
-      // 👇 ESTO ES LO QUE CAMBIA PARA VER LA VERDAD 👇
       setToastMessage(`Error: ${e.code || e.message}`); 
       setShowToast(true);
     } finally { 
       setCargando(false); 
     }
   };
-  
 
   const iniciarFinalizacion = () => {
     setModalFinalizar(false);
@@ -471,7 +476,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-     const enviarCalificacionesYFinalizar = async () => {
+  const enviarCalificacionesYFinalizar = async () => {
     setCargando(true);
     try {
       const llamarBunker = httpsCallableFromURL(functions, 'https://finalizar-viaje-v2-1080063705561.us-central1.run.app');
@@ -482,9 +487,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         ratingsChofer: ratingsChofer 
       });
 
-            if (resultado.data.success) {
-        
-        // 🔥 INYECCIÓN CRÍTICA: Notificar a los pasajeros para que califiquen
+      if (resultado.data.success) {
         pasajerosConfirmados.forEach(p => {
           if (p && (p.id || p.uid)) {
             enviarNotificacion(
@@ -503,7 +506,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       }
     } catch (e) { 
       console.error("Error completo:", e);
-      alert(`CÓDIGO: ${e.code}\nMSG: ${e.message}`); 
       setToastMessage("Error al cobrar: " + e.message);
       setShowToast(true);
     } finally { 
@@ -511,13 +513,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-    const cambiarEstadoViaje = async (nuevoEstado) => {
+  const cambiarEstadoViaje = async (nuevoEstado) => {
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
       await updateDoc(viajeRef, { estado: nuevoEstado });
       
-      // 🔥 NOTIFICACIÓN AUTOMÁTICA PROFESIONAL
       if (nuevoEstado === 'buscando') {
         const promesas = pasajerosConfirmados.map(p => {
           if (p.id || p.uid) {
@@ -616,19 +617,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           
           <div className="px-5 space-y-6 animate-in zoom-in-95 duration-500">
             
-            {/* NUEVO MAPA GOOGLE VIVO */}
             <div className="bg-white rounded-[40px] h-72 relative overflow-hidden border-4 border-slate-100 shadow-xl z-0">
                <MapaView 
               origen={viaje.coordsOrigen} 
               destino={viaje.coordsDestino} 
               posicionChofer={viaje.latChofer && viaje.lngChofer ? { lat: viaje.latChofer, lon: viaje.lngChofer } : null}
-              pasajeros={pasajerosConfirmados} // <--- Nueva Prop
-              estadoViaje={estadoViaje}       // <--- Nueva Prop para saber qué mostrar
+              pasajeros={pasajerosConfirmados} 
+              estadoViaje={estadoViaje}       
               interactivo={false} 
               />
-      
                
-               {/* Overlay flotante informativo */}
                <div className="absolute top-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
                   <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-slate-200 flex items-center gap-2 shadow-lg">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
@@ -640,14 +638,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                   </div>
                </div>
             </div>
-            
 
             <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
                <Share2 size={20} />
                <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
             </button>
 
-              {/* 🔥 PEGA EL PIN AQUÍ, EN LA PARTE DE ARRIBA 🔥 */}
             {yaSoyPasajero && !soyConductor && (estadoViaje === 'buscando') && (
               <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center mb-6 animate-in zoom-in duration-300">
                 <div className="bg-blue-500/20 p-3 rounded-full mb-3">
@@ -665,7 +661,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
 
-            {/* LISTA DE PASAJEROS HUD */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5 shadow-sm">
               <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center flex items-center justify-center gap-2">
                 <Users size={14} /> Pasajeros Confirmados ({pasajerosConfirmados.length})
@@ -766,7 +761,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
-            {/* DATOS DEL VEHÍCULO (SOLO SE MUESTRA SI EXISTEN) */}
             {viaje?.vehiculo && (
               <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm flex flex-col gap-3">
                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
@@ -795,7 +789,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
             
-            {/* 🔥 SOLICITUDES NARANJA (MOVIDO AQUÍ ARRIBA) 🔥 */}
             {soyConductor && solicitudesPendientes.length > 0 && estadoViaje === 'disponible' && (
               <div className="bg-orange-50 p-6 rounded-[35px] border-2 border-orange-200 shadow-sm space-y-4 animate-in slide-in-from-bottom">
                 <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Nuevas Solicitudes</p>
