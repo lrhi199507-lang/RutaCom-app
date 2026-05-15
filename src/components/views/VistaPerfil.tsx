@@ -439,15 +439,20 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
+            {/* TOAST FLOTANTE CORREGIDO PARA MULTIPLES LÍNEAS */}
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
-          <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
-            {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
-            <span className="truncate whitespace-nowrap">{toast.texto}</span>
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
+          <div className={`px-5 py-4 rounded-[20px] shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
+            {toast.tipo === 'exito' ? (
+              <ShieldCheck size={24} className="text-green-400 shrink-0" />
+            ) : (
+              <AlertTriangle size={24} className="shrink-0" />
+            )}
+            <span className="leading-relaxed">{toast.texto}</span>
           </div>
         </div>
       )}
-
+      
       <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100">
         <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
           <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
