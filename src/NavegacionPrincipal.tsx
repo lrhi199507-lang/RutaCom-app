@@ -415,17 +415,19 @@ export default function NavegacionPrincipal({ user }) {
           />
         )}
         
-        
-                {vista === "perfil" && (
-          <VistaPerfil 
+        {vista === "perfil" && (
+          <VistaPerfil
             userData={userData} 
-            setUserData={setUserData} // <--- AGREGA ESTA LÍNEA QUE FALTA
+            setUserData={setUserData} 
             handleLogout={() => signOut(auth)} 
             pestañaActiva={pestañaPerfil} 
             setPestañaActiva={setPestañaPerfil}
+            onAbrirChat={(chatSeleccionado) => {
+              setChatActivo(chatSeleccionado);
+              setVista("chat_individual");
+            }}
           />
         )}
-        
         
         {vista === "publicar" && (
           <WizardPublicar 
