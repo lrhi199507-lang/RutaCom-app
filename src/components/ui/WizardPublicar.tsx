@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore'; 
-import { MapPin, Navigation, ShieldCheck, X, Map, Clock } from 'lucide-react'; 
+import { MapPin, Navigation, ShieldCheck, X, Map, Clock, Car } from 'lucide-react'; // 🔥 Inyectamos Car
 import Toast from './Toast'; 
 import MapaView from '../Map/MapaView'; 
 
@@ -123,7 +123,6 @@ export const WizardPublicar = ({
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
-  // Calcula rating del conductor
   useEffect(() => {
     if (!userData?.id) return;
     const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", userData.id));
@@ -134,7 +133,6 @@ export const WizardPublicar = ({
     }).catch(e => console.error("Error rating en wizard:", e));
   }, [userData?.id]);
 
-  // --- NUEVO: INYECTOR AUTOMÁTICO DE GOOGLE MAPS ---
   useEffect(() => {
     if (window.google && window.google.maps) return;
 
@@ -155,7 +153,6 @@ export const WizardPublicar = ({
     document.head.appendChild(script);
   }, []);
   
-  // INICIALIZADOR DINÁMICO DE GOOGLE MAPS
   const inicializarGooglePlaces = () => {
     if (window.google && window.google.maps && window.google.maps.places) {
       if (!autocompleteService.current) {
@@ -170,7 +167,7 @@ export const WizardPublicar = ({
     return false;
   };
 
-    const manejarBusqueda = (texto, tipo) => {
+  const manejarBusqueda = (texto, tipo) => {
     if (tipo === 'origen') {
         setViajeForm(prev => ({...prev, origen: texto}));
     } else {
@@ -202,10 +199,7 @@ export const WizardPublicar = ({
           }));
           setSugerencias(sugerenciasGoogle);
         } else {
-          // 🔥 AQUÍ ESTÁ LA MAGIA: Vaciamos sugerencias en silencio.
           setSugerencias([]);
-          
-          // Solo mostramos error en consola si es un bloqueo real de facturación o de API, NO molestamos al usuario.
           if (status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
             console.warn(`Aviso interno de Google Maps: ${status}`);
           }
@@ -214,7 +208,7 @@ export const WizardPublicar = ({
     } else {
       setSugerencias([]);
     }
-    }
+  }
 
   const seleccionarSugerencia = (sugerencia) => {
     if (!inicializarGooglePlaces()) return;
@@ -276,7 +270,54 @@ export const WizardPublicar = ({
     return `${horas}:${m} ${ampm}`;
   };
 
-  // PASO 1: UBICACIONES (🔥 CORREGIDO RESPONSIVE)
+  // 🔥 CANDADO DE TITANIO: VERIFICACIÓN DE CHOFER 🔥
+  const tieneVehiculoRegistrado = userData?.vehiculo?.placa && userData.vehiculo.placa !== "S/N";
+  const tieneFotosVehiculoAprobadas = userData?.fotoFrontalVerificada === true; 
+  const esChoferAutorizado = tieneVehiculoRegistrado && tieneFotosVehiculoAprobadas;
+
+  // Si no es un chofer autorizado y no está editando un viaje viejo, bloqueamos la pantalla
+  if (!esChoferAutorizado && !viajeAEditar) {
+    return (
+      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto pb-24 no-scrollbar mt-10">
+        <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-blue-100">
+          <Car size={45} />
+        </div>
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none text-center">
+          Falta registrar<br/>tu vehículo
+        </h2>
+        <p className="text-xs font-bold text-slate-500 text-center px-2 leading-relaxed">
+          Para ofrecer colas y generar ingresos como chofer, la comunidad necesita saber en qué auto viajan.
+        </p>
+
+        <div className="bg-slate-50 p-5 rounded-[25px] border border-slate-100 space-y-4">
+           <div className="flex items-center justify-between">
+             <span className="text-[10px] font-black uppercase text-slate-600">1. Datos del Auto (Placa, Modelo)</span>
+             {tieneVehiculoRegistrado ? <ShieldCheck size={18} className="text-green-500"/> : <X size={18} className="text-red-400"/>}
+           </div>
+           <div className="w-full h-[1px] bg-slate-200" />
+           <div className="flex items-center justify-between">
+             <span className="text-[10px] font-black uppercase text-slate-600">2. Fotos Verificadas por Soporte</span>
+             {tieneFotosVehiculoAprobadas ? <ShieldCheck size={18} className="text-green-500"/> : <X size={18} className="text-red-400"/>}
+           </div>
+        </div>
+
+        <button 
+          onClick={() => { setVista("perfil"); }} 
+          className="w-full bg-blue-600 text-white p-5 rounded-full font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all mt-4"
+        >
+          Ir a Mi Perfil
+        </button>
+        <button 
+          onClick={() => { setVista("inicio"); setModo("pasajero"); }} 
+          className="w-full text-[10px] font-black uppercase text-slate-400 italic text-center mt-2 p-2"
+        >
+          Volver al Inicio
+        </button>
+      </div>
+    );
+  }
+
+  // PASO 1: UBICACIONES 
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
@@ -364,7 +405,7 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 2: DETALLES (🔥 CORREGIDO RESPONSIVE)
+  // PASO 2: DETALLES 
   if (pasoWizard === 2) {
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
 
@@ -493,7 +534,7 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 3: AJUSTES FINALES (🔥 CORREGIDO RESPONSIVE)
+  // PASO 3: AJUSTES FINALES
   if (pasoWizard === 3) {
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
