@@ -406,6 +406,19 @@ const manejarOlvidoClave = async () => {
       >
         {esRegistro ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí"}
       </button>
+
+      {toast && (
+  <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
+    <div className={`px-6 py-4 rounded-[25px] shadow-2xl flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-[#0f172a] border border-blue-500/30' : 'bg-red-500'}`}>
+      {toast.tipo === 'exito' ? (
+        <ShieldCheck size={20} className="text-blue-400 shrink-0" />
+      ) : (
+        <AlertTriangle size={20} className="shrink-0" />
+      )}
+      <span className="leading-relaxed">{toast.texto}</span>
+    </div>
+  </div>
+)}
     </div>
   );
 }
