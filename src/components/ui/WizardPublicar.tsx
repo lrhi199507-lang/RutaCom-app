@@ -1,9 +1,56 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore'; 
-import { MapPin, Navigation, ShieldCheck, X, Map, Clock, Car } from 'lucide-react'; // 🔥 Inyectamos Car
+// 🔥 Añadimos Check, AlertTriangle y AlertCircle
+import { MapPin, Navigation, ShieldCheck, X, Map, Clock, Car, Check, AlertTriangle, AlertCircle } from 'lucide-react'; 
 import Toast from './Toast'; 
 import MapaView from '../Map/MapaView'; 
+
+// --- FUNCIÓN MATEMÁTICA PARA DISTANCIA (Ahorra llamadas a la API) ---
+const calcularDistanciaKm = (origen, destino) => {
+  if (!origen || !destino) return 0;
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (destino.lat - origen.lat) * Math.PI / 180;
+  const dLon = (destino.lon - origen.lon) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(origen.lat * Math.PI / 180) * Math.cos(destino.lat * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c * 1.2; // Multiplicamos por 1.2 para compensar curvas de la vía
+};
+
+// --- FUNCIÓN DEL TERMÓMETRO DE PRECIOS ---
+const calcularRangoPrecio = (distanciaKm, precioIngresado) => {
+  if (distanciaKm <= 0 || !precioIngresado) return null;
+  
+  // Base aproximada: $0.11 por km. Mínimo absoluto de $1.5 para viajes súper cortos
+  const precioBase = Math.max(1.5, distanciaKm * 0.11); 
+  const limiteVerde = precioBase * 1.15; 
+  const limiteAmarillo = precioBase * 1.45;
+
+  if (precioIngresado <= limiteVerde) {
+    return {
+      estado: 'verde',
+      mensaje: '¡Precio excelente! Atraerás pasajeros rápido.',
+      color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+      icono: <Check size={18} />
+    };
+  } else if (precioIngresado <= limiteAmarillo) {
+    return {
+      estado: 'amarillo',
+      mensaje: 'Precio un poco alto. Podrías tardar más en llenar los asientos.',
+      color: 'text-amber-600 bg-amber-50 border-amber-200',
+      icono: <AlertTriangle size={18} />
+    };
+  } else {
+    return {
+      estado: 'rojo',
+      mensaje: 'Precio excesivo para viaje compartido. Considera bajarlo.',
+      color: 'text-red-600 bg-red-50 border-red-200',
+      icono: <AlertCircle size={18} />
+    };
+  }
+};
 
 // --- COMPONENTE AUXILIAR: CARRUSEL DE FECHAS ---
 const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
@@ -270,12 +317,10 @@ export const WizardPublicar = ({
     return `${horas}:${m} ${ampm}`;
   };
 
-  // 🔥 CANDADO DE TITANIO: VERIFICACIÓN DE CHOFER 🔥
   const tieneVehiculoRegistrado = userData?.vehiculo?.placa && userData.vehiculo.placa !== "S/N";
   const tieneFotosVehiculoAprobadas = userData?.fotoFrontalVerificada === true; 
   const esChoferAutorizado = tieneVehiculoRegistrado && tieneFotosVehiculoAprobadas;
 
-  // Si no es un chofer autorizado y no está editando un viaje viejo, bloqueamos la pantalla
   if (!esChoferAutorizado && !viajeAEditar) {
     return (
       <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto pb-24 no-scrollbar mt-10">
@@ -408,6 +453,10 @@ export const WizardPublicar = ({
   // PASO 2: DETALLES 
   if (pasoWizard === 2) {
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
+    
+    // 🔥 CÁLCULOS DEL TERMÓMETRO EN TIEMPO REAL 🔥
+    const distancia = calcularDistanciaKm(viajeForm.coordsOrigen, viajeForm.coordsDestino);
+    const resultadoPrecio = calcularRangoPrecio(distancia, Number(viajeForm.precio));
 
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
@@ -451,7 +500,24 @@ export const WizardPublicar = ({
           </div>
         </div>
 
-        <div className="space-y-2">
+        {/* 🔥 TERMÓMETRO VISUAL (Aparece al poner precio) 🔥 */}
+        {resultadoPrecio && (
+          <div className={`p-4 rounded-[20px] border flex items-start gap-3 animate-in fade-in zoom-in-95 duration-200 ${resultadoPrecio.color}`}>
+            <div className="mt-0.5 shrink-0">
+              {resultadoPrecio.icono}
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wider leading-none mb-1">
+                Análisis de Tarifa
+              </p>
+              <p className="text-xs font-bold leading-relaxed opacity-90">
+                {resultadoPrecio.mensaje}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2 pt-2">
           <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
           <div className="grid grid-cols-3 gap-2">
             {[
