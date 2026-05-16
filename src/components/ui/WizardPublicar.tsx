@@ -1,62 +1,59 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore'; 
-// 🔥 Añadimos Check, AlertTriangle y AlertCircle
-import { MapPin, Navigation, ShieldCheck, X, Map, Clock, Car, Check, AlertTriangle, AlertCircle } from 'lucide-react'; 
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore'; 
+// 🔥 Inyectamos ChevronLeft para el gesto visual si fuera necesario
+import { MapPin, Navigation, ShieldCheck, X, Map, Clock, Car, Check, AlertTriangle, AlertCircle, ChevronLeft } from 'lucide-react'; 
 import Toast from './Toast'; 
 import MapaView from '../Map/MapaView'; 
 
-// --- FUNCIÓN MATEMÁTICA PARA DISTANCIA (Ahorra llamadas a la API) ---
+// --- FUNCIÓN MATEMÁTICA PARA DISTANCIA ---
 const calcularDistanciaKm = (origen, destino) => {
   if (!origen || !destino) return 0;
-  const R = 6371; // Radio de la Tierra en km
+  const R = 6371; 
   const dLat = (destino.lat - origen.lat) * Math.PI / 180;
   const dLon = (destino.lon - origen.lon) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
             Math.cos(origen.lat * Math.PI / 180) * Math.cos(destino.lat * Math.PI / 180) *
             Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c * 1.2; // Multiplicamos por 1.2 para compensar curvas de la vía
+  return R * c * 1.2; 
 };
 
-// --- FUNCIÓN DEL TERMÓMETRO DE PRECIOS ---
+// --- FUNCIÓN DEL TERMÓMETRO DE PRECIOS CON RANGO FIJO ---
 const calcularRangoPrecio = (distanciaKm, precioIngresado) => {
   if (distanciaKm <= 0 || !precioIngresado) return null;
   
   const precioBase = Math.max(1.5, distanciaKm * 0.11); 
   const limiteVerde = precioBase * 1.15; 
   const limiteAmarillo = precioBase * 1.45;
-
-  // Redondeamos para que el usuario vea números limpios (ej: 15.5 o 16)
   const maxVerdeSugerido = Math.floor(limiteVerde);
 
   if (precioIngresado <= limiteVerde) {
     return {
       estado: 'verde',
       mensaje: `¡Precio excelente! El rango ideal para esta ruta es hasta $${maxVerdeSugerido}.`,
-      color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      icono: <Check size={18} />,
+      color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      icono: <Check size={18} className="text-emerald-500" />,
       sugerencia: maxVerdeSugerido
     };
   } else if (precioIngresado <= limiteAmarillo) {
     return {
       estado: 'amarillo',
       mensaje: `Precio un poco alto. Para estar en el rango verde, intenta con $${maxVerdeSugerido} o menos.`,
-      color: 'text-amber-600 bg-amber-50 border-amber-200',
-      icono: <AlertTriangle size={18} />,
+      color: 'text-amber-700 bg-amber-50 border-amber-200',
+      icono: <AlertTriangle size={18} className="text-amber-500" />,
       sugerencia: maxVerdeSugerido
     };
   } else {
     return {
       estado: 'rojo',
       mensaje: `Precio excesivo. Los pasajeros suelen buscar precios cercanos a $${maxVerdeSugerido}.`,
-      color: 'text-red-600 bg-red-50 border-red-200',
-      icono: <AlertCircle size={18} />,
+      color: 'text-red-700 bg-red-50 border-red-200',
+      icono: <AlertCircle size={18} className="text-red-500" />,
       sugerencia: maxVerdeSugerido
     };
   }
 };
-
 
 // --- COMPONENTE AUXILIAR: CARRUSEL DE FECHAS ---
 const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
@@ -82,7 +79,7 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
             key={i}
             type="button"
             onClick={() => onSelect(strDate)}
-            className={`snap-center shrink-0 w-[70px] py-3 rounded-[20px] border flex flex-col items-center justify-center transition-all ${
+            className={`snap-center shrink-0 w-[70px] py-3 rounded-[22px] border flex flex-col items-center justify-center transition-all ${
               isSelected 
                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/30' 
                 : 'bg-white border-slate-100 text-slate-500 hover:border-blue-200'
@@ -172,9 +169,27 @@ export const WizardPublicar = ({
   const [showTimeModalRegreso, setShowTimeModalRegreso] = useState(false);
 
   const [ratingCalculado, setRatingCalculado] = useState("0.0");
+  const [publicando, setPublicando] = useState(false);
 
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
+
+  // 🔥 INTERCEPTOR DE GESTO ATRÁS 🔥
+  useEffect(() => {
+    const manejarAtras = (e) => {
+      if (pasoWizard > 1) {
+        e.preventDefault();
+        // Empujamos un estado falso para que el gesto de "atrás" solo afecte al Wizard
+        window.history.pushState(null, "", window.location.pathname);
+        setPasoWizard(pasoWizard - 1);
+      }
+    };
+
+    window.history.pushState(null, "", window.location.pathname);
+    window.addEventListener('popstate', manejarAtras);
+
+    return () => window.removeEventListener('popstate', manejarAtras);
+  }, [pasoWizard, setPasoWizard]);
 
   useEffect(() => {
     if (!userData?.id) return;
@@ -194,91 +209,44 @@ export const WizardPublicar = ({
     script.async = true;
     script.defer = true;
     
-    script.onload = () => {
-      console.log("¡Google Maps inyectado con éxito!");
-    };
-    
-    script.onerror = () => {
-      setToastMessage("Error crítico: Google bloqueó la descarga del script.");
-      setShowToast(true);
-    };
-
+    script.onload = () => { console.log("¡Google Maps inyectado!"); };
+    script.onerror = () => { setToastMessage("Error crítico: Google Maps bloqueado."); setShowToast(true); };
     document.head.appendChild(script);
   }, []);
   
   const inicializarGooglePlaces = () => {
     if (window.google && window.google.maps && window.google.maps.places) {
-      if (!autocompleteService.current) {
-        autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      }
-      if (!placesService.current) {
-        const dummyDiv = document.createElement('div');
-        placesService.current = new window.google.maps.places.PlacesService(dummyDiv);
-      }
+      if (!autocompleteService.current) autocompleteService.current = new window.google.maps.places.AutocompleteService();
+      if (!placesService.current) placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
       return true;
     }
     return false;
   };
 
   const manejarBusqueda = (texto, tipo) => {
-    if (tipo === 'origen') {
-        setViajeForm(prev => ({...prev, origen: texto}));
-    } else {
-        setViajeForm(prev => ({...prev, destino: texto}));
-    }
+    if (tipo === 'origen') setViajeForm(prev => ({...prev, origen: texto}));
+    else setViajeForm(prev => ({...prev, destino: texto}));
 
     if (texto.length > 2) {
-      if (!window.google || !window.google.maps || !window.google.maps.places) {
-        setToastMessage("Error: Google Maps no cargó. Revisa tu llave en index.html");
-        setShowToast(true);
-        return;
-      }
-
       if (!inicializarGooglePlaces()) return;
-
       setCampoActivo(tipo);
-      const request = {
-        input: texto,
-        componentRestrictions: { country: 've' }, 
-      };
-
-      autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
+      autocompleteService.current.getPlacePredictions({ input: texto, componentRestrictions: { country: 've' } }, (predictions, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          const sugerenciasGoogle = predictions.map(p => ({
-            descripcion: p.description,
-            place_id: p.place_id,
-            ciudad: p.structured_formatting.main_text,
-            estado: p.structured_formatting.secondary_text
-          }));
-          setSugerencias(sugerenciasGoogle);
-        } else {
-          setSugerencias([]);
-          if (status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-            console.warn(`Aviso interno de Google Maps: ${status}`);
-          }
-        }
+          setSugerencias(predictions.map(p => ({
+            descripcion: p.description, place_id: p.place_id, ciudad: p.structured_formatting.main_text, estado: p.structured_formatting.secondary_text
+          })));
+        } else setSugerencias([]);
       });
-    } else {
-      setSugerencias([]);
-    }
+    } else setSugerencias([]);
   }
 
   const seleccionarSugerencia = (sugerencia) => {
     if (!inicializarGooglePlaces()) return;
-
-    placesService.current.getDetails({ placeId: sugerencia.place_id, fields: ['geometry', 'name', 'formatted_address'] }, (place, status) => {
+    placesService.current.getDetails({ placeId: sugerencia.place_id, fields: ['geometry'] }, (place, status) => {
       if (status === window.google.maps.places.PlacesServiceStatus.OK && place.geometry) {
-        const coords = {
-          lat: place.geometry.location.lat(),
-          lon: place.geometry.location.lng()
-        };
-        const nombreMostrar = sugerencia.ciudad; 
-        
-        if (campoActivo === 'origen') {
-          setViajeForm({...viajeForm, origen: nombreMostrar, coordsOrigen: coords});
-        } else {
-          setViajeForm({...viajeForm, destino: nombreMostrar, coordsDestino: coords});
-        }
+        const coords = { lat: place.geometry.location.lat(), lon: place.geometry.location.lng() };
+        if (campoActivo === 'origen') setViajeForm({...viajeForm, origen: sugerencia.ciudad, coordsOrigen: coords});
+        else setViajeForm({...viajeForm, destino: sugerencia.ciudad, coordsDestino: coords});
         setSugerencias([]);
       }
     });
@@ -290,462 +258,200 @@ export const WizardPublicar = ({
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
       const data = await response.json();
-      
       const address = data.address || {};
-      const zonaLocal = address.suburb || address.neighbourhood || address.residential || address.road || "";
-      const ciudadMunicipio = address.city || address.town || address.village || address.county || data.name || "";
-      const estado = address.state || "Venezuela";
-      const partes = [zonaLocal, ciudadMunicipio, estado].filter(Boolean);
-      const textoCompleto = [...new Set(partes)].join(", ");
-
-      if (tipoMapa === 'origen') {
-        setViajeForm({...viajeForm, origen: textoCompleto, coordsOrigen: coordsTemporales});
-      } else {
-        setViajeForm({...viajeForm, destino: textoCompleto, coordsDestino: coordsTemporales});
-      }
-      
+      const txt = address.city || address.town || address.village || data.name || "Ubicación Seleccionada";
+      if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txt, coordsOrigen: coordsTemporales});
+      else setViajeForm({...viajeForm, destino: txt, coordsDestino: coordsTemporales});
       setShowMapaModal(false);
-      setCoordsTemporales(null);
-    } catch (error) {
-      console.error("Error al obtener dirección:", error);
-      setShowMapaModal(false);
-    } finally {
-      setBuscandoDireccion(false);
-    }
+    } catch (error) { setShowMapaModal(false); } finally { setBuscandoDireccion(false); }
   };
 
-  const formatearHoraAmPm = (hora24) => {
-    if (!hora24) return "Seleccionar";
-    const [h, m] = hora24.split(':');
+  const formatearHoraAmPm = (h24) => {
+    if (!h24) return "Seleccionar";
+    const [h, m] = h24.split(':');
     let horas = parseInt(h);
     const ampm = horas >= 12 ? 'PM' : 'AM';
-    horas = horas % 12 || 12;
-    return `${horas}:${m} ${ampm}`;
+    return `${horas % 12 || 12}:${m} ${ampm}`;
   };
 
-  const tieneVehiculoRegistrado = userData?.vehiculo?.placa && userData.vehiculo.placa !== "S/N";
-  const tieneFotosVehiculoAprobadas = userData?.fotoFrontalVerificada === true; 
-  const esChoferAutorizado = tieneVehiculoRegistrado && tieneFotosVehiculoAprobadas;
+  const esChoferAutorizado = userData?.vehiculo?.placa && userData.vehiculo.placa !== "S/N" && userData?.fotoFrontalVerificada === true;
 
   if (!esChoferAutorizado && !viajeAEditar) {
     return (
-      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto pb-24 no-scrollbar mt-10">
-        <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-blue-100">
-          <Car size={45} />
-        </div>
-        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none text-center">
-          Falta registrar<br/>tu vehículo
-        </h2>
-        <p className="text-xs font-bold text-slate-500 text-center px-2 leading-relaxed">
-          Para ofrecer colas y generar ingresos como chofer, la comunidad necesita saber en qué auto viajan.
-        </p>
-
-        <div className="bg-slate-50 p-5 rounded-[25px] border border-slate-100 space-y-4">
-           <div className="flex items-center justify-between">
-             <span className="text-[10px] font-black uppercase text-slate-600">1. Datos del Auto (Placa, Modelo)</span>
-             {tieneVehiculoRegistrado ? <ShieldCheck size={18} className="text-green-500"/> : <X size={18} className="text-red-400"/>}
-           </div>
-           <div className="w-full h-[1px] bg-slate-200" />
-           <div className="flex items-center justify-between">
-             <span className="text-[10px] font-black uppercase text-slate-600">2. Fotos Verificadas por Soporte</span>
-             {tieneFotosVehiculoAprobadas ? <ShieldCheck size={18} className="text-green-500"/> : <X size={18} className="text-red-400"/>}
-           </div>
-        </div>
-
-        <button 
-          onClick={() => { setVista("perfil"); }} 
-          className="w-full bg-blue-600 text-white p-5 rounded-full font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all mt-4"
-        >
-          Ir a Mi Perfil
-        </button>
-        <button 
-          onClick={() => { setVista("inicio"); setModo("pasajero"); }} 
-          className="w-full text-[10px] font-black uppercase text-slate-400 italic text-center mt-2 p-2"
-        >
-          Volver al Inicio
-        </button>
+      <div className="bg-white p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-bottom mt-10 text-center">
+        <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto border-4 border-blue-100"><Car size={45} /></div>
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Falta registrar<br/>tu vehículo</h2>
+        <button onClick={() => setVista("perfil")} className="w-full bg-blue-600 text-white p-5 rounded-full font-black uppercase text-xs shadow-lg">Ir a Mi Perfil</button>
       </div>
     );
   }
 
-  // PASO 1: UBICACIONES 
+  // PASO 1: UBICACIONES (Diseño vertical)
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
-        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">
-          {viajeAEditar ? <>Edita tu<br/>Ruta Actual</> : <>¿Hacia dónde<br/>vas a manejar?</>}
-        </h2>
-        
-        <div className="space-y-4 relative">
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">{viajeAEditar ? "Edita tu Ruta" : "¿Hacia dónde vas?"}</h2>
+        <div className="relative pl-6 space-y-4">
+          <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-slate-200" />
           <div className="relative">
-            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
-              <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-              <input type="text" placeholder="Punto de salida" className="bg-transparent w-full text-sm font-bold outline-none text-slate-700 placeholder:text-slate-400" value={viajeForm.origen || ""} onChange={(e) => manejarBusqueda(e.target.value, 'origen')} />
-              <div className="flex items-center gap-3 shrink-0">
-                {viajeForm.origen && <X size={16} className="text-slate-300 active:scale-90 cursor-pointer" onClick={() => setViajeForm({...viajeForm, origen: "", coordsOrigen: null})} />}
-                <div className="w-[1px] h-5 bg-slate-200" />
-                <button onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }} className="text-slate-400 hover:text-blue-600 active:scale-90 transition-all"><Map size={18} /></button>
-              </div>
+            <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-100 border-4 border-blue-600 rounded-full z-10" />
+            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 transition-colors">
+              <input type="text" placeholder="Ciudad de salida" className="bg-transparent w-full text-sm font-bold outline-none" value={viajeForm.origen || ""} onChange={(e) => manejarBusqueda(e.target.value, 'origen')} />
+              <button onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400"><Map size={18} /></button>
             </div>
           </div>
-
           <div className="relative">
-            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-green-400 focus-within:bg-green-50/30 transition-colors">
-              <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-              <input type="text" placeholder="Punto de llegada" className="bg-transparent w-full text-sm font-bold outline-none text-slate-700 placeholder:text-slate-400" value={viajeForm.destino || ""} onChange={(e) => manejarBusqueda(e.target.value, 'destino')} />
-              <div className="flex items-center gap-3 shrink-0">
-                {viajeForm.destino && <X size={16} className="text-slate-300 active:scale-90 cursor-pointer" onClick={() => setViajeForm({...viajeForm, destino: "", coordsDestino: null})} />}
-                <div className="w-[1px] h-5 bg-slate-200" />
-                <button onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }} className="text-slate-400 hover:text-green-600 active:scale-90 transition-all"><Map size={18} /></button>
-              </div>
+            <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-green-100 border-4 border-green-500 rounded-full z-10" />
+            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-green-400 transition-colors">
+              <input type="text" placeholder="Ciudad de llegada" className="bg-transparent w-full text-sm font-bold outline-none" value={viajeForm.destino || ""} onChange={(e) => manejarBusqueda(e.target.value, 'destino')} />
+              <button onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400"><Map size={18} /></button>
             </div>
           </div>
-
           {sugerencias.length > 0 && (
-            <div className="absolute z-[110] w-full bg-white border border-slate-100 rounded-3xl shadow-2xl overflow-hidden mt-1 top-[135px]">
+            <div className="absolute z-[110] w-[calc(100%-1.5rem)] bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden mt-1 top-full">
               {sugerencias.map((s, i) => (
-                <button key={i} type="button" onClick={() => seleccionarSugerencia(s)} 
-                  className="w-full text-left p-4 hover:bg-blue-50 border-b border-slate-50 last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3 transition-colors"
-                >
-                  {campoActivo === 'origen' ? <MapPin size={14} className="text-blue-400 shrink-0"/> : <Navigation size={14} className="text-green-400 shrink-0"/>}
-                  <div className="truncate">
-                    <p className="text-slate-700 truncate">{s.ciudad}</p>
-                    <p className="text-[9px] font-bold text-slate-400 truncate">{s.estado}</p>
-                  </div>
+                <button key={i} type="button" onClick={() => seleccionarSugerencia(s)} className="w-full text-left p-4 hover:bg-slate-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3">
+                  <MapPin size={14} className="text-blue-400 shrink-0" />
+                  <div className="truncate"><p className="text-slate-700 truncate">{s.ciudad}</p><p className="text-[9px] font-bold text-slate-400 truncate">{s.estado}</p></div>
                 </button>
               ))}
             </div>
           )}
         </div>
-
         {(viajeForm.coordsOrigen || viajeForm.coordsDestino) && (
-          <div className="pt-2 animate-in fade-in zoom-in duration-300">
-            <h3 className="text-[10px] font-black uppercase text-slate-400 mb-2 italic">📍 Ruta a publicar:</h3>
-            <div className="rounded-[25px] overflow-hidden border border-slate-100 h-56 relative shrink-0">
-                <MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} />
-            </div>
+          <div className="pt-2 animate-in fade-in zoom-in"><div className="rounded-[25px] overflow-hidden border border-slate-100 h-48 relative"><MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} /></div></div>
+        )}
+        <div className="flex gap-3 pt-6">
+          <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px]">Cancelar</button>
+          <button onClick={() => setPasoWizard(2)} disabled={!viajeForm.origen || !viajeForm.destino} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg disabled:opacity-50 transition-all">Siguiente</button>
+        </div>
+        {showMapaModal && (
+          <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom">
+             <div className="p-4 flex items-center justify-between shadow-sm z-10"><h3 className="font-black uppercase italic text-slate-800 text-sm">Ubica el Pin</h3><button onClick={() => setShowMapaModal(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} /></button></div>
+             <div className="flex-1 relative"><MapaView origen={tipoMapa === 'origen' ? coordsTemporales : null} destino={tipoMapa === 'destino' ? coordsTemporales : null} onMarkerDragEnd={setCoordsTemporales} interactivo={true} /></div>
+             <div className="p-6 bg-white z-10"><button onClick={confirmarUbicacionMapa} disabled={buscandoDireccion} className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs disabled:opacity-50 shadow-lg">Confirmar Ubicación</button></div>
           </div>
         )}
-
-        <div className="flex gap-3 pt-6">
-          <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px]">Cancelar</button>
-          <button onClick={() => setPasoWizard(2)} disabled={!viajeForm.origen || !viajeForm.destino} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg disabled:opacity-50">Siguiente</button>
-        </div>
-
-        {showMapaModal && (
-            <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
-               <div className="p-4 flex items-center justify-between shadow-sm z-10">
-                  <div>
-                    <h3 className="font-black uppercase italic text-slate-800 text-sm">Ubica tu {tipoMapa === 'origen' ? 'Punto de Salida' : 'Destino'}</h3>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mueve el mapa para ajustar el pin</p>
-                  </div>
-                  <button onClick={() => setShowMapaModal(false)} className="p-2 bg-slate-100 rounded-full text-slate-500"><X size={18} /></button>
-               </div>
-               <div className="flex-1 relative bg-slate-100">
-                  <MapaView origen={tipoMapa === 'origen' ? coordsTemporales : null} destino={tipoMapa === 'destino' ? coordsTemporales : null} onMarkerDragEnd={(coords) => setCoordsTemporales(coords)} interactivo={true} />
-               </div>
-               <div className="p-6 bg-white shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-10">
-                  <button onClick={confirmarUbicacionMapa} disabled={buscandoDireccion} className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:opacity-50">
-                    {buscandoDireccion ? 'Traduciendo...' : 'Confirmar Ubicación'}
-                  </button>
-               </div>
-            </div>
-        )}
-        <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
     );
   }
 
-  // PASO 2: DETALLES 
+  // PASO 2: DETALLES (Con Max Verde)
   if (pasoWizard === 2) {
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
-    
-    // 🔥 CÁLCULOS DEL TERMÓMETRO EN TIEMPO REAL 🔥
     const distancia = calcularDistanciaKm(viajeForm.coordsOrigen, viajeForm.coordsDestino);
     const resultadoPrecio = calcularRangoPrecio(distancia, Number(viajeForm.precio));
 
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
-        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del<br/>Viaje</h2>
-        
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del Viaje</h2>
         <div className="space-y-3">
-          <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Fecha de Salida</p>
-          <CarruselFechas 
-            fechaSeleccionada={viajeForm.fecha} 
-            onSelect={(date) => setViajeForm({...viajeForm, fecha: date})} 
-            minDate={hoy} 
-          />
+          <CarruselFechas fechaSeleccionada={viajeForm.fecha} onSelect={(date) => setViajeForm({...viajeForm, fecha: date})} minDate={hoy} />
+          <button onClick={() => setShowTimeModalIda(true)} className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[25px] flex items-center justify-between active:scale-95 transition-all">
+             <div className="flex items-center gap-3"><Clock className="text-blue-600" size={20} /><span className={`text-xl font-black italic ${viajeForm.hora ? 'text-slate-800' : 'text-slate-300'}`}>{formatearHoraAmPm(viajeForm.hora)}</span></div>
+             <div className="bg-white px-3 py-1.5 rounded-full border text-[9px] font-bold text-slate-400 uppercase tracking-widest">Cambiar</div>
+          </button>
         </div>
-
-        <div className="space-y-3">
-           <p className="text-[10px] font-black uppercase text-slate-400 ml-1">Hora de Salida</p>
-           <button 
-             onClick={() => setShowTimeModalIda(true)}
-             className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[25px] flex items-center justify-between active:scale-95 transition-all focus-within:border-blue-400 focus-within:bg-blue-50/30"
-           >
-             <div className="flex items-center gap-3">
-               <Clock className="text-blue-600" size={20} />
-               <span className={`text-xl font-black italic ${viajeForm.hora ? 'text-slate-800' : 'text-slate-300'}`}>
-                 {formatearHoraAmPm(viajeForm.hora)}
-               </span>
-             </div>
-             <div className="bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-               Cambiar
-             </div>
-           </button>
+        <div className="bg-slate-50 p-5 rounded-[30px] border border-slate-100">
+           <div className="flex gap-4">
+             <div className="flex-[2]"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p><input type="number" placeholder="0.00" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic text-blue-600 focus:border-blue-400 outline-none" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} /></div>
+             <div className="flex-1"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">🪑 Asientos</p><input type="number" placeholder="1-4" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic text-slate-700 outline-none" value={viajeForm.asientos || ""} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} /></div>
+           </div>
+           {resultadoPrecio && (
+            <div className={`mt-4 p-4 rounded-2xl border flex items-start gap-3 animate-in zoom-in-95 ${resultadoPrecio.color}`}>
+              <div className="mt-0.5 shrink-0">{resultadoPrecio.icono}</div>
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1"><p className="text-[10px] font-black uppercase tracking-wider leading-none">Análisis de Tarifa</p><span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white/50 border border-current italic tracking-tighter">MAX VERDE: ${resultadoPrecio.sugerencia}</span></div>
+                <p className="text-xs font-bold leading-relaxed opacity-90">{resultadoPrecio.mensaje}</p>
+              </div>
+            </div>
+           )}
         </div>
-
-        <div className="grid grid-cols-2 gap-4 pt-2">
-          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
-            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p>
-            <input type="number" placeholder="0.00" className="bg-transparent w-full text-2xl font-black italic outline-none text-blue-600 placeholder:text-slate-300" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} />
-          </div>
-          <div className="bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-blue-400 focus-within:bg-blue-50/30 transition-colors">
-            <p className="text-[8px] font-black uppercase text-slate-400 mb-2">🪑 Asientos Libres</p>
-            <input type="number" placeholder="1 a 4" className="bg-transparent w-full text-2xl font-black italic outline-none text-slate-700 placeholder:text-slate-300" value={viajeForm.asientos || ""} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} />
-          </div>
-        </div>
-
-        {/* 🔥 TERMÓMETRO VISUAL MEJORADO 🔥 */}
-{resultadoPrecio && (
-  <div className={`p-4 rounded-[20px] border flex items-start gap-3 animate-in fade-in zoom-in-95 duration-200 ${resultadoPrecio.color}`}>
-    <div className="mt-0.5 shrink-0">
-      {resultadoPrecio.icono}
-    </div>
-    <div className="flex-1">
-      <div className="flex justify-between items-center mb-1">
-        <p className="text-[10px] font-black uppercase tracking-wider leading-none">
-          Análisis de Tarifa
-        </p>
-        {/* Píldora con el precio máximo recomendado */}
-        <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white/50 border border-current">
-          MAX VERDE: ${resultadoPrecio.sugerencia}
-        </span>
-      </div>
-      <p className="text-xs font-bold leading-relaxed opacity-90">
-        {resultadoPrecio.mensaje}
-      </p>
-    </div>
-  </div>
-)}
-        
-        <div className="space-y-2 pt-2">
-          <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { id: 'ac', icon: '❄️', label: 'Aire A.' },
-              { id: 'noFumar', icon: '🚭', label: 'Sin Humo' },
-              { id: 'mascotas', icon: '🐾', label: 'Mascotas' },
-            ].map((pref) => (
-              <button 
-                key={pref.id}
-                type="button"
-                onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [pref.id]: !viajeForm.preferencias?.[pref.id]}})}
-                className={`p-3 rounded-[20px] border-2 transition-all flex flex-col items-center gap-1 ${viajeForm.preferencias?.[pref.id] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-50 bg-white text-slate-400 hover:border-slate-100'}`}
-              >
-                <span className="text-xl">{pref.icon}</span>
-                <span className="text-[8px] font-black uppercase text-center tracking-widest mt-1">{pref.label}</span>
+        <div className="grid grid-cols-3 gap-2">
+            {[ {id:'ac', i:'❄️', l:'Aire'}, {id:'noFumar', i:'🚭', l:'Sin Humo'}, {id:'mascotas', i:'🐾', l:'Mascotas'} ].map(p => (
+              <button key={p.id} onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [p.id]: !viajeForm.preferencias?.[p.id]}})} className={`p-3 rounded-[20px] border-2 flex flex-col items-center transition-all ${viajeForm.preferencias?.[p.id] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-50 bg-white text-slate-400'}`}>
+                <span className="text-xl">{p.i}</span><span className="text-[8px] font-black uppercase mt-1">{p.l}</span>
               </button>
             ))}
-          </div>
         </div>
-
-        {!viajeAEditar && (
-          <button 
-            type="button"
-            onClick={() => {
-              const nuevoRegreso = !viajeForm.publicarRegreso;
-              setViajeForm({
-                ...viajeForm, 
-                publicarRegreso: nuevoRegreso,
-                fechaRegreso: nuevoRegreso ? viajeForm.fecha : null
-              });
-            }}
-            className={`w-full p-5 rounded-[25px] border-2 transition-all flex items-center justify-between ${viajeForm.publicarRegreso ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-100 bg-white'}`}
-          >
-            <span className={`text-[11px] font-black uppercase italic ${viajeForm.publicarRegreso ? 'text-emerald-700' : 'text-slate-600'}`}>¿Publicar Viaje de Regreso?</span>
-            <div className={`w-12 h-6 rounded-full relative transition-colors ${viajeForm.publicarRegreso ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${viajeForm.publicarRegreso ? 'left-7' : 'left-1'}`} />
-            </div>
-          </button>
-        )}
-
+        <button onClick={() => setViajeForm({...viajeForm, publicarRegreso: !viajeForm.publicarRegreso, fechaRegreso: !viajeForm.publicarRegreso ? viajeForm.fecha : null})} className={`w-full p-5 rounded-[25px] border-2 flex items-center justify-between transition-all ${viajeForm.publicarRegreso ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 bg-white'}`}>
+          <span className={`text-[11px] font-black uppercase italic ${viajeForm.publicarRegreso ? 'text-emerald-700' : 'text-slate-600'}`}>¿Publicar viaje de regreso?</span>
+          <div className={`w-12 h-6 rounded-full relative transition-colors ${viajeForm.publicarRegreso ? 'bg-emerald-500' : 'bg-slate-200'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${viajeForm.publicarRegreso ? 'left-7' : 'left-1'}`} /></div>
+        </button>
         {viajeForm.publicarRegreso && (
-          <div className="p-6 bg-slate-900 rounded-[30px] space-y-6 animate-in slide-in-from-top">
-            <div className="space-y-3">
-              <p className="text-[9px] font-black uppercase text-slate-400">Fecha de Retorno</p>
-              <CarruselFechas 
-                fechaSeleccionada={viajeForm.fechaRegreso} 
-                onSelect={(date) => setViajeForm({...viajeForm, fechaRegreso: date})} 
-                minDate={viajeForm.fecha || hoy} 
-              />
-            </div>
-
-            <div className="space-y-3">
-               <p className="text-[9px] font-black uppercase text-slate-400">Hora de Retorno</p>
-               <button 
-                 onClick={() => setShowTimeModalRegreso(true)}
-                 className="w-full bg-slate-800 border border-slate-700 p-4 rounded-[20px] flex items-center justify-between active:scale-95 transition-all"
-               >
-                 <div className="flex items-center gap-3">
-                   <Clock className="text-emerald-400" size={18} />
-                   <span className={`text-lg font-black italic ${viajeForm.horaRegreso ? 'text-white' : 'text-slate-500'}`}>
-                     {formatearHoraAmPm(viajeForm.horaRegreso)}
-                   </span>
-                 </div>
-                 <div className="bg-slate-700 px-3 py-1.5 rounded-full text-[8px] font-bold text-slate-300 uppercase tracking-widest">
-                   Elegir
-                 </div>
-               </button>
-            </div>
-          </div>
+          <div className="space-y-3 animate-in slide-in-from-top"><p className="text-[9px] font-black uppercase text-slate-400">Fecha de Retorno</p><CarruselFechas fechaSeleccionada={viajeForm.fechaRegreso} onSelect={(date) => setViajeForm({...viajeForm, fechaRegreso: date})} minDate={viajeForm.fecha || hoy} /></div>
         )}
-        
         <div className="flex gap-3 pt-4">
-          <button onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase italic text-[9px]">Atrás</button>
-          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase italic text-[9px] shadow-lg active:scale-95 disabled:opacity-50">Siguiente</button>    
+          <button onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px]">Atrás</button>
+          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg disabled:opacity-50">Siguiente</button>    
         </div>
-
-        <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(hora) => setViajeForm({...viajeForm, hora})} titulo="Hora de Salida" />
-        <ModalHoraCustom isOpen={showTimeModalRegreso} onClose={() => setShowTimeModalRegreso(false)} onConfirm={(hora) => setViajeForm({...viajeForm, horaRegreso: hora})} titulo="Hora de Retorno" />
+        <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(h) => setViajeForm({...viajeForm, hora: h})} titulo="Hora de Salida" />
       </div>
     );
   }
 
-  // PASO 3: AJUSTES FINALES
+  // PASO 3: AJUSTES FINALES (Botón 3D Reactivo)
   if (pasoWizard === 3) {
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
-        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Ajustes Finales</h2>
-        
+        <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none mb-6">Ajustes Finales</h2>
         <div className="space-y-1">
-          <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro / Referencia</p>
-          <textarea rows={2} placeholder="Ej: Frente al Farmatodo de la redoma..." className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none focus:border-blue-400 focus:bg-blue-50/30 transition-colors" value={viajeForm.referencia} onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} />
+          <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro</p>
+          <textarea rows={2} placeholder="Ej: Frente al Farmatodo..." className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold outline-none resize-none focus:border-blue-400 transition-colors" value={viajeForm.referencia} onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} />
         </div>
-
-        <div className="space-y-2">
-          <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Equipaje permitido</p>
-          <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2">
             {[{id:'ligero', i:'🎒'}, {id:'medio', i:'🧳'}, {id:'pesado', i:'📦'}].map(eq => (
-              <button key={eq.id} type="button" onClick={() => setViajeForm({...viajeForm, equipaje: eq.id})} className={`p-3 rounded-[20px] border-2 transition-all ${viajeForm.equipaje === eq.id ? 'border-blue-600 bg-blue-50' : 'border-slate-50 bg-white hover:border-slate-100'}`}>
-                <span className="text-xl">{eq.i}</span>
-              </button>
+              <button key={eq.id} onClick={() => setViajeForm({...viajeForm, equipaje: eq.id})} className={`p-3 rounded-[20px] border-2 transition-all ${viajeForm.equipaje === eq.id ? 'border-blue-600 bg-blue-50' : 'border-slate-50 bg-white hover:border-slate-100'}`}><span className="text-xl">{eq.i}</span></button>
             ))}
-          </div>
+        </div>
+        <div className="flex items-center justify-between p-5 bg-slate-50 rounded-[25px] border">
+          <div><p className="text-[10px] font-black text-slate-700 uppercase">Reserva Automática</p><p className="text-[7px] font-bold text-slate-400 uppercase">Aceptar sin preguntar</p></div>
+          <button onClick={() => setViajeForm({...viajeForm, autoAceptar: !viajeForm.autoAceptar})} className={`w-10 h-5 rounded-full relative transition-colors ${viajeForm.autoAceptar ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${viajeForm.autoAceptar ? 'left-5' : 'left-0.5'}`} /></button>
         </div>
 
-        <div className="flex items-center justify-between p-5 bg-slate-50 rounded-[25px] border border-slate-100">
-          <div>
-            <p className="text-[10px] font-black uppercase text-slate-700">Reserva Automática</p>
-            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-1">Aceptar cola sin preguntar</p>
-          </div>
-          <button type="button" onClick={() => setViajeForm({...viajeForm, autoAceptar: !viajeForm.autoAceptar})} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${viajeForm.autoAceptar ? 'bg-green-500' : 'bg-slate-300'}`}>
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${viajeForm.autoAceptar ? 'left-7' : 'left-1'}`} />
-          </button>
-        </div>
-
-        <button 
-          onClick={async () => {
-            if (!userData?.id) {
-              setToastMessage("Sesión no detectada. Reinicia la aplicación.");
-              setShowToast(true);
-              return;
-            }
-
-            const estaVerificado = userData?.kycVerificado === true || userData?.identidadVerificada === true;
-            
-            if (!estaVerificado) {
-              setToastMessage("Verifica tu identidad en 'Mi Cuenta' para publicar.");
-              setShowToast(true);
-              return; 
-            }
-
-            const [ciudadOri] = (viajeForm.origen || "").split(',');
-            const [ciudadDest] = (viajeForm.destino || "").split(',');
-
-            const datosBase = {
-              ...viajeForm,
-              idCreador: userData.id,
-              uidConductor: userData.id,
-              fotoPerfil: userData?.fotoPerfil || "",
-              conductor: userData?.nombre || "Usuario",
-              identidadVerificada: true,
-              datosConductor: {
-                nombre: userData?.nombre || "Usuario",
-                foto: userData?.fotoPerfil || "",
-                rating: ratingCalculado, 
-                viajesRealizados: userData?.viajesRealizados || 0,
-                bio: userData?.bio || ""
-              },
-              vehiculo: userData?.vehiculo || { marca: "No especificado", modelo: "", color: "", placa: "S/N" },
-              cO: ciudadOri || "S/N", 
-              cD: ciudadDest || "S/N",
-              coordsOrigen: viajeForm.coordsOrigen || null,   
-              coordsDestino: viajeForm.coordsDestino || null, 
-              estado: "disponible",
-              timestamp: Date.now(),
-              pasajeros: [], 
-              reservasPendientes: [], 
-              precio: Number(viajeForm.precio) || 0 
-            };
-            
-            try {
-              if (viajeAEditar) {
-                await publicarRuta(datosBase, true); 
-                setToastMessage("Guardado con éxito");
-              } else {
-                const objetoIda = {
-                  ...datosBase,
-                  conRetornoProgramado: !!viajeForm.publicarRegreso,
-                  tipoRuta: viajeForm.publicarRegreso ? "ida_y_vuelta" : "solo_ida",
-                  fechaRegreso: viajeForm.publicarRegreso ? viajeForm.fechaRegreso : null,
-                  horaRegreso: viajeForm.publicarRegreso ? viajeForm.horaRegreso : null,
+        <div className="pt-4">
+          <button 
+            disabled={publicando}
+            onClick={async () => {
+              if (!userData?.id || !userData?.kycVerificado) { setToastMessage("Verifica tu identidad para publicar."); setShowToast(true); return; }
+              setPublicando(true);
+              try {
+                const [ciudadOri] = (viajeForm.origen || "").split(',');
+                const [ciudadDest] = (viajeForm.destino || "").split(',');
+                const datosBase = {
+                  ...viajeForm, idCreador: userData.id, uidConductor: userData.id, conductor: userData?.nombre || "Usuario",
+                  datosConductor: { nombre: userData?.nombre || "Usuario", foto: userData?.fotoPerfil || "", rating: ratingCalculado, viajesRealizados: userData?.viajesRealizados || 0, bio: userData?.bio || "" },
+                  vehiculo: userData?.vehiculo, cO: ciudadOri || "S/N", cD: ciudadDest || "S/N", coordsOrigen: viajeForm.coordsOrigen, coordsDestino: viajeForm.coordsDestino,
+                  estado: "disponible", timestamp: Date.now(), pasajeros: [], reservasPendientes: [], precio: Number(viajeForm.precio) || 0 
                 };
-                
-                await publicarRuta(objetoIda, true); 
 
                 if (viajeForm.publicarRegreso) {
-                  await publicarRuta({
-                    ...objetoIda,
-                    origen: viajeForm.destino,
-                    destino: viajeForm.origen,
-                    cO: ciudadDest || "S/N",
-                    cD: ciudadOri || "S/N",
-                    coordsOrigen: viajeForm.coordsDestino || null, 
-                    coordsDestino: viajeForm.coordsOrigen || null, 
-                    fecha: viajeForm.fechaRegreso,
-                    hora: viajeForm.horaRegreso || viajeForm.hora,
-                    tipoRuta: "vuelta_de_ruta",
-                    conRetornoProgramado: false
-                  }, true);
+                   const objetoIda = { ...datosBase, conRetornoProgramado: true, tipoRuta: "ida_y_vuelta" };
+                   await publicarRuta(objetoIda, true);
+                   await publicarRuta({
+                    ...objetoIda, origen: viajeForm.destino, destino: viajeForm.origen, cO: ciudadDest, cD: ciudadOri,
+                    coordsOrigen: viajeForm.coordsDestino, coordsDestino: viajeForm.coordsOrigen,
+                    fecha: viajeForm.fechaRegreso, hora: viajeForm.hora, tipoRuta: "vuelta_de_ruta", conRetornoProgramado: false
+                   }, true);
+                } else {
+                  await publicarRuta({ ...datosBase, conRetornoProgramado: false, tipoRuta: "solo_ida" }, true);
                 }
-                setToastMessage("¡Publicado con éxito!");
-              }
 
-              setShowToast(true);
-              setTimeout(() => { 
-                  setShowToast(false); 
-                  setVista("inicio"); 
-                  setPasoWizard(1);
-              }, 2000);
-
-            } catch (e) {
-              console.error("ERROR CRÍTICO AL PUBLICAR:", e);
-              setToastMessage("Ocurrió un error de conexión al publicar.");
-              setShowToast(true);
-            }
-          }}
-          className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-[2px] py-5 px-6 rounded-full shadow-lg transition-colors mt-6"
-        >
-          <ShieldCheck size={20} /> 
-          <span className="text-sm">{viajeAEditar ? "Guardar Cambios" : "¡Publicar Ahora!"}</span>
-        </button>
-              
-        <button onClick={() => setPasoWizard(2)} className="w-full text-[10px] font-black uppercase text-slate-400 italic mt-4">Atrás</button>
+                setToastMessage("¡Publicado con éxito!"); setShowToast(true);
+                setTimeout(() => { setShowToast(false); setVista("inicio"); setPasoWizard(1); setPublicando(false); }, 2000);
+              } catch (e) { setToastMessage("Error al publicar."); setShowToast(true); setPublicando(false); }
+            }}
+            className={`relative w-full p-5 rounded-[25px] font-black uppercase tracking-[2px] transition-all duration-75 ${publicando ? 'bg-slate-200 text-slate-400 translate-y-1' : 'bg-blue-600 text-white border-b-[8px] border-blue-800 active:border-b-0 active:translate-y-2 shadow-[0_10px_20px_rgba(37,99,235,0.3)]'}`}
+          >
+            <div className="flex items-center justify-center gap-3">
+              {publicando ? <><div className="w-5 h-5 border-4 border-slate-400 border-t-transparent rounded-full animate-spin" /><span className="text-sm italic">PROCESANDO...</span></> : <><ShieldCheck size={22} /><span className="text-sm">{viajeAEditar ? "GUARDAR CAMBIOS" : "¡PUBLICAR AHORA!"}</span></>}
+            </div>
+          </button>
+        </div>
+        <button onClick={() => setPasoWizard(2)} className="w-full text-[10px] font-black uppercase text-slate-400 mt-4 tracking-widest text-center">Atrás</button>
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
     );
   } 
-
   return null;
 };
