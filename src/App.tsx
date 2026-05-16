@@ -129,6 +129,17 @@ export default function App() {
         } catch (errorTelegram) {
           console.error("Error al avisar a Telegram:", errorTelegram);
         }
+                // ✉️ DISPARADOR: SOLICITAR CORREO DE VERIFICACIÓN PREMIUM ✉️
+        try {
+          await addDoc(collection(db, "Notificaciones"), {
+            idDestino: "CORREO_VERIFICACION",
+            email: email.toLowerCase().trim(),
+            nombre: nombre.trim(),
+            timestamp: Date.now()
+          });
+        } catch (errorCorreo) {
+          console.error("Error al solicitar correo de verificación:", errorCorreo);
+        }
 
         setMostrarOnboarding(true);
 
