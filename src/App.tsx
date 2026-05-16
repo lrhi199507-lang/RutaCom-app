@@ -20,6 +20,8 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [verPassword, setVerPassword] = useState(false); 
   const [cargando, setCargando] = useState(false);
+  const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
+  
   
   const [usuario, setUsuario] = useState<any>(undefined); 
   
@@ -42,32 +44,35 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const manejarOlvidoClave = async () => {
-    // 1. Validamos que el campo de email no esté vacío
-    if (!email.trim() || !email.includes('@')) {
-      alert("Escribe tu correo electrónico para poder ayudarte.");
-      return;
-    }
+const manejarOlvidoClave = async () => {
+  if (!email.trim() || !email.includes('@')) {
+    setToast({ texto: "Escribe un correo válido para ayudarte.", tipo: "error" });
+    setTimeout(() => setToast(null), 4000);
+    return;
+  }
 
-    setCargando(true);
-    try {
-      // 2. Intentamos crear el documento en la colección Notificaciones
-      // Importante: Revisa que tu base de datos se llame "Notificaciones" con N mayúscula
-      await addDoc(collection(db, "Notificaciones"), {
-        idDestino: "CORREO_OLVIDO",
-        email: email.toLowerCase().trim(),
-        nombre: "Viajero",
-        timestamp: Date.now()
-      });
+  setCargando(true);
+  try {
+    await addDoc(collection(db, "Notificaciones"), {
+      idDestino: "CORREO_OLVIDO",
+      email: email.toLowerCase().trim(),
+      nombre: "Viajero",
+      timestamp: Date.now()
+    });
 
-      alert("¡Enviado! Revisa tu bandeja de entrada para restablecer tu clave.");
-    } catch (error: any) {
-      console.error("Error detallado:", error);
-      alert("Error técnico: " + error.message);
-    } finally {
-      setCargando(false);
-    }
-  };
+    // ✅ Aquí cambiamos el alert gris por tu Toast elegante
+    setToast({ 
+      texto: "¡Enviado! Revisa tu bandeja de entrada para restablecer tu clave.", 
+      tipo: "exito" 
+    });
+    setTimeout(() => setToast(null), 5000);
+  } catch (error: any) {
+    setToast({ texto: "Hubo un problema al procesar la solicitud.", tipo: "error" });
+    setTimeout(() => setToast(null), 4000);
+  } finally {
+    setCargando(false);
+  }
+};
 
   useEffect(() => {
     if (usuario !== undefined) return;
