@@ -444,15 +444,22 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
 
-  const verificarCuentaCorreo = async () => {
+    const verificarCuentaCorreo = async () => {
     if (auth.currentUser) {
       try {
-        const { sendEmailVerification } = await import('firebase/auth');
-        await sendEmailVerification(auth.currentUser);
-        setToast({ texto: "Correo de verificación enviado", tipo: "exito" });
+        // 🔥 CAMBIO: Ahora le pedimos a nuestro motor que envíe el correo Premium
+        await addDoc(collection(db, "Notificaciones"), {
+          idDestino: "CORREO_VERIFICACION",
+          email: auth.currentUser.email?.toLowerCase().trim(),
+          nombre: userData.nombre || "Viajero", // Usamos el nombre que ya tienes en el estado
+          timestamp: Date.now()
+        });
+
+        setToast({ texto: "Correo Premium enviado con éxito", tipo: "exito" });
         setTimeout(() => setToast(null), 3000);
       } catch (error) { 
-        setToast({ texto: "Error al enviar", tipo: "error" });
+        console.error("Error al disparar correo premium:", error);
+        setToast({ texto: "Error al solicitar el envío", tipo: "error" });
         setTimeout(() => setToast(null), 3000);
       }
     }
