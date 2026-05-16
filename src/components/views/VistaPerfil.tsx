@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -430,27 +431,31 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
 
-  const enviarResetContraseña = async () => {
-  if (!auth.currentUser?.email) return;
+  const [modalClave, setModalClave] = useState(false);
+const [passActual, setPassActual] = useState('');
+const [passNueva, setPassNueva] = useState('');
+
+const cambiarPasswordSeguro = async () => {
+  const user = auth.currentUser;
+  if (!user || !user.email) return;
 
   try {
-    // 🔥 Disparamos la notificación para que el Motor de Cloud envíe el correo Premium
-    await addDoc(collection(db, "Notificaciones"), {
-      idDestino: "CORREO_RESTABLECER", // Nueva etiqueta para el motor
-      email: auth.currentUser.email.toLowerCase().trim(),
-      nombre: userData.nombre || "Viajero",
-      timestamp: Date.now()
-    });
+    // 🛡️ PASO 1: Re-autenticar al usuario (Pedir clave vieja)
+    const credential = EmailAuthProvider.credential(user.email, passActual);
+    await reauthenticateWithCredential(user, credential);
 
-    setToast({ texto: "Correo de restablecimiento enviado (Revisa tu bandeja)", tipo: "exito" });
-    setTimeout(() => setToast(null), 5000);
-  } catch (error) {
-    console.error("Error:", error);
-    setToast({ texto: "Hubo un error al procesar la solicitud", tipo: "error" });
-    setTimeout(() => setToast(null), 4000);
+    // ✅ PASO 2: Si la clave vieja es correcta, actualizamos a la nueva
+    await updatePassword(user, passNueva);
+
+    setToast({ texto: "¡Contraseña actualizada con éxito!", tipo: "exito" });
+    setModalClave(false);
+    setPassActual('');
+    setPassNueva('');
+  } catch (error: any) {
+    console.error(error);
+    setToast({ texto: "La contraseña actual es incorrecta.", tipo: "error" });
   }
 };
-
     const verificarCuentaCorreo = async () => {
     if (auth.currentUser) {
       try {
@@ -1077,6 +1082,56 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           <img src={fotoZoom} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl" />
         </div>
       )}
+
+      {modalClave && (
+  <div className="fixed inset-0 bg-[#0b1120]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+    <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
+      {/* Adorno de fondo */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
+      
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="bg-blue-600/20 p-4 rounded-2xl mb-4">
+          <ShieldCheck className="text-blue-500" size={32} />
+        </div>
+        
+        <h2 className="text-xl font-black italic text-white mb-2">Seguridad</h2>
+        <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-6 text-center">Cambiar Contraseña</p>
+
+        <div className="w-full space-y-4">
+          <input 
+            type="password" 
+            placeholder="Contraseña Actual" 
+            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-white transition-all"
+            value={passActual}
+            onChange={(e) => setPassActual(e.target.value)}
+          />
+          <input 
+            type="password" 
+            placeholder="Nueva Contraseña" 
+            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-white transition-all"
+            value={passNueva}
+            onChange={(e) => setPassNueva(e.target.value)}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 w-full mt-8">
+          <button 
+            onClick={() => { setModalClave(false); setPassActual(''); setPassNueva(''); }}
+            className="p-4 rounded-2xl bg-slate-800 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 transition-all"
+          >
+            Cancelar
+          </button>
+          <button 
+            onClick={cambiarPasswordSeguro}
+            className="p-4 rounded-2xl bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-900/40 hover:bg-blue-500 active:scale-95 transition-all"
+          >
+            Actualizar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
       {pasoFoto && (
         <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
