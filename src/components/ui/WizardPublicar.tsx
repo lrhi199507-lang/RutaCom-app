@@ -23,34 +23,40 @@ const calcularDistanciaKm = (origen, destino) => {
 const calcularRangoPrecio = (distanciaKm, precioIngresado) => {
   if (distanciaKm <= 0 || !precioIngresado) return null;
   
-  // Base aproximada: $0.11 por km. Mínimo absoluto de $1.5 para viajes súper cortos
   const precioBase = Math.max(1.5, distanciaKm * 0.11); 
   const limiteVerde = precioBase * 1.15; 
   const limiteAmarillo = precioBase * 1.45;
 
+  // Redondeamos para que el usuario vea números limpios (ej: 15.5 o 16)
+  const maxVerdeSugerido = Math.floor(limiteVerde);
+
   if (precioIngresado <= limiteVerde) {
     return {
       estado: 'verde',
-      mensaje: '¡Precio excelente! Atraerás pasajeros rápido.',
+      mensaje: `¡Precio excelente! El rango ideal para esta ruta es hasta $${maxVerdeSugerido}.`,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      icono: <Check size={18} />
+      icono: <Check size={18} />,
+      sugerencia: maxVerdeSugerido
     };
   } else if (precioIngresado <= limiteAmarillo) {
     return {
       estado: 'amarillo',
-      mensaje: 'Precio un poco alto. Podrías tardar más en llenar los asientos.',
+      mensaje: `Precio un poco alto. Para estar en el rango verde, intenta con $${maxVerdeSugerido} o menos.`,
       color: 'text-amber-600 bg-amber-50 border-amber-200',
-      icono: <AlertTriangle size={18} />
+      icono: <AlertTriangle size={18} />,
+      sugerencia: maxVerdeSugerido
     };
   } else {
     return {
       estado: 'rojo',
-      mensaje: 'Precio excesivo para viaje compartido. Considera bajarlo.',
+      mensaje: `Precio excesivo. Los pasajeros suelen buscar precios cercanos a $${maxVerdeSugerido}.`,
       color: 'text-red-600 bg-red-50 border-red-200',
-      icono: <AlertCircle size={18} />
+      icono: <AlertCircle size={18} />,
+      sugerencia: maxVerdeSugerido
     };
   }
 };
+
 
 // --- COMPONENTE AUXILIAR: CARRUSEL DE FECHAS ---
 const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
@@ -500,23 +506,29 @@ export const WizardPublicar = ({
           </div>
         </div>
 
-        {/* 🔥 TERMÓMETRO VISUAL (Aparece al poner precio) 🔥 */}
-        {resultadoPrecio && (
-          <div className={`p-4 rounded-[20px] border flex items-start gap-3 animate-in fade-in zoom-in-95 duration-200 ${resultadoPrecio.color}`}>
-            <div className="mt-0.5 shrink-0">
-              {resultadoPrecio.icono}
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider leading-none mb-1">
-                Análisis de Tarifa
-              </p>
-              <p className="text-xs font-bold leading-relaxed opacity-90">
-                {resultadoPrecio.mensaje}
-              </p>
-            </div>
-          </div>
-        )}
-
+        {/* 🔥 TERMÓMETRO VISUAL MEJORADO 🔥 */}
+{resultadoPrecio && (
+  <div className={`p-4 rounded-[20px] border flex items-start gap-3 animate-in fade-in zoom-in-95 duration-200 ${resultadoPrecio.color}`}>
+    <div className="mt-0.5 shrink-0">
+      {resultadoPrecio.icono}
+    </div>
+    <div className="flex-1">
+      <div className="flex justify-between items-center mb-1">
+        <p className="text-[10px] font-black uppercase tracking-wider leading-none">
+          Análisis de Tarifa
+        </p>
+        {/* Píldora con el precio máximo recomendado */}
+        <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white/50 border border-current">
+          MAX VERDE: ${resultadoPrecio.sugerencia}
+        </span>
+      </div>
+      <p className="text-xs font-bold leading-relaxed opacity-90">
+        {resultadoPrecio.mensaje}
+      </p>
+    </div>
+  </div>
+)}
+        
         <div className="space-y-2 pt-2">
           <p className="text-[9px] font-black uppercase text-slate-400 ml-2 italic">Comodidades</p>
           <div className="grid grid-cols-3 gap-2">
