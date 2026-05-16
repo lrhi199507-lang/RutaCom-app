@@ -21,7 +21,6 @@ export default function App() {
   const [verPassword, setVerPassword] = useState(false); 
   const [cargando, setCargando] = useState(false);
   
-  // 🔥 CAMBIO CLAVE: Inicializamos en 'undefined' para saber cuándo Firebase está pensando
   const [usuario, setUsuario] = useState<any>(undefined); 
   
   // ESTADOS DEL ONBOARDING
@@ -34,19 +33,17 @@ export default function App() {
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
-  // ESTADO PARA EL MENSAJE DE LA PANTALLA DE CARGA
   const [mensajeCarga, setMensajeCarga] = useState("Conectando...");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUsuario(user); // Será null si no hay sesión, o el objeto user si la hay
+      setUsuario(user); 
     });
     return () => unsubscribe();
   }, []);
 
-  // Efecto para los textos dinámicos de carga
   useEffect(() => {
-    if (!cargando && usuario !== undefined) return;
+    if (usuario !== undefined) return;
     
     const mensajes = [
       "Calentando motores...", 
@@ -61,7 +58,7 @@ export default function App() {
     }, 1500);
 
     return () => clearInterval(intervalo);
-  }, [cargando, usuario]);
+  }, [usuario]);
 
   useEffect(() => {
     if (!usuario) return;
@@ -90,11 +87,9 @@ export default function App() {
     return () => { PushNotifications.removeAllListeners(); };
   }, [usuario]);
   
-  // INICIAR SESIÓN O REGISTRAR
   const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
     
-    // Bloqueo de seguridad: el nombre no puede estar vacío en el registro
     if (esRegistro && (!nombre.trim() || !passwordValida)) {
       alert("Por favor, ingresa tu nombre completo para continuar.");
       return;
@@ -165,16 +160,13 @@ export default function App() {
     }
   ];
 
-  // 🔥 NUEVA PANTALLA DE CARGA (SPLASH SCREEN) 🔥
-  // Se muestra mientras Firebase verifica la sesión o cuando le das a "Entrar" (cargando === true)
-  if (usuario === undefined || cargando) {
+  // 🔥 PANTALLA DE CARGA (SPLASH SCREEN) CORREGIDA 🔥
+  if (usuario === undefined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
-        {/* Luces de fondo estilo neón */}
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] animate-pulse delay-700"></div>
 
-        {/* Logo animado */}
         <div className="relative z-10 flex flex-col items-center animate-in zoom-in duration-700">
           <div className="bg-blue-600 w-28 h-28 rounded-[35px] flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.4)] transform -skew-x-6 border-b-[6px] border-blue-800 animate-bounce">
             <span className="text-6xl font-black italic text-white drop-shadow-md">D</span>
@@ -184,7 +176,6 @@ export default function App() {
             DameLaCola
           </h1>
 
-          {/* Barra de progreso visual */}
           <div className="w-48 h-1.5 bg-slate-800 rounded-full mt-10 overflow-hidden relative">
             <div className="absolute top-0 left-0 h-full w-1/2 bg-gradient-to-r from-blue-600 to-emerald-400 rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
           </div>
@@ -194,7 +185,6 @@ export default function App() {
           </p>
         </div>
 
-        {/* Clave de animación personalizada metida directo para Tailwind */}
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes loading {
             0% { transform: translateX(-100%); }
@@ -338,7 +328,7 @@ export default function App() {
           disabled={cargando || (esRegistro && !passwordValida)}
           className="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all p-5 rounded-2xl font-black tracking-widest uppercase text-sm shadow-lg disabled:opacity-50 mt-4"
         >
-          {esRegistro ? "Crear Cuenta" : "Entrar a la App"}
+          {cargando ? "PROCESANDO..." : (esRegistro ? "Crear Cuenta" : "Entrar a la App")}
         </button>
       </form>
 
