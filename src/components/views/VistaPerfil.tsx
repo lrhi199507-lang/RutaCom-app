@@ -431,18 +431,25 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const enviarResetContraseña = async () => {
-    const email = auth.currentUser?.email;
-    if (!email) return;
-    try {
-      const { sendPasswordResetEmail } = await import('firebase/auth');
-      await sendPasswordResetEmail(auth, email);
-      setToast({ texto: `Correo enviado a ${email}`, tipo: "exito" });
-      setTimeout(() => setToast(null), 3000);
-    } catch (error) { 
-      setToast({ texto: "Error al enviar el correo", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    }
-  };
+  if (!auth.currentUser?.email) return;
+
+  try {
+    // 🔥 Disparamos la notificación para que el Motor de Cloud envíe el correo Premium
+    await addDoc(collection(db, "Notificaciones"), {
+      idDestino: "CORREO_RESTABLECER", // Nueva etiqueta para el motor
+      email: auth.currentUser.email.toLowerCase().trim(),
+      nombre: userData.nombre || "Viajero",
+      timestamp: Date.now()
+    });
+
+    setToast({ texto: "Correo de restablecimiento enviado (Revisa tu bandeja)", tipo: "exito" });
+    setTimeout(() => setToast(null), 5000);
+  } catch (error) {
+    console.error("Error:", error);
+    setToast({ texto: "Hubo un error al procesar la solicitud", tipo: "error" });
+    setTimeout(() => setToast(null), 4000);
+  }
+};
 
     const verificarCuentaCorreo = async () => {
     if (auth.currentUser) {
@@ -602,8 +609,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 />
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
                 <MenuButton icon={UserCog} label="Sobre mí (Bio)" value={userData?.bio || "Escribe algo sobre ti..."} onClick={() => { setTipoEdicion({id: 'bio', label: 'Biografía', valor: userData?.bio}); setNuevoValor(userData?.bio || ""); setModalVisible(true); }} />
-                <MenuButton icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => alert("El correo no se puede cambiar por ahora por seguridad.")} />
-                <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña" onClick={enviarResetContraseña} />
+                <MenuButton  icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => {setToast({  texto: "Por tu seguridad, el correo no puede modificarse directamente. Contacta a soporte para validarlo.",  tipo: "error" 
+                });
+            setTimeout(() => setToast(null), 5000);
+              }} 
+             />
+            <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña" onClick={enviarResetContraseña} />
               </div>
             </div>
 
