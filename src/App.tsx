@@ -5,7 +5,7 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from 'firebase/auth';
-import { doc, setDoc, updateDoc } from 'firebase/firestore'; 
+import { doc, setDoc, updateDoc, addDoc, collection } from 'firebase/firestore'; // ✅ Importamos addDoc y collection
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation'; 
 import { Check, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff } from 'lucide-react'; 
@@ -41,6 +41,31 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // 🔥 NUEVA FUNCIÓN: RECUPERAR CLAVE DESDE EL LOGIN 🔥
+  const manejarOlvidoClave = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      alert("Por favor, escribe tu correo electrónico primero para enviarte el enlace de recuperación.");
+      return;
+    }
+
+    setCargando(true);
+    try {
+      // ✉️ DISPARADOR: SOLICITAR CORREO DE OLVIDO PREMIUM ✉️
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: "CORREO_OLVIDO",
+        email: email.toLowerCase().trim(),
+        nombre: "Usuario",
+        timestamp: Date.now()
+      });
+      alert("¡Listo! Si el correo existe, recibirás un enlace premium en tu bandeja para recuperar tu acceso.");
+    } catch (error) {
+      console.error("Error al solicitar recuperación:", error);
+      alert("Hubo un error al procesar la solicitud.");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   useEffect(() => {
     if (usuario !== undefined) return;
@@ -183,7 +208,7 @@ export default function App() {
     }
   ];
 
-  // 🔥 PANTALLA DE CARGA (SPLASH SCREEN) CORREGIDA 🔥
+  // 🔥 PANTALLA DE CARGA (SPLASH SCREEN) 🔥
   if (usuario === undefined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
@@ -355,12 +380,22 @@ export default function App() {
         </button>
       </form>
 
+      {/* 🔥 BOTÓN DE OLVIDÉ MI CONTRASEÑA 🔥 */}
+      {!esRegistro && (
+        <button 
+          onClick={manejarOlvidoClave}
+          className="mt-6 text-[10px] font-black uppercase tracking-[2px] text-slate-500 hover:text-blue-400 transition-colors italic"
+        >
+          ¿Olvidaste tu contraseña?
+        </button>
+      )}
+
       <button 
         onClick={() => {
           setEsRegistro(!esRegistro);
           setPassword(''); 
         }} 
-        className="mt-6 text-slate-400 text-xs font-bold underline hover:text-white transition-colors"
+        className="mt-4 text-slate-400 text-xs font-bold underline hover:text-white transition-colors"
       >
         {esRegistro ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí"}
       </button>
