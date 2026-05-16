@@ -87,7 +87,7 @@ export default function App() {
     return () => { PushNotifications.removeAllListeners(); };
   }, [usuario]);
   
-  const manejarAutenticacion = async (e: any) => {
+    const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
     
     if (esRegistro && (!nombre.trim() || !passwordValida)) {
@@ -117,6 +117,18 @@ export default function App() {
           cuentaSuspendida: false,
           vehiculo: { marca: "", modelo: "", placa: "", color: "" }
         });
+
+        // 🔥 DISPARADOR A TELEGRAM: NUEVO USUARIO 🔥
+        try {
+          await addDoc(collection(db, "Notificaciones"), {
+            idDestino: "ADMIN_TELEGRAM",
+            titulo: "NUEVO REGISTRO 👤",
+            mensaje: `Se registró un nuevo usuario en la app:\nNombre: ${nombre.trim()}\nCorreo: ${email.toLowerCase().trim()}`,
+            timestamp: Date.now()
+          });
+        } catch (errorTelegram) {
+          console.error("Error al avisar a Telegram:", errorTelegram);
+        }
 
         setMostrarOnboarding(true);
 
