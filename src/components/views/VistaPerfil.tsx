@@ -180,7 +180,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Cancelado"); }
   };
   
-  const subirDocumentoFinal = async () => {
+    const subirDocumentoFinal = async () => {
     if (!fotoDocTemporal) return;
     setCargando(true);
     const userId = userData.uid || userData.id;
@@ -203,6 +203,19 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
       await updateDoc(userRef, { [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
       setUserData({ ...userData, [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
+
+      // 🔥 DISPARADOR A TELEGRAM: DOCUMENTOS EN REVISIÓN 🔥
+      try {
+        const tipoDocTexto = pasoDocumento.tipo.toUpperCase();
+        await addDoc(collection(db, "Notificaciones"), {
+          idDestino: "ADMIN_TELEGRAM",
+          titulo: "DOCUMENTOS PENDIENTES 🚨",
+          mensaje: `El usuario ${userData.nombre || 'Desconocido'} acaba de subir su ${tipoDocTexto}.\n\nEntra al panel de control para aprobar o rechazar la foto.`,
+          timestamp: Date.now()
+        });
+      } catch (errorTelegram) {
+        console.error("Error al avisar a Telegram:", errorTelegram);
+      }
 
       setToast({ texto: "Documento enviado para revisión", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
