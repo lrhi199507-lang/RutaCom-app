@@ -431,31 +431,39 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
 
-  const [modalClave, setModalClave] = useState(false);
-const [passActual, setPassActual] = useState('');
-const [passNueva, setPassNueva] = useState('');
+    const [modalClave, setModalClave] = useState(false);
+  const [passActual, setPassActual] = useState('');
+  const [passNueva, setPassNueva] = useState('');
 
-const cambiarPasswordSeguro = async () => {
-  const user = auth.currentUser;
-  if (!user || !user.email) return;
+  const cambiarPasswordSeguro = async () => {
+    const user = auth.currentUser;
+    if (!user || !user.email) return;
+    if (!passActual || !passNueva) {
+      setToast({ texto: "Completa ambos campos", tipo: "error" });
+      return;
+    }
 
-  try {
-    // 🛡️ PASO 1: Re-autenticar al usuario (Pedir clave vieja)
-    const credential = EmailAuthProvider.credential(user.email, passActual);
-    await reauthenticateWithCredential(user, credential);
+    setCargando(true);
+    try {
+      // 🛡️ PASO 1: Re-autenticar (Pedir clave vieja)
+      const credential = EmailAuthProvider.credential(user.email, passActual);
+      await reauthenticateWithCredential(user, credential);
 
-    // ✅ PASO 2: Si la clave vieja es correcta, actualizamos a la nueva
-    await updatePassword(user, passNueva);
+      // ✅ PASO 2: Actualizar a la nueva
+      await updatePassword(user, passNueva);
 
-    setToast({ texto: "¡Contraseña actualizada con éxito!", tipo: "exito" });
-    setModalClave(false);
-    setPassActual('');
-    setPassNueva('');
-  } catch (error: any) {
-    console.error(error);
-    setToast({ texto: "La contraseña actual es incorrecta.", tipo: "error" });
-  }
-};
+      setToast({ texto: "¡Contraseña actualizada con éxito!", tipo: "exito" });
+      setModalClave(false);
+      setPassActual('');
+      setPassNueva('');
+    } catch (error: any) {
+      console.error(error);
+      setToast({ texto: "La contraseña actual es incorrecta.", tipo: "error" });
+    } finally {
+      setCargando(false);
+    }
+  };
+  
     const verificarCuentaCorreo = async () => {
     if (auth.currentUser) {
       try {
@@ -619,7 +627,7 @@ const cambiarPasswordSeguro = async () => {
             setTimeout(() => setToast(null), 5000);
               }} 
              />
-            <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña" onClick={enviarResetContraseña} />
+            <MenuButton  icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña"  onClick={() => setModalClave(true)} />    
               </div>
             </div>
 
