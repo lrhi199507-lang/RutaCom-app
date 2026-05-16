@@ -42,26 +42,28 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 NUEVA FUNCIÓN: RECUPERAR CLAVE DESDE EL LOGIN 🔥
   const manejarOlvidoClave = async () => {
+    // 1. Validamos que el campo de email no esté vacío
     if (!email.trim() || !email.includes('@')) {
-      alert("Por favor, escribe tu correo electrónico primero para enviarte el enlace de recuperación.");
+      alert("Escribe tu correo electrónico para poder ayudarte.");
       return;
     }
 
     setCargando(true);
     try {
-      // ✉️ DISPARADOR: SOLICITAR CORREO DE OLVIDO PREMIUM ✉️
+      // 2. Intentamos crear el documento en la colección Notificaciones
+      // Importante: Revisa que tu base de datos se llame "Notificaciones" con N mayúscula
       await addDoc(collection(db, "Notificaciones"), {
         idDestino: "CORREO_OLVIDO",
         email: email.toLowerCase().trim(),
-        nombre: "Usuario",
+        nombre: "Viajero",
         timestamp: Date.now()
       });
-      alert("¡Listo! Si el correo existe, recibirás un enlace premium en tu bandeja para recuperar tu acceso.");
-    } catch (error) {
-      console.error("Error al solicitar recuperación:", error);
-      alert("Hubo un error al procesar la solicitud.");
+
+      alert("¡Enviado! Revisa tu bandeja de entrada para restablecer tu clave.");
+    } catch (error: any) {
+      console.error("Error detallado:", error);
+      alert("Error técnico: " + error.message);
     } finally {
       setCargando(false);
     }
