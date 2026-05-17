@@ -488,16 +488,28 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       });
 
       if (resultado.data.success) {
-        pasajerosConfirmados.forEach(p => {
+          // 🔥 PARCHE DESDE EL FRONTEND (Solo funciona si el campo NO es 'viajesRealizados') 🔥
+      if (pasajerosConfirmados && pasajerosConfirmados.length > 0) {
+        for (const p of pasajerosConfirmados) {
           if (p && (p.id || p.uid)) {
-            enviarNotificacion(
-              p.id || p.uid,
-              "¡Llegaste a tu destino!",
-              `El viaje ha finalizado. Por favor, recuerda calificar a ${userData.nombre} en la app.`,
-              "viaje"
-            );
+            const pasajeroRef = doc(db, "usuarios", p.id || p.uid);
+            await updateDoc(pasajeroRef, {
+              viajesComoPasajero: increment(1) // ⚠️ Reemplaza por el nombre exacto de tu campo libre
+            }).catch(err => console.error("Error sumando viaje al pasajero:", err));
           }
-        });
+        }
+      }
+
+      pasajerosConfirmados.forEach(p => {
+        if (p && (p.id || p.uid)) {
+          enviarNotificacion(
+            p.id || p.uid,
+            "¡Llegaste a tu destino!",
+            `El viaje ha finalizado. Por favor, recuerda calificar a ${userData.nombre} en la app.`,
+            "viaje"
+          );
+        }
+      });
 
         setToastMessage("¡Viaje finalizado con éxito!");
         setShowToast(true);
