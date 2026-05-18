@@ -117,15 +117,21 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         respuestaBot = "✅ Para verificar tu identidad o vehículo, ve a 'Mi Perfil'. Sube fotos claras de tu Cédula o de tu Auto. El equipo de soporte las aprueba en un plazo de 1 a 12 horas hábiles.";
         break;
       case 'humano':
-        await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema complejo.");
-        return; 
-    }
-
-    const nuevoMsgUsuario = { id: `local-u-${Date.now()}`, texto: textoUsuario, uidRemitente: userData.id, timestamp: new Date() };
-    const nuevoMsgBot = { id: `local-b-${Date.now()}`, texto: respuestaBot, uidRemitente: 'admin', timestamp: new Date() };
-    
-    setMensajesBotLocal(prev => [...prev, nuevoMsgUsuario, nuevoMsgBot]);
-  };
+        // 1. Enviar alerta real a Firebase para que te llegue la notificación
+        await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema.");
+        
+        // 2. Respuesta fantasma local para calmar al usuario
+        const respuestaEspera = "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.";
+        
+        const msgBotEspera = { 
+          id: `local-b-${Date.now()}`, 
+          texto: respuestaEspera, 
+          uidRemitente: 'admin', 
+          timestamp: new Date() 
+        };
+        
+        setMensajesBotLocal(prev => [...prev, msgBotEspera]);
+        return;   
 
   const enviar = async (e, textoSugerido = null) => {
     if (e) e.preventDefault();
