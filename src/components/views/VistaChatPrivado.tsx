@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
-import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X, Map } from 'lucide-react';
+import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X, Map, Zap, CreditCard, Car, LifeBuoy } from 'lucide-react';
 
 const IconoWhatsApp = ({ size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -11,6 +11,7 @@ const IconoWhatsApp = ({ size = 20, className = "" }) => (
 
 export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => {
   const [mensajes, setMensajes] = useState([]);
+  const [mensajesBotLocal, setMensajesBotLocal] = useState([]); // 🔥 MENSAJES FANTASMA
   const [nuevoMsg, setNuevoMsg] = useState("");
   const [viajeActual, setViajeActual] = useState(null); 
   const scrollRef = useRef(null);
@@ -20,33 +21,34 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const [motivoReporte, setMotivoReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
-  // 🔥 LÓGICA INTELIGENTE: Detectamos si TÚ eres el admin leyendo este chat
+  // Detectamos si TÚ eres el admin leyendo este chat
   const ADMIN_EMAIL = "damelacola2026@gmail.com";
   const esAdmin = userData?.email?.toLowerCase().trim() === ADMIN_EMAIL || userData?.correo?.toLowerCase().trim() === ADMIN_EMAIL;
-
   const isSoporte = chat.esSoporte;
-  
-  // Si el usuario abre soporte, usa su ID. Si el admin abre soporte, usa el ID del pasajero que está en el chat.
   const chatIdReal = isSoporte ? (esAdmin ? chat.id : `soporte_${userData.id}`) : chat.id;
-
-  const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
-  const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
-  const sugerenciasSoporte = ["Tengo un problema con un viaje", "Falla en la aplicación", "Tengo una sugerencia"];
 
   const soyConductor = !isSoporte && chat.uidConductor === userData.id;
   const idOtroUsuario = soyConductor ? chat.uidPasajero : chat.uidConductor;
   
-  // Si es soporte y eres Admin, ves el nombre del usuario. Si eres usuario, ves "Soporte".
   const nombreContacto = isSoporte ? (esAdmin ? (chat.nombrePasajero || "Usuario") : "Soporte Oficial") : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
   const fotoContacto = isSoporte ? null : (soyConductor ? chat.fotoPasajero : chat.fotoConductor);
-  const sugerencias = isSoporte ? (esAdmin ? [] : sugerenciasSoporte) : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
 
-  const mensajeBienvenidaSoporte = {
-    id: 'msg-bienvenida-bot',
-    texto: `¡Hola ${userData.nombre}! Soy el asistente virtual de Dame la cola. Elige una opción abajo o escribe tu duda, y un asesor te responderá pronto.`,
-    uidRemitente: 'admin',
-    timestamp: new Date()
-  };
+  // Sugerencias normales (no de soporte)
+  const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
+  const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
+  const sugerenciasNormales = isSoporte ? [] : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
+
+  // 🔥 Inicializamos el mensaje de bienvenida del Bot localmente
+  useEffect(() => {
+    if (isSoporte && !esAdmin && mensajesBotLocal.length === 0) {
+      setMensajesBotLocal([{
+        id: `bot-welcome-${Date.now()}`,
+        texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
+        uidRemitente: 'admin',
+        timestamp: new Date()
+      }]);
+    }
+  }, [isSoporte, esAdmin, userData.nombre]);
 
   useEffect(() => {
     if (isSoporte || !chat.idViaje) return;
@@ -83,6 +85,43 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     return () => unsub();
   }, [chatIdReal]);
 
+  // Autoscroll cuando entra un mensaje del bot
+  useEffect(() => {
+    setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [mensajesBotLocal]);
+
+  // 🔥 MANEJO DE LOS BOTONES DEL BOT
+  const ejecutarComandoBot = async (tipo) => {
+    let respuestaBot = "";
+    
+    // Mostramos lo que el usuario preguntó como un mensaje local propio
+    let textoUsuario = "";
+
+    switch(tipo) {
+      case 'recarga':
+        textoUsuario = "Dudas sobre Saldo/Recargas";
+        respuestaBot = "💳 Para recargar: Ve a 'Mi Billetera', selecciona Pago Móvil o Binance Pay, realiza la transferencia y sube tu capture. \n\nPara retirar: Ve a Billetera > Retirar y coloca tus datos de Pago Móvil. (Retiro mínimo: $10).";
+        break;
+      case 'publicar':
+        textoUsuario = "¿Cómo publico un viaje?";
+        respuestaBot = "🚙 ¡Es fácil! Toca el botón central '+' en la app. Selecciona tu ruta, fecha, y un precio justo. Recuerda que debes tener tu Vehículo e Identidad verificada en tu Perfil.";
+        break;
+      case 'emergencia':
+        textoUsuario = "🚨 Me quedé varado / Ayuda";
+        respuestaBot = "⚠️ Líneas de Emergencia Sugeridas:\n\n📞 Nacionales (Gratis): 911\n📞 Contacto Vial: 0800-VIALIDAD\n\n(Próximamente añadiremos un directorio de Grúas y Mecánicos de confianza por zona).";
+        break;
+      case 'humano':
+        // Enviar mensaje real a Firebase
+        await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema.");
+        return; 
+    }
+
+    const nuevoMsgUsuario = { id: `local-u-${Date.now()}`, texto: textoUsuario, uidRemitente: userData.id, timestamp: new Date() };
+    const nuevoMsgBot = { id: `local-b-${Date.now()}`, texto: respuestaBot, uidRemitente: 'admin', timestamp: new Date() };
+    
+    setMensajesBotLocal(prev => [...prev, nuevoMsgUsuario, nuevoMsgBot]);
+  };
+
   const enviar = async (e, textoSugerido = null) => {
     if (e) e.preventDefault();
     
@@ -103,7 +142,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mensajesSinLeer: 1, 
         remitenteUltimoMensaje: userData.id,
-        // 🔥 Si es el usuario escribiendo a soporte, guardamos sus datos para que tú lo identifiques
         ...(isSoporte && !esAdmin ? {
             esSoporte: true,
             uidPasajero: userData.id,
@@ -112,12 +150,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         } : {})
       }, { merge: true });
 
-      // 🔥 LÓGICA DE NOTIFICACIONES CORREGIDA 🔥
       let idDestinoNotif = null;
       if (!isSoporte) {
-        idDestinoNotif = idOtroUsuario; // Chat normal
+        idDestinoNotif = idOtroUsuario; 
       } else if (isSoporte && esAdmin) {
-        idDestinoNotif = chat.uidPasajero; // Tú (Admin) le respondes al usuario
+        idDestinoNotif = chat.uidPasajero; 
       }
 
       if (idDestinoNotif) {
@@ -144,20 +181,15 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       setTimeout(() => setToast(null), 3000);
       return;
     }
-
     const numeroDestino = soyConductor ? chat.telefonoPasajero : chat.telefonoConductor;
     if (!numeroDestino) {
       setToast({ texto: "El usuario no registró su número", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
       return;
     }
-
     let numeroLimpio = numeroDestino.replace(/\D/g, ''); 
-    if (numeroLimpio.startsWith('0')) {
-      numeroLimpio = '58' + numeroLimpio.substring(1);
-    } else if (!numeroLimpio.startsWith('58')) {
-      numeroLimpio = '58' + numeroLimpio; 
-    }
+    if (numeroLimpio.startsWith('0')) numeroLimpio = '58' + numeroLimpio.substring(1);
+    else if (!numeroLimpio.startsWith('58')) numeroLimpio = '58' + numeroLimpio; 
     
     const mensaje = `¡Hola! Te escribo desde Dame la cola por el viaje: ${chat.ruta}.`;
     const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(mensaje)}`;
@@ -179,22 +211,23 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         fecha: new Date().toISOString(),
         estado: "pendiente" 
       });
-      
-      setMostrarModalReporte(false);
-      setMotivoReporte("");
+      setMostrarModalReporte(false); setMotivoReporte("");
       setToast({ texto: "Reporte enviado. Revisaremos el caso.", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
-      
     } catch (error) {
-      console.error("Error al reportar:", error);
       setToast({ texto: "Hubo un error al enviar el reporte.", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
-    } finally {
-      setEnviandoReporte(false);
-    }
+    } finally { setEnviandoReporte(false); }
   };
   
-  const mensajesAMostrar = isSoporte && !esAdmin ? [mensajeBienvenidaSoporte, ...mensajes] : mensajes;
+  // 🔥 MEZCLAMOS LOS MENSAJES DE FIREBASE CON LOS DEL BOT LOCAL 🔥
+  const obtenerTiempo = (msg) => {
+    if (!msg.timestamp) return Date.now();
+    if (msg.timestamp.toDate) return msg.timestamp.toDate().getTime();
+    return new Date(msg.timestamp).getTime();
+  };
+
+  const mensajesMezclados = [...mensajes, ...mensajesBotLocal].sort((a, b) => obtenerTiempo(a) - obtenerTiempo(b));
 
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
@@ -205,7 +238,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           <ChevronLeft size={28} />
         </button>
         <div className={`w-10 h-10 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${isSoporte ? 'bg-blue-600 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
-          {fotoContacto ? <img src={fotoContacto} className="w-full h-full object-cover"/> : (isSoporte ? <Headset size={20} /> : <User size={20} />)}
+          {fotoContacto ? <img src={fotoContacto} className="w-full h-full object-cover"/> : (isSoporte ? <Zap size={20} /> : <User size={20} />)}
         </div>
         
         <div className="flex-1 min-w-0">
@@ -213,32 +246,22 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             {nombreContacto} {isSoporte ? <ShieldCheck size={14} className="text-blue-400" /> : <ShieldCheck size={14} className="text-green-500" />}
           </h3>
           <p className={`text-[10px] font-bold truncate uppercase tracking-widest ${isSoporte ? 'text-blue-300' : 'text-slate-400'}`}>
-            {isSoporte ? (esAdmin ? 'Usuario pidiendo ayuda' : 'Atención 24/7') : chat.ruta}
+            {isSoporte ? (esAdmin ? 'Usuario pidiendo ayuda' : 'Asistente 24/7') : chat.ruta}
           </p>
         </div>
 
         {!isSoporte && (
           <div className="flex items-center gap-1 pr-1">
             {onVerViaje && (
-              <button 
-                onClick={onVerViaje}
-                className="px-3 py-1.5 mr-1 bg-blue-600 text-white shadow-md shadow-blue-600/30 rounded-full transition-all active:scale-95 flex items-center gap-1.5"
-              >
+              <button onClick={onVerViaje} className="px-3 py-1.5 mr-1 bg-blue-600 text-white shadow-md shadow-blue-600/30 rounded-full transition-all active:scale-95 flex items-center gap-1.5">
                 <Map size={14} strokeWidth={3} />
                 <span className="text-[9px] font-black uppercase tracking-widest">Viaje</span>
               </button>
             )}
-            <button 
-              onClick={abrirWhatsApp}
-              type="button"
-              className={`p-2 rounded-full transition-all active:scale-90 ${pasajeroConfirmado ? 'text-green-500 hover:bg-green-50' : 'text-slate-300 hover:bg-slate-50'}`}
-            >
+            <button onClick={abrirWhatsApp} type="button" className={`p-2 rounded-full transition-all active:scale-90 ${pasajeroConfirmado ? 'text-green-500 hover:bg-green-50' : 'text-slate-300 hover:bg-slate-50'}`}>
               {pasajeroConfirmado ? <IconoWhatsApp size={22} className="text-green-500" /> : <Lock size={20} className="text-slate-300" />}
             </button>
-            <button 
-              onClick={() => setMostrarModalReporte(true)}
-              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90"
-            >
+            <button onClick={() => setMostrarModalReporte(true)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90">
               <AlertTriangle size={18} strokeWidth={2.5} />
             </button>
           </div>
@@ -253,13 +276,13 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           </div>
         </div>
 
-        {mensajesAMostrar.map((m) => {
+        {mensajesMezclados.map((m) => {
           const soyYo = m.uidRemitente === userData.id;
           const esBot = m.uidRemitente === 'admin';
           
           return (
             <div key={m.id} className={`flex ${soyYo ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] p-3 px-4 shadow-sm text-sm font-bold ${
+              <div className={`max-w-[85%] p-3 px-4 shadow-sm text-sm font-bold whitespace-pre-wrap ${
                 soyYo 
                 ? 'bg-blue-600 text-white rounded-[20px] rounded-tr-none' 
                 : esBot 
@@ -275,20 +298,38 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       </div>
 
       {/* ZONA INFERIOR */}
-      <div className="bg-white border-t border-slate-100 pb-safe">
-        {mensajes.length < (isSoporte ? 5 : 4) && sugerencias.length > 0 && (
-          <div className="flex overflow-x-auto gap-2 px-4 py-3 no-scrollbar border-b border-slate-50">
-            {sugerencias.map((sug, idx) => (
-              <button 
-                key={idx}
-                type="button"
-                onClick={() => enviar(null, sug)}
-                className="whitespace-nowrap bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shrink-0"
-              >
-                {sug}
-              </button>
-            ))}
+      <div className="bg-white border-t border-slate-100 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+        
+        {/* 🔥 BOTONES DE AUTO-SOPORTE (SOLO PARA PASAJEROS EN EL CHAT DE SOPORTE) 🔥 */}
+        {isSoporte && !esAdmin ? (
+          <div className="p-3 grid grid-cols-2 gap-2 bg-slate-50 border-b border-slate-100">
+            <button onClick={() => ejecutarComandoBot('recarga')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-blue-300">
+              <CreditCard size={14} className="text-blue-500" /> Saldos / Recargas
+            </button>
+            <button onClick={() => ejecutarComandoBot('publicar')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-emerald-400">
+              <Car size={14} className="text-emerald-500" /> ¿Cómo Publicar?
+            </button>
+            <button onClick={() => ejecutarComandoBot('emergencia')} className="bg-red-50 border border-red-200 text-red-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm">
+              <AlertTriangle size={14} /> Emergencia / Grúa
+            </button>
+            <button onClick={() => ejecutarComandoBot('humano')} className="bg-slate-900 text-white p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-md shadow-slate-900/20">
+              <LifeBuoy size={14} className="text-blue-400" /> Hablar con Asesor
+            </button>
           </div>
+        ) : (
+          /* Sugerencias para chats normales */
+          mensajes.length < 4 && sugerenciasNormales.length > 0 && (
+            <div className="flex overflow-x-auto gap-2 px-4 py-3 no-scrollbar border-b border-slate-50">
+              {sugerenciasNormales.map((sug, idx) => (
+                <button 
+                  key={idx} type="button" onClick={() => enviar(null, sug)}
+                  className="whitespace-nowrap bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shrink-0"
+                >
+                  {sug}
+                </button>
+              ))}
+            </div>
+          )
         )}
 
         <form onSubmit={enviar} className="p-4 flex gap-2 items-center">
@@ -309,7 +350,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </form>
       </div>
 
-      {/* TOAST FLOTANTE */}
+      {/* TOAST FLOTANTE Y MODAL DE REPORTE (Intactos) */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -319,7 +360,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </div>
       )}
 
-      {/* MODAL DE REPORTE */}
       {mostrarModalReporte && (
         <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[30px] p-6 w-full max-w-sm shadow-2xl relative">
