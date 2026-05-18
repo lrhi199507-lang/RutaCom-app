@@ -91,28 +91,33 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   }, [mensajesBotLocal]);
 
   // 🔥 MANEJO DE LOS BOTONES DEL BOT
-  const ejecutarComandoBot = async (tipo) => {
+    const ejecutarComandoBot = async (tipo) => {
     let respuestaBot = "";
-    
-    // Mostramos lo que el usuario preguntó como un mensaje local propio
     let textoUsuario = "";
 
     switch(tipo) {
       case 'recarga':
         textoUsuario = "Dudas sobre Saldo/Recargas";
-        respuestaBot = "💳 Para recargar: Ve a 'Mi Billetera', selecciona Pago Móvil o Binance Pay, realiza la transferencia y sube tu capture. \n\nPara retirar: Ve a Billetera > Retirar y coloca tus datos de Pago Móvil. (Retiro mínimo: $10).";
+        respuestaBot = "💳 Para recargar: Ve a 'Mi Billetera', selecciona Pago Móvil o Binance Pay, realiza la transferencia y sube tu capture. \n\nPara retirar: Ve a Billetera > Retirar y coloca tus datos. (Mínimo: $10).";
         break;
       case 'publicar':
         textoUsuario = "¿Cómo publico un viaje?";
-        respuestaBot = "🚙 ¡Es fácil! Toca el botón central '+' en la app. Selecciona tu ruta, fecha, y un precio justo. Recuerda que debes tener tu Vehículo e Identidad verificada en tu Perfil.";
+        respuestaBot = "🚙 Toca el botón '+' en la app. Selecciona ruta, fecha, y precio. Recuerda: debes tener tu Vehículo y Cédula verificados en 'Mi Perfil'.";
         break;
       case 'emergencia':
         textoUsuario = "🚨 Me quedé varado / Ayuda";
-        respuestaBot = "⚠️ Líneas de Emergencia Sugeridas:\n\n📞 Nacionales (Gratis): 911\n📞 Contacto Vial: 0800-VIALIDAD\n\n(Próximamente añadiremos un directorio de Grúas y Mecánicos de confianza por zona).";
+        respuestaBot = "⚠️ Líneas de Emergencia Sugeridas:\n\n📞 Nacionales: 911\n📞 Vialidad: 0800-VIALIDAD\n\n(Pronto directorio de Grúas y Mecánicos de confianza).";
+        break;
+      case 'reportar': // 🔥 NUEVA OPCIÓN
+        textoUsuario = "¿Cómo reportar a un usuario?";
+        respuestaBot = "🛑 Para reportar a alguien por mal comportamiento: Abre el chat privado con ese usuario y toca el ícono del triángulo de advertencia (⚠️) arriba a la derecha. Revisaremos el caso en menos de 24h.";
+        break;
+      case 'verificar': // 🔥 NUEVA OPCIÓN
+        textoUsuario = "Problemas con Verificación / KYC";
+        respuestaBot = "✅ Para verificar tu identidad o vehículo, ve a 'Mi Perfil'. Sube fotos claras de tu Cédula o de tu Auto. El equipo de soporte las aprueba en un plazo de 1 a 12 horas hábiles.";
         break;
       case 'humano':
-        // Enviar mensaje real a Firebase
-        await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema.");
+        await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema complejo.");
         return; 
     }
 
@@ -299,21 +304,26 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
       {/* ZONA INFERIOR */}
       <div className="bg-white border-t border-slate-100 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-        
-        {/* 🔥 BOTONES DE AUTO-SOPORTE (SOLO PARA PASAJEROS EN EL CHAT DE SOPORTE) 🔥 */}
+                {/* 🔥 BOTONES DE AUTO-SOPORTE 🔥 */}
         {isSoporte && !esAdmin ? (
           <div className="p-3 grid grid-cols-2 gap-2 bg-slate-50 border-b border-slate-100">
             <button onClick={() => ejecutarComandoBot('recarga')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-blue-300">
-              <CreditCard size={14} className="text-blue-500" /> Saldos / Recargas
+              <CreditCard size={14} className="text-blue-500" /> Saldos / Pagos
             </button>
             <button onClick={() => ejecutarComandoBot('publicar')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-emerald-400">
-              <Car size={14} className="text-emerald-500" /> ¿Cómo Publicar?
+              <Car size={14} className="text-emerald-500" /> Publicar Viaje
+            </button>
+            <button onClick={() => ejecutarComandoBot('verificar')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-indigo-400">
+              <ShieldCheck size={14} className="text-indigo-500" /> Verificaciones
+            </button>
+            <button onClick={() => ejecutarComandoBot('reportar')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-orange-400">
+              <AlertTriangle size={14} className="text-orange-500" /> Reportar
             </button>
             <button onClick={() => ejecutarComandoBot('emergencia')} className="bg-red-50 border border-red-200 text-red-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm">
               <AlertTriangle size={14} /> Emergencia / Grúa
             </button>
             <button onClick={() => ejecutarComandoBot('humano')} className="bg-slate-900 text-white p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-md shadow-slate-900/20">
-              <LifeBuoy size={14} className="text-blue-400" /> Hablar con Asesor
+              <LifeBuoy size={14} className="text-blue-400" /> Asesor Humano
             </button>
           </div>
         ) : (
