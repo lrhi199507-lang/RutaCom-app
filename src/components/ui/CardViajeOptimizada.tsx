@@ -141,11 +141,9 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
               <span className="bg-red-50 text-red-500 border border-red-200 text-[8px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
                 ● Completo
               </span>
-            ) : cuposRestantes <= 2 ? (
-              <span className="bg-amber-500 text-white text-[8px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1">
-                ● Queda{cuposRestantes === 1 ? '' : 'n'} {cuposRestantes}
-              </span>
-            ) : null}
+            ) : cuposRestantes <= 2 ?  <span className="bg-amber-500 text-white text-[8px] font-black uppercase italic px-2 py-0.5 rounded-full flex items-center gap-1"> ● Últimos Puestos
+            </span>
+          ) : null}
           </div>
         </div>
       </div>
