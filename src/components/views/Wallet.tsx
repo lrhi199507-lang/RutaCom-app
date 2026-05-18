@@ -5,7 +5,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'; 
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote, Copy, Lock, ImageIcon, AlertTriangle
+  RefreshCcw, X, Info, Banknote, Copy, Lock, ImageIcon, AlertTriangle
 } from "lucide-react";
 import Toast from "../ui/Toast";
 
@@ -17,7 +17,7 @@ export const Wallet = ({ userData, onRegresar }) => {
   const [montoRetiro, setMontoRetiro] = useState("");
   
   const [fotoRecarga, setFotoRecarga] = useState(null);
-  const [metodoRecarga, setMetodoRecarga] = useState("pago_movil"); // 🔥 "pago_movil" o "binance"
+  const [metodoRecarga, setMetodoRecarga] = useState("pago_movil"); 
 
   const [datosBancarios, setDatosBancarios] = useState({ 
     banco: userData?.datosBancarios?.banco || "", 
@@ -35,7 +35,7 @@ export const Wallet = ({ userData, onRegresar }) => {
 
   const [tasaBCV, setTasaBCV] = useState(0);
   const [datosPagoAdmin, setDatosPagoAdmin] = useState({ banco: "Cargando...", telefono: "Cargando...", cedula: "Cargando..." });
-  const [datosBinanceAdmin, setDatosBinanceAdmin] = useState({ payId: "Cargando...", correo: "Cargando..." }); // 🔥 Datos Admin Binance
+  const [datosBinanceAdmin, setDatosBinanceAdmin] = useState({ payId: "Cargando...", correo: "Cargando..." });
 
   useEffect(() => {
     const obtenerDatosFinanzas = async () => {
@@ -52,7 +52,6 @@ export const Wallet = ({ userData, onRegresar }) => {
               cedula: data.bancoAdmin.cedula || "No definido"
             });
           }
-          // 🔥 Jalamos los datos de Binance configurados en Firebase
           if (data.binanceAdmin) {
             setDatosBinanceAdmin({
               payId: data.binanceAdmin.payId || "No definido",
@@ -134,7 +133,7 @@ export const Wallet = ({ userData, onRegresar }) => {
         fecha: new Date().toISOString(), 
         estado: "pendiente", 
         tipo: "recarga",
-        metodoPago: metodoRecarga // 🔥 Registramos si fue por binance o pago_movil
+        metodoPago: metodoRecarga 
       });
 
       setToastMsg("Solicitud enviada. Espera la validación."); 
@@ -283,78 +282,85 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       </div>
 
-      {/* MODAL DE RECARGA MODIFICADO (PAGO MÓVIL Y BINANCE) */}
+      {/* MODAL DE RECARGA MODIFICADO (BOTONES SÓLIDOS) */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300 overflow-y-auto max-h-[90vh] no-scrollbar">
-            <div className="flex justify-between items-center mb-5">
+            <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-black italic uppercase text-white">Recargar Saldo</h3>
-              <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white"><X size={18} /></button>
+              <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={18} /></button>
             </div>
 
-            {/* 🔥 TABS DE SELECCIÓN DE MÉTODO 🔥 */}
-            <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-[20px] border border-slate-800 mb-5">
+            {/* 🔥 TABS DE SELECCIÓN DE MÉTODO (BOTONES SÓLIDOS) 🔥 */}
+            <div className="flex gap-3 mb-6">
               <button 
                 type="button"
                 onClick={() => setMetodoRecarga("pago_movil")}
-                className={`py-3 rounded-[16px] text-[10px] font-black uppercase tracking-wider transition-all ${metodoRecarga === "pago_movil" ? "bg-slate-800 text-white shadow-md border border-slate-700/50" : "text-slate-500 hover:text-slate-400"}`}
+                className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${
+                  metodoRecarga === "pago_movil" 
+                    ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-900/50" 
+                    : "bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700"
+                }`}
               >
                 🇻🇪 Pago Móvil
               </button>
               <button 
                 type="button"
                 onClick={() => setMetodoRecarga("binance")}
-                className={`py-3 rounded-[16px] text-[10px] font-black uppercase tracking-wider transition-all ${metodoRecarga === "binance" ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-md" : "text-slate-500 hover:text-amber-400"}`}
+                className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${
+                  metodoRecarga === "binance" 
+                    ? "bg-amber-500 text-amber-950 border-amber-500 shadow-lg shadow-amber-900/50" 
+                    : "bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700"
+                }`}
               >
-                 Yellow Binance Pay
+                 Binance Pay
               </button>
             </div>
 
             {/* VISTA DINÁMICA DE DATOS SEGÚN EL TIPO */}
             {metodoRecarga === "pago_movil" ? (
-              <div className="space-y-4 mb-5 bg-blue-900/10 p-5 rounded-3xl border border-blue-500/20 animate-in fade-in duration-200">
+              <div className="space-y-4 mb-6 bg-blue-900/10 p-5 rounded-3xl border border-blue-500/20 animate-in fade-in zoom-in-95 duration-200">
                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold text-slate-400">Banco:</span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-black text-white uppercase">{datosPagoAdmin.banco}</span>
-                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold text-slate-400">Teléfono:</span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-black text-white">{datosPagoAdmin.telefono}</span>
-                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold text-slate-400">Cédula:</span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-black text-white">{datosPagoAdmin.cedula}</span>
-                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              // 🔥 NUEVO PANEL: DATOS DE BINANCE PAY 🔥
-              <div className="space-y-4 mb-5 bg-amber-500/5 p-5 rounded-3xl border border-amber-500/20 animate-in fade-in duration-200">
+              <div className="space-y-4 mb-6 bg-amber-500/5 p-5 rounded-3xl border border-amber-500/20 animate-in fade-in zoom-in-95 duration-200">
                 <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos de Binance (USDT)</p>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold text-slate-400">Binance Pay ID:</span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-black text-white">{datosBinanceAdmin.payId}</span>
-                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.payId, "Pay ID")} className="text-amber-400 hover:text-amber-300 p-1.5 bg-amber-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.payId, "Pay ID")} className="text-amber-400 hover:text-amber-300 p-1.5 bg-amber-500/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold text-slate-400">Correo Cuenta:</span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-black text-white truncate max-w-[140px] text-right">{datosBinanceAdmin.correo}</span>
-                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.correo, "Correo")} className="text-amber-400 hover:text-amber-300 p-1.5 bg-amber-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.correo, "Correo")} className="text-amber-400 hover:text-amber-300 p-1.5 bg-amber-500/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
                     </div>
                   </div>
                 </div>
@@ -364,14 +370,14 @@ export const Wallet = ({ userData, onRegresar }) => {
             <div className="bg-orange-500/10 border border-orange-500/30 p-3.5 rounded-2xl mb-6 flex items-start gap-3">
               <AlertTriangle size={18} className="text-orange-500 shrink-0 mt-0.5" />
               <p className="text-[9px] font-bold text-orange-200 uppercase tracking-widest leading-relaxed">
-                <span className="text-orange-400 font-black">REQUISITO:</span> Debes adjuntar la captura clara del comprobante de transferencia o Binance Pay obligatoriamente.
+                <span className="text-orange-400 font-black">REQUISITO:</span> Debes adjuntar la captura clara del comprobante. ¡Tómale capture antes de cerrar tu app del banco/Binance!
               </p>
             </div>
 
             <form onSubmit={manejarRecarga} className="space-y-4">
               <div 
                 onClick={capturarComprobante}
-                className={`w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${fotoRecarga ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-900'}`}
+                className={`w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${fotoRecarga ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-900 hover:border-slate-600'}`}
               >
                 {fotoRecarga ? (
                   <img src={fotoRecarga} className="w-full h-full object-cover rounded-2xl" />
@@ -388,10 +394,9 @@ export const Wallet = ({ userData, onRegresar }) => {
                 <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 15.00" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
               </div>
               
-              {/* 🔥 CAMBIO DINÁMICO DE LABEL E INPUT SEGÚN MÉTODO 🔥 */}
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">
-                  {metodoRecarga === "pago_movil" ? "Nro de Referencia (Últimos 4-6)" : "Tu Nombre de Usuario Binance / ID Orden"}
+                  {metodoRecarga === "pago_movil" ? "Nro de Referencia (Últimos 4-6)" : "Usuario Binance / ID de Orden"}
                 </label>
                 <input 
                   type="text" 
@@ -410,6 +415,7 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       )}
 
+      {/* MODAL RETIRO INTACTO */}
       {showModalRetiro && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
