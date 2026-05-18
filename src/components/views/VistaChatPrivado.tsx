@@ -121,7 +121,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema.");
         
         // 2. Respuesta fantasma local para calmar al usuario
-        const respuestaEspera = "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.";
+        const respuestaEspera = "⏳ ¡Entendido! Un asesor ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.";
         const msgBotEspera = { id: `local-b-${Date.now()}`, texto: respuestaEspera, uidRemitente: 'admin', timestamp: new Date() };
         
         setMensajesBotLocal(prev => [...prev, msgBotEspera]);
