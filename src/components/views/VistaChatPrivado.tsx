@@ -91,7 +91,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   }, [mensajesBotLocal]);
 
   // 🔥 MANEJO DE LOS BOTONES DEL BOT
-    const ejecutarComandoBot = async (tipo) => {
+      const ejecutarComandoBot = async (tipo) => {
     let respuestaBot = "";
     let textoUsuario = "";
 
@@ -108,11 +108,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         textoUsuario = "🚨 Me quedé varado / Ayuda";
         respuestaBot = "⚠️ Líneas de Emergencia Sugeridas:\n\n📞 Nacionales: 911\n📞 Vialidad: 0800-VIALIDAD\n\n(Pronto directorio de Grúas y Mecánicos de confianza).";
         break;
-      case 'reportar': // 🔥 NUEVA OPCIÓN
+      case 'reportar':
         textoUsuario = "¿Cómo reportar a un usuario?";
         respuestaBot = "🛑 Para reportar a alguien por mal comportamiento: Abre el chat privado con ese usuario y toca el ícono del triángulo de advertencia (⚠️) arriba a la derecha. Revisaremos el caso en menos de 24h.";
         break;
-      case 'verificar': // 🔥 NUEVA OPCIÓN
+      case 'verificar':
         textoUsuario = "Problemas con Verificación / KYC";
         respuestaBot = "✅ Para verificar tu identidad o vehículo, ve a 'Mi Perfil'. Sube fotos claras de tu Cédula o de tu Auto. El equipo de soporte las aprueba en un plazo de 1 a 12 horas hábiles.";
         break;
@@ -122,16 +122,17 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         
         // 2. Respuesta fantasma local para calmar al usuario
         const respuestaEspera = "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.";
-        
-        const msgBotEspera = { 
-          id: `local-b-${Date.now()}`, 
-          texto: respuestaEspera, 
-          uidRemitente: 'admin', 
-          timestamp: new Date() 
-        };
+        const msgBotEspera = { id: `local-b-${Date.now()}`, texto: respuestaEspera, uidRemitente: 'admin', timestamp: new Date() };
         
         setMensajesBotLocal(prev => [...prev, msgBotEspera]);
-        return;   
+        return; 
+    }
+
+    const nuevoMsgUsuario = { id: `local-u-${Date.now()}`, texto: textoUsuario, uidRemitente: userData.id, timestamp: new Date() };
+    const nuevoMsgBot = { id: `local-b-${Date.now()}`, texto: respuestaBot, uidRemitente: 'admin', timestamp: new Date() };
+    
+    setMensajesBotLocal(prev => [...prev, nuevoMsgUsuario, nuevoMsgBot]);
+  };
 
   const enviar = async (e, textoSugerido = null) => {
     if (e) e.preventDefault();
