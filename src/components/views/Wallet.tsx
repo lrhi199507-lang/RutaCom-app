@@ -5,7 +5,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'; 
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote, Copy, Lock, Image as ImageIcon, AlertTriangle
+  RefreshCcw, ShieldCheck, CreditCard, X, Info, Banknote, Copy, Lock, ImageIcon, AlertTriangle
 } from "lucide-react";
 import Toast from "../ui/Toast";
 
@@ -17,6 +17,7 @@ export const Wallet = ({ userData, onRegresar }) => {
   const [montoRetiro, setMontoRetiro] = useState("");
   
   const [fotoRecarga, setFotoRecarga] = useState(null);
+  const [metodoRecarga, setMetodoRecarga] = useState("pago_movil"); // 🔥 "pago_movil" o "binance"
 
   const [datosBancarios, setDatosBancarios] = useState({ 
     banco: userData?.datosBancarios?.banco || "", 
@@ -34,6 +35,7 @@ export const Wallet = ({ userData, onRegresar }) => {
 
   const [tasaBCV, setTasaBCV] = useState(0);
   const [datosPagoAdmin, setDatosPagoAdmin] = useState({ banco: "Cargando...", telefono: "Cargando...", cedula: "Cargando..." });
+  const [datosBinanceAdmin, setDatosBinanceAdmin] = useState({ payId: "Cargando...", correo: "Cargando..." }); // 🔥 Datos Admin Binance
 
   useEffect(() => {
     const obtenerDatosFinanzas = async () => {
@@ -48,6 +50,13 @@ export const Wallet = ({ userData, onRegresar }) => {
               banco: data.bancoAdmin.banco || "No definido",
               telefono: data.bancoAdmin.telefono || "No definido",
               cedula: data.bancoAdmin.cedula || "No definido"
+            });
+          }
+          // 🔥 Jalamos los datos de Binance configurados en Firebase
+          if (data.binanceAdmin) {
+            setDatosBinanceAdmin({
+              payId: data.binanceAdmin.payId || "No definido",
+              correo: data.binanceAdmin.correo || "No definido"
             });
           }
         }
@@ -124,7 +133,8 @@ export const Wallet = ({ userData, onRegresar }) => {
         tasaAplicada: tasaBCV, 
         fecha: new Date().toISOString(), 
         estado: "pendiente", 
-        tipo: "recarga"
+        tipo: "recarga",
+        metodoPago: metodoRecarga // 🔥 Registramos si fue por binance o pago_movil
       });
 
       setToastMsg("Solicitud enviada. Espera la validación."); 
@@ -273,46 +283,88 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       </div>
 
+      {/* MODAL DE RECARGA MODIFICADO (PAGO MÓVIL Y BINANCE) */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300 overflow-y-auto max-h-[90vh]">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300 overflow-y-auto max-h-[90vh] no-scrollbar">
+            <div className="flex justify-between items-center mb-5">
               <h3 className="text-lg font-black italic uppercase text-white">Recargar Saldo</h3>
               <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white"><X size={18} /></button>
             </div>
 
-            <div className="space-y-4 mb-6 bg-blue-900/20 p-5 rounded-3xl border border-blue-500/20">
-              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-slate-400">Banco:</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-black text-white uppercase">{datosPagoAdmin.banco}</span>
-                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={14} /></button>
+            {/* 🔥 TABS DE SELECCIÓN DE MÉTODO 🔥 */}
+            <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-[20px] border border-slate-800 mb-5">
+              <button 
+                type="button"
+                onClick={() => setMetodoRecarga("pago_movil")}
+                className={`py-3 rounded-[16px] text-[10px] font-black uppercase tracking-wider transition-all ${metodoRecarga === "pago_movil" ? "bg-slate-800 text-white shadow-md border border-slate-700/50" : "text-slate-500 hover:text-slate-400"}`}
+              >
+                🇻🇪 Pago Móvil
+              </button>
+              <button 
+                type="button"
+                onClick={() => setMetodoRecarga("binance")}
+                className={`py-3 rounded-[16px] text-[10px] font-black uppercase tracking-wider transition-all ${metodoRecarga === "binance" ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-md" : "text-slate-500 hover:text-amber-400"}`}
+              >
+                 Yellow Binance Pay
+              </button>
+            </div>
+
+            {/* VISTA DINÁMICA DE DATOS SEGÚN EL TIPO */}
+            {metodoRecarga === "pago_movil" ? (
+              <div className="space-y-4 mb-5 bg-blue-900/10 p-5 rounded-3xl border border-blue-500/20 animate-in fade-in duration-200">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-slate-400">Banco:</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-white uppercase">{datosPagoAdmin.banco}</span>
+                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-slate-400">Teléfono:</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-black text-white">{datosPagoAdmin.telefono}</span>
-                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={14} /></button>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-slate-400">Teléfono:</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-white">{datosPagoAdmin.telefono}</span>
+                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-slate-400">Cédula:</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-black text-white">{datosPagoAdmin.cedula}</span>
-                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-blue-400 hover:text-blue-300 active:scale-90 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={14} /></button>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-slate-400">Cédula:</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-white">{datosPagoAdmin.cedula}</span>
+                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-blue-400 hover:text-blue-300 p-1.5 bg-blue-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              // 🔥 NUEVO PANEL: DATOS DE BINANCE PAY 🔥
+              <div className="space-y-4 mb-5 bg-amber-500/5 p-5 rounded-3xl border border-amber-500/20 animate-in fade-in duration-200">
+                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos de Binance (USDT)</p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-slate-400">Binance Pay ID:</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-white">{datosBinanceAdmin.payId}</span>
+                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.payId, "Pay ID")} className="text-amber-400 hover:text-amber-300 p-1.5 bg-amber-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-slate-400">Correo Cuenta:</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-white truncate max-w-[140px] text-right">{datosBinanceAdmin.correo}</span>
+                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.correo, "Correo")} className="text-amber-400 hover:text-amber-300 p-1.5 bg-amber-500/10 rounded-lg transition-all"><Copy size={13} /></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
-            {/* 🔥 BANNER DE ADVERTENCIA PARA EL USUARIO 🔥 */}
             <div className="bg-orange-500/10 border border-orange-500/30 p-3.5 rounded-2xl mb-6 flex items-start gap-3">
               <AlertTriangle size={18} className="text-orange-500 shrink-0 mt-0.5" />
               <p className="text-[9px] font-bold text-orange-200 uppercase tracking-widest leading-relaxed">
-                <span className="text-orange-400 font-black">IMPORTANTE:</span> Es obligatorio subir el capture (comprobante) del pago. ¡Tómale captura antes de cerrar tu banco!
+                <span className="text-orange-400 font-black">REQUISITO:</span> Debes adjuntar la captura clara del comprobante de transferencia o Binance Pay obligatoriamente.
               </p>
             </div>
 
@@ -326,22 +378,32 @@ export const Wallet = ({ userData, onRegresar }) => {
                 ) : (
                   <>
                     <ImageIcon size={30} className="text-slate-500" />
-                    <p className="text-[10px] font-black text-slate-500 uppercase">Toca para subir Capture</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase">Subir Capture de Pantalla</p>
                   </>
                 )}
               </div>
 
               <div>
-                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($)</label>
-                <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 10.00" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($ USDT)</label>
+                <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 15.00" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
               </div>
+              
+              {/* 🔥 CAMBIO DINÁMICO DE LABEL E INPUT SEGÚN MÉTODO 🔥 */}
               <div>
-                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Nro de Referencia (Últimos 4-6)</label>
-                <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="0000" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">
+                  {metodoRecarga === "pago_movil" ? "Nro de Referencia (Últimos 4-6)" : "Tu Nombre de Usuario Binance / ID Orden"}
+                </label>
+                <input 
+                  type="text" 
+                  value={referencia} 
+                  onChange={(e) => setReferencia(e.target.value)} 
+                  placeholder={metodoRecarga === "pago_movil" ? "0000" : "Ej: LuisGamer95 o ID-98765"} 
+                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-base font-black outline-none focus:border-blue-500 transition-all" 
+                />
               </div>
               
               <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50 mt-2">
-                {enviando ? "Notificando..." : "Notificar Pago"}
+                {enviando ? "Procesando Notificación..." : "Notificar Pago Realizado"}
               </button>
             </form>
           </div>
@@ -384,7 +446,6 @@ export const Wallet = ({ userData, onRegresar }) => {
                   <Lock size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-600" />
                 </div>
                 <p className="text-[8px] font-black text-red-500/80 uppercase tracking-widest italic text-right mt-1">Titular Inamovible</p>
-
               </div>
 
               <button type="submit" disabled={enviando || Number(montoRetiro) > saldoDisponible || Number(montoRetiro) < 10 || !datosBancarios.cedula} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
