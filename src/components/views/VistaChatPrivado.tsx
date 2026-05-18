@@ -11,7 +11,6 @@ const IconoWhatsApp = ({ size = 20, className = "" }) => (
 
 export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => {
   const [mensajes, setMensajes] = useState([]);
-  const [mensajesBotLocal, setMensajesBotLocal] = useState([]); // 🔥 MENSAJES FANTASMA
   const [nuevoMsg, setNuevoMsg] = useState("");
   const [viajeActual, setViajeActual] = useState(null); 
   const scrollRef = useRef(null);
@@ -21,7 +20,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const [motivoReporte, setMotivoReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
-  // Detectamos si TÚ eres el admin leyendo este chat
   const ADMIN_EMAIL = "damelacola2026@gmail.com";
   const esAdmin = userData?.email?.toLowerCase().trim() === ADMIN_EMAIL || userData?.correo?.toLowerCase().trim() === ADMIN_EMAIL;
   const isSoporte = chat.esSoporte;
@@ -33,22 +31,9 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const nombreContacto = isSoporte ? (esAdmin ? (chat.nombrePasajero || "Usuario") : "Soporte Oficial") : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
   const fotoContacto = isSoporte ? null : (soyConductor ? chat.fotoPasajero : chat.fotoConductor);
 
-  // Sugerencias normales (no de soporte)
   const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
   const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
   const sugerenciasNormales = isSoporte ? [] : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
-
-  // 🔥 Inicializamos el mensaje de bienvenida del Bot localmente
-  useEffect(() => {
-    if (isSoporte && !esAdmin && mensajesBotLocal.length === 0) {
-      setMensajesBotLocal([{
-        id: `bot-welcome-${Date.now()}`,
-        texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
-        uidRemitente: 'admin',
-        timestamp: new Date()
-      }]);
-    }
-  }, [isSoporte, esAdmin, userData.nombre]);
 
   useEffect(() => {
     if (isSoporte || !chat.idViaje) return;
@@ -70,8 +55,24 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       orderBy("timestamp", "asc")
     );
 
+    let primeraCarga = true;
+
     const unsub = onSnapshot(q, (snap) => {
-      setMensajes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setMensajes(historialMensajes);
+
+      // 🔥 SALUDO DEL BOT GUARDADO EN FIREBASE SOLO SI EL CHAT ESTÁ VACÍO
+      if (primeraCarga && isSoporte && !esAdmin) {
+        if (historialMensajes.length === 0) {
+          addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+            texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
+            uidRemitente: 'admin',
+            timestamp: serverTimestamp()
+          });
+        }
+        primeraCarga = false;
+      }
+
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
 
@@ -85,13 +86,8 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     return () => unsub();
   }, [chatIdReal]);
 
-  // Autoscroll cuando entra un mensaje del bot
-  useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  }, [mensajesBotLocal]);
-
-  // 🔥 MANEJO DE LOS BOTONES DEL BOT
-      const ejecutarComandoBot = async (tipo) => {
+  // 🔥 COMANDOS DEL BOT (GUARDADO SILENCIOSO EN FIREBASE) 🔥
+  const ejecutarComandoBot = async (tipo) => {
     let respuestaBot = "";
     let textoUsuario = "";
 
@@ -104,34 +100,44 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         textoUsuario = "¿Cómo publico un viaje?";
         respuestaBot = "🚙 Toca el botón '+' en la app. Selecciona ruta, fecha, y precio. Recuerda: debes tener tu Vehículo y Cédula verificados en 'Mi Perfil'.";
         break;
-      case 'emergencia':
-        textoUsuario = "🚨 Me quedé varado / Ayuda";
-        respuestaBot = "⚠️ Líneas de Emergencia Sugeridas:\n\n📞 Nacionales: 911\n📞 Vialidad: 0800-VIALIDAD\n\n(Pronto directorio de Grúas y Mecánicos de confianza).";
+      case 'verificar':
+        textoUsuario = "Problemas con Verificación / KYC";
+        respuestaBot = "✅ Para verificar tu identidad o auto, ve a 'Mi Perfil'. Sube fotos claras de tu Cédula o Vehículo. Las aprobamos en un plazo de 1 a 12 horas hábiles.";
         break;
       case 'reportar':
         textoUsuario = "¿Cómo reportar a un usuario?";
-        respuestaBot = "🛑 Para reportar a alguien por mal comportamiento: Abre el chat privado con ese usuario y toca el ícono del triángulo de advertencia (⚠️) arriba a la derecha. Revisaremos el caso en menos de 24h.";
+        respuestaBot = "🛑 Para reportar a alguien: Abre el chat privado con ese usuario y toca el ícono del triángulo de advertencia (⚠️) arriba a la derecha. Revisaremos el caso en menos de 24h.";
         break;
-      case 'verificar':
-        textoUsuario = "Problemas con Verificación / KYC";
-        respuestaBot = "✅ Para verificar tu identidad o vehículo, ve a 'Mi Perfil'. Sube fotos claras de tu Cédula o de tu Auto. El equipo de soporte las aprueba en un plazo de 1 a 12 horas hábiles.";
+      case 'emergencia':
+        textoUsuario = "🚨 Me quedé varado / Ayuda";
+        respuestaBot = "⚠️ Líneas de Emergencia Sugeridas:\n\n📞 Nacionales: 911\n📞 Vialidad: 0800-VIALIDAD\n\n(Pronto directorio de Grúas y Mecánicos).";
         break;
       case 'humano':
-        // 1. Enviar alerta real a Firebase para que te llegue la notificación
-        await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema.");
-        
-        // 2. Respuesta fantasma local para calmar al usuario
-        const respuestaEspera = "⏳ ¡Entendido! Un asesor ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.";
-        const msgBotEspera = { id: `local-b-${Date.now()}`, texto: respuestaEspera, uidRemitente: 'admin', timestamp: new Date() };
-        
-        setMensajesBotLocal(prev => [...prev, msgBotEspera]);
+        await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema complejo.");
+        await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+          texto: "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.",
+          uidRemitente: 'admin',
+          timestamp: serverTimestamp()
+        });
         return; 
     }
 
-    const nuevoMsgUsuario = { id: `local-u-${Date.now()}`, texto: textoUsuario, uidRemitente: userData.id, timestamp: new Date() };
-    const nuevoMsgBot = { id: `local-b-${Date.now()}`, texto: respuestaBot, uidRemitente: 'admin', timestamp: new Date() };
-    
-    setMensajesBotLocal(prev => [...prev, nuevoMsgUsuario, nuevoMsgBot]);
+    try {
+      // Guarda la pregunta del usuario sin disparar notificación
+      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: textoUsuario,
+        uidRemitente: userData.id,
+        timestamp: serverTimestamp()
+      });
+      // Guarda la respuesta del bot sin disparar notificación
+      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: respuestaBot,
+        uidRemitente: 'admin',
+        timestamp: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error guardando comandos del bot", error);
+    }
   };
 
   const enviar = async (e, textoSugerido = null) => {
@@ -232,15 +238,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     } finally { setEnviandoReporte(false); }
   };
   
-  // 🔥 MEZCLAMOS LOS MENSAJES DE FIREBASE CON LOS DEL BOT LOCAL 🔥
-  const obtenerTiempo = (msg) => {
-    if (!msg.timestamp) return Date.now();
-    if (msg.timestamp.toDate) return msg.timestamp.toDate().getTime();
-    return new Date(msg.timestamp).getTime();
-  };
-
-  const mensajesMezclados = [...mensajes, ...mensajesBotLocal].sort((a, b) => obtenerTiempo(a) - obtenerTiempo(b));
-
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       
@@ -288,7 +285,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           </div>
         </div>
 
-        {mensajesMezclados.map((m) => {
+        {mensajes.map((m) => {
           const soyYo = m.uidRemitente === userData.id;
           const esBot = m.uidRemitente === 'admin';
           
@@ -311,7 +308,8 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
       {/* ZONA INFERIOR */}
       <div className="bg-white border-t border-slate-100 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-                {/* 🔥 BOTONES DE AUTO-SOPORTE 🔥 */}
+        
+        {/* 🔥 BOTONES DE AUTO-SOPORTE (SOLO PARA PASAJEROS EN EL CHAT DE SOPORTE) 🔥 */}
         {isSoporte && !esAdmin ? (
           <div className="p-3 grid grid-cols-2 gap-2 bg-slate-50 border-b border-slate-100">
             <button onClick={() => ejecutarComandoBot('recarga')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-blue-300">
@@ -334,7 +332,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             </button>
           </div>
         ) : (
-          /* Sugerencias para chats normales */
           mensajes.length < 4 && sugerenciasNormales.length > 0 && (
             <div className="flex overflow-x-auto gap-2 px-4 py-3 no-scrollbar border-b border-slate-50">
               {sugerenciasNormales.map((sug, idx) => (
@@ -367,7 +364,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </form>
       </div>
 
-      {/* TOAST FLOTANTE Y MODAL DE REPORTE (Intactos) */}
+      {/* TOAST FLOTANTE Y MODAL DE REPORTE */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
