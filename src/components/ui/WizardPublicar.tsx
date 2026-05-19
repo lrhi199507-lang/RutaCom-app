@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore'; 
+import { App } from '@capacitor/app';
 import { 
   MapPin, Navigation, ShieldCheck, X, Map, Clock, Car, 
   Check, AlertTriangle, AlertCircle 
@@ -134,29 +135,34 @@ export const WizardPublicar = ({
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
-  // 🔥 INTERCEPTOR DE GESTO ATRÁS (REDISEÑADO Y BLINDADO) 🔥
+  // 🔥 INTERCEPTOR NATIVO DE ANDROID (CAPACITOR) 🔥
   useEffect(() => {
-    // Empujamos un estado inicial para atrapar el primer gesto
-    window.history.pushState({ wizard: true }, "");
+    let backListener;
 
-    const manejarGestoAtras = (e) => {
-      setPasoWizard((pasoActual) => {
-        if (pasoActual > 1) {
-          // Volvemos a empujar el estado para seguir atrapando el gesto
-          window.history.pushState({ wizard: true }, "");
-          return pasoActual - 1;
-        } else {
-          // Si estamos en el paso 1 y da atrás, lo regresamos al inicio
-          setVista("inicio");
-          return pasoActual;
-        }
+    const configurarBotonAtras = async () => {
+      backListener = await App.addListener('backButton', () => {
+        setPasoWizard((pasoActual) => {
+          if (pasoActual > 1) {
+            return pasoActual - 1; // Devuelve al paso anterior
+          } else {
+            if (typeof setVista === 'function') {
+               setVista("inicio"); // Lo saca al inicio si está en el paso 1
+            }
+            return pasoActual;
+          }
+        });
       });
     };
 
-    window.addEventListener('popstate', manejarGestoAtras);
-    return () => window.removeEventListener('popstate', manejarGestoAtras);
-  }, [setVista, setPasoWizard]); 
-  // Al pasar un callback con "pasoActual", el useEffect solo se ejecuta una vez al inicio, evitando que colapse la memoria.
+    configurarBotonAtras();
+
+    // Limpiamos cuando se cierre el Wizard para no afectar el resto de la app
+    return () => {
+      if (backListener) {
+        backListener.remove();
+      }
+    };
+  }, [setVista, setPasoWizard]);
 
   useEffect(() => {
     if (!userData?.id) return;
@@ -347,7 +353,7 @@ export const WizardPublicar = ({
           </div>
         )}
         <div className="flex gap-3 pt-4">
-          <button type="button" onClick={() => window.history.back()} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px] transition-all active:scale-95"> Atrás </button>
+          <button type="button" onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px] transition-all active:scale-95"> Atrás </button>
           <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg disabled:opacity-50 transition-all">Siguiente</button>    
         </div>
         <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(h) => setViajeForm({...viajeForm, hora: h})} titulo="Hora de Salida" />
@@ -414,7 +420,8 @@ export const WizardPublicar = ({
             </div>
           </button>
         </div>
-       <button type="button" onClick={() => window.history.back()} className="w-full text-slate-400 font-black italic uppercase tracking-widest text-xs py-4 rounded-[25px] transition-all active:scale-95 bg-slate-50 border border-slate-200 mt-2 flex items-center justify-center"> Atrás </button>
+       <button type="button" onClick={() => setPasoWizard(2)} className="w-full text-slate-400 font-black italic uppercase tracking-widest text-xs py-4 rounded-[25px] transition-all active:scale-95 bg-slate-50 border border-slate-200 mt-2 flex items-center justify-center"> Atrás </button>
+        
 
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
