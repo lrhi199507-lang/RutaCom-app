@@ -96,6 +96,27 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     return () => { unmounted = true; };
   }, [conductor]);
 
+    // 🔥 TRUCO WEB PARA CAPTURAR EL GESTO DE ATRÁS DESDE EL CELULAR
+  useEffect(() => {
+    // Empujamos un estado falso al historial del navegador
+    window.history.pushState(null, '', window.location.href);
+
+    const manejarGestoAtras = (evento) => {
+      // Evitamos que el teléfono salga de la app
+      evento.preventDefault();
+      onRegresar();
+    };
+
+    // Escuchamos cuando el usuario hace el gesto o toca la flecha de atrás
+    window.addEventListener('popstate', manejarGestoAtras);
+
+    // Limpiamos la basura cuando el componente se cierra
+    return () => {
+      window.removeEventListener('popstate', manejarGestoAtras);
+    };
+  }, [onRegresar]);
+
+
   const nivel = calcularNivel(estadisticas.viajesRealizados);
 
     const manejarClickOpiniones = () => {
