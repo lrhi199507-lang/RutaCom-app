@@ -1,8 +1,20 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { db } from "../../firebaseConfig"; 
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
+import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X, Map, Zap, CreditCard, Car, LifeBuoy } from 'lucide-react';
+
+const IconoWhatsApp = ({ size = 20, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M17.472 14.38c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.487-1.761-1.66-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51h-.57c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.052 0C5.495 0 .16 5.333.158 11.892c0 2.097.549 4.14 1.595 5.945L0 24l6.335-1.652c1.746.943 3.71 1.444 5.714 1.447h.005c6.559 0 11.896-5.333 11.893-11.893a11.821 11.821 0 00-3.484-8.413z"/>
+  </svg>
+);
+
 export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => {
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMsg, setNuevoMsg] = useState("");
   const [viajeActual, setViajeActual] = useState(null); 
   const scrollRef = useRef(null);
+
   const [toast, setToast] = useState(null); 
   const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
   const [motivoReporte, setMotivoReporte] = useState("");
@@ -19,24 +31,10 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const nombreContacto = isSoporte ? (esAdmin ? (chat.nombrePasajero || "Usuario") : "Soporte Oficial") : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
   const fotoContacto = isSoporte ? null : (soyConductor ? chat.fotoPasajero : chat.fotoConductor);
 
-  // --- EFECTOS SEPARADOS Y CORRECTOS ---
+  const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
+  const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
+  const sugerenciasNormales = isSoporte ? [] : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
 
-  // 1. Interceptor botón atrás (Ahora está al nivel correcto)
-  useEffect(() => {
-    const configurarBotonAtras = async () => {
-      const backListener = await App.addListener('backButton', () => {
-        onRegresar();
-      });
-      return backListener;
-    };
-    
-    let listener;
-    configurarBotonAtras().then(l => listener = l);
-    
-    return () => { if (listener) listener.remove(); };
-  }, [onRegresar]);
-
-  // 2. Carga del viaje actual
   useEffect(() => {
     if (isSoporte || !chat.idViaje) return;
     const unsubViaje = onSnapshot(doc(db, "Viajes", chat.idViaje), (docSnap) => {
@@ -45,30 +43,45 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     return () => unsubViaje();
   }, [chat.idViaje, isSoporte]);
 
-  // 3. Carga de mensajes y limpieza de notificaciones
+  const pasajeroConfirmado = viajeActual?.pasajeros?.some(p => 
+    (p.id === chat.uidPasajero || p.uid === chat.uidPasajero) && p.estado === 'confirmado'
+  );
+
   useEffect(() => {
     if (!chatIdReal) return;
     
-    const q = query(collection(db, `Chats/${chatIdReal}/Mensajes`), orderBy("timestamp", "asc"));
+    const q = query(
+      collection(db, `Chats/${chatIdReal}/Mensajes`),
+      orderBy("timestamp", "asc")
+    );
+
+    let primeraCarga = true;
 
     const unsub = onSnapshot(q, (snap) => {
       const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setMensajes(historialMensajes);
-      
-      // Auto-saludo del bot
-      if (historialMensajes.length === 0 && isSoporte && !esAdmin) {
-        addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-          texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖.`,
-          uidRemitente: 'admin',
-          timestamp: serverTimestamp()
-        });
+
+      // 🔥 SALUDO DEL BOT GUARDADO EN FIREBASE SOLO SI EL CHAT ESTÁ VACÍO
+      if (primeraCarga && isSoporte && !esAdmin) {
+        if (historialMensajes.length === 0) {
+          addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+            texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
+            uidRemitente: 'admin',
+            timestamp: serverTimestamp()
+          });
+        }
+        primeraCarga = false;
       }
+
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
 
-    if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
-      setDoc(doc(db, "Chats", chatIdReal), { mensajesSinLeer: 0 }, { merge: true });
-    }
+    const limpiarNotificaciones = async () => {
+      if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
+        await setDoc(doc(db, "Chats", chatIdReal), { mensajesSinLeer: 0 }, { merge: true });
+      }
+    };
+    limpiarNotificaciones();
 
     return () => unsub();
   }, [chatIdReal]);
@@ -225,11 +238,8 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     } finally { setEnviandoReporte(false); }
   };
   
-    return (
-    <div className="flex items-center justify-center min-h-screen bg-red-500">
-      <h1 className="text-white font-black text-2xl">ESTOY CARGANDO</h1>
-    </div>
-  );
+  return (
+    <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       
       {/* HEADER */}
       <div className={`p-4 border-b flex items-center gap-3 shadow-sm pt-8 ${isSoporte ? 'bg-slate-900 text-white' : 'bg-white'}`}>
