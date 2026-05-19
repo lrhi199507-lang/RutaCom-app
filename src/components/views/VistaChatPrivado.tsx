@@ -225,8 +225,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     } finally { setEnviandoReporte(false); }
   };
   
-  return (
-    <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
+    return (
+    <div className="flex items-center justify-center min-h-screen bg-red-500">
+      <h1 className="text-white font-black text-2xl">ESTOY CARGANDO</h1>
+    </div>
+  );
       
       {/* HEADER */}
       <div className={`p-4 border-b flex items-center gap-3 shadow-sm pt-8 ${isSoporte ? 'bg-slate-900 text-white' : 'bg-white'}`}>
