@@ -103,7 +103,14 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           {/* AVATAR: SE PONE GRIS SI ESTÁ LLENO */}
           <div className={`w-12 h-12 rounded-[14px] border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center ${estaLleno ? 'bg-slate-300' : 'bg-blue-600'}`}>
             {viaje.fotoPerfil ? ( 
-              <img src={viaje.fotoPerfil} className={`w-full h-full object-cover ${estaLleno ? 'grayscale opacity-80' : ''}`} alt="Perfil" /> 
+              <img 
+             src={ viaje.fotoPerfil ||  viaje.datosConductor?.foto ||  viaje.foto || // A veces Firebase guarda fotos extra
+    'https://ui-avatars.com/api/?name=' + (viaje.conductor || 'D')
+  } 
+  className={`w-full h-full object-cover ${estaLleno ? 'grayscale opacity-80' : ''}`} 
+  alt="Perfil"
+  onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=D'; }} 
+/> 
             ) : ( 
               <span className="text-white font-black italic text-xl">D</span> 
             )}
