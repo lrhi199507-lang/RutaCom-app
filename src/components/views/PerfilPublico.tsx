@@ -32,6 +32,18 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
   const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
 
+  // 🔥 LÓGICA NATIVA PARA QUE EL BOTÓN ATRÁS CIERRE EL PERFIL
+  useEffect(() => {
+    let backListener;
+    const configurarBotonAtras = async () => {
+      backListener = await App.addListener('backButton', () => {
+        onClose();
+      });
+    };
+    configurarBotonAtras();
+    return () => { if (backListener) backListener.remove(); };
+  }, [onClose]);
+
   // EFECTO MAGIA: CONSULTAR FIREBASE EN VIVO
   useEffect(() => {
     let unmounted = false;
@@ -58,7 +70,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           if (esConductor || esPasajero) contadorViajes++;
         });
 
-                const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
+        const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
         const snapshotResenas = await getDocs(qResenas);
         
         let sumaEstrellas = 0;
@@ -97,7 +109,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     return () => { unmounted = true; };
   }, [conductor]);
 
-    
   const nivel = calcularNivel(estadisticas.viajesRealizados);
 
     const manejarClickOpiniones = () => {
@@ -274,7 +285,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </div>
         </div>
       )}
-      {/* --------------------------------- */}
       
     </div>
   );
