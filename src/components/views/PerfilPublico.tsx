@@ -32,18 +32,26 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
   const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
 
-  // 🔥 LÓGICA NATIVA PARA QUE EL BOTÓN ATRÁS CIERRE EL PERFIL
+    // 🔥 INTERCEPTOR NATIVO PARA CERRAR EL PERFIL CON EL BOTÓN ATRÁS DE ANDROID
   useEffect(() => {
+    // 1. Avisamos a toda la app que el perfil está abierto
+    window.perfilPublicoAbierto = true; 
+    
     let backListener;
     const configurarBotonAtras = async () => {
       backListener = await App.addListener('backButton', () => {
-        onClose();
+        onClose(); // Esto cierra el perfil público
       });
     };
     configurarBotonAtras();
-    return () => { if (backListener) backListener.remove(); };
+    
+    return () => { 
+      // 2. Avisamos a la app que el perfil ya se cerró
+      window.perfilPublicoAbierto = false; 
+      if (backListener) backListener.remove(); 
+    };
   }, [onClose]);
-
+  
   // EFECTO MAGIA: CONSULTAR FIREBASE EN VIVO
   useEffect(() => {
     let unmounted = false;
