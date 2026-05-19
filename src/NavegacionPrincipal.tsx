@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "./firebaseConfig";
 import { signOut } from "firebase/auth";
-import { AlertCircle, RefreshCcw } from 'lucide-react'; // 🔥 Añadí RefreshCcw aquí
+import { AlertCircle, RefreshCcw } from 'lucide-react'; 
 import { Wallet } from './components/views/Wallet'; 
 import { App } from '@capacitor/app';
 
@@ -89,41 +89,29 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
 
-    // 🔥 INTERCEPTOR CORREGIDO 🔥
+  // 🔥 INTERCEPTOR CORREGIDO PARA ASISTIR LOS GESTOS NATIVOS NIDIFICADOS
   useEffect(() => {
-    let backListener;
-    const configurarBotonAtras = async () => {
-      backListener = await App.addListener('backButton', () => {
-        // 1. Si hay un modal secundario activo (Wizard o Chat), NO HACEMOS NADA aquí.
-        // Dejamos que el listener de esos componentes haga su trabajo.
-        if (vista === "publicar" || vista === "chat_individual") {
-          return; 
-        }
-
-        // 2. Si estamos viendo el detalle de un viaje, lo cerramos
-        if (viajeSel) {
-          setViajeSel(null);
-          return;
-        }
-
-        // 3. Si estamos en cualquier otra pestaña (inbox, perfil, mis viajes), vamos al inicio
-        if (vista !== 'inicio') {
-          setVista('inicio');
-          return;
-        }
-
-        // 4. Si ya estamos en inicio y no hay nada abierto, salimos de la app
-        App.exitApp();
-      });
-    };
-
-    configurarBotonAtras();
+    const backListener = App.addListener('backButton', () => {
+      // 1. Si el perfil público está activo, frenamos esta navegación para que actúe su propio componente
+      if (window.perfilPublicoAbierto) {
+        return;
+      }
+      if (viajeSel) {
+        setViajeSel(null);
+        return;
+      }
+      if (vista !== 'inicio') {
+        setVista('inicio');
+        return;
+      }
+      App.exitApp();
+    });
 
     return () => {
-      if (backListener) backListener.remove();
+      backListener.remove();
     };
-  }, [vista, viajeSel]); // Agregamos 'vista' y 'viajeSel' para que sepa dónde está
-  
+  }, [vista, viajeSel]);
+
   const iniciarChat = async (viaje) => {
     if (!userData?.id || !viaje?.id) return;
     
@@ -275,19 +263,14 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
-  // 🔥 NUEVA PANTALLA DE CARGA SECUNDARIA 🔥 (Sincronización de Perfil)
   if (!userData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
-        {/* Luces de neón de fondo */}
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
-        
         <div className="relative z-10 flex flex-col items-center animate-in fade-in duration-500">
-          {/* Spinner moderno estilo tarjeta */}
           <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 flex items-center justify-center shadow-xl">
             <RefreshCcw size={28} className="text-blue-500 animate-spin" />
           </div>
-          
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] mt-6 animate-pulse">
             Sincronizando perfil...
           </p>
@@ -296,7 +279,6 @@ export default function NavegacionPrincipal({ user }) {
     );
   }
 
-  // MURO DE BLOQUEO (SOFT BAN)
   if (userData.cuentaSuspendida === true) {
     return (
       <div className="w-full max-w-md mx-auto h-screen bg-slate-950 flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-500">
@@ -309,14 +291,12 @@ export default function NavegacionPrincipal({ user }) {
         <p className="text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest">
           Tu acceso a <span className="text-blue-500">Dame la cola</span> ha sido restringido.
         </p>
-                <button 
+        <button 
           onClick={() => signOut(auth)}
           className="mt-12 text-slate-500 font-black uppercase text-[10px] border-b border-slate-800 pb-1 hover:text-white transition-colors"
         >
           Cerrar Sesión
         </button>
-        
-        {/* BOTÓN DE CONTACTO EXTERNO */}
         <a 
           href="mailto: damelacola2026@gmail.com?subject=Apelación de Cuenta Suspendida"
           className="mt-6 text-blue-500 font-black uppercase text-[10px] tracking-widest hover:text-blue-400" >  Apelar Decisión (Soporte)  </a>
@@ -324,10 +304,8 @@ export default function NavegacionPrincipal({ user }) {
     );
   }
 
-    // --- ESCUDOS Y LÓGICA DE ALERTAS ---
   const listaViajes = viajes || [];
   const listaChats = chats || [];
-
   let totalAlertasViajes = 0;
   let tieneMensajesNuevos = false;
 
@@ -351,7 +329,6 @@ export default function NavegacionPrincipal({ user }) {
     );
   }
 
-  // 👇 INYECCIÓN DE LA WALLET 👇
   if (verWallet) {
     return (
       <div className="w-full max-w-md mx-auto h-screen bg-[#0b1120] flex flex-col relative overflow-hidden z-[100]">
@@ -369,7 +346,7 @@ export default function NavegacionPrincipal({ user }) {
       />
 
       <main className="flex-1 overflow-y-auto bg-slate-50">
-           {viajeSel ? (
+        {viajeSel ? (
           <VistaDetalleViaje 
             viaje={viajeSel} 
             onRegresar={() => setViajeSel(null)} 
@@ -401,7 +378,7 @@ export default function NavegacionPrincipal({ user }) {
           </>
         )}
         
-          {vista === "inbox" && (
+        {vista === "inbox" && (
           <VistaInbox 
             chatsChofer={chats.filter(c => c.uidConductor === userData?.id)} 
             chatsPasajero={chats.filter(c => c.uidPasajero === userData?.id || c.pasajeros?.some(p => p.id === userData?.id))}
