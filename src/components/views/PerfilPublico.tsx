@@ -96,26 +96,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     return () => { unmounted = true; };
   }, [conductor]);
 
-    // 🔥 TRUCO WEB PARA CAPTURAR EL GESTO DE ATRÁS DESDE EL CELULAR
-  useEffect(() => {
-    // Empujamos un estado falso al historial del navegador
-    window.history.pushState(null, '', window.location.href);
-
-    const manejarGestoAtras = (evento) => {
-      // Evitamos que el teléfono salga de la app
-      evento.preventDefault();
-      onRegresar();
-    };
-
-    // Escuchamos cuando el usuario hace el gesto o toca la flecha de atrás
-    window.addEventListener('popstate', manejarGestoAtras);
-
-    // Limpiamos la basura cuando el componente se cierra
-    return () => {
-      window.removeEventListener('popstate', manejarGestoAtras);
-    };
-  }, [onRegresar]);
-
 
   const nivel = calcularNivel(estadisticas.viajesRealizados);
 
@@ -127,6 +107,30 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
       setMostrarModalResenas(true); // Abre el nuevo modal
     }
   };
+
+    // 🔥 TRUCO WEB PARA EL GESTO ATRÁS DESDE EL CELULAR
+  // (Pégalo con extremo cuidado en el celular)
+  useEffect(() => {
+    // 1. Inyectamos estado falso
+    window.history.pushState(null, '', window.location.href);
+
+    const manejarAtras = (e) => {
+      // 2. Interceptamos el gesto nativo
+      e.preventDefault();
+      // 3. Ejecutamos tu función de volver (asegúrate que 'onRegresar' esté definida en este archivo)
+      if (typeof onRegresar === 'function') {
+        onRegresar();
+      }
+    };
+
+    // 4. Escuchamos el evento
+    window.addEventListener('popstate', manejarAtras);
+
+    // 5. Limpieza cuando se cierra
+    return () => {
+      window.removeEventListener('popstate', manejarAtras);
+    };
+  }, [onRegresar]); // <-- ¡Cuidado aquí! Llave y corchete cerrados.
   
 
   return (
