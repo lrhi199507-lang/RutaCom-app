@@ -89,24 +89,41 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
 
+    // 🔥 INTERCEPTOR CORREGIDO 🔥
   useEffect(() => {
-    const backListener = App.addListener('backButton', () => {
-      if (viajeSel) {
-        setViajeSel(null);
-        return;
-      }
-      if (vista !== 'inicio') {
-        setVista('inicio');
-        return;
-      }
-      App.exitApp();
-    });
+    let backListener;
+    const configurarBotonAtras = async () => {
+      backListener = await App.addListener('backButton', () => {
+        // 1. Si hay un modal secundario activo (Wizard o Chat), NO HACEMOS NADA aquí.
+        // Dejamos que el listener de esos componentes haga su trabajo.
+        if (vista === "publicar" || vista === "chat_individual") {
+          return; 
+        }
+
+        // 2. Si estamos viendo el detalle de un viaje, lo cerramos
+        if (viajeSel) {
+          setViajeSel(null);
+          return;
+        }
+
+        // 3. Si estamos en cualquier otra pestaña (inbox, perfil, mis viajes), vamos al inicio
+        if (vista !== 'inicio') {
+          setVista('inicio');
+          return;
+        }
+
+        // 4. Si ya estamos en inicio y no hay nada abierto, salimos de la app
+        App.exitApp();
+      });
+    };
+
+    configurarBotonAtras();
 
     return () => {
-      backListener.remove();
+      if (backListener) backListener.remove();
     };
-  }, [vista, viajeSel]);
-
+  }, [vista, viajeSel]); // Agregamos 'vista' y 'viajeSel' para que sepa dónde está
+  
   const iniciarChat = async (viaje) => {
     if (!userData?.id || !viaje?.id) return;
     
