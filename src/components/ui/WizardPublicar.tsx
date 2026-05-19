@@ -57,7 +57,6 @@ const calcularRangoPrecio = (distanciaKm, precioIngresado) => {
   }
 };
 
-// --- COMPONENTES AUXILIARES ---
 const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
   const dias = [];
   const hoy = new Date(minDate + "T00:00:00");
@@ -113,7 +112,6 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo }) => {
   );
 };
 
-// --- 3. COMPONENTE PRINCIPAL ---
 export const WizardPublicar = ({ 
   pasoWizard, setPasoWizard, viajeForm, setViajeForm, UBICACIONES, setVista, setModo, publicarRuta,
   viajeAEditar, userData 
@@ -135,33 +133,16 @@ export const WizardPublicar = ({
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
-  // 🔥 INTERCEPTOR NATIVO DE ANDROID (CAPACITOR) 🔥
+  // 🔥 INTERCEPTOR NATIVO DE ANDROID
   useEffect(() => {
     let backListener;
-
     const configurarBotonAtras = async () => {
       backListener = await App.addListener('backButton', () => {
-        setPasoWizard((pasoActual) => {
-          if (pasoActual > 1) {
-            return pasoActual - 1; // Devuelve al paso anterior
-          } else {
-            if (typeof setVista === 'function') {
-               setVista("inicio"); // Lo saca al inicio si está en el paso 1
-            }
-            return pasoActual;
-          }
-        });
+        setPasoWizard((paso) => paso > 1 ? paso - 1 : (setVista("inicio"), paso));
       });
     };
-
     configurarBotonAtras();
-
-    // Limpiamos cuando se cierre el Wizard para no afectar el resto de la app
-    return () => {
-      if (backListener) {
-        backListener.remove();
-      }
-    };
+    return () => { if (backListener) backListener.remove(); };
   }, [setVista, setPasoWizard]);
 
   useEffect(() => {
@@ -250,7 +231,7 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 1: UBICACIONES 
+  // PASOS (RENDERIZADO)
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
@@ -390,11 +371,34 @@ export const WizardPublicar = ({
               try {
                 const [ciudadOri] = (viajeForm.origen || "").split(',');
                 const [ciudadDest] = (viajeForm.destino || "").split(',');
+                
+                // 🔥 AQUÍ FORZAMOS EL GUARDADO DE LA FOTO CORRECTAMENTE
+                const fotoParaGuardar = userData?.fotoPerfil || userData?.foto || "";
+
                 const datosBase = {
-                  ...viajeForm, idCreador: userData.id, uidConductor: userData.id, conductor: userData?.nombre || "Usuario",
-                  datosConductor: { nombre: userData?.nombre || "Usuario", foto: userData?.fotoPerfil || "", rating: ratingCalculado, viajesRealizados: userData?.viajesRealizados || 0, bio: userData?.bio || "" },
-                  vehiculo: userData?.vehiculo, cO: ciudadOri || "S/N", cD: ciudadDest || "S/N", coordsOrigen: viajeForm.coordsOrigen, coordsDestino: viajeForm.coordsDestino,
-                  estado: "disponible", timestamp: Date.now(), pasajeros: [], reservasPendientes: [], precio: Number(viajeForm.precio) || 0 
+                  ...viajeForm, 
+                  idCreador: userData.id, 
+                  uidConductor: userData.id, 
+                  conductor: userData?.nombre || "Usuario",
+                  fotoPerfil: fotoParaGuardar, // Foto en la raíz
+                  datosConductor: { 
+                    nombre: userData?.nombre || "Usuario", 
+                    foto: fotoParaGuardar, // Foto dentro del objeto conductor
+                    rating: ratingCalculado, 
+                    viajesRealizados: Number(userData?.viajesRealizados) || 0, 
+                    bio: userData?.bio || "" 
+                  },
+                  vehiculo: userData?.vehiculo, 
+                  cO: ciudadOri || "S/N", 
+                  cD: ciudadDest || "S/N", 
+                  coordsOrigen: viajeForm.coordsOrigen, 
+                  coordsDestino: viajeForm.coordsDestino,
+                  estado: "disponible", 
+                  timestamp: Date.now(), 
+                  pasajeros: [], 
+                  reservasPendientes: [], 
+                  precio: Number(viajeForm.precio) || 0,
+                  asientos: Number(viajeForm.asientos) || 1
                 };
 
                 if (viajeForm.publicarRegreso) {
@@ -411,16 +415,22 @@ export const WizardPublicar = ({
 
                 setToastMessage("¡Publicado con éxito!"); setShowToast(true);
                 setTimeout(() => { setShowToast(false); setVista("inicio"); setPasoWizard(1); setPublicando(false); }, 2000);
-              } catch (e) { setToastMessage("Error al publicar."); setShowToast(true); setPublicando(false); }
+              } catch (e) { 
+                console.error("Error al publicar:", e);
+                setToastMessage("Error: " + e.message); 
+                setShowToast(true); 
+                setPublicando(false); 
+              }
             }}
-            className={`relative w-full p-5 rounded-[25px] font-black uppercase tracking-[2px] transition-all duration-75 ${publicando ? 'bg-slate-200 text-slate-400 translate-y-1' : 'bg-blue-600 text-white border-b-[8px] border-blue-800 active:border-b-0 active:translate-y-2 shadow-[0_10px_20px_rgba(37,99,235,0.3)]'}`}
+            className={`w-full p-5 rounded-[25px] font-black uppercase tracking-[2px] transition-all duration-75 ${publicando ? 'bg-slate-300' : 'bg-blue-600 text-white shadow-[0_8px_0_#1e40af] active:shadow-none active:translate-y-2'}`}
           >
             <div className="flex items-center justify-center gap-3">
-              {publicando ? <><div className="w-5 h-5 border-4 border-slate-400 border-t-transparent rounded-full animate-spin" /><span className="text-sm italic">PROCESANDO...</span></> : <><ShieldCheck size={22} /><span className="text-sm">{viajeAEditar ? "GUARDAR CAMBIOS" : "¡PUBLICAR AHORA!"}</span></>}
+              {publicando ? 'PROCESANDO...' : (viajeAEditar ? "GUARDAR CAMBIOS" : "¡PUBLICAR AHORA!")}
             </div>
           </button>
         </div>
-       <button type="button" onClick={() => setPasoWizard(2)} className="w-full text-slate-400 font-black italic uppercase tracking-widest text-xs py-4 rounded-[25px] transition-all active:scale-95 bg-slate-50 border border-slate-200 mt-2 flex items-center justify-center"> Atrás </button>
+        
+        <button type="button" onClick={() => setPasoWizard(2)} className="w-full text-slate-400 font-black italic uppercase tracking-widest text-xs py-4 rounded-[25px] transition-all active:scale-95 bg-slate-50 border border-slate-200 mt-2 flex items-center justify-center"> Atrás </button>
         
 
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
