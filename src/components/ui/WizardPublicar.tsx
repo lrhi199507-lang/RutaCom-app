@@ -347,7 +347,7 @@ export const WizardPublicar = ({
           </div>
         )}
         <div className="flex gap-3 pt-4">
-          <button onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px]">Atrás</button>
+          <button type="button" onClick={() => window.history.back()}  className="tus-clases-de-tailwind-aqui"> Atrás </button>
           <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg disabled:opacity-50 transition-all">Siguiente</button>    
         </div>
         <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(h) => setViajeForm({...viajeForm, hora: h})} titulo="Hora de Salida" />
@@ -414,7 +414,8 @@ export const WizardPublicar = ({
             </div>
           </button>
         </div>
-        <button onClick={() => setPasoWizard(2)} className="w-full text-[10px] font-black uppercase text-slate-400 mt-6 tracking-widest text-center">Atrás</button>
+        <button  type="button" onClick={() => window.history.back()}  className="tus-clases-de-tailwind-aqui"> Atrás </button>
+
         <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
     );
