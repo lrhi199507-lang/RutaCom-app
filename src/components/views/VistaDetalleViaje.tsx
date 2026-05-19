@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
@@ -60,7 +60,6 @@ const obtenerArraySeguro = (dato) => {
   if (typeof dato === 'object') return Object.values(dato);
   return [];
 };
-// -----------------------------
 
 export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, onIniciarChat }) => {
   if (!viajeInicial) return null;
@@ -76,7 +75,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [modalFinalizar, setModalFinalizar] = useState(false);
 
   const [modalCalificacion, setModalCalificacion] = useState(false);
-  const [estrellas, setEstrellas] = useState(0);
+  const [stars, setStars] = useState(0);
   const [comentarioResena, setComentarioResena] = useState("");
 
   const [modalCalificarPasajeros, setModalCalificarPasajeros] = useState(false);
@@ -94,6 +93,24 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
+
+  // 🔥 INTERCEPCIÓN DEL GESTO NATIVO DE IR ATRÁS EN EL CELULAR
+  useEffect(() => {
+    window.history.pushState({ pantalla: 'detalle_viaje' }, '', window.location.href);
+
+    const manejarGestoFisico = (e) => {
+      e.preventDefault();
+      onRegresar(); 
+    };
+
+    window.addEventListener('popstate', manejarGestoFisico);
+    return () => window.removeEventListener('popstate', manejarGestoFisico);
+  }, [onRegresar]);
+
+  // 🔥 FUNCIÓN DE CIERRE UNIFICADO (Para botones y procesos de Firebase)
+  const salirDePantalla = () => {
+    window.history.back();
+  };
 
   useEffect(() => {
     if (window.google && window.google.maps) return;
@@ -130,7 +147,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => { if (intervaloGps) clearInterval(intervaloGps); };
   }, [soyConductor, estadoViaje, viaje?.id]);
   
-
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
       if (docSnap.exists()) {
@@ -201,14 +217,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
     const miSaldoActual = Number(userData?.saldo || 0);
 
-    // 1. Verificación de seguridad: ¿Tiene plata suficiente?
     if (miSaldoActual < costoTotalPeticion) {
       setToastMessage(`Saldo insuficiente. Necesitas $${costoTotalPeticion.toFixed(2)}`);
       setShowToast(true);
       return;
     }
 
-    // 2. Verificación de seguridad: ¿Hay puestos?
     if (puestosQueQuiero > cuposRestantes) {
       setToastMessage("No hay suficientes puestos disponibles");
       setShowToast(true);
@@ -217,7 +231,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     setCargando(true);
     try {
-      // 🔥 3. NUEVA VERIFICACIÓN CRÍTICA: ¿Ya tiene otro viaje activo? 🔥
       const miId = userData?.id || userData?.uid;
       const qActivos = query(
         collection(db, "Viajes"),
@@ -228,7 +241,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       let enOtroViaje = false;
 
       snapActivos.forEach(d => {
-        if (d.id !== viaje.id) { // Solo revisamos OTROS viajes
+        if (d.id !== viaje.id) { 
           const data = d.data();
           const esChofer = data.uidConductor === miId || data.idCreador === miId;
           const esPasajero = obtenerArraySeguro(data.pasajeros).some(p => p && (p.id === miId || p.uid === miId));
@@ -247,7 +260,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setCargando(false);
         return;
       }
-      // 🔥 FIN DE LA NUEVA VERIFICACIÓN 🔥
 
       const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
       const idConductor = viaje?.uidConductor || viaje?.idCreador;
@@ -311,9 +323,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       console.error("Error en reserva:", e);
       setToastMessage("Error al procesar");
       setShowToast(true);
-    } finally { 
-      setCargando(false); 
-    }
+    } window.setTimeout(() => setCargando(false), 500);
   };
   
   const cancelarSolicitud = async () => {
@@ -375,7 +385,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       setModalCancelar({ visible: false, rol: null });
       setShowToast(true);
-      if (modalCancelar.rol === 'chofer') onRegresar();
+      if (modalCancelar.rol === 'chofer') salirDePantalla(); // 🔥 CAMBIADO A FUNCIÓN NATURALEZA
       
     } catch (error) {
       console.error(error);
@@ -480,30 +490,27 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const llamarBunker = httpsCallableFromURL(functions, 'https://finalizar-viaje-v2-1080063705561.us-central1.run.app');
-
-      console.log("Intentando cobrar viaje:", viaje.id);
       const resultado = await llamarBunker({ 
         viajeId: viaje.id, 
         ratingsChofer: ratingsChofer 
       });
 
       if (resultado.data.success) {
-          // Notificamos a los pasajeros que el viaje terminó
-      pasajerosConfirmados.forEach(p => {
-        if (p && (p.id || p.uid)) {
-          enviarNotificacion(
-            p.id || p.uid,
-            "¡Llegaste a tu destino!",
-            `El viaje ha finalizado. Por favor, recuerda calificar a ${userData.nombre} en la app.`,
-            "viaje"
-          );
-        }
-      });
+        pasajerosConfirmados.forEach(p => {
+          if (p && (p.id || p.uid)) {
+            enviarNotificacion(
+              p.id || p.uid,
+              "¡Llegaste a tu destino!",
+              `El viaje ha finalizado. Por favor, recuerda calificar a ${userData.nombre} en la app.`,
+              "viaje"
+            );
+          }
+        });
 
         setToastMessage("¡Viaje finalizado con éxito!");
         setShowToast(true);
         setModalCalificarPasajeros(false);
-        onRegresar();
+        salirDePantalla(); // 🔥 CAMBIADO A FUNCIÓN NATURALEZA
       }
     } catch (e) { 
       console.error("Error completo:", e);
@@ -536,7 +543,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setToastMessage("¡Ruta iniciada! Pasajeros notificados.");
       }
       
-      if (nuevoEstado === 'finalizado') onRegresar();
+      if (nuevoEstado === 'finalizado') salirDePantalla(); // 🔥 CAMBIADO A FUNCIÓN NATURALEZA
       setShowToast(true);
     } catch (e) {
       console.error(e);
@@ -548,7 +555,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
   
   const enviarCalificacion = async () => {
-    if (estrellas === 0) {
+    if (stars === 0) {
       setToastMessage("Selecciona al menos 1 estrella"); setShowToast(true); return;
     }
     setCargando(true);
@@ -559,7 +566,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         idConductor: idChofer,
         idPasajero: userData?.id || "SinID",
         nombrePasajero: userData?.nombre || "Usuario",
-        estrellas: estrellas,
+        estrellas: stars,
         comentario: String(comentarioResena || ""),
         fecha: new Date().toISOString()
       });
@@ -603,7 +610,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         
         {/* HEADER */}
         <div className="p-4 pt-6 flex justify-between items-center">
-          <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
+          {/* 🔥 CAMBIADO onClick PARA QUE DISPARE EL RETROCESO NATIVO DE MANERA SINCRÓNICA */}
+          <button onClick={salirDePantalla} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
             <ArrowLeft size={16} strokeWidth={3} />
             <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
           </button>
@@ -908,7 +916,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             </>
           ) : (
             <>
-              <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+              <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
                 <MessageCircle size={16} /> Chat
               </button>
 
@@ -1052,8 +1060,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             
             <div className="flex justify-center gap-2 mb-6">
               {[1, 2, 3, 4, 5].map(num => (
-                <button key={num} onClick={() => setEstrellas(num)} className="active:scale-75 transition-all">
-                  <Star size={36} className={`${estrellas >= num ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-slate-700'} transition-colors`} />
+                <button key={num} onClick={() => setStars(num)} className="active:scale-75 transition-all">
+                  <Star size={36} className={`${stars >= num ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-slate-700'} transition-colors`} />
                 </button>
               ))}
             </div>
@@ -1065,7 +1073,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               className="w-full bg-slate-900 border border-slate-700 text-white rounded-[20px] p-4 text-xs font-bold outline-none focus:border-amber-400 resize-none h-24 mb-6"
             />
             
-            <button disabled={cargando || estrellas === 0} onClick={enviarCalificacion} className="w-full bg-amber-400 text-amber-950 rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-amber-900/50 active:scale-95 transition-all disabled:opacity-50 disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none">
+            <button disabled={cargando || stars === 0} onClick={enviarCalificacion} className="w-full bg-amber-400 text-amber-950 rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-amber-900/50 active:scale-95 transition-all disabled:opacity-50 disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none">
               {cargando ? 'Enviando...' : 'Enviar Reseña'}
             </button>
           </div>
