@@ -75,6 +75,25 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
+      // 🔥 TRUCO WEB PARA CAPTURAR EL GESTO DE ATRÁS DESDE EL CELULAR
+  useEffect(() => {
+    // Empujamos un estado falso al historial del navegador
+    window.history.pushState(null, '', window.location.href);
+
+    const manejarGestoAtras = (evento) => {
+      // Evitamos que el teléfono salga de la app
+      evento.preventDefault();
+      onRegresar();
+    };
+
+    // Escuchamos cuando el usuario hace el gesto o toca la flecha de atrás
+    window.addEventListener('popstate', manejarGestoAtras);
+
+    // Limpiamos la basura cuando el componente se cierra
+    return () => {
+      window.removeEventListener('popstate', manejarGestoAtras);
+    };
+  }, [onRegresar]);
 
     const limpiarNotificaciones = async () => {
       if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
