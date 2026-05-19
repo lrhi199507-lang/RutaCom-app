@@ -89,21 +89,33 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
 
-  // 🔥 INTERCEPTOR CORREGIDO PARA ASISTIR LOS GESTOS NATIVOS NIDIFICADOS
+    // 🔥 INTERCEPTOR NATIVO MAESTRO 🔥
   useEffect(() => {
     const backListener = App.addListener('backButton', () => {
-      // 1. Si el perfil público está activo, frenamos esta navegación para que actúe su propio componente
+      // 1. Si el perfil público está abierto (ventana superpuesta), ignorar.
       if (window.perfilPublicoAbierto) {
         return;
       }
+      
+      // 2. Si estamos en el chat o en el wizard de publicar, ignorar.
+      // Dejamos que los listeners de esos componentes hagan su trabajo.
+      if (vista === "chat_individual" || vista === "publicar") {
+        return;
+      }
+
+      // 3. Si hay un detalle de viaje abierto, lo cerramos.
       if (viajeSel) {
         setViajeSel(null);
         return;
       }
+
+      // 4. Si estamos en cualquier otra pestaña (inbox, perfil), vamos al inicio.
       if (vista !== 'inicio') {
         setVista('inicio');
         return;
       }
+
+      // 5. Si ya estamos en inicio, salir de la app.
       App.exitApp();
     });
 
