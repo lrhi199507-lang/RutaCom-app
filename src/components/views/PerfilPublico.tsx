@@ -6,7 +6,6 @@ import {
   Star, Music, MessageSquare, User, Car, Trophy, Medal, MapPin, BadgeCheck
 } from 'lucide-react';
 
-// --- FUNCIÓN PARA CALCULAR EL NIVEL (RANGO) ---
 const calcularNivel = (viajes) => {
   if (viajes < 5) return { titulo: 'NOVATO', color: 'text-slate-500', bg: 'bg-slate-100', icon: <User size={14} /> };
   if (viajes < 15) return { titulo: 'RECURRENTE', color: 'text-blue-600', bg: 'bg-blue-100', icon: <MapPin size={14} /> };
@@ -26,16 +25,12 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const [listaResenas, setListaResenas] = useState([]);
   const [mostrarModalResenas, setMostrarModalResenas] = useState(false);
   
-
-  // 1. MEJORA: Atrapar el nombre correcto sin importar de dónde venga
   const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
   const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
 
-  // EFECTO MAGIA: CONSULTAR FIREBASE EN VIVO
   useEffect(() => {
     let unmounted = false;
     
-    // Obtener ID real del conductor
     const idUsuario = conductor.uidConductor || conductor.idCreador || conductor.id;
 
     if (!idUsuario) {
@@ -45,7 +40,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
 
     const cargarEstadisticas = async () => {
       try {
-        // A. Contar Viajes Finalizados
         const qViajes = query(collection(db, "Viajes"), where("estado", "==", "finalizado"));
         const snapshotViajes = await getDocs(qViajes);
         let contadorViajes = 0;
@@ -57,22 +51,20 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           if (esConductor || esPasajero) contadorViajes++;
         });
 
-                const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
+        const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
         const snapshotResenas = await getDocs(qResenas);
         
         let sumaEstrellas = 0;
         let totalResenas = 0;
-        let resenasObtenidas = []; // NUEVO: Array para guardar los comentarios
+        let resenasObtenidas = []; 
 
         snapshotResenas.forEach((docSnap) => {
           const data = docSnap.data();
           sumaEstrellas += data.estrellas || 0;
           totalResenas++;
-          // Guardamos cada reseña en la lista
           resenasObtenidas.push({ id: docSnap.id, ...data });
         });
 
-        // 2. MEJORA: Si no hay reseñas, muestra "0.0" estrictamente
         const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "0.0";
 
         if (!unmounted) {
@@ -81,9 +73,9 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             promedio: promedioCalculado,
             totalOpiniones: totalResenas
           });
-          setListaResenas(resenasObtenidas); // NUEVO: Guardamos la lista en el estado
+          setListaResenas(resenasObtenidas); 
           setCargandoStats(false);
-      }
+        }
 
       } catch (error) {
         console.error("Error cargando estadísticas:", error);
@@ -96,42 +88,16 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     return () => { unmounted = true; };
   }, [conductor]);
 
-
   const nivel = calcularNivel(estadisticas.viajesRealizados);
 
-    const manejarClickOpiniones = () => {
+  const manejarClickOpiniones = () => {
     if (estadisticas.totalOpiniones === 0) {
       setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
       setShowToast(true);
     } else {
-      setMostrarModalResenas(true); // Abre el nuevo modal
+      setMostrarModalResenas(true); 
     }
   };
-
-    // 🔥 TRUCO WEB PARA EL GESTO ATRÁS DESDE EL CELULAR
-  // (Pégalo con extremo cuidado en el celular)
-  useEffect(() => {
-    // 1. Inyectamos estado falso
-    window.history.pushState(null, '', window.location.href);
-
-    const manejarAtras = (e) => {
-      // 2. Interceptamos el gesto nativo
-      e.preventDefault();
-      // 3. Ejecutamos tu función de volver (asegúrate que 'onRegresar' esté definida en este archivo)
-      if (typeof onRegresar === 'function') {
-        onRegresar();
-      }
-    };
-
-    // 4. Escuchamos el evento
-    window.addEventListener('popstate', manejarAtras);
-
-    // 5. Limpieza cuando se cierra
-    return () => {
-      window.removeEventListener('popstate', manejarAtras);
-    };
-  }, [onRegresar]); // <-- ¡Cuidado aquí! Llave y corchete cerrados.
-  
 
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
@@ -140,7 +106,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
       <div className="bg-white px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b border-slate-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-[14px] flex items-center justify-center shadow-lg shadow-blue-100">
-            <span className="text-white font-black italic text-lg">D</span>
+            <span className="text-white font-black italic text-lg">{inicialMostrar}</span>
           </div>
           <div>
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 italic">Perfil Público</p>
@@ -164,9 +130,8 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </button>
         </div>
         
-                {/* TARJETA DE PERFIL CENTRAL */}
+        {/* TARJETA DE PERFIL CENTRAL */}
         <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col items-center mb-8 relative">
-          
           <div className="w-28 h-28 bg-white rounded-[35px] border-4 border-slate-50 shadow-xl overflow-hidden mb-4 flex items-center justify-center relative">
             {conductor.fotoPerfil ? (
               <img src={conductor.fotoPerfil} className="w-full h-full object-cover" alt="" />
@@ -174,9 +139,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
               <User size={40} className="text-slate-200" />
             )}
           </div>
-            
           
-          {/* 3. MEJORA: Icono BadgeCheck moderno en lugar del Emoji */}
           <h2 className="text-2xl font-black text-slate-800 flex items-center justify-center gap-2 italic text-center w-full">
             <span className="truncate max-w-[80%]">{nombreMostrar}</span>
             {conductor.identidadVerificada && (
@@ -232,7 +195,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             </div>
         </div>
 
-                {/* OPINIONES DINÁMICAS */}
+        {/* OPINIONES DINÁMICAS */}
         <div className="mb-32">
           <button 
             onClick={manejarClickOpiniones}
@@ -297,8 +260,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </div>
         </div>
       )}
-      {/* --------------------------------- */}
-      
     </div>
   );
 };
