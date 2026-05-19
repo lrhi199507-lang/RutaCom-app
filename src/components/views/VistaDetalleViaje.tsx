@@ -8,6 +8,8 @@ import { Geolocation } from '@capacitor/geolocation';
 import MapaView from '../Map/MapaView';
 import { functions } from '../../firebaseConfig'; 
 import { httpsCallableFromURL } from 'firebase/functions';
+import { App } from '@capacitor/app';
+
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
   MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock
@@ -94,23 +96,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  // 🔥 INTERCEPCIÓN DEL GESTO NATIVO DE IR ATRÁS EN EL CELULAR
+  // 🔥 INTERCEPTOR NATIVO DE ANDROID PARA EL DETALLE DEL VIAJE 🔥
   useEffect(() => {
-    window.history.pushState({ pantalla: 'detalle_viaje' }, '', window.location.href);
+    let backListener;
 
-    const manejarGestoFisico = (e) => {
-      e.preventDefault();
-      onRegresar(); 
+    const configurarBotonAtras = async () => {
+      backListener = await App.addListener('backButton', () => {
+        onRegresar(); // Te saca del detalle del viaje de forma nativa
+      });
     };
 
-    window.addEventListener('popstate', manejarGestoFisico);
-    return () => window.removeEventListener('popstate', manejarGestoFisico);
-  }, [onRegresar]);
+    configurarBotonAtras();
 
-  // 🔥 FUNCIÓN DE CIERRE UNIFICADO (Para botones y procesos de Firebase)
-  const salirDePantalla = () => {
-    window.history.back();
-  };
+    return () => {
+      if (backListener) backListener.remove();
+    };
+  }, [onRegresar]);
 
   useEffect(() => {
     if (window.google && window.google.maps) return;
@@ -385,7 +386,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       setModalCancelar({ visible: false, rol: null });
       setShowToast(true);
-      if (modalCancelar.rol === 'chofer') salirDePantalla(); // 🔥 CAMBIADO A FUNCIÓN NATURALEZA
+      if (modalCancelar.rol === 'chofer') onRegresar(); // 🔥 CORREGIDO
       
     } catch (error) {
       console.error(error);
@@ -510,7 +511,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setToastMessage("¡Viaje finalizado con éxito!");
         setShowToast(true);
         setModalCalificarPasajeros(false);
-        salirDePantalla(); // 🔥 CAMBIADO A FUNCIÓN NATURALEZA
+        onRegresar(); // 🔥 CORREGIDO
       }
     } catch (e) { 
       console.error("Error completo:", e);
@@ -543,7 +544,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setToastMessage("¡Ruta iniciada! Pasajeros notificados.");
       }
       
-      if (nuevoEstado === 'finalizado') salirDePantalla(); // 🔥 CAMBIADO A FUNCIÓN NATURALEZA
+      if (nuevoEstado === 'finalizado') onRegresar(); // 🔥 CORREGIDO
       setShowToast(true);
     } catch (e) {
       console.error(e);
@@ -610,10 +611,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         
         {/* HEADER */}
         <div className="p-4 pt-6 flex justify-between items-center">
-          {/* 🔥 CAMBIADO onClick PARA QUE DISPARE EL RETROCESO NATIVO DE MANERA SINCRÓNICA */}
-          <button onClick={salirDePantalla} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
-            <ArrowLeft size={16} strokeWidth={3} />
-            <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
+          <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all"> <ArrowLeft size={16} strokeWidth={3} />  <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
           </button>
           {estadoViaje === 'en_curso' && (
             <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
