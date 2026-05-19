@@ -89,40 +89,60 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
 
-    // 🔥 INTERCEPTOR NATIVO MAESTRO 🔥
+      // 🔥 EL CEREBRO MAESTRO DE NAVEGACIÓN 🔥
   useEffect(() => {
-    const backListener = App.addListener('backButton', () => {
-      // 1. Si el perfil público está abierto (ventana superpuesta), ignorar.
-      if (window.perfilPublicoAbierto) {
-        return;
-      }
-      
-      // 2. Si estamos en el chat o en el wizard de publicar, ignorar.
-      // Dejamos que los listeners de esos componentes hagan su trabajo.
-      if (vista === "chat_individual" || vista === "publicar") {
-        return;
-      }
+    const configurarBotonAtras = async () => {
+      // 1. MATAMOS cualquier listener fantasma acumulado
+      await App.removeAllListeners();
 
-      // 3. Si hay un detalle de viaje abierto, lo cerramos.
-      if (viajeSel) {
-        setViajeSel(null);
-        return;
-      }
+      // 2. Creamos EL ÚNICO controlador de toda la app
+      await App.addListener('backButton', () => {
 
-      // 4. Si estamos en cualquier otra pestaña (inbox, perfil), vamos al inicio.
-      if (vista !== 'inicio') {
-        setVista('inicio');
-        return;
-      }
+        // Prioridad 1: Perfil Público abierto
+        if (window.perfilPublicoAbierto) {
+          window.dispatchEvent(new Event('cerrarPerfilGlobal'));
+          return;
+        }
 
-      // 5. Si ya estamos en inicio, salir de la app.
-      App.exitApp();
-    });
+        // Prioridad 2: Chat Privado
+        if (vista === "chat_individual") {
+          setChatActivo(null);
+          setVista("inbox");
+          return;
+        }
 
-    return () => {
-      backListener.remove();
+        // Prioridad 3: Publicar Viaje (Retrocede pasos)
+        if (vista === "publicar") {
+          if (pasoWizard > 1) {
+            setPasoWizard(prev => prev - 1);
+          } else {
+            setVista("inicio");
+          }
+          return;
+        }
+
+        // Prioridad 4: Detalle de Viaje abierto
+        if (viajeSel) {
+          setViajeSel(null);
+          return;
+        }
+
+        // Prioridad 5: Cualquier otra pestaña vuelve a inicio
+        if (vista !== 'inicio') {
+          setVista('inicio');
+          return;
+        }
+
+        // Prioridad 6: Salir de la app
+        App.exitApp();
+      });
     };
-  }, [vista, viajeSel]);
+
+    configurarBotonAtras();
+
+  }, [vista, viajeSel, pasoWizard, chatActivo]); 
+  // ↑ Es VITAL que estas variables estén en el corchete
+
 
   const iniciarChat = async (viaje) => {
     if (!userData?.id || !viaje?.id) return;
