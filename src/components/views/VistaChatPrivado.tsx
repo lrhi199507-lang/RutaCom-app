@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
 import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X, Map, Zap, CreditCard, Car, LifeBuoy } from 'lucide-react';
+import { App } from '@capacitor/app';
 
 const IconoWhatsApp = ({ size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -75,23 +76,20 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
-      // 🔥 TRUCO WEB PARA CAPTURAR EL GESTO DE ATRÁS DESDE EL CELULAR
+        // 🔥 INTERCEPTOR NATIVO DE ANDROID PARA EL CHAT (CAPACITOR)
   useEffect(() => {
-    // Empujamos un estado falso al historial del navegador
-    window.history.pushState(null, '', window.location.href);
+    let backListener;
 
-    const manejarGestoAtras = (evento) => {
-      // Evitamos que el teléfono salga de la app
-      evento.preventDefault();
-      onRegresar();
+    const configurarBotonAtras = async () => {
+      backListener = await App.addListener('backButton', () => {
+        onRegresar(); // Te saca del chat directo a la lista de chats
+      });
     };
 
-    // Escuchamos cuando el usuario hace el gesto o toca la flecha de atrás
-    window.addEventListener('popstate', manejarGestoAtras);
+    configurarBotonAtras();
 
-    // Limpiamos la basura cuando el componente se cierra
     return () => {
-      window.removeEventListener('popstate', manejarGestoAtras);
+      if (backListener) backListener.remove();
     };
   }, [onRegresar]);
 
