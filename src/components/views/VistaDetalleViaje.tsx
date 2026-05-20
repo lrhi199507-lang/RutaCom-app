@@ -96,23 +96,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  // 🔥 INTERCEPTOR NATIVO DE ANDROID PARA EL DETALLE DEL VIAJE 🔥
-  useEffect(() => {
-    let backListener;
-
-    const configurarBotonAtras = async () => {
-      backListener = await App.addListener('backButton', () => {
-        onRegresar(); // Te saca del detalle del viaje de forma nativa
-      });
-    };
-
-    configurarBotonAtras();
-
-    return () => {
-      if (backListener) backListener.remove();
-    };
-  }, [onRegresar]);
-
   useEffect(() => {
     if (window.google && window.google.maps) return;
     const script = document.createElement('script');
