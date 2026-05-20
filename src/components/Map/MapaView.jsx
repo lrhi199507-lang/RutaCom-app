@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Navigation } from 'lucide-react';
-import { Geolocation } from '@capacitor/geolocation'; // 🔥 RECUERDA: Ten instalado @capacitor/geolocation
+import { Geolocation } from '@capacitor/geolocation';
 
 const MapaView = ({ 
   origen, 
@@ -37,7 +37,6 @@ const MapaView = ({
       polylineOptions: { strokeColor: "#000000", strokeWeight: 5 }
     });
 
-    // Escuchamos cuando el mapa se detiene para avisar la ubicación al Wizard
     if (interactivo) {
       googleMap.current.addListener('idle', () => {
         const centro = googleMap.current.getCenter();
@@ -48,22 +47,16 @@ const MapaView = ({
     }
   }, [interactivo]);
 
-  // 2. FUNCIÓN PARA DETECTAR UBICACIÓN ACTUAL GPS
+  // 2. FUNCIÓN PARA DETECTAR UBICACIÓN ACTUAL GPS (USO MANUAL EN INTERFAZ)
   const obtenerUbicacionActual = async () => {
     setLocalizando(true);
     try {
-      const coordinates = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true
-      });
-      
-      const miPos = {
-        lat: coordinates.coords.latitude,
-        lng: coordinates.coords.longitude
-      };
+      const coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+      const miPos = { lat: coordinates.coords.latitude, lng: coordinates.coords.longitude };
 
       if (googleMap.current) {
-        googleMap.current.panTo(miPos); // Desliza el mapa suavemente
-        googleMap.current.setZoom(18); // Zoom de precisión
+        googleMap.current.panTo(miPos); 
+        googleMap.current.setZoom(18); 
       }
     } catch (error) {
       console.error("Error obteniendo ubicación:", error);
@@ -73,7 +66,7 @@ const MapaView = ({
     }
   };
 
-  // 3. ACTUALIZACIÓN DE MARCADORES (MODO NORMAL)
+  // 3. ACTUALIZACIÓN DE MARCADORES (ORIGEN, DESTINO Y CHOFER)
   useEffect(() => {
     if (!googleMap.current || !window.google || interactivo) return;
 
@@ -84,14 +77,7 @@ const MapaView = ({
       markers.current.origen = new window.google.maps.Marker({
         position: { lat: origen.lat, lng: origen.lon },
         map: googleMap.current,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: "#2563eb", 
-          fillOpacity: 1,
-          strokeWeight: 3,
-          strokeColor: "white",
-        }
+        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#2563eb", fillOpacity: 1, strokeWeight: 3, strokeColor: "white" }
       });
     }
 
@@ -99,14 +85,7 @@ const MapaView = ({
       markers.current.destino = new window.google.maps.Marker({
         position: { lat: destino.lat, lng: destino.lon },
         map: googleMap.current,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: "#22c55e", 
-          fillOpacity: 1,
-          strokeWeight: 3,
-          strokeColor: "white",
-        }
+        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#22c55e", fillOpacity: 1, strokeWeight: 3, strokeColor: "white" }
       });
     }
 
@@ -122,12 +101,40 @@ const MapaView = ({
     }
   }, [origen, destino, interactivo]);
 
+  // 4. ANIMACIÓN DEL CHOFER EN TIEMPO REAL
+  useEffect(() => {
+    if (!googleMap.current || !window.google || interactivo || !posicionChofer) return;
+
+    if (!markers.current.chofer) {
+      // Crear el marcador del carro si no existe
+      markers.current.chofer = new window.google.maps.Marker({
+        position: { lat: posicionChofer.lat, lng: posicionChofer.lon },
+        map: googleMap.current,
+        icon: { 
+          path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW, 
+          scale: 6, 
+          fillColor: "#0f172a", 
+          fillOpacity: 1, 
+          strokeWeight: 2, 
+          strokeColor: "white",
+          rotation: posicionChofer.heading || 0 
+        }
+      });
+    } else {
+      // Si ya existe, solo actualizamos su posición suavemente
+      markers.current.chofer.setPosition({ lat: posicionChofer.lat, lng: posicionChofer.lon });
+      if (posicionChofer.heading) {
+        const icon = markers.current.chofer.getIcon();
+        icon.rotation = posicionChofer.heading;
+        markers.current.chofer.setIcon(icon);
+      }
+    }
+  }, [posicionChofer, interactivo]);
+
   return (
     <div className="relative w-full h-full min-h-[300px] bg-slate-100 rounded-inherit overflow-hidden">
-      {/* EL MAPA */}
       <div ref={mapRef} className="absolute inset-0" style={{ borderRadius: 'inherit' }} />
 
-      {/* PUNTERO FIJO CENTRAL */}
       {interactivo && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           <div className="flex flex-col items-center mb-[35px]">
@@ -140,7 +147,6 @@ const MapaView = ({
         </div>
       )}
 
-      {/* 🔥 BOTÓN FLOTANTE GPS (Solo en interactivo) 🔥 */}
       {interactivo && (
         <button 
           onClick={obtenerUbicacionActual}
