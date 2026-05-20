@@ -133,18 +133,6 @@ export const WizardPublicar = ({
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
 
-  // 🔥 INTERCEPTOR NATIVO DE ANDROID
-  useEffect(() => {
-    let backListener;
-    const configurarBotonAtras = async () => {
-      backListener = await App.addListener('backButton', () => {
-        setPasoWizard((paso) => paso > 1 ? paso - 1 : (setVista("inicio"), paso));
-      });
-    };
-    configurarBotonAtras();
-    return () => { if (backListener) backListener.remove(); };
-  }, [setVista, setPasoWizard]);
-
   useEffect(() => {
     if (!userData?.id) return;
     const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", userData.id));
