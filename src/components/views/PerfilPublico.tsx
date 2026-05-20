@@ -32,23 +32,20 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
   const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
 
-    // 🔥 INTERCEPTOR NATIVO PARA CERRAR EL PERFIL CON EL BOTÓN ATRÁS DE ANDROID
+      // 🔥 ESCUCHADOR DEL CEREBRO MAESTRO 🔥
   useEffect(() => {
-    // 1. Avisamos a toda la app que el perfil está abierto
     window.perfilPublicoAbierto = true; 
     
-    let backListener;
-    const configurarBotonAtras = async () => {
-      backListener = await App.addListener('backButton', () => {
-        onClose(); // Esto cierra el perfil público
-      });
+    const handleCierre = () => {
+      onClose(); // Ejecuta el cierre visual
     };
-    configurarBotonAtras();
+
+    // Escucha la orden que le manda NavegacionPrincipal
+    window.addEventListener('cerrarPerfilGlobal', handleCierre);
     
     return () => { 
-      // 2. Avisamos a la app que el perfil ya se cerró
       window.perfilPublicoAbierto = false; 
-      if (backListener) backListener.remove(); 
+      window.removeEventListener('cerrarPerfilGlobal', handleCierre);
     };
   }, [onClose]);
   
