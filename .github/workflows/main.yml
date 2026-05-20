@@ -53,8 +53,8 @@ jobs:
 
       - name: Sincronización Capacitor
         run: |
-          # 1. Instalamos Capacitor, GPS y el Generador de Assets (Íconos)
-          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest @capacitor/assets@latest --legacy-peer-deps
+          # 1. Instalamos Capacitor, GPS, Background Geolocation y Generador de Assets
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest @capacitor-community/background-geolocation@latest @capacitor/assets@latest --legacy-peer-deps
           
           # 2. Creamos el archivo de configuración
           echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'Dame la cola', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
@@ -72,15 +72,14 @@ jobs:
           # 6. Sincronizamos
           npx cap sync android
 
-          # 7. INYECTAR PERMISOS (GPS Y NOTIFICACIONES PUSH PARA ANDROID 13+)
-          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
+          # 7. INYECTAR PERMISOS (NOTIFICACIONES, GPS Y SEGUNDO PLANO)
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
 
           # 8. MAGIA DEL ÍCONO PROFESIONAL
-          # Crea la carpeta, mete tu imagen y genera las versiones de Android
           mkdir -p assets
           mv icon.png assets/icon.png || echo "No icon.png encontrado"
           npx @capacitor/assets generate --android
-
+          
       - name: Generar APK Final
         run: |
           cd android
