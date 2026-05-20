@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
-import { getFunctions } from "firebase/functions"; // <--- NUEVA IMPORTACIÓN
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCXBs3-Z4-SC2UUAtZhjMgMZ74sD9rqq9Y",
@@ -17,9 +17,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+
+// 🔥 CACHÉ LOCAL OFFLINE ACTIVADA AQUÍ
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+});
+
 const storage = getStorage(app);
 const messaging = getMessaging(app);
-const functions = getFunctions(app, "us-central1"); // <--- INICIALIZAR AQUÍ
+const functions = getFunctions(app, "us-central1");
 
-export { auth, db, storage, messaging, functions }; // <--- EXPORTAR functions
+export { auth, db, storage, messaging, functions };
