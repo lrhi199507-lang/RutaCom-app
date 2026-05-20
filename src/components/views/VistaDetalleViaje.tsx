@@ -9,7 +9,6 @@ import MapaView from '../Map/MapaView';
 import { functions } from '../../firebaseConfig'; 
 import { httpsCallableFromURL } from 'firebase/functions';
 import { App } from '@capacitor/app';
-import { BackgroundGeolocation } from '@capacitor-community/background-geolocation';
 
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
@@ -33,43 +32,38 @@ const obtenerEstado = (ciudadNombre) => {
   }
 };
 
+// Variable global para apagar el rastreo
+let watcherId = null;
+
 const iniciarRastreoChofer = async (viajeId) => {
   try {
-    // Esto crea una notificación fija en Android que impide que la app se duerma
-    watcherId = await BackgroundGeolocation.addWatcher(
-      {
-        backgroundMessage: "Compartiendo tu ubicación con los pasajeros.",
-        backgroundTitle: "Dame la cola está activo",
-        requestPermissions: true,
-        stale: false,
-        distanceFilter: 10 // Actualiza Firebase cada vez que el chofer se mueva 10 metros
-      },
-      async (location, error) => {
-        if (error) {
-          console.error("Error GPS Background:", error);
-          return;
+    watcherId = await Geolocation.watchPosition(
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      async (position, error) => {
+        if (error) { 
+          console.error("Error GPS:", error); 
+          return; 
         }
-
-        if (location) {
-          // Enviar la posición exacta a Firebase (incluye hacia dónde apunta el carro)
+        if (position) {
+          // Actualiza Firebase con la latitud, longitud y dirección a la que apunta el carro
           await updateDoc(doc(db, "Viajes", viajeId), {
             posicionChofer: {
-              lat: location.latitude,
-              lon: location.longitude,
-              heading: location.bearing 
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+              heading: position.coords.heading || 0
             }
           });
         }
       }
     );
   } catch (error) {
-    console.error("No se pudo iniciar el rastreo en segundo plano:", error);
+    console.error("Error iniciando rastreo:", error);
   }
 };
 
 const detenerRastreoChofer = async () => {
-  if (watcherId) {
-    await BackgroundGeolocation.removeWatcher({ id: watcherId });
+  if (watcherId != null) {
+    await Geolocation.clearWatch({ id: watcherId });
     watcherId = null;
   }
 };
