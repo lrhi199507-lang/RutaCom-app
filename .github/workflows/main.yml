@@ -25,9 +25,11 @@ jobs:
           # 2. Instalación usando --legacy-peer-deps para evitar el error ERESOLVE
           npm install --force --legacy-peer-deps
           npm install -D tailwindcss @tailwindcss/vite postcss autoprefixer vite @vitejs/plugin-react typescript ts-node --legacy-peer-deps
-          npm install firebase lucide-react clsx tailwind-merge class-variance-authority @radix-ui/react-slot react-leaflet leaflet --legacy-peer-deps
+          
+          # 🔥 AQUÍ ESTÁ LA SOLUCIÓN: Agregamos los plugins de geolocalización a React antes de compilar
+          npm install firebase lucide-react clsx tailwind-merge class-variance-authority @radix-ui/react-slot react-leaflet leaflet @capacitor/geolocation @capacitor-community/background-geolocation --legacy-peer-deps
 
-          # 3. Asegurar el index.html (INCLUYE PARCHE PARA QUE SE VEAN LAS CALLES DEL MAPA)
+          # 3. Asegurar el index.html
           echo '<!DOCTYPE html>
           <html lang="es">
             <head>
@@ -42,8 +44,9 @@ jobs:
             </body>
           </html>' > index.html
 
-          # 4. COMPILAR
+          # 4. COMPILAR (Ahora sí pasará porque las librerías ya existen)
           npx vite build --outDir dist
+          
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
