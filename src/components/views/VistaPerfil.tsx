@@ -54,7 +54,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           try {
             await auth.currentUser.reload();
             // Al recargar, forzamos un mini-cambio en userData para que la pantalla se actualice y borre el mensaje
-            setUserData({ ...userData }); 
+            setUserData((prev) => prev ? { ...prev } : prev);
           } catch (error) {
             console.error("Error recargando auth:", error);
           }
