@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { App } from '@capacitor/app';
 import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
@@ -11,6 +12,34 @@ import {
   Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight, 
   TrendingUp, History, Landmark, Settings, Headset, MessageCircle, Image as ImageIcon
 } from 'lucide-react';
+
+useEffect(() => {
+  // Creamos el listener que detecta cuando la app vuelve a primer plano
+  const verificarEstado = async ({ isActive }) => {
+    if (isActive && auth.currentUser) {
+      try {
+        // La app volvió a abrirse. Actualizamos los datos desde el servidor.
+        await auth.currentUser.reload();
+        
+        // Actualiza tu variable de estado (ajusta 'setCorreoVerificado' al nombre que uses)
+        if (auth.currentUser.emailVerified) {
+          setCorreoVerificado(true); 
+        } else {
+          setCorreoVerificado(false);
+        }
+      } catch (error) {
+        console.error("Error recargando auth:", error);
+      }
+    }
+  };
+
+  const listener = App.addListener('appStateChange', verificarEstado);
+
+  // Limpieza del listener cuando se desmonte el componente
+  return () => {
+    listener.then(l => l.remove());
+  };
+}, []);
 
 const auth = getAuth();
 
