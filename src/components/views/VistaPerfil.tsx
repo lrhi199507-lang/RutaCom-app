@@ -13,34 +13,6 @@ import {
   TrendingUp, History, Landmark, Settings, Headset, MessageCircle, Image as ImageIcon
 } from 'lucide-react';
 
-useEffect(() => {
-  // Creamos el listener que detecta cuando la app vuelve a primer plano
-  const verificarEstado = async ({ isActive }) => {
-    if (isActive && auth.currentUser) {
-      try {
-        // La app volvió a abrirse. Actualizamos los datos desde el servidor.
-        await auth.currentUser.reload();
-        
-        // Actualiza tu variable de estado (ajusta 'setCorreoVerificado' al nombre que uses)
-        if (auth.currentUser.emailVerified) {
-          setCorreoVerificado(true); 
-        } else {
-          setCorreoVerificado(false);
-        }
-      } catch (error) {
-        console.error("Error recargando auth:", error);
-      }
-    }
-  };
-
-  const listener = App.addListener('appStateChange', verificarEstado);
-
-  // Limpieza del listener cuando se desmonte el componente
-  return () => {
-    listener.then(l => l.remove());
-  };
-}, []);
-
 const auth = getAuth();
 
 export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat }: any) => {
@@ -73,6 +45,32 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
+  useEffect(() => {
+    let listenerHandle: any = null;
+
+    const configurarListener = async () => {
+      listenerHandle = await App.addListener('appStateChange', async ({ isActive }) => {
+        if (isActive && auth.currentUser) {
+          try {
+            await auth.currentUser.reload();
+            // Al recargar, forzamos un mini-cambio en userData para que la pantalla se actualice y borre el mensaje
+            setUserData({ ...userData }); 
+          } catch (error) {
+            console.error("Error recargando auth:", error);
+          }
+        }
+      });
+    };
+
+    configurarListener();
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
+    };
+  }, []);
+  
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   const view = pestañaActiva || 'publico';
