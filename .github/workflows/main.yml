@@ -1,4 +1,4 @@
-name: Build APK - RutaCom Fix Colores
+name: Build AAB Produccion - Dame la cola
 
 on:
   workflow_dispatch:
@@ -83,14 +83,20 @@ jobs:
           mv icon.png assets/icon.png || echo "No icon.png encontrado"
           npx @capacitor/assets generate --android
           
-      - name: Generar APK Final
+      - name: Decodificar Keystore de Producción
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/rutacom.jks
+
+      - name: Construir Android App Bundle (AAB) Oficial
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew bundleRelease --no-daemon
 
-      - name: Upload APK
+      - name: Firmar el AAB
+        run: jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore android/app/rutacom.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" android/app/build/outputs/bundle/release/app-release.aab "${{ secrets.KEYSTORE_ALIAS }}"
+
+      - name: Subir AAB Firmado (Para la Play Store)
         uses: actions/upload-artifact@v4
         with:
-          name: DameLaCola-App
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: DameLaCola-Release-AAB
+          path: android/app/build/outputs/bundle/release/app-release.aab
