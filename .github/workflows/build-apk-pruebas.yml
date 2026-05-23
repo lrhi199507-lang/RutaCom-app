@@ -1,0 +1,54 @@
+name: Build APK Pruebas - Dame la cola
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalación Forzada y Compilación
+        run: |
+          sed -i 's/catalog:/latest/g' package.json
+          sed -i '/@workspace/d' package.json
+          rm -f .npmrc package-lock.json
+          npm install --force --legacy-peer-deps
+          npm install -D tailwindcss @tailwindcss/vite postcss autoprefixer vite @vitejs/plugin-react typescript ts-node --legacy-peer-deps
+          npm install firebase lucide-react clsx tailwind-merge class-variance-authority @radix-ui/react-slot react-leaflet leaflet @capacitor/geolocation --legacy-peer-deps
+          npx vite build --outDir dist
+          
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Sincronización Capacitor
+        run: |
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest @capacitor/assets@latest --legacy-peer-deps
+          echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'Dame la cola', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
+          npx cap add android || true
+          cp google-services.json android/app/ || true
+          sed -i '/dependencies {/a \        classpath "com.google.gms:google-services:4.4.1"' android/build.gradle
+          echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+          npx cap sync android
+
+      - name: Generar APK de Prueba
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Subir APK para Instalar
+        uses: actions/upload-artifact@v4
+        with:
+          name: DameLaCola-Test-APK
+          path: android/app/build/outputs/apk/debug/*.apk
