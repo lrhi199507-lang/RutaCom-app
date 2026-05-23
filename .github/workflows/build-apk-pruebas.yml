@@ -15,14 +15,31 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Instalación Forzada y Compilación
+      - name: Instalación Forzada de Diseño
         run: |
           sed -i 's/catalog:/latest/g' package.json
           sed -i '/@workspace/d' package.json
           rm -f .npmrc package-lock.json
+          
           npm install --force --legacy-peer-deps
           npm install -D tailwindcss @tailwindcss/vite postcss autoprefixer vite @vitejs/plugin-react typescript ts-node --legacy-peer-deps
+          
           npm install firebase lucide-react clsx tailwind-merge class-variance-authority @radix-ui/react-slot react-leaflet leaflet @capacitor/geolocation --legacy-peer-deps
+          
+          echo '<!DOCTYPE html>
+          <html lang="es">
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+              <title>Dame la cola</title>
+              <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="/src/main.tsx"></script>
+            </body>
+          </html>' > index.html
+
           npx vite build --outDir dist
           
       - name: Set up JDK 21
@@ -31,15 +48,29 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Sincronización Capacitor
+      - name: Sincronización Capacitor (Sin Assets)
         run: |
-          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest @capacitor/assets@latest --legacy-peer-deps
+          # 1. Instalamos Capacitor y GPS (Sin @capacitor/assets para evitar el error de librería pesada)
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest --legacy-peer-deps
+          
+          # 2. Creamos el archivo de configuración
           echo "import { CapacitorConfig } from '@capacitor/cli'; const config: CapacitorConfig = { appId: 'com.rutacom.app', appName: 'Dame la cola', webDir: 'dist', server: { androidScheme: 'https' } }; export default config;" > capacitor.config.ts
+          
+          # 3. Agregamos la plataforma Android
           npx cap add android || true
+          
+          # 4. Copiamos el archivo de Firebase
           cp google-services.json android/app/ || true
+          
+          # 5. Inyectamos Firebase en los archivos Gradle
           sed -i '/dependencies {/a \        classpath "com.google.gms:google-services:4.4.1"' android/build.gradle
           echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+          
+          # 6. Sincronizamos
           npx cap sync android
+
+          # 7. INYECTAR PERMISOS
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
 
       - name: Generar APK de Prueba
         run: |
