@@ -214,6 +214,15 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     window.open(url, '_blank');
   };
 
+  const manejarVerViaje = () => {
+    if (!viajeActual || viajeActual.estado === 'finalizado' || viajeActual.estado === 'cancelado') {
+      setToast({ texto: "El viaje ya no está disponible", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    if (onVerViaje) onVerViaje();
+  };
+
   const manejarReporte = async () => {
     if (!motivoReporte.trim()) return;
     setEnviandoReporte(true);
@@ -262,7 +271,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         {!isSoporte && (
           <div className="flex items-center gap-1 pr-1">
             {onVerViaje && (
-              <button onClick={onVerViaje} className="px-3 py-1.5 mr-1 bg-blue-600 text-white shadow-md shadow-blue-600/30 rounded-full transition-all active:scale-95 flex items-center gap-1.5">
+              <button onClick={manejarVerViaje} className="px-3 py-1.5 mr-1 bg-blue-600 text-white shadow-md shadow-blue-600/30 rounded-full transition-all active:scale-95 flex items-center gap-1.5">
                 <Map size={14} strokeWidth={3} />
                 <span className="text-[9px] font-black uppercase tracking-widest">Viaje</span>
               </button>
