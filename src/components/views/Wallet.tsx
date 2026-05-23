@@ -391,20 +391,19 @@ export const Wallet = ({ userData, onRegresar }) => {
 
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($ USDT)</label>
-                <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 15.00" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
-              </div>
-              
-              <div>
-                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">
-                  {metodoRecarga === "pago_movil" ? "Nro de Referencia (Últimos 4-6)" : "Usuario Binance / ID de Orden"}
-                </label>
                 <input 
-                  type="text" 
-                  value={referencia} 
-                  onChange={(e) => setReferencia(e.target.value)} 
-                  placeholder={metodoRecarga === "pago_movil" ? "0000" : "Ej: LuisGamer95 o ID-98765"} 
-                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-base font-black outline-none focus:border-blue-500 transition-all" 
+                  type="number" 
+                  value={montoRecarga} 
+                  onChange={(e) => setMontoRecarga(e.target.value)} 
+                  placeholder="Ej: 15.00" 
+                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" 
                 />
+                {/* 🔥 LÓGICA DE CONVERSIÓN EN TIEMPO REAL PARA PAGO MÓVIL 🔥 */}
+                {metodoRecarga === "pago_movil" && montoRecarga && tasaBCV > 0 && (
+                  <p className="text-[10px] font-black text-emerald-400 uppercase mt-2 ml-1 italic animate-in fade-in">
+                    Debes transferir: ≈ Bs. {(Number(montoRecarga) * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
               
               <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50 mt-2">
