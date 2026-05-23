@@ -90,6 +90,9 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           resenasObtenidas.push({ id: docSnap.id, ...data });
         });
 
+        // 🔥 ORDENAR POR FECHA (De más reciente a más antigua) 🔥
+        resenasObtenidas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
         // 2. MEJORA: Si no hay reseñas, muestra "0.0" estrictamente
         const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "0.0";
 
