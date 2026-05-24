@@ -323,69 +323,107 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const aprobarPago = async (pago: any) => {
-    if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
-    setCargando(true);
-    try {
-      await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
-      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
-      
+  if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
+  setCargando(true);
+  try {
+    await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
+    await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+    
+    await addDoc(collection(db, "Transacciones"), {
+      uid: pago.uid, tipo: "ingreso", monto: pago.monto,
+      descripcion: "Recarga de saldo aprobada", fecha: new Date().toISOString()
+    });
+
+    // 🔥 NOTIFICACIÓN DE RECARGA EXITOSA 🔥
+    await addDoc(collection(db, "Notificaciones"), {
+      idDestino: pago.uid,
+      titulo: "💰 Recarga Exitosa",
+      mensaje: `Tu recarga de $${pago.monto} ha sido aprobada y acreditada en tu billetera.`,
+      timestamp: Date.now(),
+      leido: false,
+      tipo: "billetera"
+    });
+
+    setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+    setToast({ texto: `¡$${pago.monto} acreditados y notificados!`, tipo: "exito" });
+    setTimeout(() => setToast(null), 3000);
+  } catch (error) {
+    setToast({ texto: "Error al aprobar", tipo: "error" });
+    setTimeout(() => setToast(null), 3000);
+  } finally { setCargando(false); }
+};
+  
+  const marcarRetiroComoPagado = async (pago: any) => {
+  if(!window.confirm(`¿Confirmas que ya transferiste a ${pago.nombre}?`)) return;
+  setCargando(true);
+  try {
+    await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+    await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(-pago.monto), saldoRetenido: increment(-pago.monto) });
+
+    await addDoc(collection(db, "Transacciones"), {
+      uid: pago.uid, tipo: "gasto", monto: pago.monto,
+      descripcion: "Retiro de dinero procesado", fecha: new Date().toISOString()
+    });
+
+    // 🔥 NOTIFICACIÓN DE RETIRO COMPLETADO 🔥
+    await addDoc(collection(db, "Notificaciones"), {
+      idDestino: pago.uid,
+      titulo: "💸 Retiro Completado",
+      mensaje: `Tu retiro de $${pago.monto} ha sido procesado. Verifica tu cuenta bancaria.`,
+      timestamp: Date.now(),
+      leido: false,
+      tipo: "billetera"
+    });
+
+    setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+    setToast({ texto: "Retiro pagado y usuario notificado", tipo: "exito" });
+    setTimeout(() => setToast(null), 3000);
+  } catch (error) {
+    setToast({ texto: "Error al procesar", tipo: "error" });
+    setTimeout(() => setToast(null), 3000);
+  } finally { setCargando(false); }
+};
+  
+  const rechazarPago = async (pago: any) => {
+  if(!window.confirm(pago.tipo === 'retiro' ? '¿Rechazar retiro y devolver fondos a su Wallet?' : '¿Rechazar recarga?')) return;
+  setCargando(true);
+  try {
+    await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
+    
+    let tituloNotif = "";
+    let mensajeNotif = "";
+
+    if (pago.tipo === 'retiro') {
+      await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
       await addDoc(collection(db, "Transacciones"), {
         uid: pago.uid, tipo: "ingreso", monto: pago.monto,
-        descripcion: "Recarga de saldo aprobada", fecha: new Date().toISOString()
+        descripcion: "Devolución por retiro rechazado", fecha: new Date().toISOString()
       });
+      tituloNotif = "❌ Retiro Rechazado";
+      mensajeNotif = `Tu solicitud de retiro por $${pago.monto} fue rechazada. Los fondos han regresado a tu billetera. Verifica tus datos de pago móvil.`;
+    } else {
+      tituloNotif = "❌ Recarga Rechazada";
+      mensajeNotif = `No pudimos validar tu recarga de $${pago.monto}. Por favor, verifica el número de referencia y que el capture sea legible.`;
+    }
 
-      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
-      setToast({ texto: `¡$${pago.monto} acreditados!`, tipo: "exito" });
-      setTimeout(() => setToast(null), 3000);
-    } catch (error) {
-      setToast({ texto: "Error al aprobar", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
-  };
+    // 🔥 NOTIFICACIÓN DE RECHAZO 🔥
+    await addDoc(collection(db, "Notificaciones"), {
+      idDestino: pago.uid,
+      titulo: tituloNotif,
+      mensaje: mensajeNotif,
+      timestamp: Date.now(),
+      leido: false,
+      tipo: "alerta"
+    });
 
-  const marcarRetiroComoPagado = async (pago: any) => {
-    if(!window.confirm(`¿Confirmas que ya transferiste a ${pago.nombre}?`)) return;
-    setCargando(true);
-    try {
-      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
-      await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(-pago.monto), saldoRetenido: increment(-pago.monto) });
-
-      await addDoc(collection(db, "Transacciones"), {
-        uid: pago.uid, tipo: "gasto", monto: pago.monto,
-        descripcion: "Retiro de dinero procesado", fecha: new Date().toISOString()
-      });
-
-      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
-      setToast({ texto: "Retiro marcado como pagado", tipo: "exito" });
-      setTimeout(() => setToast(null), 3000);
-    } catch (error) {
-      setToast({ texto: "Error al procesar", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
-  };
-
-  const rechazarPago = async (pago: any) => {
-    if(!window.confirm(pago.tipo === 'retiro' ? '¿Rechazar retiro y devolver fondos a su Wallet?' : '¿Rechazar recarga?')) return;
-    setCargando(true);
-    try {
-      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
-      
-      if (pago.tipo === 'retiro') {
-        await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
-        await addDoc(collection(db, "Transacciones"), {
-          uid: pago.uid, tipo: "ingreso", monto: pago.monto,
-          descripcion: "Devolución por retiro rechazado", fecha: new Date().toISOString()
-        });
-      }
-
-      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
-      setToast({ texto: "Movimiento rechazado", tipo: "exito" });
-      setTimeout(() => setToast(null), 3000);
-    } catch (error) {
-      setToast({ texto: "Error al rechazar", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
-  };
+    setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+    setToast({ texto: "Movimiento rechazado y notificado", tipo: "exito" });
+    setTimeout(() => setToast(null), 3000);
+  } catch (error) {
+    setToast({ texto: "Error al rechazar", tipo: "error" });
+    setTimeout(() => setToast(null), 3000);
+  } finally { setCargando(false); }
+};
 
   const resolverReporte = async (reporteId: string) => {
     if(!window.confirm("¿Marcar este reporte como revisado?")) return;
@@ -400,22 +438,35 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const aprobarUsuario = async (userId: string) => {
-    setCargando(true);
-    try {
-      await updateDoc(doc(db, "usuarios", userId), {
-        kycVerificado: true, licenciaVerificada: true, circulacionVerificada: true,
-        rcvVerificado: true, fotoFrontalVerificada: true, fotoTraseraVerificada: true,
-        fotoLatIzqVerificada: true, fotoLatDerVerificada: true, selfieVerificada: true
-      });
-      setToast({ texto: "¡Usuario Verificado!", tipo: "exito" });
-      setTimeout(() => setToast(null), 3000);
-      await cargarDatosAdmin();
-    } catch (e) { 
-      setToast({ texto: "Error de permisos", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
-  };
+  setCargando(true);
+  try {
+    await updateDoc(doc(db, "usuarios", userId), {
+      kycVerificado: true, licenciaVerificada: true, circulacionVerificada: true,
+      rcvVerificado: true, fotoFrontalVerificada: true, fotoTraseraVerificada: true,
+      fotoLatIzqVerificada: true, fotoLatDerVerificada: true, selfieVerificada: true,
+      estadoRevision: "aprobado",
+      mensajeAdmin: ""
+    });
 
+    // 🔥 NUEVA LÓGICA DE NOTIFICACIÓN 🔥
+    await addDoc(collection(db, "Notificaciones"), {
+      idDestino: userId, // Importante: va dirigido al ID del usuario
+      titulo: "✅ ¡Cuenta Verificada!",
+      mensaje: "Tus documentos han sido aprobados. Ya puedes empezar a generar ingresos con Dame la cola.",
+      timestamp: Date.now(),
+      leido: false,
+      tipo: "sistema"
+    });
+
+    setToast({ texto: "¡Usuario Verificado y Notificado!", tipo: "exito" });
+    setTimeout(() => setToast(null), 3000);
+    await cargarDatosAdmin();
+  } catch (e) { 
+    setToast({ texto: "Error de permisos", tipo: "error" });
+    setTimeout(() => setToast(null), 3000);
+  } finally { setCargando(false); }
+};
+  
   const rechazarDocumentos = async (userId: string) => {
   if (!window.confirm("¿Rechazar fotos?")) return;
   try {
@@ -425,9 +476,21 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       licenciaVerificada: false, rcvVerificado: false,
       kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null,
       licenciaFoto: null, rcvFoto: null,
-      estadoRevision: "rechazado", mensajeAdmin: "Tus documentos fueron rechazados. Por favor, súbelos nuevamente con mayor claridad."
+      estadoRevision: "rechazado", 
+      mensajeAdmin: "Tus documentos fueron rechazados. Por favor, súbelos nuevamente con mayor claridad."
     });
-    setToast({ texto: "Documentos eliminados", tipo: "exito" });
+
+    // 🔥 NUEVA LÓGICA DE NOTIFICACIÓN 🔥
+    await addDoc(collection(db, "Notificaciones"), {
+      idDestino: userId,
+      titulo: "⚠️ Documentos Rechazados",
+      mensaje: "Algunas de tus fotos no cumplen los requisitos. Revisa tu perfil y vuelve a subirlas para activar tu cuenta.",
+      timestamp: Date.now(),
+      leido: false,
+      tipo: "alerta"
+    });
+
+    setToast({ texto: "Documentos eliminados y usuario notificado", tipo: "exito" });
     setTimeout(() => setToast(null), 3000);
     await cargarDatosAdmin(); 
   } catch (e) { 
