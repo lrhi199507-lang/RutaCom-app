@@ -125,22 +125,16 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
-  const solicitudes = viaje.reservasPendientes?.length || 0;
+  const solicitudes = viaje.reservasPendientes?.length || 0; // Única declaración
   const estadoActual = viaje.estado || 'disponible';
   
   const estaEnCurso = estadoActual === 'en_curso' || estadoActual === 'buscando';
   const esFinalizado = estadoActual === 'finalizado';
 
- // 🔥 LÓGICA DE COLOR NARANJA MEJORADA 🔥
-// Detectamos:
-// 1. Solicitudes manuales (pendientes)
-// 2. Pasajeros nuevos (confirmados automáticamente pero quizás no vistos)
-// 3. Viajes en curso
-const solicitudes = viaje.reservasPendientes?.length || 0;
-const nuevosConfirmados = viaje.pasajeros?.filter(p => !p.vistoPorChofer)?.length || 0; 
+  // 🔥 LÓGICA DE COLOR NARANJA: 
+  const nuevosConfirmados = viaje.pasajeros?.filter(p => !p.vistoPorChofer)?.length || 0; 
+  const botonNaranja = !esFinalizado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
 
-const botonNaranja = !esFinalizado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
-  
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
