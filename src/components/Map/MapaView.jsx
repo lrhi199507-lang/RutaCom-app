@@ -131,6 +131,47 @@ const MapaView = ({
     }
   }, [posicionChofer, interactivo]);
 
+    // 5. MARCADORES DE LOS PASAJEROS
+  useEffect(() => {
+    if (!googleMap.current || !window.google || interactivo || !pasajeros.length) return;
+
+    // 1. Limpiar los marcadores viejos para que no se dupliquen al recargar
+    markers.current.pasajeros.forEach(marker => marker.setMap(null));
+    markers.current.pasajeros = [];
+
+    // 2. Paleta de colores para diferenciar a múltiples pasajeros
+    const colores = ["#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6", "#ef4444"];
+
+    pasajeros.forEach((pasajero, index) => {
+      // Solo dibuja si el pasajero tiene coordenadas válidas
+      if (pasajero && pasajero.lat && pasajero.lng) {
+        const colorFondo = colores[index % colores.length];
+        const inicial = pasajero.nombre ? pasajero.nombre.charAt(0).toUpperCase() : "P";
+
+        const marker = new window.google.maps.Marker({
+          position: { lat: pasajero.lat, lng: pasajero.lng },
+          map: googleMap.current,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 12, // Tamaño de la bolita
+            fillColor: colorFondo,
+            fillOpacity: 1,
+            strokeWeight: 2,
+            strokeColor: "white",
+          },
+          label: {
+            text: inicial,
+            color: "white",
+            fontSize: "12px",
+            fontWeight: "bold"
+          }
+        });
+
+        markers.current.pasajeros.push(marker);
+      }
+    });
+  }, [pasajeros, interactivo]);
+
   return (
     <div className="relative w-full h-full min-h-[300px] bg-slate-100 rounded-inherit overflow-hidden">
       <div ref={mapRef} className="absolute inset-0" style={{ borderRadius: 'inherit' }} />
