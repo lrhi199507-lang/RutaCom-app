@@ -131,9 +131,16 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
   const estaEnCurso = estadoActual === 'en_curso' || estadoActual === 'buscando';
   const esFinalizado = estadoActual === 'finalizado';
 
-  // 🔥 LÓGICA DE COLOR NARANJA: 
-  // Si hay solicitudes pendientes O el viaje está en curso, mantenlo naranja.
-  const botonNaranja = !esFinalizado && (solicitudes > 0 || estaEnCurso);
+ // 🔥 LÓGICA DE COLOR NARANJA MEJORADA 🔥
+// Detectamos:
+// 1. Solicitudes manuales (pendientes)
+// 2. Pasajeros nuevos (confirmados automáticamente pero quizás no vistos)
+// 3. Viajes en curso
+const solicitudes = viaje.reservasPendientes?.length || 0;
+const nuevosConfirmados = viaje.pasajeros?.filter(p => !p.vistoPorChofer)?.length || 0; 
+
+const botonNaranja = !esFinalizado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
+  
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
@@ -380,25 +387,17 @@ export const VistaMisViajes = ({
 
   // 🔥 LÓGICA DE GRAVEDAD CERO: Ordenar los viajes para que los activos salgan de primeros 🔥
   const ordenarViajesChofer = (viajes) => {
-    return [...viajes].sort((a, b) => {
-      const estadoA = a.estado || 'disponible';
-      const estadoB = b.estado || 'disponible';
-      
-      const enCursoA = estadoA === 'en_curso' || estadoA === 'buscando' ? 2 : 0;
-      const enCursoB = estadoB === 'en_curso' || estadoB === 'buscando' ? 2 : 0;
-      
-      const solA = a.reservasPendientes?.length > 0 ? 1 : 0;
-      const solB = b.reservasPendientes?.length > 0 ? 1 : 0;
+  return [...viajes].sort((a, b) => {
+    // Definimos qué es "importante"
+    const esImportante = (v) => 
+      (v.estado === 'en_curso' || v.estado === 'buscando') ? 3 : 
+      (v.reservasPendientes?.length > 0) ? 2 : 
+      (v.pasajeros?.length > 0 && v.estado === 'disponible') ? 1 : 0;
 
-      // Prioridad 1: En curso/buscando
-      if (enCursoA !== enCursoB) return enCursoB - enCursoA;
-      // Prioridad 2: Solicitudes pendientes
-      if (solA !== solB) return solB - solA;
-      // Prioridad 3: Fecha (Los más nuevos primero)
-      return (b.timestamp || 0) - (a.timestamp || 0);
-    });
-  };
-
+    return esImportante(b) - esImportante(a);
+  });
+};
+  
   const viajesActivosChoferOrdenados = ordenarViajesChofer(viajesChofer.filter(v => v.estado !== 'finalizado'));
 
   return (
