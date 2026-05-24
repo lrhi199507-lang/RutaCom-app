@@ -405,6 +405,17 @@ export const Wallet = ({ userData, onRegresar }) => {
                   </p>
                 )}
               </div>
+                            {/* CAMPO DE REFERENCIA AGREGADO */}
+              <div>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Número de Referencia</label>
+                <input 
+                  type="text" 
+                  value={referencia} 
+                  onChange={(e) => setReferencia(e.target.value)} 
+                  placeholder="Ej: 1234 (Últimos dígitos)" 
+                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-sm font-black outline-none focus:border-blue-500 transition-all" 
+                />
+              </div>
               
               <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50 mt-2">
                 {enviando ? "Procesando Notificación..." : "Notificar Pago Realizado"}
