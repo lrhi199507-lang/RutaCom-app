@@ -417,22 +417,24 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   };
 
   const rechazarDocumentos = async (userId: string) => {
-    if (!window.confirm("¿Rechazar fotos?")) return;
-    try {
-      await updateDoc(doc(db, "usuarios", userId), {
-        kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false,
-        fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false,
-        kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null,
-        estadoRevision: "rechazado", mensajeAdmin: "Tus documentos fueron rechazados."
-      });
-      setToast({ texto: "Documentos eliminados", tipo: "exito" });
-      setTimeout(() => setToast(null), 3000);
-      await cargarDatosAdmin(); 
-    } catch (e) { 
-      setToast({ texto: "Error al rechazar", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    }
-  };
+  if (!window.confirm("¿Rechazar fotos?")) return;
+  try {
+    await updateDoc(doc(db, "usuarios", userId), {
+      kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false,
+      fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false,
+      licenciaVerificada: false, rcvVerificado: false,
+      kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null,
+      licenciaFoto: null, rcvFoto: null,
+      estadoRevision: "rechazado", mensajeAdmin: "Tus documentos fueron rechazados. Por favor, súbelos nuevamente con mayor claridad."
+    });
+    setToast({ texto: "Documentos eliminados", tipo: "exito" });
+    setTimeout(() => setToast(null), 3000);
+    await cargarDatosAdmin(); 
+  } catch (e) { 
+    setToast({ texto: "Error al rechazar", tipo: "error" });
+    setTimeout(() => setToast(null), 3000);
+  }
+};
 
   const suspenderUsuario = async (userId: string) => {
     if (!window.confirm("¿SUSPENDER esta cuenta?")) return;
@@ -987,16 +989,25 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             </button>
                             {estaExpandido && (
                               <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
-                                <div className="grid grid-cols-3 gap-2">
-                                  {[{ img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' }, { img: u.fotoFrontal, label: 'Auto' }].map((item, idx) => (
-                                    <div key={idx} className="flex flex-col gap-1">
-                                      <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
-                                      <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
-                                        {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+  {[
+    { img: u.kycFoto, label: 'Cédula' }, 
+    { img: u.selfieFoto, label: 'Selfie' }, 
+    { img: u.licenciaFoto, label: 'Licencia' }, 
+    { img: u.rcvFoto, label: 'RCV' }, 
+    { img: u.fotoFrontal, label: 'Frente' },
+    { img: u.fotoTrasera, label: 'Atrás' },
+    { img: u.fotoLatIzq, label: 'Lat. Izq' },
+    { img: u.fotoLatDer, label: 'Lat. Der' }
+  ].map((item, idx) => (
+    <div key={idx} className="flex flex-col gap-1">
+      <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
+      <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
+        {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
+      </div>
+    </div>
+  ))}
+</div>
                                 <div className="flex flex-col gap-2">
                                   {estaSuspendido ? (
                                     <button disabled={cargando} onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 disabled:opacity-50 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
