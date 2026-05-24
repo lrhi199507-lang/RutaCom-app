@@ -80,8 +80,9 @@ jobs:
 
           # 8. MAGIA DEL ÍCONO PROFESIONAL
           mkdir -p assets
-          mv icon.png assets/icon.png || echo "No icon.png encontrado"
+          cp icon.png assets/icon.png || echo "CRÍTICO: No se encontró el archivo icon.png en la raíz"
           npx @capacitor/assets generate --android
+          
           
       - name: Decodificar Keystore de Producción
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/rutacom.jks
