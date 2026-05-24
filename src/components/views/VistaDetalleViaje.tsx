@@ -215,10 +215,33 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaCalifico = miReserva?.calificado === true; 
   const mostrarBannerRetorno = viaje?.publicarRegreso && viaje?.tipoRuta !== 'vuelta_de_ruta';
 
-  const activarSOS = () => {
-    setToastMessage("🚨 Alerta enviada a central (Simulación)");
+    const activarSOS = () => {
+    // Esto abre el marcador telefónico automáticamente al 911.
+    // Funciona sin internet y sin saldo, vital para emergencias reales.
+    window.open('tel:911', '_system');
+  };
+  const notificarLlegadaYAbrirModal = async () => {
+    setModalAbordaje(true); // Abre la pantalla del PIN al instante para el chofer
+    
+    // Dispara las notificaciones Push SOLO a los pasajeros que no han subido al carro
+    const promesasNotificaciones = pasajerosConfirmados.map(p => {
+      if (p && !p.abordado && (p.id || p.uid)) {
+        return enviarNotificacion(
+          p.id || p.uid,
+          "🚘 ¡Tu chofer ha llegado!",
+          `${userData?.nombre || "El conductor"} ya te está esperando afuera. Por favor, acércate y dale tu PIN secreto.`,
+          "viaje"
+        );
+      }
+      return null;
+    });
+
+    await Promise.all(promesasNotificaciones.filter(n => n !== null));
+    
+    setToastMessage("Pasajeros notificados de tu llegada");
     setShowToast(true);
   };
+  
    
   const enviarNotificacion = async (idDestino, titulo, mensaje, tipo = 'alerta') => {
     try {
@@ -953,13 +976,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                     </div>
                  ) : estadoViaje === 'buscando' ? (
                     <div className="flex-[2] flex gap-2">
-                      <button 
-                        disabled={cargando} 
-                        onClick={() => setModalAbordaje(true)} 
-                        className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
-                      >
-                        <MapPin size={16} /> ¡Ya llegué! (Validar PIN)
-                      </button>
+                      <button disabled={cargando}  onClick={notificarLlegadaYAbrirModal}  className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2" >
+                   <MapPin size={16} /> ¡Ya llegué! (Validar PIN)
+                  </button>
                     </div>
                  ) : (
                     <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
