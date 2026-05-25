@@ -685,6 +685,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
+            {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
+              <div className="mx-2 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6">
+                <div className="flex items-start gap-4">
+                  <div className="bg-orange-500 p-2 rounded-xl text-white"><AlertCircle size={20} /></div>
+                  <div className="flex-1">
+                    <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Documentos Rechazados</p>
+                    <p className="text-[11px] font-bold text-slate-700">{userData.mensajeAdmin || "Por favor sube las fotos nuevamente."}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-3">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Básica</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -758,18 +770,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <MenuButton icon={Camera} label="Lat. Derecho" status={userData.fotoLatDerVerificada ? 'verificado' : (userData.fotoLatDer ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
               </div>
             </div>
-
-            {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
-              <div className="mx-2 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6">
-                <div className="flex items-start gap-4">
-                  <div className="bg-orange-500 p-2 rounded-xl text-white"><AlertCircle size={20} /></div>
-                  <div className="flex-1">
-                    <p className="text-[10px] font-black text-orange-600 uppercase italic tracking-widest mb-1">Documentos Rechazados</p>
-                    <p className="text-[11px] font-bold text-slate-700">{userData.mensajeAdmin || "Por favor sube las fotos nuevamente."}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {esAdmin && (
               <button onClick={() => { cargarDatosAdmin(); setPestañaActiva('admin'); }} className="w-full bg-slate-900 text-white p-5 rounded-[30px] flex items-center justify-between shadow-xl mt-6">
