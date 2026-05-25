@@ -7,27 +7,20 @@ export const CampanaNotificaciones = ({ userData }) => {
   const [notificaciones, setNotificaciones] = useState([]);
   const [abierto, setAbierto] = useState(false);
 
-  useEffect(() => {
+    useEffect(() => {
     const miId = userData?.id || userData?.uid || userData?.idUsuario;
-    
     if (!miId) return;
 
+    // 🔥 AÑADIMOS EL ORDEN AQUÍ PARA QUE FIRESTORE LO HAGA POR TI 🔥
     const q = query(
       collection(db, "Notificaciones"), 
-      where("idDestino", "==", String(miId)) 
+      where("idDestino", "==", String(miId)),
+      orderBy("timestamp", "desc") // <--- ESTO ES LO QUE ORDENA TODO
     );
       
     const unsub = onSnapshot(q, (snap) => {
       let lista = [];
       snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
-      
-      // 🔥 CORRECCIÓN: Manejo seguro de fechas de Firebase
-      lista.sort((a, b) => {
-        const fechaA = a.fecha?.toDate ? a.fecha.toDate().getTime() : new Date(a.fecha || 0).getTime();
-        const fechaB = b.fecha?.toDate ? b.fecha.toDate().getTime() : new Date(b.fecha || 0).getTime();
-        return fechaB - fechaA;
-      });
-      
       setNotificaciones(lista);
     });
 
