@@ -150,15 +150,20 @@ export const Wallet = ({ userData, onRegresar }) => {
   };
 
 const manejarRetiro = async (e) => {
-  e.preventDefault();
-  
-  // 🔥 VALIDACIÓN DE DÍA (0=Domingo, 6=Sábado) 🔥
-  const hoy = new Date().getDay();
-  if (hoy !== 6) {
-    setToastMsg("Los retiros solo están disponibles los días SÁBADO.");
-    setShowToast(true);
-    return;
-  }
+    e.preventDefault();
+    
+    // 🔥 VALIDACIÓN DE DÍA Y HORA (Sábados de 8 AM a 5 PM) 🔥
+    const ahora = new Date();
+    const hoy = ahora.getDay(); // 0 = Domingo, 6 = Sábado
+    const hora = ahora.getHours(); // Formato 24h (0 a 23)
+
+    // Bloqueamos si NO es sábado, o si es antes de las 8:00 AM, o si son las 5:00 PM (17:00) o más
+    if (hoy !== 6 || hora < 8 || hora >= 17) {
+      setToastMsg("Los retiros solo están disponibles los SÁBADOS de 8:00 AM a 5:00 PM.");
+      setShowToast(true);
+      return;
+    }
+
     const monto = Number(montoRetiro);
     const MINIMO_RETIRO = 10; 
 
@@ -445,18 +450,19 @@ const manejarRetiro = async (e) => {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
               Retiro mínimo: $10. Introduce tus datos de Pago Móvil.
             </p>
-            {/* 🔥 AVISO PROFESIONAL DE DÍA DE PAGO 🔥 */}
-<div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-3xl mb-6">
-  <div className="flex items-center gap-3 mb-2">
-    <Clock size={18} className="text-amber-500" />
-    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Información de Retiros</p>
-  </div>
-  <p className="text-[10px] font-bold text-amber-100 leading-relaxed">
-    Los retiros se procesan exclusivamente los días <span className="font-black text-white">SÁBADO</span>. 
-    El monto mínimo es de <span className="font-black text-white">$10</span>. 
-    Solicitudes fuera de este horario quedarán en cola para el próximo proceso.
-  </p>
-</div>
+          
+            {/* 🔥 AVISO PROFESIONAL DE DÍA Y HORA DE PAGO 🔥 */}
+            <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-3xl mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Clock size={18} className="text-amber-500" />
+                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Información de Retiros</p>
+              </div>
+              <p className="text-[10px] font-bold text-amber-100 leading-relaxed">
+                Los retiros se procesan exclusivamente los días <span className="font-black text-white">SÁBADO de 8:00 AM a 5:00 PM</span>. 
+                El monto mínimo es de <span className="font-black text-white">$10</span>. 
+                Solicitudes fuera de este horario quedarán en cola para el próximo proceso.
+              </p>
+            </div>
 
             <form onSubmit={manejarRetiro} className="space-y-4">
               <div>
