@@ -5,7 +5,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'; 
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, X, Info, Banknote, Copy, Lock, ImageIcon, AlertTriangle
+  RefreshCcw, X, Info, Banknote, Copy, Lock, ImageIcon, AlertTriangle, Clock // 🔥 AQUÍ ESTABA EL PROBLEMA: Faltaba importar Clock
 } from "lucide-react";
 import Toast from "../ui/Toast";
 
