@@ -455,15 +455,14 @@ const manejarRetiro = async (e) => {
             <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-3xl mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <Clock size={18} className="text-amber-500" />
-                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Información de Retiros</p>
+                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Horario de Retiros</p>
               </div>
               <p className="text-[10px] font-bold text-amber-100 leading-relaxed">
-                Los retiros se procesan exclusivamente los días <span className="font-black text-white">SÁBADO de 8:00 AM a 5:00 PM</span>. 
-                El monto mínimo es de <span className="font-black text-white">$10</span>. 
-                Solicitudes fuera de este horario quedarán en cola para el próximo proceso.
+                El sistema de retiros se habilita <span className="font-black text-white">EXCLUSIVAMENTE los días SÁBADO de 8:00 AM a 5:00 PM</span>. 
+                Fuera de este horario, la opción permanecerá bloqueada.
               </p>
             </div>
-
+            
             <form onSubmit={manejarRetiro} className="space-y-4">
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Retirar ($)</label>
