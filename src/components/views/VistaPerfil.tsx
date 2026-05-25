@@ -198,21 +198,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
   
-  // 🔥 LÓGICA DE CAPTURA DE DOCUMENTOS BLINDADA Y PROFESIONAL 🔥
-  const capturarDocumento = async () => {
+    // 🔥 LÓGICA DE CAPTURA BLINDADA Y DIRECTA 🔥
+  const capturarDocumento = async (origen: CameraSource) => {
     try {
       const image = await CapacitorCamera.getPhoto({ 
-        quality: 60, // Aumentamos un poco la calidad para documentos
-        width: 1000, // Más ancho para legibilidad
+        quality: 60, 
+        width: 1000, 
         resultType: CameraResultType.DataUrl, 
-        source: CameraSource.Prompt, // 🔥 ESTO ABRE EL MENÚ NATIVO (Cámara o Galería)
-        promptLabelPhoto: 'Tomar Foto con Cámara', // Textos en español
-        promptLabelPicture: 'Elegir de mi Galería',
-        promptLabelCancel: 'Cancelar',
+        source: origen, // Ahora recibe explícitamente Cámara o Fotos
         saveToGallery: false 
       });
       if (image.dataUrl) setFotoDocTemporal(image.dataUrl);
-    } catch (e) { console.log("Cancelado o error en captura"); }
+    } catch (e) { console.log("Captura cancelada"); }
   };
   
   const subirDocumentoFinal = async () => {
@@ -1152,11 +1149,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
       
-      {pasoDocumento.activa && (
-        <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 items-center justify-center space-y-6">
+          {pasoDocumento.activa && (
+        <div className="fixed inset-0 z-[300] bg-slate-900/95 backdrop-blur-sm flex flex-col p-6 items-center justify-center space-y-6 animate-in fade-in duration-200">
           {!fotoDocTemporal ? (
             <>
-              {/* 🔥 NUEVO BLOQUE DE ACCIÓN PROFESIONAL PARA DOCUMENTOS 🔥 */}
               <div className="bg-slate-950 p-8 rounded-[40px] border border-white/5 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95">
                 <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-blue-900/50">
                   <Camera size={35} className="text-blue-400" />
@@ -1170,38 +1166,51 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                    pasoDocumento.tipo === 'rcv' ? 'Seguro RCV' : 'Foto de tu Vehículo'}
                 </h3>
                 
-                {/* 🔥 BOTÓN ÚNICO QUE ABRE EL MENÚ NATIVO PROFESIONAL 🔥 */}
-                <button 
-                  onClick={capturarDocumento} 
-                  className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl py-5 px-6 flex items-center justify-between active:scale-[0.97] transition-all hover:bg-slate-700 hover:border-blue-500/50 shadow-lg"
-                >
-                  <div className="text-left flex flex-col gap-1">
-                    <span className="font-black text-[11px] uppercase tracking-widest">Seleccionar Imagen</span>
-                    <span className="text-[9px] font-bold text-slate-500">Cámara o Galería</span>
-                  </div>
-                  <div className="bg-white/10 p-2 rounded-xl text-white">
+                {/* 🔥 BOTONES PERSONALIZADOS 100% ESTÉTICOS 🔥 */}
+                <div className="space-y-3">
+                  <button 
+                    onClick={() => capturarDocumento(CameraSource.Camera)} 
+                    className="w-full bg-blue-600 text-white rounded-2xl py-4 flex items-center justify-center gap-3 active:scale-[0.97] transition-all shadow-lg shadow-blue-900/30"
+                  >
+                    <Camera size={18} />
+                    <span className="font-black text-[11px] uppercase tracking-widest">Abrir Cámara</span>
+                  </button>
+
+                  <button 
+                    onClick={() => capturarDocumento(CameraSource.Photos)} 
+                    className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl py-4 flex items-center justify-center gap-3 active:scale-[0.97] transition-all hover:bg-slate-700"
+                  >
                     <ImageIcon size={18} />
-                  </div>
-                </button>
+                    <span className="font-black text-[11px] uppercase tracking-widest">Abrir Galería</span>
+                  </button>
+                </div>
                 
                 <button 
                   onClick={() => setPasoDocumento({...pasoDocumento, activa: false})} 
                   className="text-slate-600 font-black uppercase text-[10px] mt-8 tracking-widest hover:text-slate-400 transition-colors"
                 >
-                  Tal vez luego
+                  Cancelar
                 </button>
               </div>
             </>
           ) : (
             <>
-              <div className="w-full aspect-video rounded-3xl overflow-hidden border-4 border-blue-500"><img src={fotoDocTemporal} className="w-full h-full object-cover" /></div>
-              <button disabled={cargando} onClick={subirDocumentoFinal} className="w-full disabled:opacity-50 bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">{cargando ? "SUBIENDO..." : "Enviar Documento"}</button>
-              <button disabled={cargando} onClick={() => setFotoDocTemporal(null)} className="text-white disabled:opacity-50 font-black uppercase text-[10px]">Repetir</button>
+              <div className="w-full aspect-video rounded-3xl overflow-hidden border-4 border-blue-500 shadow-2xl animate-in zoom-in-95">
+                <img src={fotoDocTemporal} className="w-full h-full object-cover" />
+              </div>
+              <div className="w-full max-w-sm space-y-3">
+                <button disabled={cargando} onClick={subirDocumentoFinal} className="w-full disabled:opacity-50 bg-blue-600 text-white py-5 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95 transition-all">
+                  {cargando ? "SUBIENDO..." : "Enviar Documento"}
+                </button>
+                <button disabled={cargando} onClick={() => setFotoDocTemporal(null)} className="w-full text-slate-400 disabled:opacity-50 font-black uppercase text-[10px] py-3 tracking-widest hover:text-white transition-colors">
+                  Elegir otra imagen
+                </button>
+              </div>
             </>
           )}
         </div>
       )}
-
+      
       {fotoZoom && (
         <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setFotoZoom(null)}>
           <img src={fotoZoom} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl" />
