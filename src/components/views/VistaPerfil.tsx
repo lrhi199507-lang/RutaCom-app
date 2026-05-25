@@ -201,9 +201,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
   
-  const capturarDocumento = async () => {
+    const capturarDocumento = async () => {
     try {
-      const image = await CapacitorCamera.getPhoto({ quality: 40, width: 800, resultType: CameraResultType.DataUrl, source: CameraSource.Camera, saveToGallery: false });
+      const image = await CapacitorCamera.getPhoto({ 
+        quality: 40, 
+        width: 800, 
+        resultType: CameraResultType.DataUrl, 
+        source: CameraSource.Prompt, // 🔥 Esto abre el menú nativo (Cámara o Galería)
+        saveToGallery: false 
+      });
       if (image.dataUrl) setFotoDocTemporal(image.dataUrl);
     } catch (e) { console.log("Cancelado"); }
   };
