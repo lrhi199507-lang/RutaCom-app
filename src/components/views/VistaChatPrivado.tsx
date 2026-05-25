@@ -98,7 +98,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
                        "💰 Para retirar: Ve a Billetera > Retirar y coloca tus datos.\n\n" +
                        "⚠️ NOTA IMPORTANTE:\n" +
                        "1. Retiro mínimo: $10.\n" +
-                       "2. Los retiros se procesan exclusivamente los días SÁBADO de 8:00 AM a 5:00 PM. Las solicitudes fuera de este horario quedan en cola para el próximo proceso.";
+                       "2. Los retiros se procesan exclusivamente los días SÁBADO de 8:00 AM a 5:00 PM.";
         break;
       case 'publicar':
         textoUsuario = "¿Cómo publico un viaje?";
