@@ -70,29 +70,54 @@ const MapaView = ({
     }
   };
 
-  // 3. MARCADORES DE ORIGEN Y DESTINO
+    // 3. MARCADORES DE ORIGEN, DESTINO Y RUTA PERSISTENTE
   useEffect(() => {
     if (!googleMap.current || !window.google || interactivo) return;
+
+    // Limpiar marcadores previos
     if (markers.current.origen) markers.current.origen.setMap(null);
     if (markers.current.destino) markers.current.destino.setMap(null);
 
+    // Dibujar Origen (Azul)
     if (origen) {
       markers.current.origen = new window.google.maps.Marker({
         position: { lat: origen.lat, lng: origen.lon },
         map: googleMap.current,
-        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#2563eb", fillOpacity: 1, strokeWeight: 3, strokeColor: "white" }
+        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: "#2563eb", fillOpacity: 1, strokeWeight: 3, strokeColor: "white" }
       });
     }
 
+    // Dibujar Destino (Verde)
     if (destino) {
       markers.current.destino = new window.google.maps.Marker({
         position: { lat: destino.lat, lng: destino.lon },
         map: googleMap.current,
-        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#22c55e", fillOpacity: 1, strokeWeight: 3, strokeColor: "white" }
+        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: "#22c55e", fillOpacity: 1, strokeWeight: 3, strokeColor: "white" }
+      });
+    }
+
+    // Trazar Ruta (Azul profesional, más visible)
+    if (origen && destino) {
+      const directionsService = new window.google.maps.DirectionsService();
+      directionsService.route({
+        origin: { lat: origen.lat, lng: origen.lon },
+        destination: { lat: destino.lat, lng: destino.lon },
+        travelMode: window.google.maps.TravelMode.DRIVING,
+      }, (result, status) => {
+        if (status === 'OK') {
+          directionsRenderer.current.setOptions({
+            polylineOptions: {
+              strokeColor: "#2563eb", // Azul profesional
+              strokeWeight: 6,
+              strokeOpacity: 0.8
+            }
+          });
+          directionsRenderer.current.setDirections(result);
+        }
       });
     }
   }, [origen, destino, interactivo]);
-
+  
   // 4. ANIMACIÓN DEL CHOFER
   useEffect(() => {
     if (!googleMap.current || !window.google || interactivo || !posicionChofer) return;
