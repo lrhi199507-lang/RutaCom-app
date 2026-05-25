@@ -158,6 +158,28 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setCargando(false);
     }
   };
+
+  const seleccionarArchivo = async () => {
+  try {
+    const image = await Camera.getPhoto({
+      quality: 80,
+      allowEditing: false,
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Prompt, // Esto activa el menú nativo: Cámara o Galería
+      promptLabelPhoto: 'Tomar Foto',
+      promptLabelPicture: 'Abrir Galería',
+      promptLabelCancel: 'Cancelar'
+    });
+
+    if (image.dataUrl) {
+      // Aquí manejas la imagen (ej: setImagen(image.dataUrl))
+      console.log("Imagen capturada:", image.dataUrl);
+      // Lógica para enviar al servidor o mostrar vista previa
+    }
+  } catch (error) {
+    console.error("Error al capturar imagen:", error);
+  }
+};
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
     try {
@@ -1248,40 +1270,61 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   </div>
 )}
 
-      {pasoFoto && (
-        <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
-          {!fotoTemporal ? (
-            <>
-              <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center mb-10">
-                <User size={80} className="text-orange-200" />
-              </div>
-              <div className="w-full space-y-3">
-                <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all">
-                  <Camera size={18} /> Tomar Foto Ahora
-                </button>
-                <button onClick={() => seleccionarImagen(CameraSource.Photos)} className="w-full bg-slate-900 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all">
-                  <FileText size={18} className="text-blue-400" /> Elegir de la Galería
-                </button>
-              </div>
-              <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-8 tracking-widest">
-                Tal vez luego
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="w-64 h-64 rounded-full overflow-hidden border-8 border-blue-50 mb-10">
-                <img src={fotoTemporal} className="w-full h-full object-cover" alt="Previsualización" />
-              </div>
-              <button disabled={cargando} onClick={subirFotoConfirmada} className="w-full bg-blue-600 disabled:opacity-50 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
-                {cargando ? "SUBIENDO..." : "Confirmar Foto"}
-              </button>
-              <button disabled={cargando} onClick={() => setFotoTemporal(null)} className="text-slate-400 disabled:opacity-50 font-black uppercase text-[10px] mt-6 tracking-widest">
-                Elegir otra
-              </button>
-            </>
-          )}
+{pasoFoto && (
+  <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
+    {!fotoTemporal ? (
+      <>
+        <div className="w-44 h-44 bg-blue-50 rounded-full flex items-center justify-center mb-10 shadow-inner">
+          <User size={80} className="text-blue-200" />
         </div>
-      )}
+        
+        <div className="w-full space-y-3">
+          {/* BOTÓN ÚNICO Y PROFESIONAL */}
+          <button 
+            onClick={seleccionarArchivo} 
+            className="w-full bg-slate-900 text-white py-5 px-6 rounded-2xl flex items-center justify-between border border-slate-800 active:scale-[0.98] transition-all shadow-xl hover:bg-slate-800"
+          >
+            <div className="flex flex-col items-start">
+              <span className="font-black text-[11px] uppercase tracking-widest text-white">Seleccionar Imagen</span>
+              <span className="text-[9px] text-slate-400">Cámara o Galería</span>
+            </div>
+            <div className="bg-white/10 p-2 rounded-xl">
+              {/* Asegúrate de tener 'Upload' importado de lucide-react o usa 'Camera' */}
+              <Camera size={18} className="text-blue-400" />
+            </div>
+          </button>
+        </div>
+
+        <button 
+          onClick={() => setPasoFoto(false)} 
+          className="text-slate-400 font-black uppercase text-[10px] mt-8 tracking-widest hover:text-slate-600 transition-colors"
+        >
+          Tal vez luego
+        </button>
+      </>
+    ) : (
+      <>
+        <div className="w-64 h-64 rounded-full overflow-hidden border-8 border-blue-50 mb-10 shadow-lg">
+          <img src={fotoTemporal} className="w-full h-full object-cover" alt="Previsualización" />
+        </div>
+        <button 
+          disabled={cargando} 
+          onClick={subirFotoConfirmada} 
+          className="w-full bg-blue-600 disabled:opacity-50 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95 transition-transform"
+        >
+          {cargando ? "SUBIENDO..." : "Confirmar Foto"}
+        </button>
+        <button 
+          disabled={cargando} 
+          onClick={() => setFotoTemporal(null)} 
+          className="text-slate-400 disabled:opacity-50 font-black uppercase text-[10px] mt-6 tracking-widest"
+        >
+          Elegir otra
+        </button>
+      </>
+    )}
+  </div>
+)}
     </div>
   );
 };
