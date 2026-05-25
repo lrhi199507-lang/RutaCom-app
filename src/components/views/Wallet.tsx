@@ -149,8 +149,16 @@ export const Wallet = ({ userData, onRegresar }) => {
     } finally { setEnviando(false); }
   };
 
-  const manejarRetiro = async (e) => {
-    e.preventDefault();
+const manejarRetiro = async (e) => {
+  e.preventDefault();
+  
+  // 🔥 VALIDACIÓN DE DÍA (0=Domingo, 6=Sábado) 🔥
+  const hoy = new Date().getDay();
+  if (hoy !== 6) {
+    setToastMsg("Los retiros solo están disponibles los días SÁBADO.");
+    setShowToast(true);
+    return;
+  }
     const monto = Number(montoRetiro);
     const MINIMO_RETIRO = 10; 
 
@@ -437,6 +445,18 @@ export const Wallet = ({ userData, onRegresar }) => {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
               Retiro mínimo: $10. Introduce tus datos de Pago Móvil.
             </p>
+            {/* 🔥 AVISO PROFESIONAL DE DÍA DE PAGO 🔥 */}
+<div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-3xl mb-6">
+  <div className="flex items-center gap-3 mb-2">
+    <Clock size={18} className="text-amber-500" />
+    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Información de Retiros</p>
+  </div>
+  <p className="text-[10px] font-bold text-amber-100 leading-relaxed">
+    Los retiros se procesan exclusivamente los días <span className="font-black text-white">SÁBADO</span>. 
+    El monto mínimo es de <span className="font-black text-white">$10</span>. 
+    Solicitudes fuera de este horario quedarán en cola para el próximo proceso.
+  </p>
+</div>
 
             <form onSubmit={manejarRetiro} className="space-y-4">
               <div>
