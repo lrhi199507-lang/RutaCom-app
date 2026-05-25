@@ -1,33 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { Bell, CheckCircle, Info, Car, X, Trash2, CheckCheck, MessageCircle } from 'lucide-react'; // 🔥 Agregamos MessageCircle
+import { Bell, CheckCircle, Info, Car, X, Trash2, CheckCheck, MessageCircle } from 'lucide-react';
 
 export const CampanaNotificaciones = ({ userData }) => {
   const [notificaciones, setNotificaciones] = useState([]);
   const [abierto, setAbierto] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     const miId = userData?.id || userData?.uid || userData?.idUsuario;
     if (!miId) return;
 
-    // 🔥 AÑADIMOS EL ORDEN AQUÍ PARA QUE FIRESTORE LO HAGA POR TI 🔥
+    // 🔥 CONSULTA SIN ORDERBY PARA EVITAR ERROR DE PANTALLA EN BLANCO
     const q = query(
       collection(db, "Notificaciones"), 
-      where("idDestino", "==", String(miId)),
-      orderBy("timestamp", "desc") // <--- ESTO ES LO QUE ORDENA TODO
+      where("idDestino", "==", String(miId))
     );
       
     const unsub = onSnapshot(q, (snap) => {
       let lista = [];
-      snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
+      snap.forEach(d => {
+        const data = d.data();
+        lista.push({ id: d.id, ...data });
+      });
+      
+      // 🔥 ORDENAMOS MANUALMENTE POR FECHA/TIMESTAMP
+      // Si el campo 'timestamp' o 'fecha' es nuevo, esto lo pondrá al principio automáticamente
+      lista.sort((a, b) => {
+        const getVal = (item) => {
+          if (item.timestamp) return item.timestamp;
+          if (item.fecha && item.fecha.toDate) return item.fecha.toDate().getTime();
+          return 0;
+        };
+        return getVal(b) - getVal(a);
+      });
+      
       setNotificaciones(lista);
     });
 
     return () => unsub();
   }, [userData]);
   
-  // 🔥 CORRECCIÓN: Cambiamos 'leida' por 'leido' para que haga match con el envío
   const noLeidas = notificaciones.filter(n => !n.leido).length;
 
   const marcarComoLeida = async (id) => {
@@ -53,12 +66,11 @@ export const CampanaNotificaciones = ({ userData }) => {
       case 'exito': return <CheckCircle size={16} className="text-green-500" />;
       case 'viaje': return <Car size={16} className="text-blue-500" />;
       case 'alerta': return <Info size={16} className="text-amber-500" />;
-      case 'chat': return <MessageCircle size={16} className="text-blue-600" />; // 🔥 NUEVO ÍCONO PARA SOPORTE/CHATS
+      case 'chat': return <MessageCircle size={16} className="text-blue-600" />;
       default: return <Bell size={16} className="text-slate-500" />;
     }
   };
 
-  // Función para mostrar la fecha de forma segura
   const formatearFecha = (fechaFirebase) => {
     if (!fechaFirebase) return '';
     const fechaReal = fechaFirebase.toDate ? fechaFirebase.toDate() : new Date(fechaFirebase);
@@ -67,7 +79,6 @@ export const CampanaNotificaciones = ({ userData }) => {
 
   return (
     <div className="relative">
-      {/* ICONO DE CAMPANA */}
       <button 
         onClick={() => setAbierto(true)} 
         className="relative p-2.5 bg-white rounded-full border border-slate-200 shadow-sm text-slate-600 active:scale-90 transition-all hover:bg-slate-50"
@@ -80,13 +91,11 @@ export const CampanaNotificaciones = ({ userData }) => {
         )}
       </button>
 
-      {/* MODAL / DROPDOWN DE NOTIFICACIONES */}
       {abierto && (
         <div className="fixed inset-0 z-[400] flex justify-end bg-slate-900/20 backdrop-blur-sm sm:relative sm:inset-auto sm:bg-transparent sm:backdrop-blur-none">
           <div className="absolute inset-0 sm:hidden" onClick={() => setAbierto(false)}></div>
           
           <div className="absolute top-16 right-4 w-[90vw] max-w-[350px] bg-white rounded-[30px] shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-4 duration-200 sm:top-12 sm:right-0">
-            
             <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-black italic text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
                 <Bell size={14} className="text-blue-600" /> Notificaciones
@@ -108,10 +117,9 @@ export const CampanaNotificaciones = ({ userData }) => {
                       <p className={`text-[10px] uppercase tracking-wider truncate ${!notif.leido ? 'font-black text-slate-800' : 'font-bold text-slate-500'}`}>{notif.titulo}</p>
                       <p className="text-xs font-medium text-slate-600 mt-0.5 leading-snug">{notif.mensaje}</p>
                       <p className="text-[8px] font-black text-slate-400 mt-2 uppercase">
-                        {formatearFecha(notif.fecha)}
+                        {formatearFecha(notif.fecha || notif.timestamp)}
                       </p>
                     </div>
-                    {/* Botón de eliminar */}
                     <button onClick={(e) => { e.stopPropagation(); eliminarNotificacion(notif.id); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500">
                       <Trash2 size={14} />
                     </button>
