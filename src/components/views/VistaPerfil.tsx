@@ -10,7 +10,7 @@ import {
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
   Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight, 
-  TrendingUp, History, Landmark, Settings, Headset, MessageCircle, Image as ImageIcon
+  TrendingUp, History, Landmark, Settings, Headset, MessageCircle, Image as ImageIcon, Upload // 🔥 Agregamos Upload
 } from 'lucide-react';
 
 const auth = getAuth();
@@ -18,7 +18,6 @@ const auth = getAuth();
 export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   
-  // 🔥 AQUÍ FALTABA ESTA VARIABLE QUE CAUSABA LA PANTALLA BLANCA 🔥
   const [confirmacionCedula, setConfirmacionCedula] = useState(false); 
   
   const [pasoFoto, setPasoFoto] = useState(false); 
@@ -53,7 +52,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         if (isActive && auth.currentUser) {
           try {
             await auth.currentUser.reload();
-            // Al recargar, forzamos un mini-cambio en userData para que la pantalla se actualice y borre el mensaje
             setUserData((prev) => prev ? { ...prev } : prev);
           } catch (error) {
             console.error("Error recargando auth:", error);
@@ -158,28 +156,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setCargando(false);
     }
   };
-
-  const seleccionarArchivo = async () => {
-  try {
-    const image = await Camera.getPhoto({
-      quality: 80,
-      allowEditing: false,
-      resultType: CameraResultType.DataUrl,
-      source: CameraSource.Prompt, // Esto activa el menú nativo: Cámara o Galería
-      promptLabelPhoto: 'Tomar Foto',
-      promptLabelPicture: 'Abrir Galería',
-      promptLabelCancel: 'Cancelar'
-    });
-
-    if (image.dataUrl) {
-      // Aquí manejas la imagen (ej: setImagen(image.dataUrl))
-      console.log("Imagen capturada:", image.dataUrl);
-      // Lógica para enviar al servidor o mostrar vista previa
-    }
-  } catch (error) {
-    console.error("Error al capturar imagen:", error);
-  }
-};
   
   const togglePreferencia = async (campo: string, nuevoEstado: boolean) => {
     try {
@@ -189,7 +165,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } catch (e) { console.log("Error al guardar preferencia:", e); }
   };
   
-  // 🔥 LÓGICA DE GUARDADO CORREGIDA (Ya no usa window.confirm) 🔥
   const guardarCambios = async (forzar = false) => {
     if (!tipoEdicion || !nuevoValor) return;
 
@@ -223,20 +198,24 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
   
-    const capturarDocumento = async () => {
+  // 🔥 LÓGICA DE CAPTURA DE DOCUMENTOS BLINDADA Y PROFESIONAL 🔥
+  const capturarDocumento = async () => {
     try {
       const image = await CapacitorCamera.getPhoto({ 
-        quality: 40, 
-        width: 800, 
+        quality: 60, // Aumentamos un poco la calidad para documentos
+        width: 1000, // Más ancho para legibilidad
         resultType: CameraResultType.DataUrl, 
-        source: CameraSource.Prompt, // 🔥 Esto abre el menú nativo (Cámara o Galería)
+        source: CameraSource.Prompt, // 🔥 ESTO ABRE EL MENÚ NATIVO (Cámara o Galería)
+        promptLabelPhoto: 'Tomar Foto con Cámara', // Textos en español
+        promptLabelPicture: 'Elegir de mi Galería',
+        promptLabelCancel: 'Cancelar',
         saveToGallery: false 
       });
       if (image.dataUrl) setFotoDocTemporal(image.dataUrl);
-    } catch (e) { console.log("Cancelado"); }
+    } catch (e) { console.log("Cancelado o error en captura"); }
   };
   
-    const subirDocumentoFinal = async () => {
+  const subirDocumentoFinal = async () => {
     if (!fotoDocTemporal) return;
     setCargando(true);
     const userId = userData.uid || userData.id;
@@ -260,7 +239,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await updateDoc(userRef, { [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
       setUserData({ ...userData, [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
 
-      // 🔥 DISPARADOR A TELEGRAM: DOCUMENTOS EN REVISIÓN 🔥
       try {
         const tipoDocTexto = pasoDocumento.tipo.toUpperCase();
         await addDoc(collection(db, "Notificaciones"), {
@@ -362,7 +340,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       descripcion: "Recarga de saldo aprobada", fecha: new Date().toISOString()
     });
 
-    // 🔥 NOTIFICACIÓN DE RECARGA EXITOSA 🔥
     await addDoc(collection(db, "Notificaciones"), {
       idDestino: pago.uid,
       titulo: "💰 Recarga Exitosa",
@@ -393,7 +370,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       descripcion: "Retiro de dinero procesado", fecha: new Date().toISOString()
     });
 
-    // 🔥 NOTIFICACIÓN DE RETIRO COMPLETADO 🔥
     await addDoc(collection(db, "Notificaciones"), {
       idDestino: pago.uid,
       titulo: "💸 Retiro Completado",
@@ -434,7 +410,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       mensajeNotif = `No pudimos validar tu recarga de $${pago.monto}. Por favor, verifica el número de referencia y que el capture sea legible.`;
     }
 
-    // 🔥 NOTIFICACIÓN DE RECHAZO 🔥
     await addDoc(collection(db, "Notificaciones"), {
       idDestino: pago.uid,
       titulo: tituloNotif,
@@ -476,9 +451,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       mensajeAdmin: ""
     });
 
-    // 🔥 NUEVA LÓGICA DE NOTIFICACIÓN 🔥
     await addDoc(collection(db, "Notificaciones"), {
-      idDestino: userId, // Importante: va dirigido al ID del usuario
+      idDestino: userId, 
       titulo: "✅ ¡Cuenta Verificada!",
       mensaje: "Tus documentos han sido aprobados. Ya puedes empezar a generar ingresos con Dame la cola.",
       timestamp: Date.now(),
@@ -508,7 +482,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       mensajeAdmin: "Tus documentos fueron rechazados. Por favor, súbelos nuevamente con mayor claridad."
     });
 
-    // 🔥 NUEVA LÓGICA DE NOTIFICACIÓN 🔥
     await addDoc(collection(db, "Notificaciones"), {
       idDestino: userId,
       titulo: "⚠️ Documentos Rechazados",
@@ -565,13 +538,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
     setCargando(true);
     try {
-      // 🛡️ PASO 1: Re-autenticar (Pedir clave vieja)
       const credential = EmailAuthProvider.credential(user.email, passActual);
       await reauthenticateWithCredential(user, credential);
-
-      // ✅ PASO 2: Actualizar a la nueva
       await updatePassword(user, passNueva);
-
       setToast({ texto: "¡Contraseña actualizada con éxito!", tipo: "exito" });
       setModalClave(false);
       setPassActual('');
@@ -587,11 +556,10 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     const verificarCuentaCorreo = async () => {
     if (auth.currentUser) {
       try {
-        // 🔥 CAMBIO: Ahora le pedimos a nuestro motor que envíe el correo Premium
         await addDoc(collection(db, "Notificaciones"), {
           idDestino: "CORREO_VERIFICACION",
           email: auth.currentUser.email?.toLowerCase().trim(),
-          nombre: userData.nombre || "Viajero", // Usamos el nombre que ya tienes en el estado
+          nombre: userData.nombre || "Viajero", 
           timestamp: Date.now()
         });
 
@@ -623,7 +591,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
-      {/* TOAST FLOTANTE MULTILÍNEA */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-4 rounded-[20px] shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -831,10 +798,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
                         <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
               <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Pendientes</button>
-              
-              {/* 🔥 AQUÍ ESTÁ LA PESTAÑA QUE FALTABA 🔥 */}
               <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Usuarios</button>
-              
               <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
               <button onClick={() => setSubPestañaAdmin('soporte')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'soporte' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-600'}`}>Soporte ({chatsSoporteAdmin.length})</button>
               <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
@@ -987,7 +951,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                                 </div>
                               </div>
 
-                              {/* 🔥 CAJA PARA MOSTRAR EL CAPTURE AL ADMIN 🔥 */}
                               {!esRetiro && pago.comprobanteUrl && (
                                 <div className="mt-3 p-3 bg-slate-950/50 rounded-2xl border border-white/5">
                                   <p className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-1">
@@ -1056,10 +1019,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
                     usuariosAdmin
                       .filter(u => {
-                        // Detectamos si tiene documentos pendientes de revisión
                         const esPendiente = (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada);
-                        // Si estamos en 'pendientes', mostramos los que necesitan revisión.
-                        // Si estamos en 'Usuarios' (aprobados), mostramos a TODOS los demás (para poder suspenderlos).
                         return subPestañaAdmin === 'pendientes' ? esPendiente : !esPendiente;
                       })
                       .map(u => {
@@ -1133,7 +1093,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
           <div className="relative bg-white w-full max-w-md rounded-[40px] p-10 animate-in slide-in-from-bottom">
             <h4 className="text-[10px] font-black text-blue-600 uppercase mb-6 italic tracking-widest text-center">Editar {tipoEdicion?.label}</h4>
             
-             {/* 🔥 MENSAJE DE ALERTA SOLO PARA LA CÉDULA 🔥 */}
             {tipoEdicion?.id === 'cedulaNumero' && (
                <div className="bg-orange-50 border border-orange-200 p-3 rounded-2xl mb-5 flex gap-3 items-start">
                  <AlertTriangle size={18} className="text-orange-500 shrink-0 mt-0.5" />
@@ -1153,7 +1112,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
 
-      {/* 🔥 NUEVO MODAL DE CONFIRMACIÓN DE CÉDULA 🔥 */}
       {confirmacionCedula && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => !cargando && setConfirmacionCedula(false)} />
@@ -1198,10 +1156,41 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         <div className="fixed inset-0 z-[300] bg-slate-900 flex flex-col p-6 items-center justify-center space-y-6">
           {!fotoDocTemporal ? (
             <>
-              <p className="text-white text-sm font-black uppercase italic tracking-widest text-center">Capturar {pasoDocumento.tipo}</p>
-              <div className="w-full aspect-video bg-slate-800 rounded-3xl border-2 border-dashed border-white/20 flex items-center justify-center"><Camera size={40} className="text-slate-700" /></div>
-              <button onClick={capturarDocumento} className="w-full bg-blue-600 text-white p-6 rounded-[25px] font-black uppercase text-xs">Tomar Foto</button>
-              <button onClick={() => setPasoDocumento({...pasoDocumento, activa: false})} className="text-slate-500 font-black uppercase text-[10px]">Cancelar</button>
+              {/* 🔥 NUEVO BLOQUE DE ACCIÓN PROFESIONAL PARA DOCUMENTOS 🔥 */}
+              <div className="bg-slate-950 p-8 rounded-[40px] border border-white/5 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95">
+                <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-blue-900/50">
+                  <Camera size={35} className="text-blue-400" />
+                </div>
+                
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 leading-none">Subir documento</p>
+                <h3 className="text-xl font-black italic text-white uppercase tracking-tight mb-8">
+                  {pasoDocumento.tipo === 'cedula' ? 'Foto de tu Cédula' : 
+                   pasoDocumento.tipo === 'selfie' ? 'Selfie con Documento' : 
+                   pasoDocumento.tipo === 'licencia' ? 'Licencia de Conducir' : 
+                   pasoDocumento.tipo === 'rcv' ? 'Seguro RCV' : 'Foto de tu Vehículo'}
+                </h3>
+                
+                {/* 🔥 BOTÓN ÚNICO QUE ABRE EL MENÚ NATIVO PROFESIONAL 🔥 */}
+                <button 
+                  onClick={capturarDocumento} 
+                  className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl py-5 px-6 flex items-center justify-between active:scale-[0.97] transition-all hover:bg-slate-700 hover:border-blue-500/50 shadow-lg"
+                >
+                  <div className="text-left flex flex-col gap-1">
+                    <span className="font-black text-[11px] uppercase tracking-widest">Seleccionar Imagen</span>
+                    <span className="text-[9px] font-bold text-slate-500">Cámara o Galería</span>
+                  </div>
+                  <div className="bg-white/10 p-2 rounded-xl text-white">
+                    <ImageIcon size={18} />
+                  </div>
+                </button>
+                
+                <button 
+                  onClick={() => setPasoDocumento({...pasoDocumento, activa: false})} 
+                  className="text-slate-600 font-black uppercase text-[10px] mt-8 tracking-widest hover:text-slate-400 transition-colors"
+                >
+                  Tal vez luego
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -1213,7 +1202,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         </div>
       )}
 
-      {/* VISOR DE FOTOS A PANTALLA COMPLETA */}
       {fotoZoom && (
         <div className="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setFotoZoom(null)}>
           <img src={fotoZoom} className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl" />
@@ -1223,7 +1211,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       {modalClave && (
   <div className="fixed inset-0 bg-[#0b1120]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
     <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
-      {/* Adorno de fondo */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
       
       <div className="relative z-10 flex flex-col items-center">
@@ -1270,61 +1257,41 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   </div>
 )}
 
-{pasoFoto && (
-  <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
-    {!fotoTemporal ? (
-      <>
-        <div className="w-44 h-44 bg-blue-50 rounded-full flex items-center justify-center mb-10 shadow-inner">
-          <User size={80} className="text-blue-200" />
+      {/* MODAL DE FOTO DE PERFIL RESTAURADO A SU VERSIÓN ORIGINAL (DOS BOTONES) */}
+      {pasoFoto && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
+          {!fotoTemporal ? (
+            <>
+              <div className="w-44 h-44 bg-orange-50 rounded-full flex items-center justify-center mb-10">
+                <User size={80} className="text-orange-200" />
+              </div>
+              <div className="w-full space-y-3">
+                <button onClick={() => seleccionarImagen(CameraSource.Camera)} className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all">
+                  <Camera size={18} /> Tomar Foto Ahora
+                </button>
+                <button onClick={() => seleccionarImagen(CameraSource.Photos)} className="w-full bg-slate-900 text-white p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all">
+                  <FileText size={18} className="text-blue-400" /> Elegir de la Galería
+                </button>
+              </div>
+              <button onClick={() => setPasoFoto(false)} className="text-slate-400 font-black uppercase text-[10px] mt-8 tracking-widest">
+                Tal vez luego
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="w-64 h-64 rounded-full overflow-hidden border-8 border-blue-50 mb-10">
+                <img src={fotoTemporal} className="w-full h-full object-cover" alt="Previsualización" />
+              </div>
+              <button disabled={cargando} onClick={subirFotoConfirmada} className="w-full bg-blue-600 disabled:opacity-50 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl">
+                {cargando ? "SUBIENDO..." : "Confirmar Foto"}
+              </button>
+              <button disabled={cargando} onClick={() => setFotoTemporal(null)} className="text-slate-400 disabled:opacity-50 font-black uppercase text-[10px] mt-6 tracking-widest">
+                Elegir otra
+              </button>
+            </>
+          )}
         </div>
-        
-        <div className="w-full space-y-3">
-          {/* BOTÓN ÚNICO Y PROFESIONAL */}
-          <button 
-            onClick={seleccionarArchivo} 
-            className="w-full bg-slate-900 text-white py-5 px-6 rounded-2xl flex items-center justify-between border border-slate-800 active:scale-[0.98] transition-all shadow-xl hover:bg-slate-800"
-          >
-            <div className="flex flex-col items-start">
-              <span className="font-black text-[11px] uppercase tracking-widest text-white">Seleccionar Imagen</span>
-              <span className="text-[9px] text-slate-400">Cámara o Galería</span>
-            </div>
-            <div className="bg-white/10 p-2 rounded-xl">
-              {/* Asegúrate de tener 'Upload' importado de lucide-react o usa 'Camera' */}
-              <Camera size={18} className="text-blue-400" />
-            </div>
-          </button>
-        </div>
-
-        <button 
-          onClick={() => setPasoFoto(false)} 
-          className="text-slate-400 font-black uppercase text-[10px] mt-8 tracking-widest hover:text-slate-600 transition-colors"
-        >
-          Tal vez luego
-        </button>
-      </>
-    ) : (
-      <>
-        <div className="w-64 h-64 rounded-full overflow-hidden border-8 border-blue-50 mb-10 shadow-lg">
-          <img src={fotoTemporal} className="w-full h-full object-cover" alt="Previsualización" />
-        </div>
-        <button 
-          disabled={cargando} 
-          onClick={subirFotoConfirmada} 
-          className="w-full bg-blue-600 disabled:opacity-50 text-white p-6 rounded-[25px] font-black uppercase text-xs shadow-xl active:scale-95 transition-transform"
-        >
-          {cargando ? "SUBIENDO..." : "Confirmar Foto"}
-        </button>
-        <button 
-          disabled={cargando} 
-          onClick={() => setFotoTemporal(null)} 
-          className="text-slate-400 disabled:opacity-50 font-black uppercase text-[10px] mt-6 tracking-widest"
-        >
-          Elegir otra
-        </button>
-      </>
-    )}
-  </div>
-)}
+      )}
     </div>
   );
 };
