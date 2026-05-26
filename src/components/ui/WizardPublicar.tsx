@@ -271,13 +271,18 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 2: DETALLES 
+// PASO 2: DETALLES 
   if (pasoWizard === 2) {
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
     const distancia = calcularDistanciaKm(viajeForm.coordsOrigen, viajeForm.coordsDestino);
     const resultadoPrecio = calcularRangoPrecio(distancia, Number(viajeForm.precio));
 
-    return (
+    // --- NUEVO: CÁLCULO DE COMISIÓN ---
+    const precioOriginal = Number(viajeForm.precio) || 0;
+    const comision = precioOriginal * 0.10;
+    const gananciaNeta = precioOriginal - comision;
+    
+  return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
         <h2 className="text-2xl font-black italic uppercase text-slate-800 tracking-tighter leading-none">Detalles del Viaje</h2>
         <div className="space-y-3">
@@ -287,11 +292,30 @@ export const WizardPublicar = ({
              <div className="bg-white px-3 py-1.5 rounded-full border text-[9px] font-bold text-slate-400 uppercase tracking-widest">Cambiar</div>
           </button>
         </div>
-        <div className="bg-slate-50 p-5 rounded-[30px] border border-slate-100">
+                <div className="bg-slate-50 p-5 rounded-[30px] border border-slate-100">
            <div className="flex gap-4">
              <div className="flex-[2]"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p><input type="number" placeholder="0.00" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic outline-none text-blue-600 focus:border-blue-400 border-slate-100 transition-colors" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} /></div>
              <div className="flex-1"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">🪑 Asientos</p><input type="number" placeholder="1-4" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic outline-none text-slate-700 border-slate-100" value={viajeForm.asientos || ""} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} /></div>
            </div>
+
+           {/* --- NUEVO: DESGLOSE DE COMISIÓN --- */}
+           {precioOriginal > 0 && (
+             <div className="mt-4 p-4 bg-white rounded-[20px] border border-slate-100 flex flex-col gap-1.5 shadow-sm animate-in zoom-in-95">
+               <div className="flex justify-between items-center text-[11px] font-bold text-slate-500">
+                 <span>El pasajero paga:</span>
+                 <span>${precioOriginal.toFixed(2)}</span>
+               </div>
+               <div className="flex justify-between items-center text-[11px] font-bold text-red-500">
+                 <span>Tarifa de servicio (10%):</span>
+                 <span>-${comision.toFixed(2)}</span>
+               </div>
+               <div className="flex justify-between items-center text-sm font-black text-emerald-600 mt-2 pt-2 border-t border-slate-50">
+                 <span>Tu ganancia neta:</span>
+                 <span>${gananciaNeta.toFixed(2)}</span>
+               </div>
+             </div>
+           )}
+
            {resultadoPrecio && (
             <div className={`mt-4 p-4 rounded-2xl border flex items-start gap-3 animate-in zoom-in-95 ${resultadoPrecio.color}`}>
               <div className="mt-0.5 shrink-0">{resultadoPrecio.icono}</div>
