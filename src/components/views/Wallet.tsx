@@ -18,6 +18,8 @@ export const Wallet = ({ userData, onRegresar }) => {
   
   const [fotoRecarga, setFotoRecarga] = useState(null);
   const [metodoRecarga, setMetodoRecarga] = useState("pago_movil"); 
+ const [txSeleccionada, setTxSeleccionada] = useState(null);
+  
 
   const [datosBancarios, setDatosBancarios] = useState({ 
     banco: userData?.datosBancarios?.banco || "", 
@@ -270,11 +272,20 @@ const manejarRetiro = async (e) => {
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-loose">No hay movimientos aquí</p>
             </div>
           ) : (
-            <div className="space-y-3">
+                        <div className="space-y-3">
               {transaccionesFiltradas.map((tx) => {
+                // Separamos qué es un ingreso general vs qué es un viaje con recibo
                 const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga';
+                const tieneRecibo = tx.tipo === 'ingreso'; // Solo los viajes tienen recibo detallado
+
                 return (
-                  <div key={tx.id} className="bg-slate-900/80 p-5 rounded-[25px] border border-slate-800 flex items-center justify-between shadow-sm">
+                  <div 
+                    key={tx.id} 
+                    onClick={() => {
+                      if (tieneRecibo) setTxSeleccionada(tx);
+                    }}
+                    className={`bg-slate-900/80 p-5 rounded-[25px] border border-slate-800 flex items-center justify-between shadow-sm ${tieneRecibo ? 'cursor-pointer active:scale-95 transition-all hover:bg-slate-800/80 hover:border-slate-700' : ''}`}
+                  >
                     <div className="flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${esIngreso ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                         {esIngreso ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
@@ -284,9 +295,18 @@ const manejarRetiro = async (e) => {
                         <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5 tracking-widest">{new Date(tx.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' })}</p>
                       </div>
                     </div>
-                    <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {esIngreso ? '+' : '-'}${Number(tx.monto).toFixed(2)}
-                    </p>
+                    
+                    {/* Monto e Ícono Visual de Recibo */}
+                    <div className="flex items-center gap-3">
+                      <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {esIngreso ? '+' : '-'}${Number(tx.monto).toFixed(2)}
+                      </p>
+                      {tieneRecibo && (
+                        <div className="bg-slate-800 p-2 rounded-full text-blue-400 border border-slate-700 shadow-sm">
+                          <Info size={16} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
