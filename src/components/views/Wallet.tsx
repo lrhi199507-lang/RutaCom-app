@@ -516,6 +516,43 @@ const manejarRetiro = async (e) => {
           </div>
         </div>
       )}
+      {/* --- MODAL DE RECIBO DETALLADO --- */}
+      {txSeleccionada && (
+        <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black italic uppercase text-white">Detalle del Viaje</h3>
+              <button onClick={() => setTxSeleccionada(null)} className="p-2 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={18} /></button>
+            </div>
+            
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
+              Desglose de la transacción <br/><span className="text-white font-black">{txSeleccionada.descripcion || "Viaje Realizado"}</span>
+            </p>
+
+            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner">
+               <div className="flex justify-between items-center text-[11px] font-bold text-slate-400">
+                 <span>Pago del pasajero:</span>
+                 <span>${((Number(txSeleccionada.monto) || 0) / 0.9).toFixed(2)}</span>
+               </div>
+               <div className="flex justify-between items-center text-[11px] font-bold text-red-400">
+                 <span>Comisión app (10%):</span>
+                 <span>-${(((Number(txSeleccionada.monto) || 0) / 0.9) * 0.1).toFixed(2)}</span>
+               </div>
+               
+               <div className="h-px bg-slate-800 w-full my-2"></div>
+               
+               <div className="flex justify-between items-center text-base font-black text-emerald-400">
+                 <span>Total Acreditado:</span>
+                 <span>${(Number(txSeleccionada.monto) || 0).toFixed(2)}</span>
+               </div>
+            </div>
+
+            <button onClick={() => setTxSeleccionada(null)} className="w-full bg-slate-800 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest mt-6 active:scale-95 transition-all hover:bg-slate-700 border border-slate-700">
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
