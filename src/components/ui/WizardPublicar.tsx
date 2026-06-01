@@ -186,18 +186,34 @@ export const WizardPublicar = ({
     });
   };
 
-  const confirmarUbicacionMapa = async () => {
-    if (!coordsTemporales) return;
-    setBuscandoDireccion(true);
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
-      const data = await response.json();
-      const txt = data.address?.city || data.address?.town || data.name || "Ubicación Seleccionada";
-      if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txt, coordsOrigen: coordsTemporales});
-      else setViajeForm({...viajeForm, destino: txt, coordsDestino: coordsTemporales});
-      setShowMapaModal(false);
-    } finally { setBuscandoDireccion(false); }
-  };
+const confirmarUbicacionMapa = async () => {
+  if (!coordsTemporales) return;
+  setBuscandoDireccion(true);
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
+    
+    // Si la API responde con error (ej. 403 o 500), forzamos a que salte al catch
+    if (!response.ok) throw new Error("Error en la API de Nominatim");
+    
+    const data = await response.json();
+    const txt = data.address?.city || data.address?.town || data.name || "Ubicación Seleccionada";
+    
+    if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txt, coordsOrigen: coordsTemporales});
+    else setViajeForm({...viajeForm, destino: txt, coordsDestino: coordsTemporales});
+    
+    setShowMapaModal(false);
+  } catch (error) {
+    // Si falla el internet o la API, guardamos la ubicación de emergencia para no trabar la app
+    alert("No se pudo traducir la dirección, pero la ubicación fue guardada.");
+    const txtEmergencia = "Punto en el mapa";
+    if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txtEmergencia, coordsOrigen: coordsTemporales});
+    else setViajeForm({...viajeForm, destino: txtEmergencia, coordsDestino: coordsTemporales});
+    
+    setShowMapaModal(false);
+  } finally { 
+    setBuscandoDireccion(false); 
+  }
+};
 
   const formatearHoraAmPm = (h24) => {
     if (!h24) return "Seleccionar";
