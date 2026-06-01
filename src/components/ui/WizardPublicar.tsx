@@ -192,20 +192,36 @@ const confirmarUbicacionMapa = async () => {
   try {
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
     
-    // Si la API responde con error (ej. 403 o 500), forzamos a que salte al catch
     if (!response.ok) throw new Error("Error en la API de Nominatim");
     
     const data = await response.json();
-    const txt = data.address?.city || data.address?.town || data.name || "Ubicación Seleccionada";
+    
+    // --- NUEVA LÓGICA DE DETALLE ---
+    let txt = "Ubicación Seleccionada";
+    if (data.address) {
+      // Extraemos todo el detalle posible
+      const lugar = data.name || "";
+      const calle = data.address.road || data.address.pedestrian || "";
+      const sector = data.address.neighbourhood || data.address.suburb || data.address.residential || "";
+      const ciudad = data.address.city || data.address.town || data.address.village || "";
+      
+      // Filtramos los que vengan vacíos y unimos con comas
+      const partes = [lugar, calle, sector, ciudad].filter(Boolean);
+      
+      // Usamos Set para eliminar duplicados (por si 'lugar' y 'calle' se llaman igual)
+      txt = [...new Set(partes)].join(", ");
+    } else if (data.display_name) {
+      // Plan B: Cortar la dirección larga cruda a solo 3 fragmentos
+      txt = data.display_name.split(',').slice(0, 3).join(', ');
+    }
     
     if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txt, coordsOrigen: coordsTemporales});
     else setViajeForm({...viajeForm, destino: txt, coordsDestino: coordsTemporales});
     
     setShowMapaModal(false);
   } catch (error) {
-    // Si falla el internet o la API, guardamos la ubicación de emergencia para no trabar la app
     alert("No se pudo traducir la dirección, pero la ubicación fue guardada.");
-    const txtEmergencia = "Punto en el mapa";
+    const txtEmergencia = "Punto marcado en el mapa";
     if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txtEmergencia, coordsOrigen: coordsTemporales});
     else setViajeForm({...viajeForm, destino: txtEmergencia, coordsDestino: coordsTemporales});
     
@@ -214,7 +230,7 @@ const confirmarUbicacionMapa = async () => {
     setBuscandoDireccion(false); 
   }
 };
-
+  
   const formatearHoraAmPm = (h24) => {
     if (!h24) return "Seleccionar";
     const [h, m] = h24.split(':');
