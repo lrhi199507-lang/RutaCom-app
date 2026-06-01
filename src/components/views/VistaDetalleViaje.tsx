@@ -770,6 +770,18 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
+            {/* Punto de encuentro renderizado condicionalmente */}
+{viaje.referencia && viaje.referencia.trim() !== "" && (
+  <div className="mt-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+      Punto de Encuentro
+    </p>
+    <p className="text-base font-semibold text-[#0f172a]">
+      {viaje.referencia}
+    </p>
+  </div>
+)}
+            
             {mostrarBannerRetorno && (
               <div className="bg-emerald-50 p-5 rounded-[30px] border border-emerald-100 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center"><Repeat size={18} className="text-emerald-600" /></div>
