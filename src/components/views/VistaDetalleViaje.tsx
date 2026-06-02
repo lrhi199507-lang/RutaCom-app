@@ -20,13 +20,35 @@ import { UBICACIONES } from "../../constants/ubicaciones";
 const obtenerEstado = (ciudadNombre) => {
   try {
     if (!ciudadNombre || typeof ciudadNombre !== 'string') return "Destino";
-    const [soloCiudad] = ciudadNombre.split(',');
     if (!UBICACIONES) return "Venezuela";
-    const estadoEncontrado = Object.keys(UBICACIONES).find(estado => {
-       const ciudades = UBICACIONES[estado];
-       return Array.isArray(ciudades) && ciudades.includes(soloCiudad.trim());
-    });
-    return estadoEncontrado || "Venezuela";
+    
+    // Convertimos a minúsculas para una comparación segura
+    const textoBusqueda = ciudadNombre.toLowerCase();
+
+    // 1. Primero, verificamos si el nombre del estado ya viene incluido en el texto
+    for (const estado of Object.keys(UBICACIONES)) {
+      if (textoBusqueda.includes(estado.toLowerCase())) {
+        return estado; // Devuelve el nombre del estado original (ej. "Carabobo")
+      }
+    }
+
+    // 2. Si no viene el estado, buscamos a qué estado pertenece la ciudad mencionada
+    for (const estado of Object.keys(UBICACIONES)) {
+      const ciudades = UBICACIONES[estado];
+      if (Array.isArray(ciudades)) {
+        for (const ciudad of ciudades) {
+          if (textoBusqueda.includes(ciudad.toLowerCase())) {
+            return estado;
+          }
+        }
+      }
+    }
+
+    // 3. Si no encuentra coincidencias, devuelve el texto original o un fallback
+    // En lugar de "Venezuela", al menos mostramos el origen crudo
+    const [primeraParte] = ciudadNombre.split(',');
+    return primeraParte ? primeraParte.trim() : "Venezuela";
+    
   } catch (error) {
     return "Destino";
   }
