@@ -59,16 +59,25 @@ const calcularRangoPrecio = (distanciaKm, precioIngresado) => {
 
 const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
   const dias = [];
-  const hoy = new Date(minDate + "T00:00:00");
+  
+  // Dividimos el string para forzar a JavaScript a usar tu zona horaria local
+  const [year, month, day] = minDate.split('-');
+  const hoy = new Date(year, month - 1, day); 
+
   for (let i = 0; i < 15; i++) {
     const d = new Date(hoy);
     d.setDate(hoy.getDate() + i);
     dias.push(d);
   }
+  
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
       {dias.map((d, i) => {
-        const strDate = d.toISOString().split('T')[0];
+        // Formateamos la fecha manualmente SIN usar toISOString()
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        const strDate = `${d.getFullYear()}-${mes}-${dia}`;
+        
         const isSelected = fechaSeleccionada === strDate;
         return (
           <button key={i} type="button" onClick={() => onSelect(strDate)} className={`snap-center shrink-0 w-[70px] py-3 rounded-[22px] border flex flex-col items-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white border-slate-100 text-slate-500'}`}>
@@ -118,7 +127,12 @@ export const WizardPublicar = ({
 }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const hoy = new Date().toISOString().split('T')[0];
+
+  const fechaLocal = new Date();
+  const mesLocal = String(fechaLocal.getMonth() + 1).padStart(2, '0');
+  const diaLocal = String(fechaLocal.getDate()).padStart(2, '0');
+  const hoy = `${fechaLocal.getFullYear()}-${mesLocal}-${diaLocal}`;
+  
   const [sugerencias, setSugerencias] = useState([]);
   const [campoActivo, setCampoActivo] = useState(null);
   const [showMapaModal, setShowMapaModal] = useState(false);
