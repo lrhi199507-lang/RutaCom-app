@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore'; // Importa writeBatch
+import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore'; 
 import { Bell, CheckCircle, Info, Car, X, Trash2, CheckCheck, MessageCircle } from 'lucide-react';
 
 export const CampanaNotificaciones = ({ userData }) => {
@@ -22,13 +22,19 @@ export const CampanaNotificaciones = ({ userData }) => {
         lista.push({ id: d.id, ...d.data() });
       });
       
+      // 🔥 CORRECCIÓN AQUÍ: Extracción de milisegundos reales para evitar el NaN
       lista.sort((a, b) => {
-        const getVal = (item) => {
-          if (item.timestamp) return item.timestamp;
-          if (item.fecha && item.fecha.toDate) return item.fecha.toDate().getTime();
-          return 0;
+        const obtenerMilis = (item) => {
+          const valor = item.fecha || item.timestamp;
+          if (!valor) return 0;
+          
+          if (valor.toMillis) return valor.toMillis();
+          if (valor.toDate) return valor.toDate().getTime();
+          
+          return new Date(valor).getTime() || 0;
         };
-        return getVal(b) - getVal(a);
+
+        return obtenerMilis(b) - obtenerMilis(a); // De más reciente a más antigua
       });
       
       setNotificaciones(lista);
@@ -51,7 +57,6 @@ export const CampanaNotificaciones = ({ userData }) => {
     } catch (error) { console.error("Error al eliminar", error); }
   };
 
-  // 🔥 CORRECCIÓN: Uso de Batch para una sola petición al servidor
   const marcarTodasLeidas = async () => {
     const batch = writeBatch(db);
     const noLeidasArr = notificaciones.filter(n => !n.leido);
@@ -102,7 +107,6 @@ export const CampanaNotificaciones = ({ userData }) => {
 
       {abierto && (
         <>
-          {/* 🔥 CORRECCIÓN: Div transparente global para cerrar haciendo clic afuera en escritorio */}
           <div className="fixed inset-0 z-[390]" onClick={() => setAbierto(false)}></div>
 
           <div className="fixed inset-0 z-[400] flex justify-end pointer-events-none sm:absolute sm:inset-auto sm:right-0 sm:top-12">
