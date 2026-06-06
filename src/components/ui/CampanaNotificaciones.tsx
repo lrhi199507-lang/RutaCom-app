@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore'; // Importa writeBatch
 import { Bell, CheckCircle, Info, Car, X, Trash2, CheckCheck, MessageCircle } from 'lucide-react';
 
 export const CampanaNotificaciones = ({ userData }) => {
@@ -11,7 +11,6 @@ export const CampanaNotificaciones = ({ userData }) => {
     const miId = userData?.id || userData?.uid || userData?.idUsuario;
     if (!miId) return;
 
-    // 🔥 CONSULTA SIN ORDERBY PARA EVITAR ERROR DE PANTALLA EN BLANCO
     const q = query(
       collection(db, "Notificaciones"), 
       where("idDestino", "==", String(miId))
@@ -20,12 +19,9 @@ export const CampanaNotificaciones = ({ userData }) => {
     const unsub = onSnapshot(q, (snap) => {
       let lista = [];
       snap.forEach(d => {
-        const data = d.data();
-        lista.push({ id: d.id, ...data });
+        lista.push({ id: d.id, ...d.data() });
       });
       
-      // 🔥 ORDENAMOS MANUALMENTE POR FECHA/TIMESTAMP
-      // Si el campo 'timestamp' o 'fecha' es nuevo, esto lo pondrá al principio automáticamente
       lista.sort((a, b) => {
         const getVal = (item) => {
           if (item.timestamp) return item.timestamp;
@@ -55,10 +51,23 @@ export const CampanaNotificaciones = ({ userData }) => {
     } catch (error) { console.error("Error al eliminar", error); }
   };
 
+  // 🔥 CORRECCIÓN: Uso de Batch para una sola petición al servidor
   const marcarTodasLeidas = async () => {
-    notificaciones.forEach(async (n) => {
-      if (!n.leido) await updateDoc(doc(db, "Notificaciones", n.id), { leido: true });
+    const batch = writeBatch(db);
+    const noLeidasArr = notificaciones.filter(n => !n.leido);
+    
+    if (noLeidasArr.length === 0) return;
+
+    noLeidasArr.forEach((n) => {
+      const ref = doc(db, "Notificaciones", n.id);
+      batch.update(ref, { leido: true });
     });
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error("Error al marcar todas como leídas", error);
+    }
   };
 
   const obtenerIcono = (tipo) => {
@@ -80,7 +89,7 @@ export const CampanaNotificaciones = ({ userData }) => {
   return (
     <div className="relative">
       <button 
-        onClick={() => setAbierto(true)} 
+        onClick={() => setAbierto(!abierto)} 
         className="relative p-2.5 bg-white rounded-full border border-slate-200 shadow-sm text-slate-600 active:scale-90 transition-all hover:bg-slate-50"
       >
         <Bell size={20} />
@@ -92,51 +101,56 @@ export const CampanaNotificaciones = ({ userData }) => {
       </button>
 
       {abierto && (
-        <div className="fixed inset-0 z-[400] flex justify-end bg-slate-900/20 backdrop-blur-sm sm:relative sm:inset-auto sm:bg-transparent sm:backdrop-blur-none">
-          <div className="absolute inset-0 sm:hidden" onClick={() => setAbierto(false)}></div>
-          
-          <div className="absolute top-16 right-4 w-[90vw] max-w-[350px] bg-white rounded-[30px] shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-4 duration-200 sm:top-12 sm:right-0">
-            <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-black italic text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
-                <Bell size={14} className="text-blue-600" /> Notificaciones
-              </h3>
-              <button onClick={() => setAbierto(false)} className="bg-slate-200 p-1.5 rounded-full text-slate-500"><X size={14} /></button>
-            </div>
+        <>
+          {/* 🔥 CORRECCIÓN: Div transparente global para cerrar haciendo clic afuera en escritorio */}
+          <div className="fixed inset-0 z-[390]" onClick={() => setAbierto(false)}></div>
 
-            <div className="max-h-[60vh] overflow-y-auto p-2 space-y-2 bg-slate-50">
-              {notificaciones.length === 0 ? (
-                <div className="p-8 text-center text-slate-400">
-                  <Bell size={32} className="mx-auto mb-3 opacity-20" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">No tienes mensajes nuevos</p>
-                </div>
-              ) : (
-                notificaciones.map(notif => (
-                  <div key={notif.id} className={`p-4 rounded-[20px] flex gap-3 relative transition-colors ${!notif.leido ? 'bg-white border-l-4 border-blue-500 shadow-sm' : 'bg-slate-100 opacity-70'}`} onClick={() => !notif.leido && marcarComoLeida(notif.id)}>
-                    <div className="shrink-0 mt-0.5">{obtenerIcono(notif.tipo)}</div>
-                    <div className="flex-1 min-w-0 pr-6">
-                      <p className={`text-[10px] uppercase tracking-wider truncate ${!notif.leido ? 'font-black text-slate-800' : 'font-bold text-slate-500'}`}>{notif.titulo}</p>
-                      <p className="text-xs font-medium text-slate-600 mt-0.5 leading-snug">{notif.mensaje}</p>
-                      <p className="text-[8px] font-black text-slate-400 mt-2 uppercase">
-                        {formatearFecha(notif.fecha || notif.timestamp)}
-                      </p>
-                    </div>
-                    <button onClick={(e) => { e.stopPropagation(); eliminarNotificacion(notif.id); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500">
-                      <Trash2 size={14} />
-                    </button>
+          <div className="fixed inset-0 z-[400] flex justify-end pointer-events-none sm:absolute sm:inset-auto sm:right-0 sm:top-12">
+            <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm sm:hidden pointer-events-auto" onClick={() => setAbierto(false)}></div>
+            
+            <div className="absolute top-16 right-4 w-[90vw] max-w-[350px] bg-white rounded-[30px] shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-4 duration-200 pointer-events-auto sm:top-0 sm:right-0">
+              <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h3 className="font-black italic text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
+                  <Bell size={14} className="text-blue-600" /> Notificaciones
+                </h3>
+                <button onClick={() => setAbierto(false)} className="bg-slate-200 p-1.5 rounded-full text-slate-500"><X size={14} /></button>
+              </div>
+
+              <div className="max-h-[60vh] overflow-y-auto p-2 space-y-2 bg-slate-50">
+                {notificaciones.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400">
+                    <Bell size={32} className="mx-auto mb-3 opacity-20" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">No tienes mensajes nuevos</p>
                   </div>
-                ))
+                ) : (
+                  notificaciones.map(notif => (
+                    <div key={notif.id} className={`p-4 rounded-[20px] flex gap-3 relative transition-colors ${!notif.leido ? 'bg-white border-l-4 border-blue-500 shadow-sm cursor-pointer' : 'bg-slate-100 opacity-70'}`} onClick={() => !notif.leido && marcarComoLeida(notif.id)}>
+                      <div className="shrink-0 mt-0.5">{obtenerIcono(notif.tipo)}</div>
+                      <div className="flex-1 min-w-0 pr-6">
+                        <p className={`text-[10px] uppercase tracking-wider truncate ${!notif.leido ? 'font-black text-slate-800' : 'font-bold text-slate-500'}`}>{notif.titulo}</p>
+                        <p className="text-xs font-medium text-slate-600 mt-0.5 leading-snug">{notif.mensaje}</p>
+                        <p className="text-[8px] font-black text-slate-400 mt-2 uppercase">
+                          {formatearFecha(notif.fecha || notif.timestamp)}
+                        </p>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); eliminarNotificacion(notif.id); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {noLeidas > 0 && (
+                <div className="p-3 bg-white border-t border-slate-50">
+                  <button onClick={marcarTodasLeidas} className="w-full py-3 rounded-2xl bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                    <CheckCheck size={14} /> Marcar todas como leídas
+                  </button>
+                </div>
               )}
             </div>
-
-            {noLeidas > 0 && (
-              <div className="p-3 bg-white border-t border-slate-50">
-                <button onClick={marcarTodasLeidas} className="w-full py-3 rounded-2xl bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
-                  <CheckCheck size={14} /> Marcar todas como leídas
-                </button>
-              </div>
-            )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
