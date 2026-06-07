@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { App } from '@capacitor/app';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase'; // <-- Ajusta la ruta a tu archivo de configuración de Firebase
+import { db } from '../firebase'; // <-- Ajusta la ruta a tu archivo de configuración de Firebase
 
 export function VerificadorActualizacion() {
   const [necesitaActualizar, setNecesitaActualizar] = useState(false);
