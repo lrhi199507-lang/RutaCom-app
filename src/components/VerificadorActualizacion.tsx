@@ -6,52 +6,56 @@ import { db } from "../firebaseConfig";
 export function VerificadorActualizacion() {
   const [necesitaActualizar, setNecesitaActualizar] = useState(false);
   const [urlTienda, setUrlTienda] = useState('');
+  const [debug, setDebug] = useState<string>('Iniciando...'); // Para ver qué pasa en pantalla
 
   useEffect(() => {
     const verificarVersion = async () => {
       try {
-        // 1. Obtener la versión interna de la app instalada (el versionCode)
         const info = await App.getInfo();
-        const versionActual = Number(info.build);
+        // Convertimos a número de forma segura
+        const versionActual = parseInt(info.build || "0", 10);
+        
+        setDebug(`V. Actual: ${versionActual}`);
 
-        // 2. Consultar la versión mínima permitida en Firebase
         const docRef = doc(db, 'Configuracion', 'app');
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const { version_minima, url_playstore } = docSnap.data();
+          const data = docSnap.data();
+          const versionMinima = Number(data.version_minima);
           
-          // 3. Si la versión actual es menor a la requerida, bloqueamos la app
-          if (versionActual < version_minima) {
-            setUrlTienda(url_playstore);
+          setDebug(`Actual: ${versionActual} | Min: ${versionMinima}`);
+
+          if (versionActual < versionMinima) {
+            setUrlTienda(data.url_playstore);
             setNecesitaActualizar(true);
           }
+        } else {
+          setDebug("Error: El documento 'app' no existe en Firebase");
         }
-      } catch (error) {
-        console.error("Error verificando actualización:", error);
+      } catch (error: any) {
+        setDebug("Error: " + error.message);
       }
     };
 
     verificarVersion();
   }, []);
 
-  // Si no necesita actualizar, no renderizamos nada y la app sigue normal
-  if (!necesitaActualizar) return null;
+  // Si necesita actualizar, mostramos el bloqueo
+  if (necesitaActualizar) {
+    return (
+      <div className="fixed inset-0 bg-zinc-950 z-[9999] flex flex-col items-center justify-center p-6 text-white">
+        <h2 className="text-2xl font-bold mb-4">Actualización Requerida</h2>
+        <a href={urlTienda} className="bg-blue-600 p-4 rounded-xl w-full text-center">Ir a Play Store</a>
+      </div>
+    );
+  }
 
-  // Si necesita actualizar, mostramos una pantalla negra que bloquea todo
+  // Si NO necesita actualizar, mostramos esto pequeño para saber que el código corrió
+  // Borra este return de debug cuando funcione
   return (
-    <div className="fixed inset-0 bg-zinc-950 z-[9999] flex flex-col items-center justify-center p-6 text-white">
-      <h2 className="text-2xl font-bold mb-4 text-center">Actualización Requerida</h2>
-      <p className="text-center mb-8 text-zinc-300">
-        Hemos lanzado una nueva versión con mejoras importantes. Debes actualizar para seguir usando Dame la Cola.
-      </p>
-      <a 
-        href={urlTienda}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold w-full text-center transition-colors"
-      >
-        Ir a la Play Store
-      </a>
+    <div className="fixed top-0 left-0 bg-black/50 text-[8px] text-white z-[9999] p-1">
+      {debug}
     </div>
   );
 }
-
