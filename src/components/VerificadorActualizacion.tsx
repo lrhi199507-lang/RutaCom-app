@@ -15,7 +15,7 @@ export function VerificadorActualizacion() {
         const versionActual = Number(info.build);
 
         // 2. Consultar la versión mínima permitida en Firebase
-        const docRef = doc(db, 'configuracion', 'app');
+        const docRef = doc(db, 'Configuracion', 'app');
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
