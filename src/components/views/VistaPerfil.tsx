@@ -41,7 +41,11 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [tasaActual, setTasaActual] = useState(0); 
   const [balanceApp, setBalanceApp] = useState(0);
   const [bancoAdmin, setBancoAdmin] = useState({ banco: "", telefono: "", cedula: "" });
-  const [historialUsuario, setHistorialUsuario] = useState([])
+
+  // Estados para el Modal de Administración
+const [modalAdmin, setModalAdmin] = useState<{tipo: 'historial' | 'accion', data: any | null}>({tipo: 'historial', data: null});
+const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
+  
   
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
@@ -109,35 +113,26 @@ const verHistorial = async (uid: string) => {
   try {
     const q = query(collection(db, "Reportes"), where("idReportado", "==", uid));
     const snap = await getDocs(q);
-    const historial = snap.docs.map(d => d.data());
-    
-    if (historial.length === 0) {
-      alert("Este usuario no tiene reportes previos.");
-    } else {
-      alert(`Historial encontrado: ${historial.length} reportes previos.`);
-      // Aquí abrirías un modal con la lista de historial
-    }
-  } catch (e) {
-    console.error("Error al buscar historial", e);
-  } finally {
-    setCargando(false);
-  }
+    setHistorialUsuario(snap.docs.map(d => ({id: d.id, ...d.data()})));
+    setModalAdmin({tipo: 'historial', data: uid});
+  } catch (e) { console.error(e); } finally { setCargando(false); }
 };
 
-// 3. Aplicar sanción directa
 const aplicarSancion = async (uid: string) => {
-  if (!window.confirm("¿Estás seguro de BANEAR a este usuario permanentemente?")) return;
-  
+  setModalAdmin({tipo: 'accion', data: uid});
+};
+
+const confirmarSancion = async (uid: string, motivo: string) => {
+  setCargando(true);
   try {
     await updateDoc(doc(db, "usuarios", uid), {
       cuentaSuspendida: true,
-      mensajeAdmin: "Tu cuenta ha sido suspendida por incumplimiento de normas."
+      mensajeAdmin: motivo
     });
-    alert("Usuario suspendido exitosamente.");
-    await cargarDatosAdmin(); // Refrescar lista
-  } catch (e) {
-    console.error("Error al banear", e);
-  }
+    setToast({ texto: "Usuario suspendido correctamente", tipo: "exito" });
+    setModalAdmin({tipo: 'accion', data: null});
+    await cargarDatosAdmin();
+  } catch (e) { setToast({ texto: "Error al sancionar", tipo: "error" }); } finally { setCargando(false); }
 };
   
 
@@ -1080,6 +1075,7 @@ const aplicarSancion = async (uid: string) => {
                       )}
                     </div>
                   )}
+
                   
           {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
                     usuariosAdmin
@@ -1369,6 +1365,33 @@ const aplicarSancion = async (uid: string) => {
           )}
         </div>
       )}
+
+      {modalAdmin.data && (
+  <div className="fixed inset-0 z-[500] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl">
+      {modalAdmin.tipo === 'historial' ? (
+        <div className="space-y-4">
+          <h3 className="text-white font-black uppercase text-xs italic">Historial de Reportes</h3>
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {historialUsuario.map(h => (
+              <div key={h.id} className="bg-slate-900 p-3 rounded-xl border border-white/5 text-[9px] text-slate-400">
+                "{h.motivo}" - <span className="text-white">{new Date(h.fecha).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setModalAdmin({tipo: 'historial', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cerrar</button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <h3 className="text-red-500 font-black uppercase text-xs italic">Confirmar Suspensión</h3>
+          <p className="text-[10px] text-slate-400">¿Estás seguro? Esta acción es irreversible.</p>
+          <button onClick={() => confirmarSancion(modalAdmin.data, "Incumplimiento de normas")} className="w-full bg-red-600 p-3 rounded-xl text-white font-black text-[10px] active:scale-95">CONFIRMAR Y BANEAR</button>
+          <button onClick={() => setModalAdmin({tipo: 'accion', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cancelar</button>
+        </div>
+      )}
+    </div>
+  </div>
+)}
     </div>
   );
 };
