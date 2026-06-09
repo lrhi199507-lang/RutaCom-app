@@ -41,6 +41,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [tasaActual, setTasaActual] = useState(0); 
   const [balanceApp, setBalanceApp] = useState(0);
   const [bancoAdmin, setBancoAdmin] = useState({ banco: "", telefono: "", cedula: "" });
+  const [historialUsuario, setHistorialUsuario] = useState([])
   
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
@@ -94,6 +95,51 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       default: return "bg-blue-600";
     }
   };
+
+  // 1. Ver Perfil completo del usuario
+const verPerfil = (uid: string) => {
+  console.log("Abriendo perfil del usuario:", uid);
+  // Aquí puedes abrir un nuevo modal o redirigir a una pantalla de detalles
+  alert(`Cargando información completa del perfil: ${uid}`);
+};
+
+// 2. Ver Historial de reportes del usuario
+const verHistorial = async (uid: string) => {
+  setCargando(true);
+  try {
+    const q = query(collection(db, "Reportes"), where("idReportado", "==", uid));
+    const snap = await getDocs(q);
+    const historial = snap.docs.map(d => d.data());
+    
+    if (historial.length === 0) {
+      alert("Este usuario no tiene reportes previos.");
+    } else {
+      alert(`Historial encontrado: ${historial.length} reportes previos.`);
+      // Aquí abrirías un modal con la lista de historial
+    }
+  } catch (e) {
+    console.error("Error al buscar historial", e);
+  } finally {
+    setCargando(false);
+  }
+};
+
+// 3. Aplicar sanción directa
+const aplicarSancion = async (uid: string) => {
+  if (!window.confirm("¿Estás seguro de BANEAR a este usuario permanentemente?")) return;
+  
+  try {
+    await updateDoc(doc(db, "usuarios", uid), {
+      cuentaSuspendida: true,
+      mensajeAdmin: "Tu cuenta ha sido suspendida por incumplimiento de normas."
+    });
+    alert("Usuario suspendido exitosamente.");
+    await cargarDatosAdmin(); // Refrescar lista
+  } catch (e) {
+    console.error("Error al banear", e);
+  }
+};
+  
 
   const calcularSiguienteNivel = () => {
     const total = totalTrayectoria;
@@ -997,48 +1043,40 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                             <p className="text-[10px] font-black text-slate-600 uppercase italic">Zona segura. No hay reportes.</p>
                         </div>
                       ) : (
-                        reportesAdmin.map(r => (
-                          <div key={r.id} className="bg-[#0f172a] border border-red-500/30 rounded-[30px] p-5 relative overflow-hidden shadow-xl">
-                            {/* Fondo decorativo rojo suave */}
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl"></div>
-                            
-                            <div className="relative z-10 flex flex-col gap-4">
-                              {/* Cabecera del Reporte */}
-                              <div className="flex items-start justify-between border-b border-white/5 pb-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 shrink-0">
-                                    <AlertTriangle size={20} />
-                                  </div>
-                                  <div>
-                                    <span className="text-[7px] font-black bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
-                                    <p className="text-xs font-black text-white uppercase italic truncate">
-                                      {r.nombreReportado}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
+                        {reportesAdmin.map(r => (
+  <div key={r.id} className="bg-[#0f172a] border border-red-500/20 rounded-[30px] p-5 relative overflow-hidden shadow-2xl">
+    {/* Fondo decorativo */}
+    <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl"></div>
+    
+    <div className="relative z-10 flex flex-col gap-4">
+      {/* Cabecera: Nombre y botón perfil */}
+      <div className="flex justify-between items-start">
+        <div>
+          <span className="text-[7px] font-black bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
+          <p className="text-sm font-black text-white uppercase italic">{r.nombreReportado}</p>
+        </div>
+        <button onClick={() => verPerfil(r.idReportado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
+      </div>
 
-                              {/* Detalles */}
-                              <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                  <User size={10} /> Denunciante: <span className="text-slate-300">{r.nombreReportador}</span>
-                                </p>
-                                <p className="text-[11px] font-medium text-slate-300 italic leading-relaxed border-l-2 border-red-500/50 pl-3">
-                                  "{r.motivo}"
-                                </p>
-                              </div>
+      {/* Detalles */}
+      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+        <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreReportador}</p>
+        <p className="text-[11px] text-slate-300 italic border-l-2 border-red-500/30 pl-3 leading-tight">"{r.motivo}"</p>
+      </div>
 
-                              {/* Acción */}
-                              <button 
-                                onClick={() => resolverReporte(r.id)} 
-                                className="w-full bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/5"
-                              >
-                                <ShieldCheck size={16} className="text-green-500" />
-                                Marcar como Resuelto
-                              </button>
-                            </div>
-                          </div>
-                        ))
+      {/* Acciones en cuadrícula */}
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => verHistorial(r.idReportado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all">Historial</button>
+        <button onClick={() => resolverReporte(r.id)} className="bg-green-900/20 border border-green-500/20 p-3 rounded-2xl text-[9px] font-black uppercase text-green-400 hover:bg-green-900/40 transition-all">Resolver</button>
+      </div>
+      
+      {/* Acción crítica */}
+      <button onClick={() => aplicarSancion(r.idReportado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
+        Aplicar Sanción / Banear
+      </button>
+    </div>
+  </div>
+))}
                       )}
                     </div>
                   )}
