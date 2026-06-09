@@ -111,11 +111,25 @@ const verPerfil = (uid: string) => {
 const verHistorial = async (uid: string) => {
   setCargando(true);
   try {
-    const q = query(collection(db, "Reportes"), where("idReportado", "==", uid));
-    const snap = await getDocs(q);
-    setHistorialUsuario(snap.docs.map(d => ({id: d.id, ...d.data()})));
+    // 1. Buscar Reportes
+    const qReportes = query(collection(db, "Reportes"), where("idReportado", "==", uid));
+    const snapReportes = await getDocs(qReportes);
+    
+    // 2. Buscar últimos 5 Viajes (ejemplo de control de calidad)
+    const qViajes = query(collection(db, "Viajes"), where("uidConductor", "==", uid), orderBy("fecha", "desc"));
+    const snapViajes = await getDocs(qViajes);
+    
+    const reportes = snapReportes.docs.map(d => ({ tipo: 'REPORTE', ...d.data() }));
+    const viajes = snapViajes.docs.slice(0, 5).map(d => ({ tipo: 'VIAJE', ...d.data() }));
+    
+    setHistorialUsuario([...reportes, ...viajes]);
     setModalAdmin({tipo: 'historial', data: uid});
-  } catch (e) { console.error(e); } finally { setCargando(false); }
+  } catch (e) { 
+    console.error("Error al cargar historial:", e); 
+    setToast({ texto: "Error al cargar historial", tipo: "error" });
+  } finally { 
+    setCargando(false); 
+  }
 };
 
 const aplicarSancion = async (uid: string) => {
@@ -1368,25 +1382,53 @@ const confirmarSancion = async (uid: string, motivo: string) => {
 
       {modalAdmin.data && (
   <div className="fixed inset-0 z-[500] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-    <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl">
+    <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl animate-in zoom-in-95">
+      
       {modalAdmin.tipo === 'historial' ? (
         <div className="space-y-4">
-          <h3 className="text-white font-black uppercase text-xs italic">Historial de Reportes</h3>
-          <div className="max-h-60 overflow-y-auto space-y-2">
-            {historialUsuario.map(h => (
-              <div key={h.id} className="bg-slate-900 p-3 rounded-xl border border-white/5 text-[9px] text-slate-400">
-                "{h.motivo}" - <span className="text-white">{new Date(h.fecha).toLocaleDateString()}</span>
-              </div>
-            ))}
+          <h3 className="text-white font-black uppercase text-xs italic border-b border-white/5 pb-2">Diagnóstico de Usuario</h3>
+          
+          <div className="max-h-80 overflow-y-auto space-y-4 pr-1">
+            {/* Sección Reportes */}
+            <div>
+              <p className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-2">Reportes ({historialUsuario.filter(h => h.tipo === 'REPORTE').length})</p>
+              {historialUsuario.filter(h => h.tipo === 'REPORTE').length === 0 ? 
+                <p className="text-[9px] text-slate-600 italic">Sin reportes.</p> :
+                historialUsuario.filter(h => h.tipo === 'REPORTE').map((h, i) => (
+                  <div key={i} className="bg-red-900/10 p-3 rounded-xl border border-red-500/10 mb-2">
+                    <p className="text-[10px] text-red-100 font-bold">"{h.motivo}"</p>
+                    <p className="text-[8px] text-red-500 mt-1">{new Date(h.fecha).toLocaleDateString()}</p>
+                  </div>
+                ))
+              }
+            </div>
+
+            {/* Sección Viajes */}
+            <div>
+              <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2">Últimos Viajes ({historialUsuario.filter(h => h.tipo === 'VIAJE').length})</p>
+              {historialUsuario.filter(h => h.tipo === 'VIAJE').length === 0 ? 
+                <p className="text-[9px] text-slate-600 italic">No registra viajes.</p> :
+                historialUsuario.filter(h => h.tipo === 'VIAJE').map((h, i) => (
+                  <div key={i} className="bg-slate-900 p-3 rounded-xl border border-white/5 mb-2 flex justify-between items-center">
+                    <p className="text-[10px] text-slate-300 font-bold">Viaje finalizado</p>
+                    <p className="text-[8px] text-slate-500">{new Date(h.fecha).toLocaleDateString()}</p>
+                  </div>
+                ))
+              }
+            </div>
           </div>
-          <button onClick={() => setModalAdmin({tipo: 'historial', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cerrar</button>
+          
+          <button onClick={() => setModalAdmin({tipo: 'historial', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px] uppercase">Cerrar</button>
         </div>
       ) : (
+        /* Sección Sanción (Ya estaba limpia, pero la mantenemos coherente) */
         <div className="space-y-4">
           <h3 className="text-red-500 font-black uppercase text-xs italic">Confirmar Suspensión</h3>
-          <p className="text-[10px] text-slate-400">¿Estás seguro? Esta acción es irreversible.</p>
-          <button onClick={() => confirmarSancion(modalAdmin.data, "Incumplimiento de normas")} className="w-full bg-red-600 p-3 rounded-xl text-white font-black text-[10px] active:scale-95">CONFIRMAR Y BANEAR</button>
-          <button onClick={() => setModalAdmin({tipo: 'accion', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cancelar</button>
+          <p className="text-[10px] text-slate-400">¿Estás seguro de suspender este usuario permanentemente?</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => setModalAdmin({tipo: 'accion', data: null})} className="bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cancelar</button>
+            <button onClick={() => confirmarSancion(modalAdmin.data, "Incumplimiento de normas")} className="bg-red-600 p-3 rounded-xl text-white font-black text-[10px]">BANEAR</button>
+          </div>
         </div>
       )}
     </div>
