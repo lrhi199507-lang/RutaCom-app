@@ -17,7 +17,10 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
   const [toast, setToast] = useState(null); 
   const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
-  const [motivoReporte, setMotivoReporte] = useState("");
+  
+  // NUEVOS ESTADOS DE REPORTE
+  const [motivoSeleccionado, setMotivoSeleccionado] = useState("");
+  const [descripcionReporte, setDescripcionReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
   const ADMIN_EMAIL = "damelacola2026@gmail.com";
@@ -61,7 +64,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setMensajes(historialMensajes);
 
-      // 🔥 SALUDO DEL BOT GUARDADO EN FIREBASE SOLO SI EL CHAT ESTÁ VACÍO
       if (primeraCarga && isSoporte && !esAdmin) {
         if (historialMensajes.length === 0) {
           addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
@@ -86,19 +88,14 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     return () => unsub();
   }, [chatIdReal]);
 
-  // 🔥 COMANDOS DEL BOT (GUARDADO SILENCIOSO EN FIREBASE) 🔥
   const ejecutarComandoBot = async (tipo) => {
     let respuestaBot = "";
     let textoUsuario = "";
 
     switch(tipo) {
-                  case 'recarga':
+      case 'recarga':
         textoUsuario = "Dudas sobre Saldo/Recargas";
-        respuestaBot = "💳 Para recargar: Ve a 'Mi Billetera', selecciona Pago Móvil o Binance Pay, realiza la transferencia y sube tu capture. \n\n" +
-                       "💰 Para retirar: Ve a Billetera > Retirar y coloca tus datos.\n\n" +
-                       "⚠️ NOTA IMPORTANTE:\n" +
-                       "1. Retiro mínimo: $10.\n" +
-                       "2. Los retiros se procesan exclusivamente los días SÁBADO de 8:00 AM a 5:00 PM.";
+        respuestaBot = "💳 Para recargar: Ve a 'Mi Billetera', selecciona Pago Móvil o Binance Pay, realiza la transferencia y sube tu capture. \n\n💰 Para retirar: Ve a Billetera > Retirar y coloca tus datos.\n\n⚠️ NOTA IMPORTANTE:\n1. Retiro mínimo: $10.\n2. Los retiros se procesan exclusivamente los días SÁBADO de 8:00 AM a 5:00 PM.";
         break;
       case 'publicar':
         textoUsuario = "¿Cómo publico un viaje?";
@@ -127,13 +124,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     }
 
     try {
-      // Guarda la pregunta del usuario sin disparar notificación
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: textoUsuario,
         uidRemitente: userData.id,
         timestamp: serverTimestamp()
       });
-      // Guarda la respuesta del bot sin disparar notificación
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: respuestaBot,
         uidRemitente: 'admin',
@@ -227,28 +222,40 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     if (onVerViaje) onVerViaje();
   };
 
+  // 🔥 NUEVA LÓGICA DE REPORTE PROFESIONAL 🔥
   const manejarReporte = async () => {
-    if (!motivoReporte.trim()) return;
+    if (!motivoSeleccionado || !descripcionReporte.trim()) return;
     setEnviandoReporte(true);
+    
     try {
       await addDoc(collection(db, "Reportes"), {
-        idReportado: idOtroUsuario || "Desconocido",
-        nombreReportado: nombreContacto || "Usuario",
-        idReportador: userData?.id || "Desconocido",
-        nombreReportador: userData?.nombre || "Usuario",
-        idChat: chatIdReal || "N/A",
+        idDenunciante: userData?.id || "Desconocido",
+        nombreDenunciante: userData?.nombre || "Usuario",
+        rolDenunciante: soyConductor ? 'conductor' : 'pasajero',
+        idDenunciado: idOtroUsuario || "Desconocido",
+        nombreDenunciado: nombreContacto || "Usuario",
         idViaje: chat.idViaje || "N/A",
-        motivo: motivoReporte,
-        fecha: new Date().toISOString(),
-        estado: "pendiente" 
+        idChat: chatIdReal || "N/A",
+        motivo: motivoSeleccionado,
+        descripcion: descripcionReporte.trim(),
+        estado: 'pendiente',
+        accionesTomadas: '',
+        fechaCreacion: serverTimestamp(),
       });
-      setMostrarModalReporte(false); setMotivoReporte("");
+      
+      setMostrarModalReporte(false); 
+      setMotivoSeleccionado("");
+      setDescripcionReporte("");
+      
       setToast({ texto: "Reporte enviado. Revisaremos el caso.", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
     } catch (error) {
+      console.error(error);
       setToast({ texto: "Hubo un error al enviar el reporte.", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
-    } finally { setEnviandoReporte(false); }
+    } finally { 
+      setEnviandoReporte(false); 
+    }
   };
   
   return (
@@ -322,7 +329,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       {/* ZONA INFERIOR */}
       <div className="bg-white border-t border-slate-100 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
         
-        {/* 🔥 BOTONES DE AUTO-SOPORTE (SOLO PARA PASAJEROS EN EL CHAT DE SOPORTE) 🔥 */}
         {isSoporte && !esAdmin ? (
           <div className="p-3 grid grid-cols-2 gap-2 bg-slate-50 border-b border-slate-100">
             <button onClick={() => ejecutarComandoBot('recarga')} className="bg-white border border-slate-200 text-slate-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm hover:border-blue-300">
@@ -377,7 +383,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </form>
       </div>
 
-      {/* TOAST FLOTANTE Y MODAL DE REPORTE */}
+      {/* TOAST FLOTANTE */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -387,26 +393,47 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </div>
       )}
 
+      {/* MODAL DE REPORTE ACTUALIZADO */}
       {mostrarModalReporte && (
         <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[30px] p-6 w-full max-w-sm shadow-2xl relative">
-            <button onClick={() => setMostrarModalReporte(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+            <button onClick={() => setMostrarModalReporte(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full">
+              <X size={20} />
+            </button>
+            
             <div className="flex items-center gap-3 mb-4 text-red-500">
               <AlertTriangle size={24} strokeWidth={2.5} />
               <h3 className="font-black italic uppercase tracking-tighter">Reportar Usuario</h3>
             </div>
+            
             <p className="text-xs font-medium text-slate-500 mb-4">
-              ¿Por qué estás reportando a <span className="font-bold text-slate-800">{nombreContacto}</span>? Tu reporte es anónimo y nos ayuda a mantener la comunidad segura.
+              ¿Por qué estás reportando a <span className="font-bold text-slate-800">{nombreContacto}</span>? Tu reporte nos ayuda a mantener la comunidad segura.
             </p>
+
+            <select
+              value={motivoSeleccionado}
+              onChange={(e) => setMotivoSeleccionado(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-[15px] p-3 text-sm font-bold text-slate-700 outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all mb-3 appearance-none"
+            >
+              <option value="" disabled>Selecciona el motivo principal...</option>
+              <option value="Falta de respeto o acoso">Falta de respeto o acoso</option>
+              <option value="Conducción imprudente">Conducción imprudente</option>
+              <option value="Vehículo o persona no coincide">Vehículo o persona no coincide</option>
+              <option value="Problema con el pago">Problema con el pago</option>
+              <option value="No se presentó al viaje">No se presentó al viaje</option>
+              <option value="Otro">Otro motivo</option>
+            </select>
+
             <textarea
-              value={motivoReporte}
-              onChange={(e) => setMotivoReporte(e.target.value)}
-              placeholder="Explica brevemente lo sucedido..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-[20px] p-4 text-sm font-medium outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all resize-none h-28 mb-4"
+              value={descripcionReporte}
+              onChange={(e) => setDescripcionReporte(e.target.value)}
+              placeholder="Explica brevemente los detalles de lo sucedido..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-[15px] p-3 text-sm font-medium outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all resize-none h-24 mb-4"
             ></textarea>
+
             <button
               onClick={manejarReporte}
-              disabled={!motivoReporte.trim() || enviandoReporte}
+              disabled={!motivoSeleccionado || !descripcionReporte.trim() || enviandoReporte}
               className="w-full bg-red-500 hover:bg-red-600 disabled:bg-slate-300 text-white font-black italic uppercase tracking-widest text-xs py-4 rounded-full shadow-lg transition-all active:scale-95"
             >
               {enviandoReporte ? "Enviando..." : "Enviar Reporte"}
