@@ -989,30 +989,60 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                     </>
                   )}
 
-                  {subPestañaAdmin === 'reportes' && (
-                    reportesAdmin.length === 0 ? (
-                      <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay reportes activos</p>
-                    ) : (
-                      reportesAdmin.map(r => (
-                        <div key={r.id} className="bg-slate-900 border border-red-500/20 rounded-[25px] p-5 space-y-3 text-white">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><AlertCircle size={16} /></div>
-                              <div>
-                                <p className="text-[10px] font-black text-white uppercase italic tracking-tighter">Denunciado: {r.nombreReportado}</p>
-                                <p className="text-[8px] text-slate-500 font-bold uppercase">Por: {r.nombreReportador}</p>
-                              </div>
-                            </div>
-                            <button onClick={() => resolverReporte(r.id)} className="bg-slate-800 p-2 rounded-lg text-slate-400"><ShieldCheck size={16} /></button>
-                          </div>
-                          <div className="bg-slate-950/50 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[10px] font-bold text-slate-400 italic leading-relaxed">"{r.motivo}"</p>
-                          </div>
+                    {subPestañaAdmin === 'reportes' && (
+                    <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
+                      {reportesAdmin.length === 0 ? (
+                        <div className="bg-slate-900/50 p-10 rounded-[30px] border border-white/5 text-center mt-6">
+                            <ShieldCheck size={40} className="text-slate-800 mx-auto mb-3" />
+                            <p className="text-[10px] font-black text-slate-600 uppercase italic">Zona segura. No hay reportes.</p>
                         </div>
-                      ))
-                    )
-                  )}
+                      ) : (
+                        reportesAdmin.map(r => (
+                          <div key={r.id} className="bg-[#0f172a] border border-red-500/30 rounded-[30px] p-5 relative overflow-hidden shadow-xl">
+                            {/* Fondo decorativo rojo suave */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl"></div>
+                            
+                            <div className="relative z-10 flex flex-col gap-4">
+                              {/* Cabecera del Reporte */}
+                              <div className="flex items-start justify-between border-b border-white/5 pb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 shrink-0">
+                                    <AlertTriangle size={20} />
+                                  </div>
+                                  <div>
+                                    <span className="text-[7px] font-black bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
+                                    <p className="text-xs font-black text-white uppercase italic truncate">
+                                      {r.nombreReportado}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
 
+                              {/* Detalles */}
+                              <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                  <User size={10} /> Denunciante: <span className="text-slate-300">{r.nombreReportador}</span>
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-300 italic leading-relaxed border-l-2 border-red-500/50 pl-3">
+                                  "{r.motivo}"
+                                </p>
+                              </div>
+
+                              {/* Acción */}
+                              <button 
+                                onClick={() => resolverReporte(r.id)} 
+                                className="w-full bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/5"
+                              >
+                                <ShieldCheck size={16} className="text-green-500" />
+                                Marcar como Resuelto
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  
           {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
                     usuariosAdmin
                       .filter(u => {
