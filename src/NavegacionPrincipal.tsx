@@ -187,8 +187,9 @@ export default function NavegacionPrincipal({ user }) {
           ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           timestamp: Date.now(),
           mensajesSinLeer: 0,
-          estadoViaje: viaje.estado || "disponible"
-        };
+          estadoViaje: viaje.estado || "disponible",
+         participantes: [conductorId, userData.id]
+      };
         
         const nuevoChatRef = await addDoc(collection(db, "Chats"), nuevosDatos);
         chatDataCompleto = { id: nuevoChatRef.id, ...nuevosDatos };
