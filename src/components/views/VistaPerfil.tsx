@@ -1043,52 +1043,52 @@ const confirmarSancion = async (uid: string, motivo: string) => {
                       )}
                     </>
                   )}
+                  
+{subPestañaAdmin === 'reportes' && (
+  <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
+    {reportesAdmin.length === 0 ? (
+      <div className="bg-slate-900/50 p-10 rounded-[30px] border border-white/5 text-center mt-6">
+        <ShieldCheck size={40} className="text-slate-800 mx-auto mb-3" />
+        <p className="text-[10px] font-black text-slate-600 uppercase italic">Zona segura. No hay reportes.</p>
+      </div>
+    ) : (
+      // AQUÍ QUITÉ LA LLAVE EXTRA QUE CAUSABA EL ERROR
+      reportesAdmin.map(r => (
+        <div key={r.id} className="bg-[#0f172a] border border-red-500/20 rounded-[30px] p-5 relative overflow-hidden shadow-2xl">
+          {/* Fondo decorativo */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10 flex flex-col gap-4">
+            {/* Cabecera */}
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-[7px] font-black bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
+                <p className="text-sm font-black text-white uppercase italic">{r.nombreReportado}</p>
+              </div>
+              <button onClick={() => verPerfil(r.idReportado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
+            </div>
 
-                    {subPestañaAdmin === 'reportes' && (
-                    <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
-                      {reportesAdmin.length === 0 ? (
-                        <div className="bg-slate-900/50 p-10 rounded-[30px] border border-white/5 text-center mt-6">
-                            <ShieldCheck size={40} className="text-slate-800 mx-auto mb-3" />
-                            <p className="text-[10px] font-black text-slate-600 uppercase italic">Zona segura. No hay reportes.</p>
-                        </div>
-                      ) : (
-                        {reportesAdmin.map(r => (
-  <div key={r.id} className="bg-[#0f172a] border border-red-500/20 rounded-[30px] p-5 relative overflow-hidden shadow-2xl">
-    {/* Fondo decorativo */}
-    <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl"></div>
-    
-    <div className="relative z-10 flex flex-col gap-4">
-      {/* Cabecera: Nombre y botón perfil */}
-      <div className="flex justify-between items-start">
-        <div>
-          <span className="text-[7px] font-black bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
-          <p className="text-sm font-black text-white uppercase italic">{r.nombreReportado}</p>
+            {/* Detalles */}
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreReportador}</p>
+              <p className="text-[11px] text-slate-300 italic border-l-2 border-red-500/30 pl-3 leading-tight">"{r.motivo}"</p>
+            </div>
+
+            {/* Acciones */}
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => verHistorial(r.idReportado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all">Historial</button>
+              <button onClick={() => resolverReporte(r.id)} className="bg-green-900/20 border border-green-500/20 p-3 rounded-2xl text-[9px] font-black uppercase text-green-400 hover:bg-green-900/40 transition-all">Resolver</button>
+            </div>
+            
+            <button onClick={() => aplicarSancion(r.idReportado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
+              Aplicar Sanción / Banear
+            </button>
+          </div>
         </div>
-        <button onClick={() => verPerfil(r.idReportado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
-      </div>
-
-      {/* Detalles */}
-      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-        <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreReportador}</p>
-        <p className="text-[11px] text-slate-300 italic border-l-2 border-red-500/30 pl-3 leading-tight">"{r.motivo}"</p>
-      </div>
-
-      {/* Acciones en cuadrícula */}
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={() => verHistorial(r.idReportado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all">Historial</button>
-        <button onClick={() => resolverReporte(r.id)} className="bg-green-900/20 border border-green-500/20 p-3 rounded-2xl text-[9px] font-black uppercase text-green-400 hover:bg-green-900/40 transition-all">Resolver</button>
-      </div>
-      
-      {/* Acción crítica */}
-      <button onClick={() => aplicarSancion(r.idReportado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
-        Aplicar Sanción / Banear
-      </button>
-    </div>
+      ))
+    )}
   </div>
-))}
-                      )}
-                    </div>
-                  )}
+)}
 
                   
           {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
