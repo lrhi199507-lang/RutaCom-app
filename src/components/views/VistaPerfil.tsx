@@ -317,27 +317,32 @@ const confirmarSancion = async (uid: string, motivo: string) => {
   };
   
   const cargarDatosAdmin = async () => {
-    setCargando(true);
-    try {
-      const snapUsers = await getDocs(collection(db, "usuarios"));
-      setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
+  setCargando(true);
+  try {
+    const [snapUsers, snapReports, snapPagos, snapAdmin, snapSoporte] = await Promise.all([
+      getDocs(collection(db, "usuarios")),
+      getDocs(collection(db, "Reportes")),
+      getDocs(query(collection(db, "PagosPendientes"), where("estado", "==", "pendiente"))),
+      getDocs(query(collection(db, "Transacciones"), where("uid", "==", "ADMIN_APP"), orderBy("fecha", "desc"))),
+      getDocs(query(collection(db, "Chats"), where("esSoporte", "==", true)))
+    ]);
+
+    setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
+    setReportesAdmin(snapReports.docs.map(d => ({ 
+      id: d.id, 
+      ...d.data() 
+    })));
+    setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })));
+    setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
+    setChatsSoporteAdmin(snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.ultimaHora || "").localeCompare(a.ultimaHora || "")));
       
-      const snapReports = await getDocs(collection(db, "Reportes"));
-      setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      const snapPagos = await getDocs(collection(db, "PagosPendientes"));
-      setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })).filter((p: any) => p.estado === 'pendiente'));
-
-      const qAdmin = query(collection(db, "Transacciones"), where("uid", "==", "ADMIN_APP"), orderBy("fecha", "desc"));
-      const snapAdmin = await getDocs(qAdmin);
-      setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      const qSoporte = query(collection(db, "Chats"), where("esSoporte", "==", true));
-      const snapSoporte = await getDocs(qSoporte);
-      setChatsSoporteAdmin(
-        snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => (b.ultimaHora || "").localeCompare(a.ultimaHora || ""))
-      );
+  } catch (e) {
+    console.error("Error crítico de carga:", e);
+  } finally {
+    setCargando(false);
+  }
+};
 
       const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
       if (docFinanzas.exists()) {
@@ -1057,7 +1062,6 @@ const confirmarSancion = async (uid: string, motivo: string) => {
         <p className="text-[10px] font-black text-slate-600 uppercase italic">Zona segura. No hay reportes.</p>
       </div>
     ) : (
-      // AQUÍ QUITÉ LA LLAVE EXTRA QUE CAUSABA EL ERROR
       reportesAdmin.map(r => (
         <div key={r.id} className="bg-[#0f172a] border border-red-500/20 rounded-[30px] p-5 relative overflow-hidden shadow-2xl">
           {/* Fondo decorativo */}
@@ -1068,24 +1072,24 @@ const confirmarSancion = async (uid: string, motivo: string) => {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[7px] font-black bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
-                <p className="text-sm font-black text-white uppercase italic">{r.nombreReportado}</p>
+                <p className="text-sm font-black text-white uppercase italic">{r.nombreDenunciado}</p>
               </div>
-              <button onClick={() => verPerfil(r.idReportado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
+              <button onClick={() => verPerfil(r.idDenunciado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
             </div>
 
             {/* Detalles */}
             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreReportador}</p>
-              <p className="text-[11px] text-slate-300 italic border-l-2 border-red-500/30 pl-3 leading-tight">"{r.motivo}"</p>
+              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreDenunciante}</p>
+              <p className="text-[11px] text-slate-300 italic border-l-2 border-red-500/30 pl-3 leading-tight">"{r.descripcion}"</p>
             </div>
 
             {/* Acciones */}
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => verHistorial(r.idReportado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all">Historial</button>
+              <button onClick={() => verHistorial(r.idDenunciado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all">Historial</button>
               <button onClick={() => resolverReporte(r.id)} className="bg-green-900/20 border border-green-500/20 p-3 rounded-2xl text-[9px] font-black uppercase text-green-400 hover:bg-green-900/40 transition-all">Resolver</button>
             </div>
             
-            <button onClick={() => aplicarSancion(r.idReportado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
+            <button onClick={() => aplicarSancion(r.idDenunciado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
               Aplicar Sanción / Banear
             </button>
           </div>
@@ -1094,7 +1098,7 @@ const confirmarSancion = async (uid: string, motivo: string) => {
     )}
   </div>
 )}
-
+                  
                   
           {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
                     usuariosAdmin
