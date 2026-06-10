@@ -317,12 +317,9 @@ const confirmarSancion = async (uid: string, motivo: string) => {
   };
   
   const cargarDatosAdmin = async () => {
-  // 1. Verificación rápida antes de ejecutar
-  if (cargando) return; 
-
   setCargando(true);
-  
   try {
+    // 1. Carga paralela de colecciones
     const [snapUsers, snapReports, snapPagos, snapAdmin, snapSoporte] = await Promise.all([
       getDocs(collection(db, "usuarios")),
       getDocs(collection(db, "Reportes")),
@@ -331,24 +328,24 @@ const confirmarSancion = async (uid: string, motivo: string) => {
       getDocs(query(collection(db, "Chats"), where("esSoporte", "==", true)))
     ]);
 
-    // 2. Mapeo limpio usando una función auxiliar si es necesario para evitar redundancia
-    const formatData = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    setUsuariosAdmin(formatData(snapUsers));
-    setReportesAdmin(formatData(snapReports));
-    setPagosAdmin(formatData(snapPagos));
-    setTransaccionesAdmin(formatData(snapAdmin));
-    
-    // 3. Lógica de ordenamiento específica para chats
-    const chatsOrdenados = formatData(snapSoporte).sort((a, b) => 
-      (b.ultimaHora || "").localeCompare(a.ultimaHora || "")
-    );
-    setChatsSoporteAdmin(chatsOrdenados);
+    setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
+    setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
+    setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })));
+    setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
+    setChatsSoporteAdmin(snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.ultimaHora || "").localeCompare(a.ultimaHora || "")));
       
+    // 2. Carga secuencial de Finanzas (dentro del mismo bloque try)
+    const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
+    if (docFinanzas.exists()) {
+      const data = docFinanzas.data();
+      setTasaActual(data.tasaBCV || 0);
+      setBalanceApp(data.gananciasTotales || 0);
+      if (data.bancoAdmin) setBancoAdmin(data.bancoAdmin);
+    }
+
   } catch (e) {
-    // 4. Feedback al usuario (importante si estás en móvil)
-    console.error("Error al sincronizar dashboard:", e);
-    alert("Error al cargar datos. Verifica tu conexión.");
+    console.error("Error crítico de carga:", e);
   } finally {
     setCargando(false);
   }
@@ -673,11 +670,6 @@ const confirmarSancion = async (uid: string, motivo: string) => {
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
 
-  useEffect(() => {
-  console.log("Datos de reportes cargados:", reportesAdmin);
-}, [reportesAdmin]);
-
-  
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
       {toast && (
