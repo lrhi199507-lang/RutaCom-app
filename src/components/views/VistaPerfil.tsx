@@ -486,16 +486,29 @@ const confirmarSancion = async (uid: string, motivo: string) => {
 };
 
   const resolverReporte = async (reporteId: string) => {
-    if(!window.confirm("¿Marcar este reporte como revisado?")) return;
-    try {
-      const { deleteDoc } = await import('firebase/firestore');
-      await deleteDoc(doc(db, "Reportes", reporteId));
-      setReportesAdmin(reportesAdmin.filter(r => r.id !== reporteId));
-    } catch (e) { 
-      setToast({ texto: "Error al eliminar", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    }
-  };
+  // Confirmación visual antes de hacer nada
+  const confirmar = window.confirm("¿Marcar este reporte como resuelto?");
+  if (!confirmar) return;
+
+  setCargando(true);
+  try {
+    await updateDoc(doc(db, "Reportes", reporteId), {
+      estado: "resuelto",
+      fechaResolucion: new Date().toISOString(),
+      resueltoPor: "ADMIN_DAMELACOLA" // O el email del auth actual
+    });
+    
+    // Recargar datos inmediatamente para ver el cambio
+    await cargarDatosAdmin();
+    setToast({ texto: "Reporte marcado como resuelto", tipo: "exito" });
+  } catch (e) {
+    console.error(e);
+    setToast({ texto: "Error al actualizar", tipo: "error" });
+  } finally {
+    setCargando(false);
+  }
+};
+
 
   const aprobarUsuario = async (userId: string) => {
   setCargando(true);
@@ -1085,9 +1098,15 @@ const confirmarSancion = async (uid: string, motivo: string) => {
 
             {/* Acciones */}
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => verHistorial(r.idDenunciado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all">Historial</button>
-              <button onClick={() => resolverReporte(r.id)} className="bg-green-900/20 border border-green-500/20 p-3 rounded-2xl text-[9px] font-black uppercase text-green-400 hover:bg-green-900/40 transition-all">Resolver</button>
-            </div>
+   <button  onClick={() => verHistorial(r.idDenunciado)}  className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all" >
+    Historial
+  </button>
+     <button  onClick={() => resolverReporte(r.id)}  disabled={r.estado === 'resuelto'}  className={`p-3 rounded-2xl text-[9px] font-black uppercase transition-all ${ r.estado === 'resuelto' 
+        ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed' 
+        : 'bg-green-900/20 border border-green-500/20 text-green-400 hover:bg-green-900/40'  }`}  >
+    {r.estado === 'resuelto' ? 'RESUELTO' : 'RESOLVER'}
+  </button>
+</div>
             
             <button onClick={() => aplicarSancion(r.idDenunciado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
               Aplicar Sanción / Banear
