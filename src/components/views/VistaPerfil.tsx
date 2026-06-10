@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { App } from '@capacitor/app';
 import { db, storage } from '../../firebaseConfig';
-import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, collection, increment, getDoc, query, where, orderBy, addDoc, limit } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -10,7 +10,7 @@ import {
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, RefreshCw, AlertCircle, AlertTriangle,
   Car, Palette, Hash, Gauge, LogOut, Camera, X, DollarSign, ArrowUpRight, 
-  TrendingUp, History, Landmark, Settings, Headset, MessageCircle, Image as ImageIcon, Upload // 🔥 Agregamos Upload
+  TrendingUp, History, Landmark, Settings, Headset, MessageCircle, Image as ImageIcon, Upload
 } from 'lucide-react';
 
 const auth = getAuth();
@@ -43,9 +43,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [bancoAdmin, setBancoAdmin] = useState({ banco: "", telefono: "", cedula: "" });
 
   // Estados para el Modal de Administración
-const [modalAdmin, setModalAdmin] = useState<{tipo: 'historial' | 'accion', data: any | null}>({tipo: 'historial', data: null});
-const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
-  
+  const [modalAdmin, setModalAdmin] = useState<{tipo: 'historial' | 'accion', data: any | null}>({tipo: 'historial', data: null});
+  const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
   
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
@@ -57,7 +56,7 @@ const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
         if (isActive && auth.currentUser) {
           try {
             await auth.currentUser.reload();
-            setUserData((prev) => prev ? { ...prev } : prev);
+            setUserData((prev: any) => prev ? { ...prev } : prev);
           } catch (error) {
             console.error("Error recargando auth:", error);
           }
@@ -101,55 +100,60 @@ const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
   };
 
   // 1. Ver Perfil completo del usuario
-const verPerfil = async (uid: string) => {
-  if (!uid || uid === 'undefined') {
-    setToast({ texto: "Error: ID de usuario no válido", tipo: "error" });
-    return;
-  }
+  const verPerfil = async (uid: string) => {
+    if (!uid || uid === 'undefined') {
+      setToast({ texto: "Error: ID de usuario no válido", tipo: "error" });
+      return;
+    }
+    // Lógica para ver perfil aquí
+  };
 
-// 2. Ver Historial de reportes del usuario
-const verHistorial = async (uid: string) => {
-  setCargando(true);
-  try {
-    // 1. Buscar Reportes
-    const qReportes = query(collection(db, "Reportes"), where("idReportado", "==", uid));
-    const snapReportes = await getDocs(qReportes);
-    
-    // 2. Buscar últimos 5 Viajes (ejemplo de control de calidad)
-    const qViajes = query(collection(db, "Viajes"), where("uidConductor", "==", uid), orderBy("fecha", "desc"));
-    const snapViajes = await getDocs(qViajes);
-    
-    const reportes = snapReportes.docs.map(d => ({ tipo: 'REPORTE', ...d.data() }));
-    const viajes = snapViajes.docs.slice(0, 5).map(d => ({ tipo: 'VIAJE', ...d.data() }));
-    
-    setHistorialUsuario([...reportes, ...viajes]);
-    setModalAdmin({tipo: 'historial', data: uid});
-  } catch (e) { 
-    console.error("Error al cargar historial:", e); 
-    setToast({ texto: "Error al cargar historial", tipo: "error" });
-  } finally { 
-    setCargando(false); 
-  }
-};
+  // 2. Ver Historial de reportes del usuario
+  const verHistorial = async (uid: string) => {
+    setCargando(true);
+    try {
+      // Buscar Reportes
+      const qReportes = query(collection(db, "Reportes"), where("idReportado", "==", uid));
+      const snapReportes = await getDocs(qReportes);
+      
+      // Buscar últimos 5 Viajes
+      const qViajes = query(collection(db, "Viajes"), where("uidConductor", "==", uid), orderBy("fecha", "desc"));
+      const snapViajes = await getDocs(qViajes);
+      
+      const reportes = snapReportes.docs.map(d => ({ tipo: 'REPORTE', ...d.data() }));
+      const viajes = snapViajes.docs.slice(0, 5).map(d => ({ tipo: 'VIAJE', ...d.data() }));
+      
+      setHistorialUsuario([...reportes, ...viajes]);
+      setModalAdmin({tipo: 'historial', data: uid});
+    } catch (e) { 
+      console.error("Error al cargar historial:", e); 
+      setToast({ texto: "Error al cargar historial", tipo: "error" });
+    } finally { 
+      setCargando(false); 
+    }
+  };
 
-const aplicarSancion = async (uid: string) => {
-  setModalAdmin({tipo: 'accion', data: uid});
-};
+  const aplicarSancion = async (uid: string) => {
+    setModalAdmin({tipo: 'accion', data: uid});
+  };
 
-const confirmarSancion = async (uid: string, motivo: string) => {
-  setCargando(true);
-  try {
-    await updateDoc(doc(db, "usuarios", uid), {
-      cuentaSuspendida: true,
-      mensajeAdmin: motivo
-    });
-    setToast({ texto: "Usuario suspendido correctamente", tipo: "exito" });
-    setModalAdmin({tipo: 'accion', data: null});
-    await cargarDatosAdmin();
-  } catch (e) { setToast({ texto: "Error al sancionar", tipo: "error" }); } finally { setCargando(false); }
-};
+  const confirmarSancion = async (uid: string, motivo: string) => {
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "usuarios", uid), {
+        cuentaSuspendida: true,
+        mensajeAdmin: motivo
+      });
+      setToast({ texto: "Usuario suspendido correctamente", tipo: "exito" });
+      setModalAdmin({tipo: 'accion', data: null});
+      await cargarDatosAdmin();
+    } catch (e) { 
+      setToast({ texto: "Error al sancionar", tipo: "error" }); 
+    } finally { 
+      setCargando(false); 
+    }
+  };
   
-
   const calcularSiguienteNivel = () => {
     const total = totalTrayectoria;
     if (total < 10) return { meta: 10, faltan: 10 - total, nombre: "PLATA" };
@@ -253,14 +257,13 @@ const confirmarSancion = async (uid: string, motivo: string) => {
     }
   };
   
-    // 🔥 LÓGICA DE CAPTURA BLINDADA Y DIRECTA 🔥
   const capturarDocumento = async (origen: CameraSource) => {
     try {
       const image = await CapacitorCamera.getPhoto({ 
         quality: 60, 
         width: 1000, 
         resultType: CameraResultType.DataUrl, 
-        source: origen, // Ahora recibe explícitamente Cámara o Fotos
+        source: origen,
         saveToGallery: false 
       });
       if (image.dataUrl) setFotoDocTemporal(image.dataUrl);
@@ -317,40 +320,24 @@ const confirmarSancion = async (uid: string, motivo: string) => {
   };
   
   const cargarDatosAdmin = async () => {
-  setCargando(true);
-  try {
-    // 1. Carga paralela de colecciones
-    const [snapUsers, snapReports, snapPagos, snapAdmin, snapSoporte] = await Promise.all([
-      getDocs(collection(db, "usuarios")),
-      getDocs(collection(db, "Reportes")),
-      getDocs(query(collection(db, "PagosPendientes"), where("estado", "==", "pendiente"))),
-      getDocs(query(collection(db, "Transacciones"), where("uid", "==", "ADMIN_APP"), orderBy("fecha", "desc"))),
-      getDocs(query(collection(db, "Chats"), where("esSoporte", "==", true)))
-    ]);
+    setCargando(true);
+    try {
+      // Límites agregados para no colapsar la app cuando llegues a miles de usuarios
+      const [snapUsers, snapReports, snapPagos, snapAdmin, snapSoporte] = await Promise.all([
+        getDocs(query(collection(db, "usuarios"), limit(50))), 
+        getDocs(query(collection(db, "Reportes"), limit(30))),
+        getDocs(query(collection(db, "PagosPendientes"), where("estado", "==", "pendiente"), limit(50))),
+        getDocs(query(collection(db, "Transacciones"), where("uid", "==", "ADMIN_APP"), orderBy("fecha", "desc"), limit(20))),
+        getDocs(query(collection(db, "Chats"), where("esSoporte", "==", true), limit(20)))
+      ]);
 
-    setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
-    setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
-    setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })));
-    setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
-    setChatsSoporteAdmin(snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.ultimaHora || "").localeCompare(a.ultimaHora || "")));
-      
-    // 2. Carga secuencial de Finanzas (dentro del mismo bloque try)
-    const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
-    if (docFinanzas.exists()) {
-      const data = docFinanzas.data();
-      setTasaActual(data.tasaBCV || 0);
-      setBalanceApp(data.gananciasTotales || 0);
-      if (data.bancoAdmin) setBancoAdmin(data.bancoAdmin);
-    }
-
-  } catch (e) {
-    console.error("Error crítico de carga:", e);
-  } finally {
-    setCargando(false);
-  }
-};
-
+      setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
+      setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
+      setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })));
+      setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
+      setChatsSoporteAdmin(snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.ultimaHora || "").localeCompare(a.ultimaHora || "")));
+        
       const docFinanzas = await getDoc(doc(db, "Configuracion", "Finanzas"));
       if (docFinanzas.exists()) {
         const data = docFinanzas.data();
@@ -358,10 +345,11 @@ const confirmarSancion = async (uid: string, motivo: string) => {
         setBalanceApp(data.gananciasTotales || 0);
         if (data.bancoAdmin) setBancoAdmin(data.bancoAdmin);
       }
-    } catch (e) { 
-      console.error("Error cargando admin:", e); 
-    } finally { 
-      setCargando(false); 
+
+    } catch (e) {
+      console.error("Error crítico de carga:", e);
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -393,193 +381,191 @@ const confirmarSancion = async (uid: string, motivo: string) => {
   };
 
   const aprobarPago = async (pago: any) => {
-  if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
-  setCargando(true);
-  try {
-    await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
-    await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
-    
-    await addDoc(collection(db, "Transacciones"), {
-      uid: pago.uid, tipo: "ingreso", monto: pago.monto,
-      descripcion: "Recarga de saldo aprobada", fecha: new Date().toISOString()
-    });
-
-    await addDoc(collection(db, "Notificaciones"), {
-      idDestino: pago.uid,
-      titulo: "💰 Recarga Exitosa",
-      mensaje: `Tu recarga de $${pago.monto} ha sido aprobada y acreditada en tu billetera.`,
-      timestamp: Date.now(),
-      leido: false,
-      tipo: "billetera"
-    });
-
-    setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
-    setToast({ texto: `¡$${pago.monto} acreditados y notificados!`, tipo: "exito" });
-    setTimeout(() => setToast(null), 3000);
-  } catch (error) {
-    setToast({ texto: "Error al aprobar", tipo: "error" });
-    setTimeout(() => setToast(null), 3000);
-  } finally { setCargando(false); }
-};
-  
-  const marcarRetiroComoPagado = async (pago: any) => {
-  if(!window.confirm(`¿Confirmas que ya transferiste a ${pago.nombre}?`)) return;
-  setCargando(true);
-  try {
-    await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
-    await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(-pago.monto), saldoRetenido: increment(-pago.monto) });
-
-    await addDoc(collection(db, "Transacciones"), {
-      uid: pago.uid, tipo: "gasto", monto: pago.monto,
-      descripcion: "Retiro de dinero procesado", fecha: new Date().toISOString()
-    });
-
-    await addDoc(collection(db, "Notificaciones"), {
-      idDestino: pago.uid,
-      titulo: "💸 Retiro Completado",
-      mensaje: `Tu retiro de $${pago.monto} ha sido procesado. Verifica tu cuenta bancaria.`,
-      timestamp: Date.now(),
-      leido: false,
-      tipo: "billetera"
-    });
-
-    setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
-    setToast({ texto: "Retiro pagado y usuario notificado", tipo: "exito" });
-    setTimeout(() => setToast(null), 3000);
-  } catch (error) {
-    setToast({ texto: "Error al procesar", tipo: "error" });
-    setTimeout(() => setToast(null), 3000);
-  } finally { setCargando(false); }
-};
-  
-  const rechazarPago = async (pago: any) => {
-  if(!window.confirm(pago.tipo === 'retiro' ? '¿Rechazar retiro y devolver fondos a su Wallet?' : '¿Rechazar recarga?')) return;
-  setCargando(true);
-  try {
-    await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
-    
-    let tituloNotif = "";
-    let mensajeNotif = "";
-
-    if (pago.tipo === 'retiro') {
-      await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
+    if(!window.confirm(`¿Aprobar recarga de $${pago.monto} para ${pago.nombre}?`)) return;
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
+      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+      
       await addDoc(collection(db, "Transacciones"), {
         uid: pago.uid, tipo: "ingreso", monto: pago.monto,
-        descripcion: "Devolución por retiro rechazado", fecha: new Date().toISOString()
+        descripcion: "Recarga de saldo aprobada", fecha: new Date().toISOString()
       });
-      tituloNotif = "❌ Retiro Rechazado";
-      mensajeNotif = `Tu solicitud de retiro por $${pago.monto} fue rechazada. Los fondos han regresado a tu billetera. Verifica tus datos de pago móvil.`;
-    } else {
-      tituloNotif = "❌ Recarga Rechazada";
-      mensajeNotif = `No pudimos validar tu recarga de $${pago.monto}. Por favor, verifica el número de referencia y que el capture sea legible.`;
-    }
 
-    await addDoc(collection(db, "Notificaciones"), {
-      idDestino: pago.uid,
-      titulo: tituloNotif,
-      mensaje: mensajeNotif,
-      timestamp: Date.now(),
-      leido: false,
-      tipo: "alerta"
-    });
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: pago.uid,
+        titulo: "💰 Recarga Exitosa",
+        mensaje: `Tu recarga de $${pago.monto} ha sido aprobada y acreditada en tu billetera.`,
+        timestamp: Date.now(),
+        leido: false,
+        tipo: "billetera"
+      });
 
-    setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
-    setToast({ texto: "Movimiento rechazado y notificado", tipo: "exito" });
-    setTimeout(() => setToast(null), 3000);
-  } catch (error) {
-    setToast({ texto: "Error al rechazar", tipo: "error" });
-    setTimeout(() => setToast(null), 3000);
-  } finally { setCargando(false); }
-};
+      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+      setToast({ texto: `¡$${pago.monto} acreditados y notificados!`, tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast({ texto: "Error al aprobar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
+  
+  const marcarRetiroComoPagado = async (pago: any) => {
+    if(!window.confirm(`¿Confirmas que ya transferiste a ${pago.nombre}?`)) return;
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
+      await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(-pago.monto), saldoRetenido: increment(-pago.monto) });
+
+      await addDoc(collection(db, "Transacciones"), {
+        uid: pago.uid, tipo: "gasto", monto: pago.monto,
+        descripcion: "Retiro de dinero procesado", fecha: new Date().toISOString()
+      });
+
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: pago.uid,
+        titulo: "💸 Retiro Completado",
+        mensaje: `Tu retiro de $${pago.monto} ha sido procesado. Verifica tu cuenta bancaria.`,
+        timestamp: Date.now(),
+        leido: false,
+        tipo: "billetera"
+      });
+
+      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+      setToast({ texto: "Retiro pagado y usuario notificado", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast({ texto: "Error al procesar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
+  
+  const rechazarPago = async (pago: any) => {
+    if(!window.confirm(pago.tipo === 'retiro' ? '¿Rechazar retiro y devolver fondos a su Wallet?' : '¿Rechazar recarga?')) return;
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
+      
+      let tituloNotif = "";
+      let mensajeNotif = "";
+
+      if (pago.tipo === 'retiro') {
+        await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
+        await addDoc(collection(db, "Transacciones"), {
+          uid: pago.uid, tipo: "ingreso", monto: pago.monto,
+          descripcion: "Devolución por retiro rechazado", fecha: new Date().toISOString()
+        });
+        tituloNotif = "❌ Retiro Rechazado";
+        mensajeNotif = `Tu solicitud de retiro por $${pago.monto} fue rechazada. Los fondos han regresado a tu billetera. Verifica tus datos de pago móvil.`;
+      } else {
+        tituloNotif = "❌ Recarga Rechazada";
+        mensajeNotif = `No pudimos validar tu recarga de $${pago.monto}. Por favor, verifica el número de referencia y que el capture sea legible.`;
+      }
+
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: pago.uid,
+        titulo: tituloNotif,
+        mensaje: mensajeNotif,
+        timestamp: Date.now(),
+        leido: false,
+        tipo: "alerta"
+      });
+
+      setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
+      setToast({ texto: "Movimiento rechazado y notificado", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast({ texto: "Error al rechazar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
 
   const resolverReporte = async (reporteId: string) => {
-  const confirmar = window.confirm("¿Marcar este reporte como resuelto?");
-  if (!confirmar) return;
+    const confirmar = window.confirm("¿Marcar este reporte como resuelto?");
+    if (!confirmar) return;
 
-  setCargando(true);
-  try {
-    // Obtenemos el email del admin actual para la auditoría
-    const adminEmail = auth.currentUser?.email || "desconocido";
+    setCargando(true);
+    try {
+      const adminEmail = auth.currentUser?.email || "desconocido";
 
-    await updateDoc(doc(db, "Reportes", reporteId), {
-      estado: "resuelto",
-      // PISTA DE AUDITORÍA
-      auditoria: {
-        accion: "resolucion_reporte",
-        realizadoPor: adminEmail,
-        timestamp: new Date().toISOString()
-      }
-    });
-    
-    await cargarDatosAdmin();
-    setToast({ texto: "Reporte resuelto y auditado", tipo: "exito" });
-  } catch (e) {
-    console.error(e);
-    setToast({ texto: "Error al actualizar", tipo: "error" });
-  } finally {
-    setCargando(false);
-  }
-};
+      await updateDoc(doc(db, "Reportes", reporteId), {
+        estado: "resuelto",
+        auditoria: {
+          accion: "resolucion_reporte",
+          realizadoPor: adminEmail,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+      await cargarDatosAdmin();
+      setToast({ texto: "Reporte resuelto y auditado", tipo: "exito" });
+    } catch (e) {
+      console.error(e);
+      setToast({ texto: "Error al actualizar", tipo: "error" });
+    } finally {
+      setCargando(false);
+    }
+  };
 
   const aprobarUsuario = async (userId: string) => {
-  setCargando(true);
-  try {
-    await updateDoc(doc(db, "usuarios", userId), {
-      kycVerificado: true, licenciaVerificada: true, circulacionVerificada: true,
-      rcvVerificado: true, fotoFrontalVerificada: true, fotoTraseraVerificada: true,
-      fotoLatIzqVerificada: true, fotoLatDerVerificada: true, selfieVerificada: true,
-      estadoRevision: "aprobado",
-      mensajeAdmin: ""
-    });
+    setCargando(true);
+    try {
+      await updateDoc(doc(db, "usuarios", userId), {
+        kycVerificado: true, licenciaVerificada: true, circulacionVerificada: true,
+        rcvVerificado: true, fotoFrontalVerificada: true, fotoTraseraVerificada: true,
+        fotoLatIzqVerificada: true, fotoLatDerVerificada: true, selfieVerificada: true,
+        estadoRevision: "aprobado",
+        mensajeAdmin: ""
+      });
 
-    await addDoc(collection(db, "Notificaciones"), {
-      idDestino: userId, 
-      titulo: "✅ ¡Cuenta Verificada!",
-      mensaje: "Tus documentos han sido aprobados. Ya puedes empezar a generar ingresos con Dame la cola.",
-      timestamp: Date.now(),
-      leido: false,
-      tipo: "sistema"
-    });
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: userId, 
+        titulo: "✅ ¡Cuenta Verificada!",
+        mensaje: "Tus documentos han sido aprobados. Ya puedes empezar a generar ingresos con Dame la cola.",
+        timestamp: Date.now(),
+        leido: false,
+        tipo: "sistema"
+      });
 
-    setToast({ texto: "¡Usuario Verificado y Notificado!", tipo: "exito" });
-    setTimeout(() => setToast(null), 3000);
-    await cargarDatosAdmin();
-  } catch (e) { 
-    setToast({ texto: "Error de permisos", tipo: "error" });
-    setTimeout(() => setToast(null), 3000);
-  } finally { setCargando(false); }
-};
+      setToast({ texto: "¡Usuario Verificado y Notificado!", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+      await cargarDatosAdmin();
+    } catch (e) { 
+      setToast({ texto: "Error de permisos", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
   
   const rechazarDocumentos = async (userId: string) => {
-  if (!window.confirm("¿Rechazar fotos?")) return;
-  try {
-    await updateDoc(doc(db, "usuarios", userId), {
-      kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false,
-      fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false,
-      licenciaVerificada: false, rcvVerificado: false,
-      kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null,
-      licenciaFoto: null, rcvFoto: null,
-      estadoRevision: "rechazado", 
-      mensajeAdmin: "Tus documentos fueron rechazados. Por favor, súbelos nuevamente con mayor claridad."
-    });
+    if (!window.confirm("¿Rechazar fotos?")) return;
+    try {
+      await updateDoc(doc(db, "usuarios", userId), {
+        kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false,
+        fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false,
+        licenciaVerificada: false, rcvVerificado: false,
+        kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null,
+        licenciaFoto: null, rcvFoto: null,
+        estadoRevision: "rechazado", 
+        mensajeAdmin: "Tus documentos fueron rechazados. Por favor, súbelos nuevamente con mayor claridad."
+      });
 
-    await addDoc(collection(db, "Notificaciones"), {
-      idDestino: userId,
-      titulo: "⚠️ Documentos Rechazados",
-      mensaje: "Algunas de tus fotos no cumplen los requisitos. Revisa tu perfil y vuelve a subirlas para activar tu cuenta.",
-      timestamp: Date.now(),
-      leido: false,
-      tipo: "alerta"
-    });
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: userId,
+        titulo: "⚠️ Documentos Rechazados",
+        mensaje: "Algunas de tus fotos no cumplen los requisitos. Revisa tu perfil y vuelve a subirlas para activar tu cuenta.",
+        timestamp: Date.now(),
+        leido: false,
+        tipo: "alerta"
+      });
 
-    setToast({ texto: "Documentos eliminados y usuario notificado", tipo: "exito" });
-    setTimeout(() => setToast(null), 3000);
-    await cargarDatosAdmin(); 
-  } catch (e) { 
-    setToast({ texto: "Error al rechazar", tipo: "error" });
-    setTimeout(() => setToast(null), 3000);
-  }
-};
+      setToast({ texto: "Documentos eliminados y usuario notificado", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+      await cargarDatosAdmin(); 
+    } catch (e) { 
+      setToast({ texto: "Error al rechazar", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
 
   const suspenderUsuario = async (userId: string) => {
     if (!window.confirm("¿SUSPENDER esta cuenta?")) return;
@@ -605,7 +591,7 @@ const confirmarSancion = async (uid: string, motivo: string) => {
     } finally { setCargando(false); }
   };
 
-    const [modalClave, setModalClave] = useState(false);
+  const [modalClave, setModalClave] = useState(false);
   const [passActual, setPassActual] = useState('');
   const [passNueva, setPassNueva] = useState('');
 
@@ -634,7 +620,7 @@ const confirmarSancion = async (uid: string, motivo: string) => {
     }
   };
   
-    const verificarCuentaCorreo = async () => {
+  const verificarCuentaCorreo = async () => {
     if (auth.currentUser) {
       try {
         await addDoc(collection(db, "Notificaciones"), {
@@ -877,7 +863,7 @@ const confirmarSancion = async (uid: string, motivo: string) => {
               <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} className={cargando ? 'animate-spin' : ''}/></button>
             </div>
 
-                        <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
+            <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
               <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Pendientes</button>
               <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Usuarios</button>
               <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
@@ -885,7 +871,6 @@ const confirmarSancion = async (uid: string, motivo: string) => {
               <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
               <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
             </div>
-            
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
               {cargando ? (
@@ -995,7 +980,6 @@ const confirmarSancion = async (uid: string, motivo: string) => {
                         <button disabled={cargando} onClick={guardarDatosBancarios} className="w-full bg-blue-600 disabled:opacity-50 text-white p-3 rounded-2xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all mt-2">Guardar Datos de Cobro</button>
                       </div>
                       
-
                       {pagosAdmin.length === 0 ? (
                         <p className="text-center text-slate-700 font-black uppercase italic text-[10px] mt-20">No hay pagos pendientes</p>
                       ) : (
@@ -1073,59 +1057,54 @@ const confirmarSancion = async (uid: string, motivo: string) => {
                     </>
                   )}
                   
-{subPestañaAdmin === 'reportes' && (
-  <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
-    {reportesAdmin.length === 0 ? (
-      <div className="bg-slate-900/50 p-10 rounded-[30px] border border-white/5 text-center mt-6">
-        <ShieldCheck size={40} className="text-slate-800 mx-auto mb-3" />
-        <p className="text-[10px] font-black text-slate-600 uppercase italic">Zona segura. No hay reportes.</p>
-      </div>
-    ) : (
-      reportesAdmin.map(r => (
-        <div key={r.id} className="bg-[#0f172a] border border-red-500/20 rounded-[30px] p-5 relative overflow-hidden shadow-2xl">
-          {/* Fondo decorativo */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl"></div>
-          
-          <div className="relative z-10 flex flex-col gap-4">
-            {/* Cabecera */}
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-[7px] font-black bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
-                <p className="text-sm font-black text-white uppercase italic">{r.nombreDenunciado}</p>
-              </div>
-              <button onClick={() => verPerfil(r.idDenunciado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
-            </div>
+                  {subPestañaAdmin === 'reportes' && (
+                    <div className="space-y-4 animate-in slide-in-from-bottom duration-400">
+                      {reportesAdmin.length === 0 ? (
+                        <div className="bg-slate-900/50 p-10 rounded-[30px] border border-white/5 text-center mt-6">
+                          <ShieldCheck size={40} className="text-slate-800 mx-auto mb-3" />
+                          <p className="text-[10px] font-black text-slate-600 uppercase italic">Zona segura. No hay reportes.</p>
+                        </div>
+                      ) : (
+                        reportesAdmin.map(r => (
+                          <div key={r.id} className="bg-[#0f172a] border border-red-500/20 rounded-[30px] p-5 relative overflow-hidden shadow-2xl">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl"></div>
+                            
+                            <div className="relative z-10 flex flex-col gap-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <span className="text-[7px] font-black bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-1 inline-block">Reporte Activo</span>
+                                  <p className="text-sm font-black text-white uppercase italic">{r.nombreDenunciado}</p>
+                                </div>
+                                <button onClick={() => verPerfil(r.idDenunciado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
+                              </div>
 
-            {/* Detalles */}
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreDenunciante}</p>
-              <p className="text-[11px] text-slate-300 italic border-l-2 border-red-500/30 pl-3 leading-tight">"{r.descripcion}"</p>
-            </div>
+                              <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                                <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreDenunciante}</p>
+                                <p className="text-[11px] text-slate-300 italic border-l-2 border-red-500/30 pl-3 leading-tight">"{r.descripcion}"</p>
+                              </div>
 
-            {/* Acciones */}
-            <div className="grid grid-cols-2 gap-2">
-   <button  onClick={() => verHistorial(r.idDenunciado)}  className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all" >
-    Historial
-  </button>
-     <button  onClick={() => resolverReporte(r.id)}  disabled={r.estado === 'resuelto'}  className={`p-3 rounded-2xl text-[9px] font-black uppercase transition-all ${ r.estado === 'resuelto' 
-        ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed' 
-        : 'bg-green-900/20 border border-green-500/20 text-green-400 hover:bg-green-900/40'  }`}  >
-    {r.estado === 'resuelto' ? 'RESUELTO' : 'RESOLVER'}
-  </button>
-</div>
-            
-            <button onClick={() => aplicarSancion(r.idDenunciado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
-              Aplicar Sanción / Banear
-            </button>
-          </div>
-        </div>
-      ))
-    )}
-  </div>
-)}
+                              <div className="grid grid-cols-2 gap-2">
+                                <button  onClick={() => verHistorial(r.idDenunciado)}  className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all" >
+                                  Historial
+                                </button>
+                                <button  onClick={() => resolverReporte(r.id)}  disabled={r.estado === 'resuelto'}  className={`p-3 rounded-2xl text-[9px] font-black uppercase transition-all ${ r.estado === 'resuelto' 
+                                  ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed' 
+                                  : 'bg-green-900/20 border border-green-500/20 text-green-400 hover:bg-green-900/40'  }`}  >
+                                  {r.estado === 'resuelto' ? 'RESUELTO' : 'RESOLVER'}
+                                </button>
+                              </div>
+                              
+                              <button onClick={() => aplicarSancion(r.idDenunciado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
+                                Aplicar Sanción / Banear
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                   
-                  
-          {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
+                  {(subPestañaAdmin === 'pendientes' || subPestañaAdmin === 'aprobados') && (
                     usuariosAdmin
                       .filter(u => {
                         const esPendiente = (u.kycFoto && !u.kycVerificado) || (u.fotoFrontal && !u.fotoFrontalVerificada);
@@ -1150,24 +1129,24 @@ const confirmarSancion = async (uid: string, motivo: string) => {
                             {estaExpandido && (
                               <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
                                 <div className="grid grid-cols-4 gap-2">
-  {[
-    { img: u.kycFoto, label: 'Cédula' }, 
-    { img: u.selfieFoto, label: 'Selfie' }, 
-    { img: u.licenciaFoto, label: 'Licencia' }, 
-    { img: u.rcvFoto, label: 'RCV' }, 
-    { img: u.fotoFrontal, label: 'Frente' },
-    { img: u.fotoTrasera, label: 'Atrás' },
-    { img: u.fotoLatIzq, label: 'Lat. Izq' },
-    { img: u.fotoLatDer, label: 'Lat. Der' }
-  ].map((item, idx) => (
-    <div key={idx} className="flex flex-col gap-1">
-      <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
-      <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
-        {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
-      </div>
-    </div>
-  ))}
-</div>
+                                  {[
+                                    { img: u.kycFoto, label: 'Cédula' }, 
+                                    { img: u.selfieFoto, label: 'Selfie' }, 
+                                    { img: u.licenciaFoto, label: 'Licencia' }, 
+                                    { img: u.rcvFoto, label: 'RCV' }, 
+                                    { img: u.fotoFrontal, label: 'Frente' },
+                                    { img: u.fotoTrasera, label: 'Atrás' },
+                                    { img: u.fotoLatIzq, label: 'Lat. Izq' },
+                                    { img: u.fotoLatDer, label: 'Lat. Der' }
+                                  ].map((item, idx) => (
+                                    <div key={idx} className="flex flex-col gap-1">
+                                      <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
+                                      <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
+                                        {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                                 <div className="flex flex-col gap-2">
                                   {estaSuspendido ? (
                                     <button disabled={cargando} onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 disabled:opacity-50 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
@@ -1261,7 +1240,7 @@ const confirmarSancion = async (uid: string, motivo: string) => {
         </div>
       )}
       
-          {pasoDocumento.activa && (
+      {pasoDocumento.activa && (
         <div className="fixed inset-0 z-[300] bg-slate-900/95 backdrop-blur-sm flex flex-col p-6 items-center justify-center space-y-6 animate-in fade-in duration-200">
           {!fotoDocTemporal ? (
             <>
@@ -1278,7 +1257,6 @@ const confirmarSancion = async (uid: string, motivo: string) => {
                    pasoDocumento.tipo === 'rcv' ? 'Seguro RCV' : 'Foto de tu Vehículo'}
                 </h3>
                 
-                {/* 🔥 BOTONES PERSONALIZADOS 100% ESTÉTICOS 🔥 */}
                 <div className="space-y-3">
                   <button 
                     onClick={() => capturarDocumento(CameraSource.Camera)} 
@@ -1330,55 +1308,54 @@ const confirmarSancion = async (uid: string, motivo: string) => {
       )}
 
       {modalClave && (
-  <div className="fixed inset-0 bg-[#0b1120]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-    <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
-      
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="bg-blue-600/20 p-4 rounded-2xl mb-4">
-          <ShieldCheck className="text-blue-500" size={32} />
-        </div>
-        
-        <h2 className="text-xl font-black italic text-white mb-2">Seguridad</h2>
-        <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-6 text-center">Cambiar Contraseña</p>
+        <div className="fixed inset-0 bg-[#0b1120]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
+            
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="bg-blue-600/20 p-4 rounded-2xl mb-4">
+                <ShieldCheck className="text-blue-500" size={32} />
+              </div>
+              
+              <h2 className="text-xl font-black italic text-white mb-2">Seguridad</h2>
+              <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-6 text-center">Cambiar Contraseña</p>
 
-        <div className="w-full space-y-4">
-          <input 
-            type="password" 
-            placeholder="Contraseña Actual" 
-            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-white transition-all"
-            value={passActual}
-            onChange={(e) => setPassActual(e.target.value)}
-          />
-          <input 
-            type="password" 
-            placeholder="Nueva Contraseña" 
-            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-white transition-all"
-            value={passNueva}
-            onChange={(e) => setPassNueva(e.target.value)}
-          />
-        </div>
+              <div className="w-full space-y-4">
+                <input 
+                  type="password" 
+                  placeholder="Contraseña Actual" 
+                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-white transition-all"
+                  value={passActual}
+                  onChange={(e) => setPassActual(e.target.value)}
+                />
+                <input 
+                  type="password" 
+                  placeholder="Nueva Contraseña" 
+                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-white transition-all"
+                  value={passNueva}
+                  onChange={(e) => setPassNueva(e.target.value)}
+                />
+              </div>
 
-        <div className="grid grid-cols-2 gap-3 w-full mt-8">
-          <button 
-            onClick={() => { setModalClave(false); setPassActual(''); setPassNueva(''); }}
-            className="p-4 rounded-2xl bg-slate-800 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 transition-all"
-          >
-            Cancelar
-          </button>
-          <button 
-            onClick={cambiarPasswordSeguro}
-            className="p-4 rounded-2xl bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-900/40 hover:bg-blue-500 active:scale-95 transition-all"
-          >
-            Actualizar
-          </button>
+              <div className="grid grid-cols-2 gap-3 w-full mt-8">
+                <button 
+                  onClick={() => { setModalClave(false); setPassActual(''); setPassNueva(''); }}
+                  className="p-4 rounded-2xl bg-slate-800 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={cambiarPasswordSeguro}
+                  className="p-4 rounded-2xl bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-900/40 hover:bg-blue-500 active:scale-95 transition-all"
+                >
+                  Actualizar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
 
-      {/* MODAL DE FOTO DE PERFIL RESTAURADO A SU VERSIÓN ORIGINAL (DOS BOTONES) */}
       {pasoFoto && (
         <div className="fixed inset-0 z-[200] bg-white flex flex-col p-8 items-center justify-center text-center">
           {!fotoTemporal ? (
@@ -1415,59 +1392,56 @@ const confirmarSancion = async (uid: string, motivo: string) => {
       )}
 
       {modalAdmin.data && (
-  <div className="fixed inset-0 z-[500] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-    <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl animate-in zoom-in-95">
-      
-      {modalAdmin.tipo === 'historial' ? (
-        <div className="space-y-4">
-          <h3 className="text-white font-black uppercase text-xs italic border-b border-white/5 pb-2">Diagnóstico de Usuario</h3>
-          
-          <div className="max-h-80 overflow-y-auto space-y-4 pr-1">
-            {/* Sección Reportes */}
-            <div>
-              <p className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-2">Reportes ({historialUsuario.filter(h => h.tipo === 'REPORTE').length})</p>
-              {historialUsuario.filter(h => h.tipo === 'REPORTE').length === 0 ? 
-                <p className="text-[9px] text-slate-600 italic">Sin reportes.</p> :
-                historialUsuario.filter(h => h.tipo === 'REPORTE').map((h, i) => (
-                  <div key={i} className="bg-red-900/10 p-3 rounded-xl border border-red-500/10 mb-2">
-                    <p className="text-[10px] text-red-100 font-bold">"{h.motivo}"</p>
-                    <p className="text-[8px] text-red-500 mt-1">{new Date(h.fecha).toLocaleDateString()}</p>
+        <div className="fixed inset-0 z-[500] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl animate-in zoom-in-95">
+            
+            {modalAdmin.tipo === 'historial' ? (
+              <div className="space-y-4">
+                <h3 className="text-white font-black uppercase text-xs italic border-b border-white/5 pb-2">Diagnóstico de Usuario</h3>
+                
+                <div className="max-h-80 overflow-y-auto space-y-4 pr-1">
+                  <div>
+                    <p className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-2">Reportes ({historialUsuario.filter(h => h.tipo === 'REPORTE').length})</p>
+                    {historialUsuario.filter(h => h.tipo === 'REPORTE').length === 0 ? 
+                      <p className="text-[9px] text-slate-600 italic">Sin reportes.</p> :
+                      historialUsuario.filter(h => h.tipo === 'REPORTE').map((h, i) => (
+                        <div key={i} className="bg-red-900/10 p-3 rounded-xl border border-red-500/10 mb-2">
+                          <p className="text-[10px] text-red-100 font-bold">"{h.motivo}"</p>
+                          <p className="text-[8px] text-red-500 mt-1">{new Date(h.fecha).toLocaleDateString()}</p>
+                        </div>
+                      ))
+                    }
                   </div>
-                ))
-              }
-            </div>
 
-            {/* Sección Viajes */}
-            <div>
-              <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2">Últimos Viajes ({historialUsuario.filter(h => h.tipo === 'VIAJE').length})</p>
-              {historialUsuario.filter(h => h.tipo === 'VIAJE').length === 0 ? 
-                <p className="text-[9px] text-slate-600 italic">No registra viajes.</p> :
-                historialUsuario.filter(h => h.tipo === 'VIAJE').map((h, i) => (
-                  <div key={i} className="bg-slate-900 p-3 rounded-xl border border-white/5 mb-2 flex justify-between items-center">
-                    <p className="text-[10px] text-slate-300 font-bold">Viaje finalizado</p>
-                    <p className="text-[8px] text-slate-500">{new Date(h.fecha).toLocaleDateString()}</p>
+                  <div>
+                    <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2">Últimos Viajes ({historialUsuario.filter(h => h.tipo === 'VIAJE').length})</p>
+                    {historialUsuario.filter(h => h.tipo === 'VIAJE').length === 0 ? 
+                      <p className="text-[9px] text-slate-600 italic">No registra viajes.</p> :
+                      historialUsuario.filter(h => h.tipo === 'VIAJE').map((h, i) => (
+                        <div key={i} className="bg-slate-900 p-3 rounded-xl border border-white/5 mb-2 flex justify-between items-center">
+                          <p className="text-[10px] text-slate-300 font-bold">Viaje finalizado</p>
+                          <p className="text-[8px] text-slate-500">{new Date(h.fecha).toLocaleDateString()}</p>
+                        </div>
+                      ))
+                    }
                   </div>
-                ))
-              }
-            </div>
-          </div>
-          
-          <button onClick={() => setModalAdmin({tipo: 'historial', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px] uppercase">Cerrar</button>
-        </div>
-      ) : (
-        /* Sección Sanción (Ya estaba limpia, pero la mantenemos coherente) */
-        <div className="space-y-4">
-          <h3 className="text-red-500 font-black uppercase text-xs italic">Confirmar Suspensión</h3>
-          <p className="text-[10px] text-slate-400">¿Estás seguro de suspender este usuario permanentemente?</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => setModalAdmin({tipo: 'accion', data: null})} className="bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cancelar</button>
-            <button onClick={() => confirmarSancion(modalAdmin.data, "Incumplimiento de normas")} className="bg-red-600 p-3 rounded-xl text-white font-black text-[10px]">BANEAR</button>
+                </div>
+                
+                <button onClick={() => setModalAdmin({tipo: 'historial', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px] uppercase">Cerrar</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="text-red-500 font-black uppercase text-xs italic">Confirmar Suspensión</h3>
+                <p className="text-[10px] text-slate-400">¿Estás seguro de suspender este usuario permanentemente?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setModalAdmin({tipo: 'accion', data: null})} className="bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cancelar</button>
+                  <button onClick={() => confirmarSancion(modalAdmin.data, "Incumplimiento de normas")} className="bg-red-600 p-3 rounded-xl text-white font-black text-[10px]">BANEAR</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
-    </div>
-  </div>
-)}
     </div>
   );
 };
