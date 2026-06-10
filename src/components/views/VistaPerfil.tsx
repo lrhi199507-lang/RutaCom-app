@@ -317,7 +317,11 @@ const confirmarSancion = async (uid: string, motivo: string) => {
   };
   
   const cargarDatosAdmin = async () => {
+  // 1. Verificación rápida antes de ejecutar
+  if (cargando) return; 
+
   setCargando(true);
+  
   try {
     const [snapUsers, snapReports, snapPagos, snapAdmin, snapSoporte] = await Promise.all([
       getDocs(collection(db, "usuarios")),
@@ -327,18 +331,24 @@ const confirmarSancion = async (uid: string, motivo: string) => {
       getDocs(query(collection(db, "Chats"), where("esSoporte", "==", true)))
     ]);
 
-    setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
-    setReportesAdmin(snapReports.docs.map(d => ({ 
-      id: d.id, 
-      ...d.data() 
-    })));
-    setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })));
-    setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
-    setChatsSoporteAdmin(snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.ultimaHora || "").localeCompare(a.ultimaHora || "")));
+    // 2. Mapeo limpio usando una función auxiliar si es necesario para evitar redundancia
+    const formatData = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    setUsuariosAdmin(formatData(snapUsers));
+    setReportesAdmin(formatData(snapReports));
+    setPagosAdmin(formatData(snapPagos));
+    setTransaccionesAdmin(formatData(snapAdmin));
+    
+    // 3. Lógica de ordenamiento específica para chats
+    const chatsOrdenados = formatData(snapSoporte).sort((a, b) => 
+      (b.ultimaHora || "").localeCompare(a.ultimaHora || "")
+    );
+    setChatsSoporteAdmin(chatsOrdenados);
       
   } catch (e) {
-    console.error("Error crítico de carga:", e);
+    // 4. Feedback al usuario (importante si estás en móvil)
+    console.error("Error al sincronizar dashboard:", e);
+    alert("Error al cargar datos. Verifica tu conexión.");
   } finally {
     setCargando(false);
   }
@@ -486,21 +496,26 @@ const confirmarSancion = async (uid: string, motivo: string) => {
 };
 
   const resolverReporte = async (reporteId: string) => {
-  // Confirmación visual antes de hacer nada
   const confirmar = window.confirm("¿Marcar este reporte como resuelto?");
   if (!confirmar) return;
 
   setCargando(true);
   try {
+    // Obtenemos el email del admin actual para la auditoría
+    const adminEmail = auth.currentUser?.email || "desconocido";
+
     await updateDoc(doc(db, "Reportes", reporteId), {
       estado: "resuelto",
-      fechaResolucion: new Date().toISOString(),
-      resueltoPor: "ADMIN_DAMELACOLA" // O el email del auth actual
+      // PISTA DE AUDITORÍA
+      auditoria: {
+        accion: "resolucion_reporte",
+        realizadoPor: adminEmail,
+        timestamp: new Date().toISOString()
+      }
     });
     
-    // Recargar datos inmediatamente para ver el cambio
     await cargarDatosAdmin();
-    setToast({ texto: "Reporte marcado como resuelto", tipo: "exito" });
+    setToast({ texto: "Reporte resuelto y auditado", tipo: "exito" });
   } catch (e) {
     console.error(e);
     setToast({ texto: "Error al actualizar", tipo: "error" });
@@ -508,7 +523,6 @@ const confirmarSancion = async (uid: string, motivo: string) => {
     setCargando(false);
   }
 };
-
 
   const aprobarUsuario = async (userId: string) => {
   setCargando(true);
