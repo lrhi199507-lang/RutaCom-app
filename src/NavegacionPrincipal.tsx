@@ -157,11 +157,10 @@ export default function NavegacionPrincipal({ user }) {
       }
 
       const chatsRef = collection(db, "Chats");
-      const q = query(
+            const q = query(
         chatsRef, 
         where("idViaje", "==", viaje.id),
-        where("uidPasajero", "==", userData.id),
-        where("uidConductor", "==", conductorId)
+        where("participantes", "array-contains", userData.id) 
       );
       
       const querySnapshot = await getDocs(q);
