@@ -101,11 +101,11 @@ const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
   };
 
   // 1. Ver Perfil completo del usuario
-const verPerfil = (uid: string) => {
-  console.log("Abriendo perfil del usuario:", uid);
-  // Aquí puedes abrir un nuevo modal o redirigir a una pantalla de detalles
-  alert(`Cargando información completa del perfil: ${uid}`);
-};
+const verPerfil = async (uid: string) => {
+  if (!uid || uid === 'undefined') {
+    setToast({ texto: "Error: ID de usuario no válido", tipo: "error" });
+    return;
+  }
 
 // 2. Ver Historial de reportes del usuario
 const verHistorial = async (uid: string) => {
@@ -641,6 +641,11 @@ const confirmarSancion = async (uid: string, motivo: string) => {
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
 
+  useEffect(() => {
+  console.log("Datos de reportes cargados:", reportesAdmin);
+}, [reportesAdmin]);
+
+  
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
       {toast && (
