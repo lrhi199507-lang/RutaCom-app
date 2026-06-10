@@ -61,22 +61,24 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     let primeraCarga = true;
 
     const unsub = onSnapshot(q, (snap) => {
-      const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setMensajes(historialMensajes);
+  const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  setMensajes(historialMensajes);
 
-      if (primeraCarga && isSoporte && !esAdmin) {
-        if (historialMensajes.length === 0) {
-          addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-            texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
-            uidRemitente: 'admin',
-            timestamp: serverTimestamp()
-          });
-        }
-        primeraCarga = false;
-      }
+  if (primeraCarga && isSoporte && !esAdmin) {
+    if (historialMensajes.length === 0) {
+      addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
+        uidRemitente: 'admin',
+        timestamp: serverTimestamp(),
+        // 🔥 AGREGA ESTO:
+        participantes: [userData.id, 'admin']
+      });
+    }
+    primeraCarga = false;
+  }
 
-      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    });
+  setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+});
 
     const limpiarNotificaciones = async () => {
       if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
@@ -118,7 +120,9 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
           texto: "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.",
           uidRemitente: 'admin',
-          timestamp: serverTimestamp()
+          timestamp: serverTimestamp(),
+          // Modificación 1: Participantes para el caso del asesor humano
+          participantes: [userData.id, 'admin']
         });
         return; 
     }
@@ -127,12 +131,16 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: textoUsuario,
         uidRemitente: userData.id,
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        // Modificación 2: Participantes para el mensaje que simula enviar el usuario
+        participantes: [userData.id, 'admin']
       });
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: respuestaBot,
         uidRemitente: 'admin',
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        // Modificación 3: Participantes para la respuesta automática del bot
+        participantes: [userData.id, 'admin']
       });
     } catch (error) {
       console.error("Error guardando comandos del bot", error);
