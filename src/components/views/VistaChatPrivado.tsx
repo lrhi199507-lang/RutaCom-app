@@ -142,8 +142,9 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         // Modificación 3: Participantes para la respuesta automática del bot
         participantes: [userData.id, 'admin']
       });
-    } catch (error) {
+       } catch (error) {
       console.error("Error guardando comandos del bot", error);
+      alert("Error en el bot: " + error.message); // 🔥 AGREGAR ESTO
     }
   };
 
@@ -168,7 +169,7 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
     : [chat.uidPasajero, chat.uidConductor]
 });
 
-      await setDoc(doc(db, "Chats", chatIdReal), {
+            await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mensajesSinLeer: 1, 
@@ -177,7 +178,9 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
             esSoporte: true,
             uidPasajero: userData.id,
             nombrePasajero: userData.nombre,
-            ruta: "Soporte Técnico"
+            ruta: "Soporte Técnico",
+            // 🔥 ESTO FALTABA PARA QUE FIREBASE TE DEJE CREAR EL CHAT DEL BOT:
+            participantes: [userData.id, "admin"] 
         } : {})
       }, { merge: true });
 
@@ -201,8 +204,9 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         });
       }
 
-    } catch (error) {
+        } catch (error) {
       console.error("Error al enviar:", error);
+      alert("Error al enviar: " + error.message); // 🔥 AGREGAR ESTO
     }
   };
 
