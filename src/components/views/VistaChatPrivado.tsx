@@ -148,11 +148,17 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     try {
       setNuevoMsg(""); 
       
-      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-        texto: texto,
-        uidRemitente: userData.id,
-        timestamp: serverTimestamp()
-      });
+      // CÓDIGO CORREGIDO
+await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+  texto: texto,
+  uidRemitente: userData.id,
+  timestamp: serverTimestamp(),
+  
+  // 🔥 NUEVO: Replicamos los uids participantes exigidos por la regla de seguridad
+  participantes: isSoporte 
+    ? [userData.id, "admin"] 
+    : [chat.uidPasajero, chat.uidConductor]
+});
 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
