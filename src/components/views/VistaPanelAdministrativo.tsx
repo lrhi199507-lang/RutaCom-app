@@ -10,10 +10,21 @@ import {
 
 const auth = getAuth();
 
-// Función auxiliar para mostrar fechas legibles
+// 🔥 CORRECCIÓN 1: Leer correctamente los Timestamps de Firebase
 const formatearFecha = (fechaCualquiera: any) => {
   if (!fechaCualquiera) return "Fecha desconocida";
-  const fecha = new Date(typeof fechaCualquiera === 'number' ? fechaCualquiera : fechaCualquiera);
+  
+  let fecha;
+  if (fechaCualquiera.toDate) {
+    // Si es un objeto Timestamp de Firebase
+    fecha = fechaCualquiera.toDate();
+  } else {
+    // Si es un número o string
+    fecha = new Date(typeof fechaCualquiera === 'number' ? fechaCualquiera : fechaCualquiera);
+  }
+
+  if (isNaN(fecha.getTime())) return "Fecha inválida";
+
   return fecha.toLocaleString('es-VE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
@@ -45,7 +56,6 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     try {
       const [snapUsers, snapReports, snapPagos, snapAdmin, snapSoporte] = await Promise.all([
         getDocs(query(collection(db, "usuarios"), limit(50))), 
-        // Consulta indexada de Firebase (Evita gastar RAM del teléfono)
         getDocs(query(collection(db, "Reportes"), orderBy("fechaCreacion", "desc"), limit(30))),
         getDocs(query(collection(db, "PagosPendientes"), where("estado", "==", "pendiente"), limit(50))),
         getDocs(query(collection(db, "Transacciones"), where("uid", "==", "ADMIN_APP"), orderBy("fecha", "desc"), limit(20))),
@@ -93,10 +103,10 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     } finally { setCargando(false); }
   };
 
-    const verHistorial = async (uid: string) => {
+  const verHistorial = async (uid: string) => {
     setCargando(true);
     try {
-      // AQUÍ ESTÁ EL CAMBIO PRINCIPAL 👇
+      // 🔥 CORRECCIÓN 2: Consulta usando 'idDenunciado' exactamente como está en Firebase
       const qReportes = query(
         collection(db, "Reportes"), 
         where("idDenunciado", "==", uid), 
@@ -117,19 +127,22 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         ...snapViajes.docs.map(d => ({ tipo: 'VIAJE', ...d.data() }))
       ];
 
+      // Ordenar localmente la mezcla de reportes y viajes para que los más recientes queden arriba
       historialCombinado.sort((a: any, b: any) => {
-        const timeA = a.fechaCreacion || a.timestamp || a.fecha || 0;
-        const timeB = b.fechaCreacion || b.timestamp || b.fecha || 0;
-        return timeB - timeA;
+        const getTime = (obj: any) => {
+          const val = obj.fechaCreacion || obj.timestamp || obj.fecha;
+          if (!val) return 0;
+          return val.toMillis ? val.toMillis() : new Date(val).getTime();
+        };
+        return getTime(b) - getTime(a);
       });
 
       setHistorialUsuario(historialCombinado);
       setModalAdmin({tipo: 'historial', data: uid});
     } catch (e) { 
-      console.error(e); 
+      console.error("Error cargando historial:", e); 
     } finally { setCargando(false); }
   };
-  
 
   const confirmarSancion = async (uid: string, motivo: string) => {
     setCargando(true);
@@ -518,7 +531,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         </div>
       )}
 
-      {/* MODAL DE ACCIONES / HISTORIAL - z-[600] para estar arriba de todo */}
+      {/* MODAL DE ACCIONES / HISTORIAL */}
       {modalAdmin.data && (
         <div className="fixed inset-0 z-[600] bg-slate-950/90 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl animate-in zoom-in-95">
