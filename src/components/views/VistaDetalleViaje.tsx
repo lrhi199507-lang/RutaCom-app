@@ -247,29 +247,50 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CHAT INTELIGENTE CORREGIDA
+  // 🔥 LÓGICA DE CHATS PRIVADOS PROFESIONAL (Generación de IDs únicos)
+  const abrirChatChofer = (pasajero) => {
+    const idPas = String(pasajero.id || pasajero.uid);
+    onIniciarChat({
+      ...viaje,
+      id: `${viaje.id}_${idPas}`, // ID de sala única entre conductor y este pasajero
+      idViaje: viaje.id,
+      uidConductor: viaje.uidConductor || viaje.idCreador,
+      uidPasajero: idPas,
+      nombrePasajero: pasajero.nombre || "Pasajero",
+      fotoPasajero: pasajero.fotoPerfil || null,
+      telefonoPasajero: pasajero.telefono || "",
+      esSoporte: false
+    });
+  };
+
+  const abrirChatPasajero = () => {
+    const miId = String(userData?.id || userData?.uid);
+    onIniciarChat({
+      ...viaje,
+      id: `${viaje.id}_${miId}`, // El pasajero busca la misma sala única
+      idViaje: viaje.id,
+      uidConductor: viaje.uidConductor || viaje.idCreador,
+      uidPasajero: miId,
+      nombrePasajero: userData?.nombre || "Pasajero",
+      fotoPasajero: userData?.fotoPerfil || null,
+      telefonoPasajero: userData?.telefono || "",
+      esSoporte: false
+    });
+  };
+
   const manejarChatGlobal = () => {
     if (soyConductor) {
       if (pasajerosConfirmados.length === 1) {
-        const p = pasajerosConfirmados[0];
-        // Inyectamos exactamente los campos que necesita VistaChatPrivado
-        onIniciarChat({ 
-          ...viaje, 
-          uidPasajero: p.id || p.uid,
-          nombrePasajero: p.nombre || "Pasajero",
-          fotoPasajero: p.fotoPerfil || null,
-          telefonoPasajero: p.telefono || ""
-        });
+        abrirChatChofer(pasajerosConfirmados[0]);
       } else if (pasajerosConfirmados.length > 1) {
-        setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero en la lista ☝️", tipo: "error" });
+        setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero ☝️", tipo: "error" });
         setTimeout(() => setToast(null), 4000);
       } else {
         setToast({ texto: "Aún no tienes pasajeros confirmados", tipo: "error" });
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      // El pasajero habla directo con el chofer, el viaje ya tiene los datos del chofer
-      onIniciarChat(viaje); 
+      abrirChatPasajero();
     }
   };
 
@@ -635,18 +656,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                        <div className={`${p.abordado ? 'bg-green-100' : 'bg-amber-100'} p-2 rounded-full shrink-0`}>
                          {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
-                       {/* 🔥 BOTÓN DE CHAT INYECTANDO DATOS DEL PASAJERO */}
+                       
                        {soyConductor && (
                           <button 
                             onClick={(e) => { 
                               e.stopPropagation(); 
-                              onIniciarChat({ 
-                                ...viaje, 
-                                uidPasajero: p.id || p.uid,
-                                nombrePasajero: p.nombre || "Pasajero",
-                                fotoPasajero: p.fotoPerfil || null,
-                                telefonoPasajero: p.telefono || ""
-                              }); 
+                              abrirChatChofer(p); 
                             }} 
                             className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1"
                           >
