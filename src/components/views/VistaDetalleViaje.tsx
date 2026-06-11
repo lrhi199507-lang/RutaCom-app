@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp, setDoc } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
@@ -247,7 +247,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CREACIÓN DE CHAT PROFESIONAL (Sin parches de frontend)
+  // 🔥 LÓGICA DE CREACIÓN DE CHAT A PRUEBA DE BALAS
   const iniciarChatPrivado = async (pasajeroObjetivo) => {
     setCargando(true);
     try {
@@ -269,10 +269,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         esSoporte: false
       };
 
-      // Al haber modificado las reglas de Firebase, ahora getDoc SÍ funciona correctamente si no existe
-      const chatSnap = await getDoc(chatRef);
-      
-      if (!chatSnap.exists()) {
+      // Intentamos una actualización invisible. Si Firebase nos bota, significa que la sala no existe
+      try {
+        await updateDoc(chatRef, { ultimaActividad: new Date().toISOString() });
+      } catch (error) {
+        // La sala no existe, la creamos a la fuerza
         await setDoc(chatRef, {
           ...datosChat,
           fechaCreacion: serverTimestamp(),
@@ -282,11 +283,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       }
 
       onIniciarChat(datosChat);
-      onRegresar(); // Cerramos el viaje para que la app salte directo al chat
+      onRegresar(); // Cierra el detalle para mostrar el chat limpio
       
     } catch (e: any) {
-      console.error("Error al crear sala:", e);
-      setToast({ texto: `Error: ${e.message || "No se pudo abrir el chat"}`, tipo: "error" });
+      console.error("Error crítico al crear sala:", e);
+      setToast({ texto: "Error al abrir la sala de chat", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally {
       setCargando(false);
@@ -600,10 +601,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
   return (
-    <div className="fixed inset-0 z-[50] bg-slate-50 flex flex-col font-sans overflow-hidden animate-in slide-in-from-right duration-300">
+    // 🔥 CAMBIO CRÍTICO: z-[99999] aplasta a la barra inferior de navegación y recupera el diseño original
+    <div className="fixed inset-0 z-[99999] bg-slate-50 flex flex-col font-sans h-[100dvh] w-screen overflow-hidden animate-in slide-in-from-right duration-300">
       
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100000] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
             {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="truncate whitespace-nowrap">{toast.texto}</span>
@@ -611,7 +613,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto pb-48 relative">
+      {/* pb-32 asegura que los últimos pasajeros de la lista no queden escondidos debajo de los botones fijos */}
+      <div className="flex-1 overflow-y-auto pb-32 relative">
         <div className="p-4 pt-6 flex justify-between items-center sticky top-0 z-[60] bg-slate-50/90 backdrop-blur-sm">
           <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 active:scale-95 transition-all"> 
             <ArrowLeft size={16} strokeWidth={3} />  <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
@@ -877,8 +880,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* FOOTER FIJO */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[110]">
+      {/* FOOTER FIJO QUE SIEMPRE SE MANTIENE ABAJO */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[100000]">
         <div className="flex gap-2 sm:gap-3 h-14 max-w-md mx-auto">
           
           {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
