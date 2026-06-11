@@ -33,8 +33,11 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [pagosAdmin, setPagosAdmin] = useState<any[]>([]); 
   const [transaccionesAdmin, setTransaccionesAdmin] = useState<any[]>([]); 
   const [chatsSoporteAdmin, setChatsSoporteAdmin] = useState<any[]>([]); 
+  // Cerca de tus otros estados de administración
+// Cerca de tus otros estados de administración
+const [usuarioVisitadoAdmin, setUsuarioVisitadoAdmin] = useState(null);
+const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos' | 'historial' | 'soporte' | 'perfil_ajeno'>('pendientes');
   
-  const [subPestañaAdmin, setSubPestañaAdmin] = useState<'pendientes' | 'aprobados' | 'reportes' | 'pagos' | 'historial' | 'soporte'>('pendientes');
   const [usuarioExpandidoAdmin, setUsuarioExpandidoAdmin] = useState<string | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   
@@ -99,14 +102,24 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
 
-  // 1. Ver Perfil completo del usuario
   const verPerfil = async (uid: string) => {
-    if (!uid || uid === 'undefined') {
-      setToast({ texto: "Error: ID de usuario no válido", tipo: "error" });
-      return;
+    if (!uid || uid === 'undefined') return;
+    setCargando(true);
+    try {
+        const userRef = doc(db, "usuarios", uid);
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+            setUsuarioVisitadoAdmin({ id: snap.id, ...snap.data() });
+            setSubPestañaAdmin('perfil_ajeno'); // Esto activa la nueva vista
+        } else {
+            setToast({ texto: "Usuario no encontrado", tipo: "error" });
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        setCargando(false);
     }
-    // Lógica para ver perfil aquí
-  };
+};
 
   // 2. Ver Historial de reportes del usuario
   const verHistorial = async (uid: string) => {
@@ -853,30 +866,63 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         )}
 
         {view === 'admin' && (
-          <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
-            <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
-              <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl"><ChevronRight size={20} className="rotate-180" /></button>
-              <div className="text-center">
-                <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
-                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
-              </div>
-              <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} className={cargando ? 'animate-spin' : ''}/></button>
-            </div>
+  <div className="fixed inset-0 bg-slate-950 z-[100] flex flex-col animate-in fade-in duration-300">
+    <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
+      <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl"><ChevronRight size={20} className="rotate-180" /></button>
+      <div className="text-center">
+        <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
+        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Panel Administrativo</p>
+      </div>
+      <button onClick={cargarDatosAdmin} className="text-blue-400 bg-blue-400/10 p-2 rounded-xl"><RefreshCw size={20} className={cargando ? 'animate-spin' : ''}/></button>
+    </div>
 
-            <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
-              <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Pendientes</button>
-              <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Usuarios</button>
-              <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
-              <button onClick={() => setSubPestañaAdmin('soporte')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'soporte' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-600'}`}>Soporte ({chatsSoporteAdmin.length})</button>
-              <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
-              <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
+    <div className="flex bg-slate-900 p-1 border-b border-white/5 overflow-x-auto no-scrollbar shrink-0">
+      <button onClick={() => setSubPestañaAdmin('pendientes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pendientes' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-slate-600'}`}>Pendientes</button>
+      <button onClick={() => setSubPestañaAdmin('aprobados')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'aprobados' ? 'text-green-500 border-b-2 border-green-500' : 'text-slate-600'}`}>Usuarios</button>
+      <button onClick={() => setSubPestañaAdmin('pagos')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'pagos' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-slate-600'}`}>Pagos ({pagosAdmin.length})</button>
+      <button onClick={() => setSubPestañaAdmin('soporte')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'soporte' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-600'}`}>Soporte ({chatsSoporteAdmin.length})</button>
+      <button onClick={() => setSubPestañaAdmin('historial')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'historial' ? 'text-indigo-500 border-b-2 border-indigo-500' : 'text-slate-600'}`}>Historial</button>
+      <button onClick={() => setSubPestañaAdmin('reportes')} className={`flex-1 min-w-[80px] py-3 text-[9px] font-black uppercase transition-colors ${subPestañaAdmin === 'reportes' ? 'text-red-500 border-b-2 border-red-500' : 'text-slate-600'}`}>Reportes</button>
+    </div>
+    
+    <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
+      {cargando ? (
+        <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
+      ) : (
+        <>
+          {/* VISTA NUEVA: PERFIL DEL USUARIO REPORTADO */}
+          {subPestañaAdmin === 'perfil_ajeno' && usuarioVisitadoAdmin ? (
+            <div className="animate-in slide-in-from-right duration-300">
+              <button onClick={() => setSubPestañaAdmin('reportes')} className="mb-4 text-slate-400 hover:text-white font-black text-[10px] uppercase flex items-center gap-2 transition-colors">
+                <ChevronRight className="rotate-180" size={16} /> Volver a Reportes
+              </button>
+              
+              <div className="bg-[#0f172a] border border-white/5 rounded-[30px] p-6 text-white text-center shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
+                
+                <div className="w-24 h-24 mx-auto mb-4 relative z-10">
+                  {usuarioVisitadoAdmin.fotoPerfil ? (
+                    <img src={usuarioVisitadoAdmin.fotoPerfil} className="w-full h-full rounded-[25px] border border-slate-700 object-cover shadow-lg" alt="Perfil" />
+                  ) : (
+                    <div className="w-full h-full rounded-[25px] border border-slate-700 bg-slate-800 flex items-center justify-center shadow-lg"><User size={40} className="text-slate-500" /></div>
+                  )}
+                </div>
+                
+                <h2 className="relative z-10 text-xl font-black italic uppercase">{usuarioVisitadoAdmin.nombre}</h2>
+                <p className="relative z-10 text-[10px] text-slate-400 font-bold mb-6 tracking-widest">{usuarioVisitadoAdmin.telefono || "Sin teléfono"} | {usuarioVisitadoAdmin.correo || "Sin correo"}</p>
+                
+                <div className="relative z-10 grid grid-cols-2 gap-3">
+                  <button onClick={() => verHistorial(usuarioVisitadoAdmin.id)} className="bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">
+                    Ver Historial
+                  </button>
+                  <button onClick={() => suspenderUsuario(usuarioVisitadoAdmin.id)} className="bg-red-950/40 hover:bg-red-900 border border-red-900/50 text-red-500 hover:text-red-100 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">
+                    Suspender
+                  </button>
+                </div>
+              </div>
             </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
-              {cargando ? (
-                <p className="text-center p-10 text-slate-500 italic animate-pulse text-xs uppercase font-black">Sincronizando...</p>
-              ) : (
-                <>
+          ) : (
+            <>
                   {subPestañaAdmin === 'soporte' && (
                     <div className="space-y-3 animate-in slide-in-from-bottom duration-400">
                       {chatsSoporteAdmin.length === 0 ? (
