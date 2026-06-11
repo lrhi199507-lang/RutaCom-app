@@ -247,20 +247,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 NUEVA LÓGICA INFALIBLE: CREAR SALA ANTES DE ABRIRLA
+  // 🔥 LÓGICA DE CREACIÓN DE CHAT PROFESIONAL (Sin parches de frontend)
   const iniciarChatPrivado = async (pasajeroObjetivo) => {
     setCargando(true);
     try {
       const idChofer = String(viaje.uidConductor || viaje.idCreador);
       const idPas = String(pasajeroObjetivo.id || pasajeroObjetivo.uid);
-      
-      // Creamos una sala única combinando el viaje y el pasajero
       const idSalaChat = `${viaje.id}_${idPas}`;
-
       const chatRef = doc(db, "Chats", idSalaChat);
-      const chatSnap = await getDoc(chatRef);
 
-      // Preparamos los datos base de la sala de chat
       const datosChat = {
         id: idSalaChat,
         idViaje: viaje.id,
@@ -274,7 +269,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         esSoporte: false
       };
 
-      // Si la sala no existe en Firebase, la registramos oficialmente
+      // Al haber modificado las reglas de Firebase, ahora getDoc SÍ funciona correctamente si no existe
+      const chatSnap = await getDoc(chatRef);
+      
       if (!chatSnap.exists()) {
         await setDoc(chatRef, {
           ...datosChat,
@@ -284,13 +281,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         });
       }
 
-      // Le mandamos los datos a la App y cerramos la pantalla del viaje
       onIniciarChat(datosChat);
-      onRegresar(); 
+      onRegresar(); // Cerramos el viaje para que la app salte directo al chat
       
-    } catch (e) {
-      console.error("Error crítico al crear sala:", e);
-      setToast({ texto: "Error al abrir la sala de chat", tipo: "error" });
+    } catch (e: any) {
+      console.error("Error al crear sala:", e);
+      setToast({ texto: `Error: ${e.message || "No se pudo abrir el chat"}`, tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally {
       setCargando(false);
@@ -309,7 +305,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      // El pasajero abre el chat mandando sus propios datos como objetivo
       iniciarChatPrivado(userData);
     }
   };
