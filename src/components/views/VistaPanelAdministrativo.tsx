@@ -27,7 +27,9 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
   const [modalAdmin, setModalAdmin] = useState<{tipo: 'historial' | 'accion', data: any | null}>({tipo: 'historial', data: null});
   const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
   const [toastAdmin, setToastAdmin] = useState<string | null>(null);
-
+  const [motivoSuspension, setMotivoSuspension] = useState("");
+  
+  
   useEffect(() => {
     cargarDatosAdmin();
   }, []);
@@ -258,8 +260,8 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                   <p className="relative z-10 text-[10px] text-slate-400 font-bold mb-6 tracking-widest">{usuarioVisitadoAdmin.telefono || "Sin teléfono"}</p>
                   <div className="relative z-10 grid grid-cols-2 gap-3">
                     <button onClick={() => verHistorial(usuarioVisitadoAdmin.id)} className="bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black text-[10px] uppercase">Ver Historial</button>
-                    <button onClick={() => suspenderUsuario(usuarioVisitadoAdmin.id)} className="bg-red-950/40 hover:bg-red-900 border border-red-900/50 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase">Suspender</button>
-                  </div>
+                    <button onClick={() => setModalAdmin({tipo: 'accion', data: usuarioVisitadoAdmin.id})} className="bg-red-950/40 hover:bg-red-900 border border-red-900/50 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"> Suspender </button>
+                   </div>
                 </div>
               </div>
             ) : (
@@ -447,27 +449,66 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         </div>
       )}
 
-      {modalAdmin.data && (
-        <div className="fixed inset-0 z-[500] bg-slate-950/90 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl">
+            {modalAdmin.data && (
+        <div className="fixed inset-0 z-[500] bg-slate-950/90 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl animate-in zoom-in-95">
             {modalAdmin.tipo === 'historial' ? (
               <div className="space-y-4">
-                <h3 className="text-white font-black uppercase text-xs italic border-b border-white/5 pb-2">Diagnóstico de Usuario</h3>
-                <div className="max-h-80 overflow-y-auto space-y-4">
-                  {historialUsuario.map((h, i) => (
-                    <div key={i} className="bg-slate-900 p-3 rounded-xl border border-white/5">
-                      <p className="text-[10px] text-slate-300 font-bold">{h.tipo}: {h.motivo || "Viaje realizado"}</p>
-                    </div>
-                  ))}
+                <h3 className="text-white font-black uppercase text-xs italic border-b border-white/5 pb-2 flex items-center gap-2">
+                  <History size={16} className="text-blue-500" /> Diagnóstico de Usuario
+                </h3>
+                
+                {/* Cuadro de advertencia con el contador de reportes */}
+                <div className="bg-red-950/40 border border-red-900/50 p-4 rounded-2xl text-center shadow-inner">
+                  <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-1">Total de Reportes Recibidos</p>
+                  <p className="text-4xl font-black italic text-red-500">{historialUsuario.filter(h => h.tipo === 'REPORTE').length}</p>
                 </div>
-                <button onClick={() => setModalAdmin({tipo: 'historial', data: null})} className="w-full bg-slate-800 p-3 rounded-xl text-white font-black text-[10px] uppercase">Cerrar</button>
+
+                <div className="max-h-60 overflow-y-auto space-y-3 pr-1 mt-4">
+                  {historialUsuario.filter(h => h.tipo === 'REPORTE').length === 0 ? (
+                    <p className="text-[10px] text-slate-500 italic text-center py-4">Usuario ejemplar. No tiene reportes previos.</p>
+                  ) : (
+                    historialUsuario.filter(h => h.tipo === 'REPORTE').map((h, i) => (
+                      <div key={i} className="bg-slate-900 p-4 rounded-xl border border-white/5 relative overflow-hidden">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+                        <p className="text-[8px] font-black text-slate-500 uppercase mb-1">{new Date(h.fecha || h.timestamp).toLocaleDateString()}</p>
+                        <p className="text-[11px] text-white font-bold italic">"{h.descripcion || h.motivo}"</p>
+                        <p className="text-[8px] text-slate-400 mt-2">Denunciante: {h.nombreDenunciante || "Anónimo"}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+                
+                <button onClick={() => setModalAdmin({tipo: 'historial', data: null})} className="w-full bg-slate-800 hover:bg-slate-700 transition-colors p-4 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest mt-2">
+                  Cerrar Historial
+                </button>
               </div>
             ) : (
               <div className="space-y-4">
-                <h3 className="text-red-500 font-black uppercase text-xs italic">Confirmar Suspensión</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setModalAdmin({tipo: 'accion', data: null})} className="bg-slate-800 p-3 rounded-xl text-white font-black text-[10px]">Cancelar</button>
-                  <button onClick={() => confirmarSancion(modalAdmin.data, "Incumplimiento de normas")} className="bg-red-600 p-3 rounded-xl text-white font-black text-[10px]">BANEAR</button>
+                <div className="w-16 h-16 bg-red-950/50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-2 border border-red-900">
+                  <AlertTriangle size={30} />
+                </div>
+                <h3 className="text-red-500 font-black uppercase text-lg italic text-center">Suspender Cuenta</h3>
+                <p className="text-[10px] text-slate-400 text-center font-bold">¿Por qué estás suspendiendo a este usuario? Este mensaje le aparecerá cuando intente abrir la aplicación.</p>
+                
+                <textarea 
+                  value={motivoSuspension}
+                  onChange={(e) => setMotivoSuspension(e.target.value)}
+                  placeholder="Ej: Múltiples reportes por conducir a exceso de velocidad..."
+                  className="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-xs text-white font-medium outline-none focus:border-red-500 min-h-[100px] resize-none"
+                />
+
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <button onClick={() => { setModalAdmin({tipo: 'accion', data: null}); setMotivoSuspension(""); }} className="bg-slate-800 p-4 rounded-2xl text-slate-400 hover:text-white font-black text-[10px] uppercase transition-colors">
+                    Cancelar
+                  </button>
+                  <button 
+                    disabled={cargando || !motivoSuspension.trim()} 
+                    onClick={() => confirmarSancion(modalAdmin.data, motivoSuspension)} 
+                    className="bg-red-600 disabled:opacity-50 p-4 rounded-2xl text-white font-black text-[10px] uppercase shadow-lg hover:bg-red-500 transition-all"
+                  >
+                    {cargando ? 'Cargando...' : 'Aplicar Ban'}
+                  </button>
                 </div>
               </div>
             )}
