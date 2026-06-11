@@ -111,10 +111,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [verPerfil, setVerPerfil] = useState(false);
   const [cargando, setCargando] = useState(false);
   
-  // 🔥 NUEVO SISTEMA DE TOAST PROFESIONAL (Igual que en Admin)
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
 
-  // Funciones puente para no romper PerfilPublico temporalmente
   const setToastMessage = (msg) => {
     setToast({texto: msg, tipo: "exito"});
     setTimeout(() => setToast(null), 3000);
@@ -249,6 +247,24 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
+  // 🔥 LÓGICA DE CHAT INTELIGENTE 
+  const manejarChatGlobal = () => {
+    if (soyConductor) {
+      if (pasajerosConfirmados.length === 1) {
+        // Inyectamos el pasajero para que el padre sepa con quién abrir el chat
+        onIniciarChat({ ...viaje, uidPasajeroElegido: pasajerosConfirmados[0].id || pasajerosConfirmados[0].uid });
+      } else if (pasajerosConfirmados.length > 1) {
+        setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero en la lista ☝️", tipo: "error" });
+        setTimeout(() => setToast(null), 4000);
+      } else {
+        setToast({ texto: "Aún no tienes pasajeros confirmados", tipo: "error" });
+        setTimeout(() => setToast(null), 3000);
+      }
+    } else {
+      onIniciarChat(viaje); // El pasajero habla directo con el chofer
+    }
+  };
+
   const solicitarCola = async () => {
     const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
     const miSaldoActual = Number(userData?.saldo || 0);
@@ -267,7 +283,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     setCargando(true);
     try {
-      // 🔥 CORRECCIÓN CRÍTICA: Asegurar coordenadas antes de proceder
       let lat = 0; let lng = 0;
       try {
         const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
@@ -277,7 +292,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setToast({ texto: "Enciende tu GPS o Ubicación para pedir la cola", tipo: "error" });
         setTimeout(() => setToast(null), 4000);
         setCargando(false);
-        return; // Detiene el proceso si no hay GPS
+        return; 
       }
 
       const miId = userData?.id || userData?.uid;
@@ -334,7 +349,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     } catch (e: any) { 
       console.error("Error en reserva:", e);
-      // 🔥 Te mostrará el error exacto en rojo si algo más falla en Firebase
       setToast({ texto: `Error de sistema: ${e.message || "No se pudo procesar"}`, tipo: "error" });
       setTimeout(() => setToast(null), 4000);
     } finally {
@@ -544,7 +558,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative font-sans">
       
-      {/* 🔥 TOAST PROFESIONAL FLOTANTE */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
@@ -555,7 +568,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       )}
 
       <div className="flex-1 overflow-y-auto pb-48">
-        {/* HEADER */}
         <div className="p-4 pt-6 flex justify-between items-center">
           <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all"> <ArrowLeft size={16} strokeWidth={3} />  <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
           </button>
@@ -602,7 +614,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                  {pasajerosConfirmados.map((p, index) => {
                    if (!p) return null;
                    return (
-                     <div key={`hud-${p.id || p.uid || index}`} className="flex items-center gap-4 bg-slate-50 p-3.5 rounded-[25px] border border-slate-100">
+                     <div key={`hud-${p.id || p.uid || index}`} className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-[25px] border border-slate-100">
                        <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                           {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-400" />}
                        </div>
@@ -615,6 +627,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                        <div className={`${p.abordado ? 'bg-green-100' : 'bg-amber-100'} p-2 rounded-full shrink-0`}>
                          {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
+                       {/* 🔥 BOTÓN DE CHAT DIRECTO PARA EL CHOFER */}
+                       {soyConductor && (
+                          <button onClick={(e) => { e.stopPropagation(); onIniciarChat({ ...viaje, uidPasajeroElegido: p.id || p.uid }); }} className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1">
+                            <MessageCircle size={16} />
+                          </button>
+                       )}
                      </div>
                    );
                  })}
@@ -807,77 +825,75 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* FOOTER FIJO */}
+      {/* 🔥 FOOTER FIJO CORREGIDO (CHAT SIEMPRE VISIBLE) */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
-        <div className="flex gap-3 h-14">
-          {estadoViaje === 'en_curso' ? (
-            <>
-              <button onClick={activarSOS} className="flex-1 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all border border-rose-200">
-                <AlertTriangle size={16} /> SOS
-              </button>
-              {soyConductor ? (
-                 <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-[2] bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-slate-900/30 active:scale-95 transition-all">
-                   Finalizar Viaje
-                 </button>
-              ) : (
-                 <div className="flex-[2] bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                   <Navigation size={16} /> En Ruta a Destino
-                 </div>
-              )}
-            </>
-          ) : (
-            <>
-              <button onClick={() => onIniciarChat(viaje)} className="flex-1 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
-                <MessageCircle size={16} /> Chat
-              </button>
+        <div className="flex gap-2 sm:gap-3 h-14">
+          
+          {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
+            <button onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
+              <MessageCircle size={18} /> <span className="hidden sm:inline">Chat</span>
+            </button>
+          )}
 
-              {soyConductor ? (
-                 estadoViaje === 'disponible' ? (
-                    <div className="flex-[2] flex gap-2">
-                      <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
-                        Cancelar
-                      </button>
-                      <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
-                        {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
-                      </button>
-                    </div>
-                 ) : estadoViaje === 'buscando' ? (
-                    <div className="flex-[2] flex gap-2">
-                      <button disabled={cargando}  onClick={notificarLlegadaYAbrirModal}  className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2" >
-                        <MapPin size={16} /> ¡Ya llegué! (Validar PIN)
-                      </button>
-                    </div>
-                 ) : (
-                    <div className="flex-[2] bg-slate-100 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center border border-slate-200">
-                      Viaje Terminado
-                    </div>
-                 )
+          {estadoViaje === 'en_curso' && !soyConductor && (
+            <button onClick={activarSOS} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm border border-rose-200 active:scale-95 transition-all">
+              <AlertTriangle size={18} /> <span className="hidden sm:inline">SOS</span>
+            </button>
+          )}
+
+          {estadoViaje === 'en_curso' ? (
+            soyConductor ? (
+              <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
+                Finalizar Viaje
+              </button>
+            ) : (
+              <div className="flex-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                <Navigation size={16} /> En Ruta a Destino
+              </div>
+            )
+          ) : estadoViaje === 'buscando' ? (
+            soyConductor ? (
+               <button disabled={cargando} onClick={notificarLlegadaYAbrirModal} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2" >
+                 <MapPin size={16} /> ¡Ya llegué! (Validar)
+               </button>
+            ) : (
+               <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-1 bg-red-100 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-200">
+                 <X size={16} strokeWidth={3} /> Cancelar Asiento
+               </button>
+            )
+          ) : estadoViaje === 'disponible' ? (
+            soyConductor ? (
+              <div className="flex-1 flex gap-2">
+                <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
+                  Cancelar
+                </button>
+                <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
+                  {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
+                </button>
+              </div>
+            ) : (
+              yaSoyPasajero ? (
+                <div className="flex-1 bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                  <Check size={16} /> Confirmado
+                </div>
+              ) : yaSolicite ? (
+                <button disabled={cargando} onClick={cancelarSolicitud} className="flex-1 bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
+              ) : cuposRestantes > 0 ? (
+                <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
               ) : (
-                yaSoyPasajero ? (
-                  estadoViaje === 'finalizado' ? (
-                     yaCalifico ? (
-                       <div className="flex-[2] bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                         <Star size={16} className="fill-green-600" /> Viaje Calificado
-                       </div>
-                     ) : (
-                       <button onClick={() => setModalCalificacion(true)} className="flex-[2] bg-amber-400 text-amber-950 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 active:scale-95 transition-all border border-amber-300">
-                         <Star size={16} className="fill-amber-950" /> Calificar Experiencia
-                       </button>
-                     )
-                  ) : (
-                     <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-[2] bg-red-100 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-200">
-                       <X size={16} strokeWidth={3} /> Cancelar Asiento
-                     </button>
-                  )
-                ) : yaSolicite ? (
-                  <button disabled={cargando} onClick={cancelarSolicitud} className="flex-[2] bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
-                ) : cuposRestantes > 0 ? (
-                  <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
-                ) : (
-                  <button disabled className="flex-[2] bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
-                )
-              )}
-            </>
+                <button disabled className="flex-1 bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
+              )
+            )
+          ) : yaSoyPasajero && estadoViaje === 'finalizado' && (
+             yaCalifico ? (
+               <div className="w-full bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                 <Star size={16} className="fill-green-600" /> Viaje Calificado
+               </div>
+             ) : (
+               <button onClick={() => setModalCalificacion(true)} className="w-full bg-amber-400 text-amber-950 rounded-[22px] h-14 font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 active:scale-95 transition-all border border-amber-300">
+                 <Star size={16} className="fill-amber-950" /> Calificar Experiencia
+               </button>
+             )
           )}
         </div>
       </div>
