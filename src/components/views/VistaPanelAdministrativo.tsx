@@ -10,6 +10,13 @@ import {
 
 const auth = getAuth();
 
+// Función auxiliar para mostrar fechas legibles
+const formatearFecha = (fechaCualquiera: any) => {
+  if (!fechaCualquiera) return "Fecha desconocida";
+  const fecha = new Date(typeof fechaCualquiera === 'number' ? fechaCualquiera : fechaCualquiera);
+  return fecha.toLocaleString('es-VE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
+
 export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any) => {
   const [cargando, setCargando] = useState(false);
   const [usuariosAdmin, setUsuariosAdmin] = useState<any[]>([]);
@@ -28,8 +35,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
   const [historialUsuario, setHistorialUsuario] = useState<any[]>([]);
   const [toastAdmin, setToastAdmin] = useState<string | null>(null);
   const [motivoSuspension, setMotivoSuspension] = useState("");
-  
-  
+
   useEffect(() => {
     cargarDatosAdmin();
   }, []);
@@ -46,7 +52,16 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
       ]);
 
       setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
-      setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
+      
+      // Mapear y ordenar reportes localmente para evitar errores de índice en Firebase
+      const reportes = snapReports.docs.map(d => ({ id: d.id, ...d.data() }));
+      reportes.sort((a: any, b: any) => {
+        const timeA = a.timestamp || new Date(a.fecha || 0).getTime();
+        const timeB = b.timestamp || new Date(b.fecha || 0).getTime();
+        return timeB - timeA; // Más reciente primero
+      });
+      setReportesAdmin(reportes);
+
       setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })));
       setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
       setChatsSoporteAdmin(snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -94,18 +109,23 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
       const qViajes = query(collection(db, "Viajes"), where("uidConductor", "==", uid), orderBy("fecha", "desc"));
       const snapViajes = await getDocs(qViajes);
       
-      setHistorialUsuario([
+      const historialCombinado = [
         ...snapReportes.docs.map(d => ({ tipo: 'REPORTE', ...d.data() })),
         ...snapViajes.docs.slice(0, 5).map(d => ({ tipo: 'VIAJE', ...d.data() }))
-      ]);
+      ];
+
+      // Ordenar el historial por fecha
+      historialCombinado.sort((a: any, b: any) => {
+        const timeA = a.timestamp || new Date(a.fecha || 0).getTime();
+        const timeB = b.timestamp || new Date(b.fecha || 0).getTime();
+        return timeB - timeA;
+      });
+
+      setHistorialUsuario(historialCombinado);
       setModalAdmin({tipo: 'historial', data: uid});
     } catch (e) { 
       console.error(e); 
     } finally { setCargando(false); }
-  };
-
-  const aplicarSancion = async (uid: string) => {
-    setModalAdmin({tipo: 'accion', data: uid});
   };
 
   const confirmarSancion = async (uid: string, motivo: string) => {
@@ -113,9 +133,31 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     try {
       await updateDoc(doc(db, "usuarios", uid), { cuentaSuspendida: true, mensajeAdmin: motivo });
       setModalAdmin({tipo: 'accion', data: null});
+      setMotivoSuspension("");
       setToastAdmin("Usuario suspendido");
       await cargarDatosAdmin();
     } catch (e) { console.error(e); } finally { setCargando(false); }
+  };
+
+  const enviarAdvertencia = async (uid: string) => {
+    if (!window.confirm("¿Enviar advertencia formal a este usuario?")) return;
+    setCargando(true);
+    try {
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: uid,
+        titulo: "⚠️ Atención a las Normas",
+        mensaje: "Hemos recibido comentarios sobre tu comportamiento reciente en la plataforma. Te recordamos cumplir con las normas de convivencia para evitar la suspensión permanente de tu cuenta.",
+        timestamp: Date.now(),
+        leido: false,
+        tipo: "alerta"
+      });
+      setToastAdmin("Advertencia enviada al usuario");
+    } catch (e) {
+      console.error(e);
+      setToastAdmin("Error al enviar advertencia");
+    } finally {
+      setCargando(false);
+    }
   };
 
   const actualizarTasaBCV = async () => {
@@ -177,27 +219,6 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-      const enviarAdvertencia = async (uid: string) => {
-    if (!window.confirm("¿Enviar advertencia formal de convivencia a este usuario?")) return;
-    setCargando(true);
-    try {
-      await addDoc(collection(db, "Notificaciones"), {
-        idDestino: uid,
-        titulo: "⚠️ Atención a las Normas",
-        mensaje: "Hemos recibido comentarios sobre tu comportamiento reciente en la plataforma. Te recordamos cumplir con las normas de convivencia para evitar la suspensión permanente de tu cuenta.",
-        timestamp: Date.now(),
-        leido: false,
-        tipo: "alerta"
-      });
-      setToastAdmin("Advertencia enviada al usuario");
-    } catch (e) {
-      console.error(e);
-      setToastAdmin("Error al enviar advertencia");
-    } finally {
-      setCargando(false);
-    }
-  };
-
   const aprobarUsuario = async (userId: string) => {
     setCargando(true);
     try {
@@ -215,12 +236,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
   };
 
   const suspenderUsuario = async (userId: string) => {
-    if (!window.confirm("¿SUSPENDER cuenta?")) return;
-    setCargando(true);
-    try {
-      await updateDoc(doc(db, "usuarios", userId), { cuentaSuspendida: true });
-      await cargarDatosAdmin(); 
-    } catch (e) { console.error(e); } finally { setCargando(false); }
+    setModalAdmin({tipo: 'accion', data: userId});
   };
 
   const reactivarUsuario = async (userId: string) => {
@@ -240,7 +256,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         </div>
       )}
 
-      <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white">
+      <div className="p-6 bg-slate-900 border-b border-white/5 flex items-center justify-between text-white shrink-0">
         <button onClick={() => setPestañaActiva('cuenta')} className="bg-white/5 p-2 rounded-xl"><ChevronRight size={20} className="rotate-180" /></button>
         <div className="text-center">
           <h2 className="font-black italic uppercase text-sm tracking-tighter">Control Maestro</h2>
@@ -281,8 +297,8 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                   <p className="relative z-10 text-[10px] text-slate-400 font-bold mb-6 tracking-widest">{usuarioVisitadoAdmin.telefono || "Sin teléfono"}</p>
                   <div className="relative z-10 grid grid-cols-2 gap-3">
                     <button onClick={() => verHistorial(usuarioVisitadoAdmin.id)} className="bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black text-[10px] uppercase">Ver Historial</button>
-                    <button onClick={() => setModalAdmin({tipo: 'accion', data: usuarioVisitadoAdmin.id})} className="bg-red-950/40 hover:bg-red-900 border border-red-900/50 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"> Suspender </button>
-                   </div>
+                    <button onClick={() => suspenderUsuario(usuarioVisitadoAdmin.id)} className="bg-red-950/40 border border-red-900/50 hover:bg-red-900 text-red-500 hover:text-red-100 py-4 rounded-2xl font-black text-[10px] uppercase">Suspender</button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -333,7 +349,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                               <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400"><DollarSign size={18} /></div>
                               <div>
                                 <p className="text-[11px] font-black text-slate-200 uppercase leading-none mb-1">{tx.descripcion}</p>
-                                <p className="text-[8px] font-bold text-slate-500 uppercase">{new Date(tx.fecha).toLocaleDateString('es-VE')}</p>
+                                <p className="text-[8px] font-bold text-slate-500 uppercase">{formatearFecha(tx.fecha)}</p>
                               </div>
                             </div>
                             <p className="text-sm font-black italic text-indigo-400">+${Number(tx.monto).toFixed(2)}</p>
@@ -405,15 +421,17 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                               <button onClick={() => verPerfil(r.idDenunciado)} className="text-[9px] font-bold text-blue-400 bg-blue-500/5 px-3 py-1 rounded-lg border border-blue-500/10">PERFIL</button>
                             </div>
                             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreDenunciante}</p>
+                              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">
+                                Denunciante: {r.nombreDenunciante} • {formatearFecha(r.timestamp || r.fecha)}
+                              </p>
                               <p className="text-[11px] text-slate-300 italic pl-3 leading-tight">"{r.descripcion}"</p>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                            <button onClick={() => verHistorial(r.idDenunciado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all"> Historial </button>
-                            <button onClick={() => enviarAdvertencia(r.idDenunciado)} className="bg-orange-900/20 border border-orange-500/20 text-orange-500 p-3 rounded-2xl text-[9px] font-black uppercase hover:bg-orange-900/40 transition-all"> Advertir</button>
-                            <button onClick={() => resolverReporte(r.id)} disabled={r.estado === 'resuelto'} className={`p-3 rounded-2xl text-[9px] font-black uppercase transition-all ${ r.estado === 'resuelto' ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed' : 'bg-green-900/20 border border-green-500/20 text-green-400 hover:bg-green-900/40'}`}> {r.estado === 'resuelto' ? 'RESUELTO' : 'RESOLVER'} </button>
+                              <button onClick={() => verHistorial(r.idDenunciado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300">Historial</button>
+                              <button onClick={() => enviarAdvertencia(r.idDenunciado)} className="bg-orange-900/20 border border-orange-500/20 text-orange-500 p-3 rounded-2xl text-[9px] font-black uppercase">Advertir</button>
+                              <button onClick={() => resolverReporte(r.id)} disabled={r.estado === 'resuelto'} className="bg-green-900/20 border text-green-400 p-3 rounded-2xl text-[9px] font-black uppercase">RESOLVER</button>
                             </div>
-                            <button onClick={() => aplicarSancion(r.idDenunciado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase">Aplicar Sanción / Banear</button>
+                            <button onClick={() => suspenderUsuario(r.idDenunciado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase">Aplicar Sanción / Banear</button>
                           </div>
                         </div>
                       ))
@@ -429,32 +447,58 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                     })
                     .map(u => {
                       const estaExpandido = usuarioExpandidoAdmin === u.id;
+                      const estaSuspendido = u.cuentaSuspendida === true;
                       return (
-                        <div key={u.id} className="bg-slate-900 border border-white/5 rounded-[25px] overflow-hidden">
-                          <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white">
-                            <div className="text-left">
-                              <p className="font-black text-xs uppercase">{u.nombre}</p>
-                              <p className="text-[9px] text-slate-500">{u.correo || u.email}</p>
+                        <div key={u.id} className={`bg-slate-900 border ${estaSuspendido ? 'border-red-900' : 'border-white/5'} rounded-[25px] overflow-hidden transition-colors`}>
+                          <button onClick={() => setUsuarioExpandidoAdmin(estaExpandido ? null : u.id)} className="w-full flex items-center justify-between p-5 text-white relative">
+                            {estaSuspendido && <div className="absolute top-0 right-0 bg-red-600 text-white text-[7px] font-black uppercase px-2 py-1 rounded-bl-xl">Suspendido</div>}
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 ${estaSuspendido ? 'bg-red-950/50 text-red-500' : 'bg-slate-800 text-white'} rounded-full flex items-center justify-center font-black text-xs`}>{u.nombre?.charAt(0).toUpperCase()}</div>
+                              <div className="text-left">
+                                <p className={`font-black text-xs uppercase italic ${estaSuspendido ? 'text-slate-500 line-through' : 'text-white'}`}>{u.nombre}</p>
+                                <p className="text-[9px] text-slate-500 font-bold">{u.correo || u.email}</p>
+                              </div>
                             </div>
                             <ChevronRight size={18} className={`text-slate-600 transition-transform ${estaExpandido ? 'rotate-90' : ''}`} />
                           </button>
                           {estaExpandido && (
-                            <div className="p-6 pt-0 space-y-5">
+                            <div className="p-6 pt-0 space-y-5 animate-in slide-in-from-top duration-200">
                               <div className="grid grid-cols-4 gap-2">
                                 {[
-                                  { img: u.kycFoto, label: 'Cédula' }, { img: u.selfieFoto, label: 'Selfie' },
-                                  { img: u.licenciaFoto, label: 'Licencia' }, { img: u.rcvFoto, label: 'RCV' },
-                                  { img: u.fotoFrontal, label: 'Frente' }, { img: u.fotoTrasera, label: 'Atrás' }
+                                  { img: u.kycFoto, label: 'Cédula' }, 
+                                  { img: u.selfieFoto, label: 'Selfie' }, 
+                                  { img: u.licenciaFoto, label: 'Licencia' }, 
+                                  { img: u.rcvFoto, label: 'RCV' }, 
+                                  { img: u.fotoFrontal, label: 'Frente' },
+                                  { img: u.fotoTrasera, label: 'Atrás' },
+                                  { img: u.fotoLatIzq, label: 'Lat. Izq' },
+                                  { img: u.fotoLatDer, label: 'Lat. Der' }
                                 ].map((item, idx) => (
-                                  <div key={idx} onClick={() => item.img && setFotoZoom(item.img)} className="bg-slate-800 aspect-square rounded-xl overflow-hidden"><img src={item.img} className="w-full h-full object-cover" /></div>
+                                  <div key={idx} className="flex flex-col gap-1">
+                                    <p className="text-[7px] font-black text-slate-500 uppercase text-center tracking-tighter">{item.label}</p>
+                                    <div onClick={() => item.img && setFotoZoom(item.img)} className={`bg-slate-800 aspect-square rounded-xl overflow-hidden border border-white/5 flex items-center justify-center ${estaSuspendido ? 'opacity-50 grayscale' : ''}`}> 
+                                      {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Camera size={14} className="text-slate-700" />}
+                                    </div>
+                                  </div>
                                 ))}
                               </div>
-                              <div className="flex gap-2">
-                                <button onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
-                                <button onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar</button>
+                              <div className="flex flex-col gap-2">
+                                {estaSuspendido ? (
+                                  <button disabled={cargando} onClick={() => reactivarUsuario(u.id)} className="w-full bg-slate-800 disabled:opacity-50 text-white p-3 rounded-xl font-black text-[10px] uppercase border border-slate-700 active:scale-95 transition-all">Reactivar Cuenta</button>
+                                ) : (
+                                  <>
+                                    {subPestañaAdmin === 'pendientes' && (
+                                      <div className="flex gap-2">
+                                        <button disabled={cargando} onClick={() => aprobarUsuario(u.id)} className="flex-1 bg-green-600 disabled:opacity-50 text-white p-3 rounded-xl font-black text-[10px] uppercase">Aprobar</button>
+                                        <button disabled={cargando} onClick={() => rechazarDocumentos(u.id)} className="flex-1 bg-amber-500/20 disabled:opacity-50 text-amber-500 p-3 rounded-xl font-black text-[10px] uppercase">Rechazar Fotos</button>
+                                      </div>
+                                    )}
+                                    <button disabled={cargando} onClick={() => suspenderUsuario(u.id)} className="w-full bg-red-950/40 disabled:opacity-50 text-red-500 p-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-600 hover:text-white transition-all">Suspender Usuario</button>
+                                  </>
+                                )}
                               </div>
                             </div>
-                          )}
+                          )}     
                         </div>
                       );
                     })
@@ -471,8 +515,9 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         </div>
       )}
 
-            {modalAdmin.data && (
-        <div className="fixed inset-0 z-[500] bg-slate-950/90 flex items-center justify-center p-4 animate-in fade-in">
+      {/* MODAL DE ACCIONES / HISTORIAL - z-[600] para estar arriba de todo */}
+      {modalAdmin.data && (
+        <div className="fixed inset-0 z-[600] bg-slate-950/90 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] p-6 border border-white/10 shadow-2xl animate-in zoom-in-95">
             {modalAdmin.tipo === 'historial' ? (
               <div className="space-y-4">
@@ -480,7 +525,6 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                   <History size={16} className="text-blue-500" /> Diagnóstico de Usuario
                 </h3>
                 
-                {/* Cuadro de advertencia con el contador de reportes */}
                 <div className="bg-red-950/40 border border-red-900/50 p-4 rounded-2xl text-center shadow-inner">
                   <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-1">Total de Reportes Recibidos</p>
                   <p className="text-4xl font-black italic text-red-500">{historialUsuario.filter(h => h.tipo === 'REPORTE').length}</p>
@@ -493,7 +537,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                     historialUsuario.filter(h => h.tipo === 'REPORTE').map((h, i) => (
                       <div key={i} className="bg-slate-900 p-4 rounded-xl border border-white/5 relative overflow-hidden">
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-                        <p className="text-[8px] font-black text-slate-500 uppercase mb-1">{new Date(h.fecha || h.timestamp).toLocaleDateString()}</p>
+                        <p className="text-[8px] font-black text-slate-500 uppercase mb-1">{formatearFecha(h.timestamp || h.fecha)}</p>
                         <p className="text-[11px] text-white font-bold italic">"{h.descripcion || h.motivo}"</p>
                         <p className="text-[8px] text-slate-400 mt-2">Denunciante: {h.nombreDenunciante || "Anónimo"}</p>
                       </div>
