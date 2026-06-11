@@ -247,12 +247,19 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CHAT INTELIGENTE 
+  // 🔥 LÓGICA DE CHAT INTELIGENTE CORREGIDA
   const manejarChatGlobal = () => {
     if (soyConductor) {
       if (pasajerosConfirmados.length === 1) {
-        // Inyectamos el pasajero para que el padre sepa con quién abrir el chat
-        onIniciarChat({ ...viaje, uidPasajeroElegido: pasajerosConfirmados[0].id || pasajerosConfirmados[0].uid });
+        const p = pasajerosConfirmados[0];
+        // Inyectamos exactamente los campos que necesita VistaChatPrivado
+        onIniciarChat({ 
+          ...viaje, 
+          uidPasajero: p.id || p.uid,
+          nombrePasajero: p.nombre || "Pasajero",
+          fotoPasajero: p.fotoPerfil || null,
+          telefonoPasajero: p.telefono || ""
+        });
       } else if (pasajerosConfirmados.length > 1) {
         setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero en la lista ☝️", tipo: "error" });
         setTimeout(() => setToast(null), 4000);
@@ -261,7 +268,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      onIniciarChat(viaje); // El pasajero habla directo con el chofer
+      // El pasajero habla directo con el chofer, el viaje ya tiene los datos del chofer
+      onIniciarChat(viaje); 
     }
   };
 
@@ -627,9 +635,21 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                        <div className={`${p.abordado ? 'bg-green-100' : 'bg-amber-100'} p-2 rounded-full shrink-0`}>
                          {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
-                       {/* 🔥 BOTÓN DE CHAT DIRECTO PARA EL CHOFER */}
+                       {/* 🔥 BOTÓN DE CHAT INYECTANDO DATOS DEL PASAJERO */}
                        {soyConductor && (
-                          <button onClick={(e) => { e.stopPropagation(); onIniciarChat({ ...viaje, uidPasajeroElegido: p.id || p.uid }); }} className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1">
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              onIniciarChat({ 
+                                ...viaje, 
+                                uidPasajero: p.id || p.uid,
+                                nombrePasajero: p.nombre || "Pasajero",
+                                fotoPasajero: p.fotoPerfil || null,
+                                telefonoPasajero: p.telefono || ""
+                              }); 
+                            }} 
+                            className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1"
+                          >
                             <MessageCircle size={16} />
                           </button>
                        )}
@@ -825,7 +845,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* 🔥 FOOTER FIJO CORREGIDO (CHAT SIEMPRE VISIBLE) */}
+      {/* FOOTER FIJO CORREGIDO (CHAT SIEMPRE VISIBLE) */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
         <div className="flex gap-2 sm:gap-3 h-14">
           
