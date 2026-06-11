@@ -93,13 +93,13 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     } finally { setCargando(false); }
   };
 
-  const verHistorial = async (uid: string) => {
+    const verHistorial = async (uid: string) => {
     setCargando(true);
     try {
-      // Usando el índice compuesto para buscar y ordenar de una vez
+      // AQUÍ ESTÁ EL CAMBIO PRINCIPAL 👇
       const qReportes = query(
         collection(db, "Reportes"), 
-        where("idReportado", "==", uid), 
+        where("idDenunciado", "==", uid), 
         orderBy("fechaCreacion", "desc")
       );
       const snapReportes = await getDocs(qReportes);
@@ -117,7 +117,6 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         ...snapViajes.docs.map(d => ({ tipo: 'VIAJE', ...d.data() }))
       ];
 
-      // Ordenar localmente solo para mezclar reportes y viajes cronológicamente
       historialCombinado.sort((a: any, b: any) => {
         const timeA = a.fechaCreacion || a.timestamp || a.fecha || 0;
         const timeB = b.fechaCreacion || b.timestamp || b.fecha || 0;
@@ -130,6 +129,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
       console.error(e); 
     } finally { setCargando(false); }
   };
+  
 
   const confirmarSancion = async (uid: string, motivo: string) => {
     setCargando(true);
