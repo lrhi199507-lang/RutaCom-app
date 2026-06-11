@@ -177,6 +177,27 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
+      const enviarAdvertencia = async (uid: string) => {
+    if (!window.confirm("¿Enviar advertencia formal de convivencia a este usuario?")) return;
+    setCargando(true);
+    try {
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: uid,
+        titulo: "⚠️ Atención a las Normas",
+        mensaje: "Hemos recibido comentarios sobre tu comportamiento reciente en la plataforma. Te recordamos cumplir con las normas de convivencia para evitar la suspensión permanente de tu cuenta.",
+        timestamp: Date.now(),
+        leido: false,
+        tipo: "alerta"
+      });
+      setToastAdmin("Advertencia enviada al usuario");
+    } catch (e) {
+      console.error(e);
+      setToastAdmin("Error al enviar advertencia");
+    } finally {
+      setCargando(false);
+    }
+  };
+
   const aprobarUsuario = async (userId: string) => {
     setCargando(true);
     try {
@@ -387,9 +408,10 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                               <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Denunciante: {r.nombreDenunciante}</p>
                               <p className="text-[11px] text-slate-300 italic pl-3 leading-tight">"{r.descripcion}"</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button onClick={() => verHistorial(r.idDenunciado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300">Historial</button>
-                              <button onClick={() => resolverReporte(r.id)} disabled={r.estado === 'resuelto'} className="bg-green-900/20 border text-green-400 p-3 rounded-2xl text-[9px] font-black uppercase">RESOLVER</button>
+                            <div className="grid grid-cols-3 gap-2">
+                            <button onClick={() => verHistorial(r.idDenunciado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300 hover:bg-slate-700 transition-all"> Historial </button>
+                            <button onClick={() => enviarAdvertencia(r.idDenunciado)} className="bg-orange-900/20 border border-orange-500/20 text-orange-500 p-3 rounded-2xl text-[9px] font-black uppercase hover:bg-orange-900/40 transition-all"> Advertir</button>
+                            <button onClick={() => resolverReporte(r.id)} disabled={r.estado === 'resuelto'} className={`p-3 rounded-2xl text-[9px] font-black uppercase transition-all ${ r.estado === 'resuelto' ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed' : 'bg-green-900/20 border border-green-500/20 text-green-400 hover:bg-green-900/40'}`}> {r.estado === 'resuelto' ? 'RESUELTO' : 'RESOLVER'} </button>
                             </div>
                             <button onClick={() => aplicarSancion(r.idDenunciado)} className="w-full py-3 rounded-2xl border border-red-900/50 text-red-500 text-[9px] font-black uppercase">Aplicar Sanción / Banear</button>
                           </div>
