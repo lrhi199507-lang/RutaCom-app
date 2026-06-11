@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
@@ -143,6 +143,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
+  // 🔥 CONTROL MAESTRO DE MODALES PARA OCULTAR LA BARRA INFERIOR
+  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion;
+
   useEffect(() => {
     if (window.google && window.google.maps) return;
     const script = document.createElement('script');
@@ -247,7 +250,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CREACIÓN DE CHAT A PRUEBA DE BALAS
+  // 🔥 LÓGICA DE CREACIÓN DE CHAT ENRIQUECIDA (Para que el padre sepa exactamente a quién abrirle)
   const iniciarChatPrivado = async (pasajeroObjetivo) => {
     setCargando(true);
     try {
@@ -269,11 +272,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         esSoporte: false
       };
 
-      // Intentamos una actualización invisible. Si Firebase nos bota, significa que la sala no existe
       try {
         await updateDoc(chatRef, { ultimaActividad: new Date().toISOString() });
       } catch (error) {
-        // La sala no existe, la creamos a la fuerza
         await setDoc(chatRef, {
           ...datosChat,
           fechaCreacion: serverTimestamp(),
@@ -282,11 +283,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         });
       }
 
-      onIniciarChat(datosChat);
-      onRegresar(); // Cierra el detalle para mostrar el chat limpio
+      // Inyectamos las coordenadas exactas del pasajero en el Viaje para que el componente "Mensajes" lo encuentre
+      onIniciarChat({
+        ...viaje,
+        uidPasajero: idPas,           // Ayuda a la vista padre a filtrar si lo requiere
+        idPasajeroDestino: idPas,     // Backup flag
+        chatIdGenerado: idSalaChat,   // Obliga la coincidencia
+        pasajero: pasajeroObjetivo    // Envía el objeto completo por si el chat lo requiere
+      });
       
     } catch (e: any) {
-      console.error("Error crítico al crear sala:", e);
+      console.error("Error al abrir sala:", e);
       setToast({ texto: "Error al abrir la sala de chat", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally {
@@ -601,11 +608,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
   return (
-    // 🔥 CAMBIO CRÍTICO: z-[99999] aplasta a la barra inferior de navegación y recupera el diseño original
     <div className="fixed inset-0 z-[99999] bg-slate-50 flex flex-col font-sans h-[100dvh] w-screen overflow-hidden animate-in slide-in-from-right duration-300">
       
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100000] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[120000] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
             {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="truncate whitespace-nowrap">{toast.texto}</span>
@@ -613,7 +619,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      {/* pb-32 asegura que los últimos pasajeros de la lista no queden escondidos debajo de los botones fijos */}
       <div className="flex-1 overflow-y-auto pb-32 relative">
         <div className="p-4 pt-6 flex justify-between items-center sticky top-0 z-[60] bg-slate-50/90 backdrop-blur-sm">
           <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 active:scale-95 transition-all"> 
@@ -880,83 +885,85 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* FOOTER FIJO QUE SIEMPRE SE MANTIENE ABAJO */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[100000]">
-        <div className="flex gap-2 sm:gap-3 h-14 max-w-md mx-auto">
-          
-          {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
-            <button disabled={cargando} onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
-              <MessageCircle size={18} /> <span className="hidden sm:inline">Chat</span>
-            </button>
-          )}
-
-          {estadoViaje === 'en_curso' && !soyConductor && (
-            <button onClick={activarSOS} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm border border-rose-200 active:scale-95 transition-all">
-              <AlertTriangle size={18} /> <span className="hidden sm:inline">SOS</span>
-            </button>
-          )}
-
-          {estadoViaje === 'en_curso' ? (
-            soyConductor ? (
-              <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
-                Finalizar Viaje
+      {/* 🔥 REGLA DE ORO: SI HAY UN MODAL ABIERTO, ESTA BARRA AZUL DESAPARECE POR COMPLETO */}
+      {!hayModalAbierto && (
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[100000]">
+          <div className="flex gap-2 sm:gap-3 h-14 max-w-md mx-auto">
+            
+            {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
+              <button disabled={cargando} onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
+                <MessageCircle size={18} /> <span className="hidden sm:inline">Chat</span>
               </button>
-            ) : (
-              <div className="flex-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                <Navigation size={16} /> En Ruta a Destino
-              </div>
-            )
-          ) : estadoViaje === 'buscando' ? (
-            soyConductor ? (
-               <button disabled={cargando} onClick={notificarLlegadaYAbrirModal} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2" >
-                 <MapPin size={16} /> ¡Ya llegué! (Validar)
-               </button>
-            ) : (
-               <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-1 bg-red-100 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-200">
-                 <X size={16} strokeWidth={3} /> Cancelar Asiento
-               </button>
-            )
-          ) : estadoViaje === 'disponible' ? (
-            soyConductor ? (
-              <div className="flex-1 flex gap-2">
-                <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
-                  Cancelar
+            )}
+
+            {estadoViaje === 'en_curso' && !soyConductor && (
+              <button onClick={activarSOS} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-rose-50 text-rose-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-sm border border-rose-200 active:scale-95 transition-all">
+                <AlertTriangle size={18} /> <span className="hidden sm:inline">SOS</span>
+              </button>
+            )}
+
+            {estadoViaje === 'en_curso' ? (
+              soyConductor ? (
+                <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
+                  Finalizar Viaje
                 </button>
-                <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
-                  {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
-                </button>
-              </div>
-            ) : (
-              yaSoyPasajero ? (
-                <div className="flex-1 bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                  <Check size={16} /> Confirmado
-                </div>
-              ) : yaSolicite ? (
-                <button disabled={cargando} onClick={cancelarSolicitud} className="flex-1 bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
-              ) : cuposRestantes > 0 ? (
-                <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
               ) : (
-                <button disabled className="flex-1 bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
+                <div className="flex-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                  <Navigation size={16} /> En Ruta a Destino
+                </div>
               )
-            )
-          ) : yaSoyPasajero && estadoViaje === 'finalizado' && (
-             yaCalifico ? (
-               <div className="w-full bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                 <Star size={16} className="fill-green-600" /> Viaje Calificado
-               </div>
-             ) : (
-               <button onClick={() => setModalCalificacion(true)} className="w-full bg-amber-400 text-amber-950 rounded-[22px] h-14 font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 active:scale-95 transition-all border border-amber-300">
-                 <Star size={16} className="fill-amber-950" /> Calificar Experiencia
-               </button>
-             )
-          )}
+            ) : estadoViaje === 'buscando' ? (
+              soyConductor ? (
+                 <button disabled={cargando} onClick={notificarLlegadaYAbrirModal} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2" >
+                   <MapPin size={16} /> ¡Ya llegué! (Validar)
+                 </button>
+              ) : (
+                 <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-1 bg-red-100 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-200">
+                   <X size={16} strokeWidth={3} /> Cancelar Asiento
+                 </button>
+              )
+            ) : estadoViaje === 'disponible' ? (
+              soyConductor ? (
+                <div className="flex-1 flex gap-2">
+                  <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
+                    Cancelar
+                  </button>
+                  <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
+                    {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
+                  </button>
+                </div>
+              ) : (
+                yaSoyPasajero ? (
+                  <div className="flex-1 bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                    <Check size={16} /> Confirmado
+                  </div>
+                ) : yaSolicite ? (
+                  <button disabled={cargando} onClick={cancelarSolicitud} className="flex-1 bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
+                ) : cuposRestantes > 0 ? (
+                  <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
+                ) : (
+                  <button disabled className="flex-1 bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
+                )
+              )
+            ) : yaSoyPasajero && estadoViaje === 'finalizado' && (
+               yaCalifico ? (
+                 <div className="w-full bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                   <Star size={16} className="fill-green-600" /> Viaje Calificado
+                 </div>
+               ) : (
+                 <button onClick={() => setModalCalificacion(true)} className="w-full bg-amber-400 text-amber-950 rounded-[22px] h-14 font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 active:scale-95 transition-all border border-amber-300">
+                   <Star size={16} className="fill-amber-950" /> Calificar Experiencia
+                 </button>
+               )
+            )}
+          </div>
         </div>
-      </div>
+      )}
       
       {/* MODAL FINALIZAR VIAJE */}
       {modalFinalizar && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
             <div className="bg-blue-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-blue-500/20">
               <Check size={30} className="text-blue-500" />
             </div>
@@ -973,12 +980,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       {/* MODAL CHOFER CALIFICA PASAJEROS */}
       {modalCalificarPasajeros && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-[#0f172a] w-full max-w-md rounded-[35px] shadow-2xl p-6 relative border border-slate-800 my-auto">
-            <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2 text-center">Califica a tus Pasajeros</h3>
-            <p className="text-[10px] font-bold text-slate-400 mb-6 text-center uppercase tracking-widest">¿Cómo se comportaron durante el viaje?</p>
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-[#0f172a] w-full max-w-md rounded-[35px] shadow-2xl p-6 relative border border-slate-800 flex flex-col max-h-[90vh]">
+            <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2 text-center shrink-0">Califica a tus Pasajeros</h3>
+            <p className="text-[10px] font-bold text-slate-400 mb-6 text-center uppercase tracking-widest shrink-0">¿Cómo se comportaron durante el viaje?</p>
 
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar mb-6">
+            <div className="space-y-4 overflow-y-auto no-scrollbar mb-6 flex-1">
               {pasajerosConfirmados.map((p, index) => {
                 if (!p) return null;
                 const pid = p.id || p.uid;
@@ -1003,7 +1010,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               })}
             </div>
 
-            <button onClick={enviarCalificacionesYFinalizar} disabled={cargando} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">
+            <button onClick={enviarCalificacionesYFinalizar} disabled={cargando} className="w-full shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">
               {cargando ? 'Guardando...' : 'Finalizar y Guardar'}
             </button>
           </div>
@@ -1012,8 +1019,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       {/* MODAL PASAJERO CALIFICA CHOFER */}
       {modalCalificacion && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
             <button onClick={() => setModalCalificacion(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white transition-colors"><X size={20} /></button>
             <div className="w-16 h-16 rounded-[20px] bg-blue-600 mx-auto overflow-hidden mb-4 border-2 border-slate-700 flex items-center justify-center">
               {viaje?.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <span className="text-white font-black italic text-2xl">D</span>}
@@ -1037,16 +1044,16 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      {/* MODAL DE ABORDAJE (PIN) */}
+      {/* MODAL DE ABORDAJE (PIN) - AHORA CON SCROLL INTERNO SI HACE FALTA */}
       {modalAbordaje && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300">
-            <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 z-[110000] flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 pb-8">
+          <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center mb-6 shrink-0">
               <h3 className="text-lg font-black italic uppercase text-slate-800">Verificación de Abordaje</h3>
               <button onClick={() => setModalAbordaje(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} /></button>
             </div>
-            <p className="text-xs font-bold text-slate-500 mb-6">Solicita el PIN secreto a tus pasajeros para confirmar que están en el auto.</p>
-            <div className="space-y-4 max-h-[40vh] overflow-y-auto mb-6">
+            <p className="text-xs font-bold text-slate-500 mb-6 shrink-0">Solicita el PIN secreto a tus pasajeros para confirmar que están en el auto.</p>
+            <div className="space-y-4 overflow-y-auto mb-6 flex-1">
               {pasajerosConfirmados.map((p, index) => {
                 if (!p) return null;
                 const idPasajero = p.id || p.uid;
@@ -1069,15 +1076,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 );
               })}
             </div>
-            <button onClick={procesarAbordajeEIniciar} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">Confirmar e Iniciar Viaje</button>
+            <button onClick={procesarAbordajeEIniciar} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all shrink-0">Confirmar e Iniciar Viaje</button>
           </div>
         </div>
       )}
 
       {/* MODAL DE ACOMPAÑANTES */}
       {modalAcompanantes && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
-          <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
+          <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-black italic uppercase text-slate-800">¿Vas con alguien más?</h3>
               <button onClick={() => setModalAcompanantes(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors"><X size={18} /></button>
@@ -1132,8 +1139,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       
       {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-red-900/50 text-center">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-red-900/50 text-center max-h-[85vh] overflow-y-auto">
             <div className="bg-red-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-red-500/20">
               <AlertTriangle size={30} className="text-red-500" />
             </div>
