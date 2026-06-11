@@ -103,10 +103,9 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     } finally { setCargando(false); }
   };
 
-  const verHistorial = async (uid: string) => {
+    const verHistorial = async (uid: string) => {
     setCargando(true);
     try {
-      // 🔥 CORRECCIÓN 2: Consulta usando 'idDenunciado' exactamente como está en Firebase
       const qReportes = query(
         collection(db, "Reportes"), 
         where("idDenunciado", "==", uid), 
@@ -114,9 +113,10 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
       );
       const snapReportes = await getDocs(qReportes);
       
+      // 🔥 CORRECCIÓN: Ajustado a 'idCreador' para que coincida con tu índice en Firebase
       const qViajes = query(
         collection(db, "Viajes"), 
-        where("uidConductor", "==", uid), 
+        where("idCreador", "==", uid), 
         orderBy("fecha", "desc"),
         limit(5)
       );
@@ -127,7 +127,6 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         ...snapViajes.docs.map(d => ({ tipo: 'VIAJE', ...d.data() }))
       ];
 
-      // Ordenar localmente la mezcla de reportes y viajes para que los más recientes queden arriba
       historialCombinado.sort((a: any, b: any) => {
         const getTime = (obj: any) => {
           const val = obj.fechaCreacion || obj.timestamp || obj.fecha;
@@ -139,9 +138,12 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
 
       setHistorialUsuario(historialCombinado);
       setModalAdmin({tipo: 'historial', data: uid});
-    } catch (e) { 
+    } catch (e: any) { 
       console.error("Error cargando historial:", e); 
-    } finally { setCargando(false); }
+      setToastAdmin("Error de lectura: " + e.message); // Así sabrás si falta un índice
+    } finally { 
+      setCargando(false); 
+    }
   };
 
   const confirmarSancion = async (uid: string, motivo: string) => {
@@ -442,8 +444,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                               </p>
                               <p className="text-[11px] text-slate-300 italic pl-3 leading-tight">"{r.descripcion}"</p>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <button onClick={() => verHistorial(r.idDenunciado)} className="bg-slate-800 p-3 rounded-2xl text-[9px] font-black uppercase text-slate-300">Historial</button>
+                            <div className="grid grid-cols-2 gap-2">
                               <button onClick={() => enviarAdvertencia(r.idDenunciado)} className="bg-orange-900/20 border border-orange-500/20 text-orange-500 p-3 rounded-2xl text-[9px] font-black uppercase">Advertir</button>
                               <button onClick={() => resolverReporte(r.id)} disabled={r.estado === 'resuelto'} className="bg-green-900/20 border text-green-400 p-3 rounded-2xl text-[9px] font-black uppercase">RESOLVER</button>
                             </div>
