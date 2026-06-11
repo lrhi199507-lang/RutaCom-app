@@ -247,12 +247,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CHATS PRIVADOS PROFESIONAL (Generación de IDs únicos)
+  // 🔥 LÓGICA DE CHATS DIRECTOS Y CIERRE DE VISTA
   const abrirChatChofer = (pasajero) => {
     const idPas = String(pasajero.id || pasajero.uid);
     onIniciarChat({
       ...viaje,
-      id: `${viaje.id}_${idPas}`, // ID de sala única entre conductor y este pasajero
+      id: `${viaje.id}_${idPas}`, 
       idViaje: viaje.id,
       uidConductor: viaje.uidConductor || viaje.idCreador,
       uidPasajero: idPas,
@@ -261,13 +261,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       telefonoPasajero: pasajero.telefono || "",
       esSoporte: false
     });
+    onRegresar(); // Obliga a la app a cerrar esta pantalla para que se vea el chat
   };
 
   const abrirChatPasajero = () => {
     const miId = String(userData?.id || userData?.uid);
     onIniciarChat({
       ...viaje,
-      id: `${viaje.id}_${miId}`, // El pasajero busca la misma sala única
+      id: `${viaje.id}_${miId}`, 
       idViaje: viaje.id,
       uidConductor: viaje.uidConductor || viaje.idCreador,
       uidPasajero: miId,
@@ -276,6 +277,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       telefonoPasajero: userData?.telefono || "",
       esSoporte: false
     });
+    onRegresar(); // Obliga a la app a cerrar esta pantalla para que se vea el chat
   };
 
   const manejarChatGlobal = () => {
@@ -585,10 +587,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative font-sans">
+    // 🔥 CAMBIO CRÍTICO 1: "fixed inset-0 z-[100]" convierte esto en un modal real a pantalla completa.
+    // Es imposible scrollear y ver la bandeja de "Mensajes" detrás de él.
+    <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col font-sans animate-in slide-in-from-right duration-300">
       
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[300] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
             {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="truncate whitespace-nowrap">{toast.texto}</span>
@@ -596,9 +600,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto pb-48">
-        <div className="p-4 pt-6 flex justify-between items-center">
-          <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all"> <ArrowLeft size={16} strokeWidth={3} />  <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
+      <div className="flex-1 overflow-y-auto pb-48 relative">
+        <div className="p-4 pt-6 flex justify-between items-center sticky top-0 z-[60] bg-slate-50/90 backdrop-blur-sm">
+          <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 active:scale-95 transition-all"> 
+            <ArrowLeft size={16} strokeWidth={3} />  <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
           </button>
           {estadoViaje === 'en_curso' && (
             <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
@@ -663,7 +668,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                               e.stopPropagation(); 
                               abrirChatChofer(p); 
                             }} 
-                            className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1"
+                            className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30"
                           >
                             <MessageCircle size={16} />
                           </button>
@@ -860,9 +865,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* FOOTER FIJO CORREGIDO (CHAT SIEMPRE VISIBLE) */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 bg-white/90 backdrop-blur-md border-t border-slate-100 z-[60] max-w-md mx-auto">
-        <div className="flex gap-2 sm:gap-3 h-14">
+      {/* FOOTER FIJO */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[110]">
+        <div className="flex gap-2 sm:gap-3 h-14 max-w-md mx-auto">
           
           {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
             <button onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
@@ -935,7 +940,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       
       {/* MODAL FINALIZAR VIAJE */}
       {modalFinalizar && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
             <div className="bg-blue-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-blue-500/20">
               <Check size={30} className="text-blue-500" />
@@ -953,7 +958,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       {/* MODAL CHOFER CALIFICA PASAJEROS */}
       {modalCalificarPasajeros && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-[#0f172a] w-full max-w-md rounded-[35px] shadow-2xl p-6 relative border border-slate-800 my-auto">
             <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2 text-center">Califica a tus Pasajeros</h3>
             <p className="text-[10px] font-bold text-slate-400 mb-6 text-center uppercase tracking-widest">¿Cómo se comportaron durante el viaje?</p>
@@ -992,7 +997,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       {/* MODAL PASAJERO CALIFICA CHOFER */}
       {modalCalificacion && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
             <button onClick={() => setModalCalificacion(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white transition-colors"><X size={20} /></button>
             <div className="w-16 h-16 rounded-[20px] bg-blue-600 mx-auto overflow-hidden mb-4 border-2 border-slate-700 flex items-center justify-center">
@@ -1019,7 +1024,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       {/* MODAL DE ABORDAJE (PIN) */}
       {modalAbordaje && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-950/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-black italic uppercase text-slate-800">Verificación de Abordaje</h3>
@@ -1056,7 +1061,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       {/* MODAL DE ACOMPAÑANTES */}
       {modalAcompanantes && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
           <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-black italic uppercase text-slate-800">¿Vas con alguien más?</h3>
@@ -1112,7 +1117,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       
       {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] p-6 flex items-center justify-center animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-red-900/50 text-center">
             <div className="bg-red-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-red-500/20">
               <AlertTriangle size={30} className="text-red-500" />
