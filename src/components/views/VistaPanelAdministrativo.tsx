@@ -45,23 +45,15 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     try {
       const [snapUsers, snapReports, snapPagos, snapAdmin, snapSoporte] = await Promise.all([
         getDocs(query(collection(db, "usuarios"), limit(50))), 
-        getDocs(query(collection(db, "Reportes"), limit(30))),
+        // Consulta indexada de Firebase (Evita gastar RAM del teléfono)
+        getDocs(query(collection(db, "Reportes"), orderBy("fechaCreacion", "desc"), limit(30))),
         getDocs(query(collection(db, "PagosPendientes"), where("estado", "==", "pendiente"), limit(50))),
         getDocs(query(collection(db, "Transacciones"), where("uid", "==", "ADMIN_APP"), orderBy("fecha", "desc"), limit(20))),
         getDocs(query(collection(db, "Chats"), where("esSoporte", "==", true), limit(20)))
       ]);
 
       setUsuariosAdmin(snapUsers.docs.map(d => ({ id: d.id, ...d.data() })));
-      
-      // Mapear y ordenar reportes localmente para evitar errores de índice en Firebase
-      const reportes = snapReports.docs.map(d => ({ id: d.id, ...d.data() }));
-      reportes.sort((a: any, b: any) => {
-        const timeA = a.timestamp || new Date(a.fecha || 0).getTime();
-        const timeB = b.timestamp || new Date(b.fecha || 0).getTime();
-        return timeB - timeA; // Más reciente primero
-      });
-      setReportesAdmin(reportes);
-
+      setReportesAdmin(snapReports.docs.map(d => ({ id: d.id, ...d.data() })));
       setPagosAdmin(snapPagos.docs.map(d => ({ id: d.id, ...d.data() })));
       setTransaccionesAdmin(snapAdmin.docs.map(d => ({ id: d.id, ...d.data() })));
       setChatsSoporteAdmin(snapSoporte.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -104,20 +96,31 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
   const verHistorial = async (uid: string) => {
     setCargando(true);
     try {
-      const qReportes = query(collection(db, "Reportes"), where("idReportado", "==", uid));
+      // Usando el índice compuesto para buscar y ordenar de una vez
+      const qReportes = query(
+        collection(db, "Reportes"), 
+        where("idReportado", "==", uid), 
+        orderBy("fechaCreacion", "desc")
+      );
       const snapReportes = await getDocs(qReportes);
-      const qViajes = query(collection(db, "Viajes"), where("uidConductor", "==", uid), orderBy("fecha", "desc"));
+      
+      const qViajes = query(
+        collection(db, "Viajes"), 
+        where("uidConductor", "==", uid), 
+        orderBy("fecha", "desc"),
+        limit(5)
+      );
       const snapViajes = await getDocs(qViajes);
       
       const historialCombinado = [
         ...snapReportes.docs.map(d => ({ tipo: 'REPORTE', ...d.data() })),
-        ...snapViajes.docs.slice(0, 5).map(d => ({ tipo: 'VIAJE', ...d.data() }))
+        ...snapViajes.docs.map(d => ({ tipo: 'VIAJE', ...d.data() }))
       ];
 
-      // Ordenar el historial por fecha
+      // Ordenar localmente solo para mezclar reportes y viajes cronológicamente
       historialCombinado.sort((a: any, b: any) => {
-        const timeA = a.timestamp || new Date(a.fecha || 0).getTime();
-        const timeB = b.timestamp || new Date(b.fecha || 0).getTime();
+        const timeA = a.fechaCreacion || a.timestamp || a.fecha || 0;
+        const timeB = b.fechaCreacion || b.timestamp || b.fecha || 0;
         return timeB - timeA;
       });
 
@@ -422,7 +425,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                             </div>
                             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
                               <p className="text-[8px] font-black text-slate-500 uppercase mb-1">
-                                Denunciante: {r.nombreDenunciante} • {formatearFecha(r.timestamp || r.fecha)}
+                                Denunciante: {r.nombreDenunciante} • {formatearFecha(r.fechaCreacion || r.timestamp || r.fecha)}
                               </p>
                               <p className="text-[11px] text-slate-300 italic pl-3 leading-tight">"{r.descripcion}"</p>
                             </div>
@@ -537,7 +540,7 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
                     historialUsuario.filter(h => h.tipo === 'REPORTE').map((h, i) => (
                       <div key={i} className="bg-slate-900 p-4 rounded-xl border border-white/5 relative overflow-hidden">
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-                        <p className="text-[8px] font-black text-slate-500 uppercase mb-1">{formatearFecha(h.timestamp || h.fecha)}</p>
+                        <p className="text-[8px] font-black text-slate-500 uppercase mb-1">{formatearFecha(h.fechaCreacion || h.timestamp || h.fecha)}</p>
                         <p className="text-[11px] text-white font-bold italic">"{h.descripcion || h.motivo}"</p>
                         <p className="text-[8px] text-slate-400 mt-2">Denunciante: {h.nombreDenunciante || "Anónimo"}</p>
                       </div>
