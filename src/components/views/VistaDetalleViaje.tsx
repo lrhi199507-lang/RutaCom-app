@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
 import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
@@ -247,43 +247,60 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CHATS DIRECTOS Y CIERRE DE VISTA
-  const abrirChatChofer = (pasajero) => {
-    const idPas = String(pasajero.id || pasajero.uid);
-    onIniciarChat({
-      ...viaje,
-      id: `${viaje.id}_${idPas}`, 
-      idViaje: viaje.id,
-      uidConductor: viaje.uidConductor || viaje.idCreador,
-      uidPasajero: idPas,
-      nombrePasajero: pasajero.nombre || "Pasajero",
-      fotoPasajero: pasajero.fotoPerfil || null,
-      telefonoPasajero: pasajero.telefono || "",
-      esSoporte: false
-    });
-    onRegresar(); // Obliga a la app a cerrar esta pantalla para que se vea el chat
-  };
+  // 🔥 NUEVA LÓGICA INFALIBLE: CREAR SALA ANTES DE ABRIRLA
+  const iniciarChatPrivado = async (pasajeroObjetivo) => {
+    setCargando(true);
+    try {
+      const idChofer = String(viaje.uidConductor || viaje.idCreador);
+      const idPas = String(pasajeroObjetivo.id || pasajeroObjetivo.uid);
+      
+      // Creamos una sala única combinando el viaje y el pasajero
+      const idSalaChat = `${viaje.id}_${idPas}`;
 
-  const abrirChatPasajero = () => {
-    const miId = String(userData?.id || userData?.uid);
-    onIniciarChat({
-      ...viaje,
-      id: `${viaje.id}_${miId}`, 
-      idViaje: viaje.id,
-      uidConductor: viaje.uidConductor || viaje.idCreador,
-      uidPasajero: miId,
-      nombrePasajero: userData?.nombre || "Pasajero",
-      fotoPasajero: userData?.fotoPerfil || null,
-      telefonoPasajero: userData?.telefono || "",
-      esSoporte: false
-    });
-    onRegresar(); // Obliga a la app a cerrar esta pantalla para que se vea el chat
+      const chatRef = doc(db, "Chats", idSalaChat);
+      const chatSnap = await getDoc(chatRef);
+
+      // Preparamos los datos base de la sala de chat
+      const datosChat = {
+        id: idSalaChat,
+        idViaje: viaje.id,
+        participantes: [idChofer, idPas],
+        uidConductor: idChofer,
+        uidPasajero: idPas,
+        nombreConductor: soyConductor ? String(userData?.nombre || "Conductor") : String(viaje.cN || viaje.conductor || "Conductor"),
+        nombrePasajero: soyConductor ? String(pasajeroObjetivo.nombre || "Pasajero") : String(userData?.nombre || "Pasajero"),
+        fotoConductor: soyConductor ? (userData?.fotoPerfil || null) : (viaje.fotoPerfil || null),
+        fotoPasajero: soyConductor ? (pasajeroObjetivo.fotoPerfil || null) : (userData?.fotoPerfil || null),
+        esSoporte: false
+      };
+
+      // Si la sala no existe en Firebase, la registramos oficialmente
+      if (!chatSnap.exists()) {
+        await setDoc(chatRef, {
+          ...datosChat,
+          fechaCreacion: serverTimestamp(),
+          ultimoMensaje: "Chat habilitado para el viaje",
+          ultimaHora: new Date().toISOString()
+        });
+      }
+
+      // Le mandamos los datos a la App y cerramos la pantalla del viaje
+      onIniciarChat(datosChat);
+      onRegresar(); 
+      
+    } catch (e) {
+      console.error("Error crítico al crear sala:", e);
+      setToast({ texto: "Error al abrir la sala de chat", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setCargando(false);
+    }
   };
 
   const manejarChatGlobal = () => {
     if (soyConductor) {
       if (pasajerosConfirmados.length === 1) {
-        abrirChatChofer(pasajerosConfirmados[0]);
+        iniciarChatPrivado(pasajerosConfirmados[0]);
       } else if (pasajerosConfirmados.length > 1) {
         setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero ☝️", tipo: "error" });
         setTimeout(() => setToast(null), 4000);
@@ -292,7 +309,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      abrirChatPasajero();
+      // El pasajero abre el chat mandando sus propios datos como objetivo
+      iniciarChatPrivado(userData);
     }
   };
 
@@ -587,12 +605,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
   return (
-    // 🔥 CAMBIO CRÍTICO 1: "fixed inset-0 z-[100]" convierte esto en un modal real a pantalla completa.
-    // Es imposible scrollear y ver la bandeja de "Mensajes" detrás de él.
-    <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col font-sans animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-[50] bg-slate-50 flex flex-col font-sans overflow-hidden animate-in slide-in-from-right duration-300">
       
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[300] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
             {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="truncate whitespace-nowrap">{toast.texto}</span>
@@ -664,9 +680,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                        
                        {soyConductor && (
                           <button 
+                            disabled={cargando}
                             onClick={(e) => { 
                               e.stopPropagation(); 
-                              abrirChatChofer(p); 
+                              iniciarChatPrivado(p); 
                             }} 
                             className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30"
                           >
@@ -870,7 +887,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         <div className="flex gap-2 sm:gap-3 h-14 max-w-md mx-auto">
           
           {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
-            <button onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
+            <button disabled={cargando} onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
               <MessageCircle size={18} /> <span className="hidden sm:inline">Chat</span>
             </button>
           )}
