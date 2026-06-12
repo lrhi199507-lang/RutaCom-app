@@ -143,23 +143,32 @@ export default function NavegacionPrincipal({ user }) {
   }, [vista, viajeSel, pasoWizard, chatActivo]); 
   // ↑ Es VITAL que estas variables estén en el corchete
 
-
-  const iniciarChat = async (viaje) => {
-    if (!userData?.id || !viaje?.id) return;
+   const iniciarChat = async (datos) => {
+    if (!userData?.id || !datos?.id) return;
     
     try {
-      const conductorId = viaje.uidConductor || viaje.idCreador;
+      // 🔥 EL PARCHE MAESTRO: Si la orden ya trae el chat armado desde VistaDetalleViaje, ábrelo de una!
+      if (datos.participantes && typeof datos.mensajesSinLeer !== 'undefined') {
+        setChatActivo(datos);
+        setVista("chat_individual");
+        setViajeSel(null); // Cierra la pantalla del viaje para no causar conflictos
+        return;
+      }
+
+      // --- Lógica original para el pasajero ---
+      const conductorId = datos.uidConductor || datos.idCreador;
       const soyConductor = conductorId === userData.id;
 
+      // Si es conductor y la orden no trajo el chat armado, lo mandamos al inbox por seguridad
       if (soyConductor) {
          setVista("inbox");
          return;
       }
 
       const chatsRef = collection(db, "Chats");
-            const q = query(
+      const q = query(
         chatsRef, 
-        where("idViaje", "==", viaje.id),
+        where("idViaje", "==", datos.id),
         where("participantes", "array-contains", userData.id) 
       );
       
@@ -172,12 +181,12 @@ export default function NavegacionPrincipal({ user }) {
         chatDataCompleto = { id: docSnap.id, ...docSnap.data() };
       } else {
         const nuevosDatos = {
-          idViaje: viaje.id,
-          ruta: `${viaje.cO || viaje.origen?.split(',')[0] || "Ruta"} - ${viaje.cD || viaje.destino?.split(',')[0] || "Ruta"}`,
+          idViaje: datos.id,
+          ruta: `${datos.cO || datos.origen?.split(',')[0] || "Ruta"} - ${datos.cD || datos.destino?.split(',')[0] || "Ruta"}`,
           uidConductor: conductorId, 
-          nombreConductor: viaje.conductor || "Conductor",
-          telefonoConductor: viaje.telefono || "",
-          fotoConductor: viaje.fotoPerfil || "",
+          nombreConductor: datos.conductor || "Conductor",
+          telefonoConductor: datos.telefono || "",
+          fotoConductor: datos.fotoPerfil || "",
           uidPasajero: userData.id,
           nombrePasajero: userData.nombre || "Pasajero",
           fotoPasajero: userData.fotoPerfil || "",
@@ -186,9 +195,9 @@ export default function NavegacionPrincipal({ user }) {
           ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           timestamp: Date.now(),
           mensajesSinLeer: 0,
-          estadoViaje: viaje.estado || "disponible",
-         participantes: [conductorId, userData.id]
-      };
+          estadoViaje: datos.estado || "disponible",
+          participantes: [conductorId, userData.id]
+        };
         
         const nuevoChatRef = await addDoc(collection(db, "Chats"), nuevosDatos);
         chatDataCompleto = { id: nuevoChatRef.id, ...nuevosDatos };
@@ -196,6 +205,7 @@ export default function NavegacionPrincipal({ user }) {
 
       setChatActivo(chatDataCompleto);
       setVista("chat_individual");
+      setViajeSel(null); // 🔥 Aseguramos cerrar la vista del viaje aquí también
       
     } catch (error) {
       console.error("Error al iniciar chat:", error);
