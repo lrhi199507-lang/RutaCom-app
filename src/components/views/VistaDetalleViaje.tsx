@@ -250,48 +250,67 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  const abrirChatPasajero = () => {
-    const miId = String(userData?.id || userData?.uid);
-    onIniciarChat({
-      ...viaje, 
-      id: `${viaje.id}_${miId}`, // ID de sala verdaderamente privada
-      idViaje: viaje.id,
-      uidConductor: viaje.uidConductor || viaje.idCreador,
-      uidPasajero: miId,
-      nombreConductor: viaje.cN || viaje.conductor || "Conductor",
-      nombrePasajero: userData?.nombre || "Pasajero",
-      fotoConductor: viaje.fotoPerfil || null,
-      fotoPasajero: userData?.fotoPerfil || null,
-      telefonoConductor: viaje.telefono || "",
-      telefonoPasajero: userData?.telefono || "",
-      ruta: viaje.cO ? `${viaje.cO.split(',')[0]} - ${viaje.cD?.split(',')[0]}` : "Detalle de Ruta",
-      esSoporte: false
-    });
+    // 🔥 LÓGICA DE CHAT DEFINITIVA BASADA EN TU IMAGEN DE FIREBASE
+  const iniciarChatPrivado = async (pasajeroObjetivo) => {
+    setCargando(true);
+    try {
+      const miId = String(userData?.id || userData?.uid);
+      const idChofer = String(viaje.uidConductor || viaje.idCreador);
+      const idPas = String(pasajeroObjetivo.id || pasajeroObjetivo.uid);
+      
+      // 1. BUSCAMOS EL CHAT REAL EN FIREBASE (array-contains es vital para que las reglas no bloqueen)
+      const qChat = query(
+        collection(db, "Chats"),
+        where("idViaje", "==", viaje.id),
+        where("uidPasajero", "==", idPas),
+        where("participantes", "array-contains", miId)
+      );
+      
+      const chatSnap = await getDocs(qChat);
+      
+      if (!chatSnap.empty) {
+        // 2. SI EXISTE, LO ABRIMOS CON SU ID ALEATORIO REAL (Ej: MuQ14u...)
+        const chatExistente = chatSnap.docs[0];
+        onIniciarChat({ id: chatExistente.id, ...chatExistente.data() });
+      } else {
+        // 3. SI NO EXISTE, LO CREAMOS EXACTAMENTE COMO EN TU CAPTURA
+        const datosNuevoChat = {
+          estadoViaje: estadoViaje,
+          fotoConductor: soyConductor ? (userData?.fotoPerfil || null) : (viaje.fotoPerfil || null),
+          fotoPasajero: soyConductor ? (pasajeroObjetivo.fotoPerfil || null) : (userData?.fotoPerfil || null),
+          idViaje: viaje.id,
+          mensajesSinLeer: 0,
+          nombreConductor: soyConductor ? String(userData?.nombre || "Conductor") : String(viaje.cN || viaje.conductor || "Conductor"),
+          nombrePasajero: soyConductor ? String(pasajeroObjetivo.nombre || "Pasajero") : String(userData?.nombre || "Pasajero"),
+          participantes: [idChofer, idPas],
+          ruta: viaje.cO ? `${viaje.cO.split(',')[0]} - ${viaje.cD?.split(',')[0]}` : "Detalle de Ruta",
+          telefonoConductor: soyConductor ? (userData?.telefono || "") : (viaje.telefono || ""),
+          telefonoPasajero: soyConductor ? (pasajeroObjetivo.telefono || "") : (userData?.telefono || ""),
+          timestamp: Date.now(),
+          uidConductor: idChofer,
+          uidPasajero: idPas,
+          ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          ultimoMensaje: "Chat iniciado",
+          esSoporte: false
+        };
+
+        const nuevoChatRef = await addDoc(collection(db, "Chats"), datosNuevoChat);
+        onIniciarChat({ id: nuevoChatRef.id, ...datosNuevoChat });
+      }
+      
+    } catch (e) {
+      console.error("Error al gestionar sala de chat:", e);
+      setToast({ texto: "Error de conexión al abrir el chat", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setCargando(false);
+    }
   };
 
-const abrirChatChofer = (pasajero) => {
-    const idPas = String(pasajero.id || pasajero.uid);
-    onIniciarChat({
-      ...viaje,
-      id: `${viaje.id}_${idPas}`, // ID de sala verdaderamente privada
-      idViaje: viaje.id,
-      uidConductor: userData?.id || userData?.uid,
-      uidPasajero: idPas,
-      nombreConductor: userData?.nombre || "Conductor",
-      nombrePasajero: pasajero.nombre || "Pasajero",
-      fotoConductor: userData?.fotoPerfil || null,
-      fotoPasajero: pasajero.fotoPerfil || null,
-      telefonoConductor: userData?.telefono || "",
-      telefonoPasajero: pasajero.telefono || "",
-      ruta: viaje.cO ? `${viaje.cO.split(',')[0]} - ${viaje.cD?.split(',')[0]}` : "Detalle de Ruta",
-      esSoporte: false
-    });
-  };
-  
   const manejarChatGlobal = () => {
     if (soyConductor) {
       if (pasajerosConfirmados.length === 1) {
-        abrirChatChofer(pasajerosConfirmados[0]);
+        iniciarChatPrivado(pasajerosConfirmados[0]);
       } else if (pasajerosConfirmados.length > 1) {
         setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero", tipo: "error" });
         setTimeout(() => setToast(null), 3000);
@@ -300,7 +319,8 @@ const abrirChatChofer = (pasajero) => {
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      abrirChatPasajero();
+      // Si soy pasajero, mi "objetivo" soy yo mismo para la lógica
+      iniciarChatPrivado(userData); 
     }
   };
 
@@ -668,18 +688,13 @@ const abrirChatChofer = (pasajero) => {
                          {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
                        
-                       {soyConductor && (
-                          <button 
-                            disabled={cargando}
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              abrirChatChofer(p); 
-                            }} 
-                            className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30"
-                          >
-                            <MessageCircle size={16} />
-                          </button>
-                       )}
+                         {soyConductor && (
+                         <button disabled={cargando} onClick={(e) => {  e.stopPropagation();  iniciarChatPrivado(p); // <-- ESTO ES VITAL
+                        }} 
+                      className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30" >
+                     <MessageCircle size={16} />
+                     </button>
+                     )}
                      </div>
                    );
                  })}
