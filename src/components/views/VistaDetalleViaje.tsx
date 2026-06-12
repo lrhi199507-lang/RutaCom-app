@@ -139,7 +139,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [ninosExtra, setNinosExtra] = useState(0);
   
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
-
+   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
@@ -176,6 +176,29 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
     return () => { if (intervaloGps) clearInterval(intervaloGps); };
   }, [soyConductor, estadoViaje, viaje?.id]);
+
+    // 🔥 NUEVO RADAR: Verifica si el conductor tiene OTRO viaje en curso
+  useEffect(() => {
+    if (!soyConductor || !userData?.id) return;
+    
+    // Buscamos todos los viajes de este conductor
+    const qActivos = query(
+      collection(db, "Viajes"),
+      where("uidConductor", "==", userData.id)
+    );
+    
+    const unsubActivos = onSnapshot(qActivos, (snap) => {
+      // Filtramos localmente para evitar errores de Firebase
+      const otroViajeActivo = snap.docs.some(d => {
+        const data = d.data();
+        // Es un viaje activo SI NO es el viaje actual, Y está en_curso o buscando
+        return d.id !== viaje.id && (data.estado === "buscando" || data.estado === "en_curso");
+      });
+      setViajeActivoBloqueante(otroViajeActivo);
+    });
+    
+    return () => unsubActivos();
+  }, [soyConductor, userData?.id, viaje?.id]);
   
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
