@@ -910,9 +910,20 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* 🔥 REGLA DE ORO: SI HAY UN MODAL ABIERTO, ESTA BARRA AZUL DESAPARECE POR COMPLETO */}
+            {/* 🔥 REGLA DE ORO: SI HAY UN MODAL ABIERTO, ESTA BARRA AZUL DESAPARECE POR COMPLETO */}
       {!hayModalAbierto && (
         <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[100000]">
+          
+          {/* 🛑 ALERTA FLOTANTE: SI HAY UN VIAJE ACTIVO, SE LO RECORDAMOS AQUÍ */}
+          {soyConductor && estadoViaje === 'disponible' && viajeActivoBloqueante && (
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-max max-w-[95vw] animate-in slide-in-from-bottom duration-300">
+              <div className="bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-slate-700">
+                <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                <span>No puedes iniciar. Finaliza tu ruta actual.</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2 sm:gap-3 h-14 max-w-md mx-auto">
             
             {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
@@ -953,9 +964,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                   <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200">
                     Cancelar
                   </button>
-                  <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
-                    {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
-                  </button>
+
+                  {/* 🔥 BOTÓN BLOQUEADO INTELIGENTE SI TIENE OTRO VIAJE */}
+                  {viajeActivoBloqueante ? (
+                    <button disabled className="flex-[2] bg-slate-800 text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 leading-tight border border-slate-700">
+                      <Lock size={16} className="text-amber-500" />
+                      <div className="flex flex-col items-start text-left">
+                        <span>Bloqueado</span>
+                        <span className="text-[7px] text-amber-500/80">Termina tu viaje activo</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
+                      {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
+                    </button>
+                  )}
+
                 </div>
               ) : (
                 yaSoyPasajero ? (
