@@ -174,6 +174,7 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mensajesSinLeer: 1, 
         remitenteUltimoMensaje: userData.id,
+        timestamp: Date.now(),
         ...(isSoporte && !esAdmin ? {
             esSoporte: true,
             uidPasajero: userData.id,
