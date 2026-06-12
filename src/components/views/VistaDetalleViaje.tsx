@@ -250,30 +250,57 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CHAT ORIGINAL Y SEPARADA
-  const abrirChatChofer = (pasajeroObjetivo) => {
-    // Le enviamos a tu componente de Mensajes el viaje, pero "inyectado" con los datos del pasajero
+  const abrirChatPasajero = () => {
+    const miId = String(userData?.id || userData?.uid);
     onIniciarChat({
-      ...viaje,
-      uidPasajero: pasajeroObjetivo.id || pasajeroObjetivo.uid,
-      pasajero: pasajeroObjetivo 
+      ...viaje, 
+      id: `${viaje.id}_${miId}`, // ID de sala verdaderamente privada
+      idViaje: viaje.id,
+      uidConductor: viaje.uidConductor || viaje.idCreador,
+      uidPasajero: miId,
+      nombreConductor: viaje.cN || viaje.conductor || "Conductor",
+      nombrePasajero: userData?.nombre || "Pasajero",
+      fotoConductor: viaje.fotoPerfil || null,
+      fotoPasajero: userData?.fotoPerfil || null,
+      telefonoConductor: viaje.telefono || "",
+      telefonoPasajero: userData?.telefono || "",
+      ruta: viaje.cO ? `${viaje.cO.split(',')[0]} - ${viaje.cD?.split(',')[0]}` : "Detalle de Ruta",
+      esSoporte: false
     });
   };
 
+const abrirChatChofer = (pasajero) => {
+    const idPas = String(pasajero.id || pasajero.uid);
+    onIniciarChat({
+      ...viaje,
+      id: `${viaje.id}_${idPas}`, // ID de sala verdaderamente privada
+      idViaje: viaje.id,
+      uidConductor: userData?.id || userData?.uid,
+      uidPasajero: idPas,
+      nombreConductor: userData?.nombre || "Conductor",
+      nombrePasajero: pasajero.nombre || "Pasajero",
+      fotoConductor: userData?.fotoPerfil || null,
+      fotoPasajero: pasajero.fotoPerfil || null,
+      telefonoConductor: userData?.telefono || "",
+      telefonoPasajero: pasajero.telefono || "",
+      ruta: viaje.cO ? `${viaje.cO.split(',')[0]} - ${viaje.cD?.split(',')[0]}` : "Detalle de Ruta",
+      esSoporte: false
+    });
+  };
+  
   const manejarChatGlobal = () => {
     if (soyConductor) {
       if (pasajerosConfirmados.length === 1) {
         abrirChatChofer(pasajerosConfirmados[0]);
       } else if (pasajerosConfirmados.length > 1) {
-        setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero ☝️", tipo: "error" });
-        setTimeout(() => setToast(null), 4000);
+        setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero", tipo: "error" });
+        setTimeout(() => setToast(null), 3000);
       } else {
         setToast({ texto: "Aún no tienes pasajeros confirmados", tipo: "error" });
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      // 🔥 EL PASAJERO VUELVE A SU LÓGICA ORIGINAL (La que sí te funcionaba)
-      onIniciarChat(viaje);
+      abrirChatPasajero();
     }
   };
 
