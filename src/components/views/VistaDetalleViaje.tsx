@@ -650,7 +650,7 @@ const abrirChatChofer = (pasajero) => {
               <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center flex items-center justify-center gap-2">
                 <Users size={14} /> Pasajeros Confirmados ({pasajerosConfirmados.length})
               </h3>
-              <div className="space-y-3">
+                            <div className="space-y-3">
                  {pasajerosConfirmados.map((p, index) => {
                    if (!p) return null;
                    return (
@@ -668,13 +668,17 @@ const abrirChatChofer = (pasajero) => {
                          {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
                        
-                         {soyConductor && (
-                        <button disabled={cargando} onClick={(e) => {  e.stopPropagation(); 
-                         abrirChatChofer(p); // 👈 AQUÍ LLAMAMOS A LA NUEVA FUNCIÓN
-                         }} className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30"  >
-                        <MessageCircle size={16} />
-                        </button>
-                         )}
+                       {soyConductor && (
+                          <button 
+                            disabled={cargando}
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              abrirChatChofer(p); 
+                            }} 
+                            className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30"
+                          >
+                            <MessageCircle size={16} />
+                          </button>
                        )}
                      </div>
                    );
