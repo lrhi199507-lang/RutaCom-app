@@ -61,24 +61,23 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     let primeraCarga = true;
 
     const unsub = onSnapshot(q, (snap) => {
-  const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  setMensajes(historialMensajes);
+      const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setMensajes(historialMensajes);
 
-  if (primeraCarga && isSoporte && !esAdmin) {
-    if (historialMensajes.length === 0) {
-      addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-        texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
-        uidRemitente: 'admin',
-        timestamp: serverTimestamp(),
-        // 🔥 AGREGA ESTO:
-        participantes: [userData.id, 'admin']
-      });
-    }
-    primeraCarga = false;
-  }
+      if (primeraCarga && isSoporte && !esAdmin) {
+        if (historialMensajes.length === 0) {
+          addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+            texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
+            uidRemitente: 'admin',
+            timestamp: serverTimestamp(),
+            participantes: [userData.id, 'admin']
+          });
+        }
+        primeraCarga = false;
+      }
 
-  setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-});
+      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    });
 
     const limpiarNotificaciones = async () => {
       if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
@@ -121,7 +120,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           texto: "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.",
           uidRemitente: 'admin',
           timestamp: serverTimestamp(),
-          // Modificación 1: Participantes para el caso del asesor humano
           participantes: [userData.id, 'admin']
         });
         return; 
@@ -132,19 +130,17 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         texto: textoUsuario,
         uidRemitente: userData.id,
         timestamp: serverTimestamp(),
-        // Modificación 2: Participantes para el mensaje que simula enviar el usuario
         participantes: [userData.id, 'admin']
       });
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: respuestaBot,
         uidRemitente: 'admin',
         timestamp: serverTimestamp(),
-        // Modificación 3: Participantes para la respuesta automática del bot
         participantes: [userData.id, 'admin']
       });
-       } catch (error) {
+    } catch (error) {
       console.error("Error guardando comandos del bot", error);
-      alert("Error en el bot: " + error.message); // 🔥 AGREGAR ESTO
+      alert("Error en el bot: " + error.message); 
     }
   };
 
@@ -157,19 +153,16 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     try {
       setNuevoMsg(""); 
       
-      // CÓDIGO CORREGIDO
-await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-  texto: texto,
-  uidRemitente: userData.id,
-  timestamp: serverTimestamp(),
-  
-  // 🔥 NUEVO: Replicamos los uids participantes exigidos por la regla de seguridad
-  participantes: isSoporte 
-    ? [userData.id, "admin"] 
-    : [chat.uidPasajero, chat.uidConductor]
-});
+      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: texto,
+        uidRemitente: userData.id,
+        timestamp: serverTimestamp(),
+        participantes: isSoporte 
+          ? [userData.id, "admin"] 
+          : [chat.uidPasajero, chat.uidConductor]
+      });
 
-            await setDoc(doc(db, "Chats", chatIdReal), {
+      await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mensajesSinLeer: 1, 
@@ -180,7 +173,6 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
             uidPasajero: userData.id,
             nombrePasajero: userData.nombre,
             ruta: "Soporte Técnico",
-            // 🔥 ESTO FALTABA PARA QUE FIREBASE TE DEJE CREAR EL CHAT DEL BOT:
             participantes: [userData.id, "admin"] 
         } : {})
       }, { merge: true });
@@ -205,9 +197,9 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         });
       }
 
-        } catch (error) {
+    } catch (error) {
       console.error("Error al enviar:", error);
-      alert("Error al enviar: " + error.message); // 🔥 AGREGAR ESTO
+      alert("Error al enviar: " + error.message); 
     }
   };
 
@@ -241,7 +233,6 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
     if (onVerViaje) onVerViaje();
   };
 
-  // 🔥 NUEVA LÓGICA DE REPORTE PROFESIONAL 🔥
   const manejarReporte = async () => {
     if (!motivoSeleccionado || !descripcionReporte.trim()) return;
     setEnviandoReporte(true);
@@ -278,7 +269,8 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
   };
   
   return (
-    <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
+    // 🔥 AQUÍ ES EL z-[120000] QUE GARANTIZA QUE ESTÉ POR ENCIMA DEL VIAJE
+    <div className="fixed inset-0 bg-white z-[120000] flex flex-col animate-in slide-in-from-right duration-300">
       
       {/* HEADER */}
       <div className={`p-4 border-b flex items-center gap-3 shadow-sm pt-8 ${isSoporte ? 'bg-slate-900 text-white' : 'bg-white'}`}>
@@ -316,7 +308,7 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         )}
       </div>
 
-      {/* CUERPO DE MENSAJES */}
+      {/* CUERPO DE MENSAJES (CORREGIDO Y CON HORA) */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         <div className="flex justify-center mb-6 mt-2">
           <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-2xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
@@ -324,11 +316,10 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
           </div>
         </div>
 
-                {mensajes.map((m) => {
+        {mensajes.map((m) => {
           const soyYo = m.uidRemitente === userData.id;
           const esBot = m.uidRemitente === 'admin';
           
-          // Extraemos y formateamos la hora
           let horaStr = "Enviando...";
           if (m.timestamp) {
             const fecha = m.timestamp.toDate ? m.timestamp.toDate() : new Date(m.timestamp);
@@ -352,7 +343,8 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
             </div>
           );
         })}
-        
+        <div ref={scrollRef} />
+      </div>
 
       {/* ZONA INFERIOR */}
       <div className="bg-white border-t border-slate-100 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
