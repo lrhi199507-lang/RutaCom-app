@@ -250,61 +250,20 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-  // 🔥 LÓGICA DE CREACIÓN DE CHAT ENRIQUECIDA (Para que el padre sepa exactamente a quién abrirle)
-  const iniciarChatPrivado = async (pasajeroObjetivo) => {
-    setCargando(true);
-    try {
-      const idChofer = String(viaje.uidConductor || viaje.idCreador);
-      const idPas = String(pasajeroObjetivo.id || pasajeroObjetivo.uid);
-      const idSalaChat = `${viaje.id}_${idPas}`;
-      const chatRef = doc(db, "Chats", idSalaChat);
-
-      const datosChat = {
-        id: idSalaChat,
-        idViaje: viaje.id,
-        participantes: [idChofer, idPas],
-        uidConductor: idChofer,
-        uidPasajero: idPas,
-        nombreConductor: soyConductor ? String(userData?.nombre || "Conductor") : String(viaje.cN || viaje.conductor || "Conductor"),
-        nombrePasajero: soyConductor ? String(pasajeroObjetivo.nombre || "Pasajero") : String(userData?.nombre || "Pasajero"),
-        fotoConductor: soyConductor ? (userData?.fotoPerfil || null) : (viaje.fotoPerfil || null),
-        fotoPasajero: soyConductor ? (pasajeroObjetivo.fotoPerfil || null) : (userData?.fotoPerfil || null),
-        esSoporte: false
-      };
-
-      try {
-        await updateDoc(chatRef, { ultimaActividad: new Date().toISOString() });
-      } catch (error) {
-        await setDoc(chatRef, {
-          ...datosChat,
-          fechaCreacion: serverTimestamp(),
-          ultimoMensaje: "Chat habilitado para el viaje",
-          ultimaHora: new Date().toISOString()
-        });
-      }
-
-      // Inyectamos las coordenadas exactas del pasajero en el Viaje para que el componente "Mensajes" lo encuentre
-      onIniciarChat({
-        ...viaje,
-        uidPasajero: idPas,           // Ayuda a la vista padre a filtrar si lo requiere
-        idPasajeroDestino: idPas,     // Backup flag
-        chatIdGenerado: idSalaChat,   // Obliga la coincidencia
-        pasajero: pasajeroObjetivo    // Envía el objeto completo por si el chat lo requiere
-      });
-      
-    } catch (e: any) {
-      console.error("Error al abrir sala:", e);
-      setToast({ texto: "Error al abrir la sala de chat", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally {
-      setCargando(false);
-    }
+  // 🔥 LÓGICA DE CHAT ORIGINAL Y SEPARADA
+  const abrirChatChofer = (pasajeroObjetivo) => {
+    // Le enviamos a tu componente de Mensajes el viaje, pero "inyectado" con los datos del pasajero
+    onIniciarChat({
+      ...viaje,
+      uidPasajero: pasajeroObjetivo.id || pasajeroObjetivo.uid,
+      pasajero: pasajeroObjetivo 
+    });
   };
 
   const manejarChatGlobal = () => {
     if (soyConductor) {
       if (pasajerosConfirmados.length === 1) {
-        iniciarChatPrivado(pasajerosConfirmados[0]);
+        abrirChatChofer(pasajerosConfirmados[0]);
       } else if (pasajerosConfirmados.length > 1) {
         setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero ☝️", tipo: "error" });
         setTimeout(() => setToast(null), 4000);
@@ -313,7 +272,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      iniciarChatPrivado(userData);
+      // 🔥 EL PASAJERO VUELVE A SU LÓGICA ORIGINAL (La que sí te funcionaba)
+      onIniciarChat(viaje);
     }
   };
 
@@ -681,17 +641,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                          {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
                        
-                       {soyConductor && (
-                          <button 
-                            disabled={cargando}
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              iniciarChatPrivado(p); 
-                            }} 
-                            className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30"
-                          >
-                            <MessageCircle size={16} />
-                          </button>
+                         {soyConductor && (
+                        <button disabled={cargando} onClick={(e) => {  e.stopPropagation(); 
+                         abrirChatChofer(p); // 👈 AQUÍ LLAMAMOS A LA NUEVA FUNCIÓN
+                         }} className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30"  >
+                        <MessageCircle size={16} />
+                        </button>
+                         )}
                        )}
                      </div>
                    );
