@@ -324,26 +324,35 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
           </div>
         </div>
 
-        {mensajes.map((m) => {
+                {mensajes.map((m) => {
           const soyYo = m.uidRemitente === userData.id;
           const esBot = m.uidRemitente === 'admin';
           
+          // Extraemos y formateamos la hora
+          let horaStr = "Enviando...";
+          if (m.timestamp) {
+            const fecha = m.timestamp.toDate ? m.timestamp.toDate() : new Date(m.timestamp);
+            horaStr = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+          
           return (
-            <div key={m.id} className={`flex ${soyYo ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] p-3 px-4 shadow-sm text-sm font-bold whitespace-pre-wrap ${
+            <div key={m.id} className={`flex w-full mb-2 ${soyYo ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] flex flex-col shadow-sm ${
                 soyYo 
                 ? 'bg-blue-600 text-white rounded-[20px] rounded-tr-none' 
                 : esBot 
                   ? 'bg-slate-800 text-white border border-slate-700 rounded-[20px] rounded-tl-none'
                   : 'bg-white text-slate-700 border border-slate-200 rounded-[20px] rounded-tl-none'
               }`}>
-                {m.texto}
+                <span className="p-3 px-4 pb-1 text-sm font-bold whitespace-pre-wrap">{m.texto}</span>
+                <span className={`px-4 pb-2 text-[9px] text-right font-black tracking-wider ${soyYo ? 'text-blue-300' : 'text-slate-400'}`}>
+                  {horaStr}
+                </span>
               </div>
             </div>
           );
         })}
-        <div ref={scrollRef} />
-      </div>
+        
 
       {/* ZONA INFERIOR */}
       <div className="bg-white border-t border-slate-100 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
