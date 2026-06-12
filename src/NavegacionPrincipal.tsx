@@ -82,9 +82,19 @@ export default function NavegacionPrincipal({ user }) {
       setViajes(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    const unsubC = onSnapshot(query(collection(db, "Chats"), orderBy("timestamp", "desc")), (s) => {
-      setChats(s.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    // 🔥 LA SOLUCIÓN: Le decimos a Firebase que SOLO escuche nuestros chats. 
+    // Lo ordenamos en memoria (sort) para no tener que crear Índices Complejos en la base de datos.
+    const unsubC = onSnapshot(
+      query(collection(db, "Chats"), where("participantes", "array-contains", user.uid)), 
+      (s) => {
+        const chatsData = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        chatsData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Ordena del más nuevo al más viejo
+        setChats(chatsData);
+      },
+      (error) => {
+        console.error("Error silencioso evitado en chats:", error);
+      }
+    );
 
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
