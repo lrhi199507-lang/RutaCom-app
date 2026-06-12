@@ -250,15 +250,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-    // 🔥 LÓGICA DE CHAT DEFINITIVA BASADA EN TU IMAGEN DE FIREBASE
-  const iniciarChatPrivado = async (pasajeroObjetivo) => {
+     const iniciarChatPrivado = async (pasajeroObjetivo) => {
     setCargando(true);
     try {
       const miId = String(userData?.id || userData?.uid);
       const idChofer = String(viaje.uidConductor || viaje.idCreador);
       const idPas = String(pasajeroObjetivo.id || pasajeroObjetivo.uid);
       
-      // 1. BUSCAMOS EL CHAT REAL EN FIREBASE (array-contains es vital para que las reglas no bloqueen)
       const qChat = query(
         collection(db, "Chats"),
         where("idViaje", "==", viaje.id),
@@ -269,11 +267,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       const chatSnap = await getDocs(qChat);
       
       if (!chatSnap.empty) {
-        // 2. SI EXISTE, LO ABRIMOS CON SU ID ALEATORIO REAL (Ej: MuQ14u...)
         const chatExistente = chatSnap.docs[0];
         onIniciarChat({ id: chatExistente.id, ...chatExistente.data() });
+        // 🔥 CERRAMOS LA VISTA DEL VIAJE CON UN RETRASO MÍNIMO PARA EVITAR CORTOS CIRCUITOS
+        setTimeout(() => onRegresar(), 150); 
       } else {
-        // 3. SI NO EXISTE, LO CREAMOS EXACTAMENTE COMO EN TU CAPTURA
         const datosNuevoChat = {
           estadoViaje: estadoViaje,
           fotoConductor: soyConductor ? (userData?.fotoPerfil || null) : (viaje.fotoPerfil || null),
@@ -296,6 +294,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
         const nuevoChatRef = await addDoc(collection(db, "Chats"), datosNuevoChat);
         onIniciarChat({ id: nuevoChatRef.id, ...datosNuevoChat });
+        // 🔥 CERRAMOS LA VISTA
+        setTimeout(() => onRegresar(), 150);
       }
       
     } catch (e) {
@@ -312,7 +312,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       if (pasajerosConfirmados.length === 1) {
         iniciarChatPrivado(pasajerosConfirmados[0]);
       } else if (pasajerosConfirmados.length > 1) {
-        setToast({ texto: "Usa el ícono de chat junto al nombre del pasajero", tipo: "error" });
+        setToast({ texto: "Toca el ícono de chat del pasajero en la lista" });
         setTimeout(() => setToast(null), 3000);
       } else {
         setToast({ texto: "Aún no tienes pasajeros confirmados", tipo: "error" });
@@ -621,7 +621,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[120000] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
           <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
             {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
-            <span className="truncate whitespace-nowrap">{toast.texto}</span>
+            <span className="text-center leading-tight break-words">{toast.texto}</span>
           </div>
         </div>
       )}
