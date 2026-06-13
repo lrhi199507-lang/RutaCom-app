@@ -11,7 +11,7 @@ import { App } from '@capacitor/app';
 
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
-  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock
+  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock, RefreshCcw
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
@@ -141,13 +141,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
   
-  // 🔥 NUEVO ESTADO PARA EL BLOQUEO DEL PASAJERO
+  // 🔥 NUEVOS ESTADOS PARA BLOQUEO DE PASAJERO PERFECTO
   const [reservaActivaBloqueante, setReservaActivaBloqueante] = useState(false);
+  const [revisandoBloqueo, setRevisandoBloqueo] = useState(true);
   
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  // 🔥 CONTROL MAESTRO DE MODALES PARA OCULTAR LA BARRA INFERIOR
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion;
 
   useEffect(() => {
@@ -181,15 +181,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => { if (intervaloGps) clearInterval(intervaloGps); };
   }, [soyConductor, estadoViaje, viaje?.id]);
 
-  // 🔥 RADAR CHOFER
   useEffect(() => {
     if (!soyConductor || !userData?.id) return;
     
-    const qActivos = query(
-      collection(db, "Viajes"),
-      where("uidConductor", "==", userData.id)
-    );
-    
+    const qActivos = query(collection(db, "Viajes"), where("uidConductor", "==", userData.id));
     const unsubActivos = onSnapshot(qActivos, (snap) => {
       const otroViajeActivo = snap.docs.some(d => {
         const data = d.data();
@@ -208,9 +203,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSoyPasajero = !!miReserva;
   const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
 
-  // 🔥 NUEVO RADAR PASAJERO: Evita que el pasajero se clone en 2 viajes distintos
+  // 🔥 RADAR PASAJERO REFORZADO (CONDICIÓN DE CARRERA ELIMINADA)
   useEffect(() => {
-    if (soyConductor || !userData?.id || yaSoyPasajero || yaSolicite) return;
+    if (soyConductor || !userData?.id || yaSoyPasajero || yaSolicite) {
+      setRevisandoBloqueo(false);
+      return;
+    }
+
+    let isComponentMounted = true;
 
     const verificarBloqueo = async () => {
       try {
@@ -222,17 +222,35 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           const data = docSnap.data();
           if (data.idViaje !== viaje.id && (data.estado === 'pendiente' || data.estado === 'aprobada')) {
             const vSnap = await getDoc(doc(db, "Viajes", data.idViaje));
-            if (vSnap.exists() && ['disponible', 'buscando', 'en_curso'].includes(vSnap.data().estado)) {
-               bloqueado = true;
-               break;
+            if (vSnap.exists()) {
+              const vData = vSnap.data();
+              if (['disponible', 'buscando', 'en_curso'].includes(vData.estado)) {
+                 // Verificamos que realmente exista dentro del viaje (por si fue cancelado)
+                 const enConfirmados = (vData.pasajeros || []).some(p => p && (p.id === userData.id || p.uid === userData.id));
+                 const enPendientes = (vData.reservasPendientes || []).some(p => p && (p.id === userData.id || p.uid === userData.id));
+                 
+                 if (enConfirmados || enPendientes) {
+                   bloqueado = true;
+                   break;
+                 }
+              }
             }
           }
         }
-        setReservaActivaBloqueante(bloqueado);
-      } catch (error) { console.error("Error en radar pasajero:", error); }
+        
+        if (isComponentMounted) {
+          setReservaActivaBloqueante(bloqueado);
+          setRevisandoBloqueo(false);
+        }
+      } catch (error) { 
+        console.error("Error en radar pasajero:", error); 
+        if (isComponentMounted) setRevisandoBloqueo(false);
+      }
     };
 
     verificarBloqueo();
+
+    return () => { isComponentMounted = false; };
   }, [soyConductor, userData?.id, viaje?.id, yaSoyPasajero, yaSolicite]);
 
   
@@ -891,7 +909,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                         <div className="flex items-center gap-2 shrink-0">
                           {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500" /> : <Lock size={14} className="text-slate-300" />}
                           
-                          {/* 🔥 SOLUCIÓN 1: BOTÓN DE CHAT INYECTADO AQUÍ 🔥 */}
                           {soyConductor && (
                             <button disabled={cargando} onClick={(e) => { e.stopPropagation(); iniciarChatPrivado(pasajero); }} 
                               className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shadow-md shadow-slate-900/30">
@@ -1020,7 +1037,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 </div>
               ) : (
                 yaSoyPasajero ? (
-                  // 🔥 SOLUCIÓN 3: BOTÓN CANCELAR PARA EL PASAJERO 🔥
                   <div className="flex-1 flex gap-2">
                     <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200 flex items-center justify-center">
                       Cancelar
@@ -1031,8 +1047,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                   </div>
                 ) : yaSolicite ? (
                   <button disabled={cargando} onClick={cancelarSolicitud} className="flex-1 bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
+                ) : revisandoBloqueo ? (
+                  // 🔥 SOLUCIÓN: BOTÓN CARGANDO MIENTRAS EL RADAR HACE SU TRABAJO
+                  <button disabled className="flex-1 bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                    <RefreshCcw size={16} className="animate-spin" /> Verificando...
+                  </button>
                 ) : reservaActivaBloqueante ? (
-                  // 🔥 SOLUCIÓN 2: RADAR DE BLOQUEO VISUAL PARA PASAJEROS CLONADOS 🔥
                   <button disabled className="flex-1 bg-slate-800 text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 border border-slate-700">
                     <Lock size={16} className="text-amber-500" />
                     <div className="flex flex-col items-start text-left">
