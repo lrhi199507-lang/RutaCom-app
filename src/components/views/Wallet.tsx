@@ -5,7 +5,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'; 
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
-  RefreshCcw, X, Info, Banknote, Copy, Lock, ImageIcon, AlertTriangle, Clock // 🔥 AQUÍ ESTABA EL PROBLEMA: Faltaba importar Clock
+  RefreshCcw, X, Info, Banknote, Copy, Lock, ImageIcon, AlertTriangle, Clock 
 } from "lucide-react";
 import Toast from "../ui/Toast";
 
@@ -18,9 +18,8 @@ export const Wallet = ({ userData, onRegresar }) => {
   
   const [fotoRecarga, setFotoRecarga] = useState(null);
   const [metodoRecarga, setMetodoRecarga] = useState("pago_movil"); 
- const [txSeleccionada, setTxSeleccionada] = useState(null);
+  const [txSeleccionada, setTxSeleccionada] = useState(null);
   
-
   const [datosBancarios, setDatosBancarios] = useState({ 
     banco: userData?.datosBancarios?.banco || "", 
     telefono: userData?.datosBancarios?.telefono || "", 
@@ -28,8 +27,11 @@ export const Wallet = ({ userData, onRegresar }) => {
   });
 
   const [enviando, setEnviando] = useState(false);
+  
+  // 🔥 ESTADOS DEL TOAST ACTUALIZADOS 🔥
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState("success"); // Puede ser 'success' o 'error'
   
   const [transacciones, setTransacciones] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
@@ -77,6 +79,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     }, (error) => {
       console.error("Error en Billetera:", error);
       setToastMsg(`Error de lectura: ${error.message}`);
+      setToastType("error");
       setShowToast(true);
       setCargandoHistorial(false); 
     });
@@ -92,6 +95,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     try {
       await navigator.clipboard.writeText(texto);
       setToastMsg(`${campo} copiado al portapapeles`);
+      setToastType("success");
       setShowToast(true);
     } catch (err) { console.error("Error al copiar", err); }
   };
@@ -114,6 +118,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     e.preventDefault();
     if (!montoRecarga || !referencia || !fotoRecarga) { 
       setToastMsg("Debes completar los datos y subir el capture"); 
+      setToastType("error");
       setShowToast(true); 
       return; 
     }
@@ -139,6 +144,7 @@ export const Wallet = ({ userData, onRegresar }) => {
       });
 
       setToastMsg("Solicitud enviada. Espera la validación."); 
+      setToastType("success");
       setShowToast(true);
       setShowModalRecarga(false); 
       setMontoRecarga(""); 
@@ -147,22 +153,22 @@ export const Wallet = ({ userData, onRegresar }) => {
     } catch (error) {
       console.error(error); 
       setToastMsg("Error al enviar solicitud. Revisa tu conexión."); 
+      setToastType("error");
       setShowToast(true);
     } finally { setEnviando(false); }
   };
 
-const manejarRetiro = async (e) => {
+  const manejarRetiro = async (e) => {
     e.preventDefault();
     
-        // 🔥 VALIDACIÓN DE HORA (Todos los días de 7 PM a 11 PM) 🔥
     const ahora = new Date();
     const hora24 = ahora.getHours();
-    const esPM = hora24 >= 12; // Verificamos si es la tarde/noche
-    const hora12 = hora24 % 12 || 12; // Convertimos el reloj a formato 1 a 12
+    const esPM = hora24 >= 12;
+    const hora12 = hora24 % 12 || 12;
 
-    // Bloqueamos si es AM, si es antes de las 7 PM, si son las 11 PM o más, o si es mediodía (12 PM)
     if (!esPM || hora12 < 7 || hora12 >= 11 || hora24 === 12) {
       setToastMsg("Los retiros solo están disponibles TODOS LOS DÍAS de 7:00 PM a 11:00 PM.");
+      setToastType("error");
       setShowToast(true);
       return;
     }
@@ -170,9 +176,9 @@ const manejarRetiro = async (e) => {
     const monto = Number(montoRetiro);
     const MINIMO_RETIRO = 10; 
 
-    if (monto < MINIMO_RETIRO) { setToastMsg(`El retiro mínimo es de $${MINIMO_RETIRO}`); setShowToast(true); return; }
-    if (monto > saldoDisponible) { setToastMsg("Saldo insuficiente para retirar"); setShowToast(true); return; }
-    if (!datosBancarios.banco || !datosBancarios.telefono || !datosBancarios.cedula) { setToastMsg("Completa tus datos de Pago Móvil"); setShowToast(true); return; }
+    if (monto < MINIMO_RETIRO) { setToastMsg(`El retiro mínimo es de $${MINIMO_RETIRO}`); setToastType("error"); setShowToast(true); return; }
+    if (monto > saldoDisponible) { setToastMsg("Saldo insuficiente para retirar"); setToastType("error"); setShowToast(true); return; }
+    if (!datosBancarios.banco || !datosBancarios.telefono || !datosBancarios.cedula) { setToastMsg("Completa tus datos de Pago Móvil"); setToastType("error"); setShowToast(true); return; }
 
     setEnviando(true);
     try {
@@ -190,10 +196,12 @@ const manejarRetiro = async (e) => {
         tasaAplicada: tasaBCV, fecha: new Date().toISOString(), estado: "pendiente", tipo: "retiro"
       });
 
-      setToastMsg("Retiro en proceso. Datos guardados."); setShowToast(true);
+      setToastMsg("Retiro en proceso. Datos guardados."); 
+      setToastType("success");
+      setShowToast(true);
       setShowModalRetiro(false); setMontoRetiro("");
     } catch (error) {
-      console.error(error); setToastMsg("Error al procesar el retiro"); setShowToast(true);
+      console.error(error); setToastMsg("Error al procesar el retiro"); setToastType("error"); setShowToast(true);
     } finally { setEnviando(false); }
   };
 
@@ -204,13 +212,13 @@ const manejarRetiro = async (e) => {
     return true;
   });
 
-    const horaBoton24 = new Date().getHours();
+  const horaBoton24 = new Date().getHours();
   const botonBloqueadoPorHora = horaBoton24 < 19 || horaBoton24 >= 23;
   
-
   return (
     <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-x-hidden">
-      <Toast show={showToast} message={toastMsg} onClose={() => setShowToast(false)} />
+      {/* 🔥 COMPONENTE TOAST ACTUALIZADO CON EL TIPO 🔥 */}
+      <Toast show={showToast} message={toastMsg} type={toastType} onClose={() => setShowToast(false)} />
 
       <div className="p-6 pt-10 flex justify-between items-center sticky top-0 bg-[#0b1120]/80 backdrop-blur-lg z-50">
         <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
@@ -277,11 +285,10 @@ const manejarRetiro = async (e) => {
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-loose">No hay movimientos aquí</p>
             </div>
           ) : (
-                        <div className="space-y-3">
+            <div className="space-y-3">
               {transaccionesFiltradas.map((tx) => {
-                // Separamos qué es un ingreso general vs qué es un viaje con recibo
                 const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga';
-                const tieneRecibo = tx.tipo === 'ingreso'; // Solo los viajes tienen recibo detallado
+                const tieneRecibo = tx.tipo === 'ingreso'; 
 
                 return (
                   <div 
@@ -301,7 +308,6 @@ const manejarRetiro = async (e) => {
                       </div>
                     </div>
                     
-                    {/* Monto e Ícono Visual de Recibo */}
                     <div className="flex items-center gap-3">
                       <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : 'text-red-400'}`}>
                         {esIngreso ? '+' : '-'}${Number(tx.monto).toFixed(2)}
@@ -320,7 +326,7 @@ const manejarRetiro = async (e) => {
         </div>
       </div>
 
-      {/* MODAL DE RECARGA MODIFICADO (BOTONES SÓLIDOS) */}
+      {/* MODAL DE RECARGA */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300 overflow-y-auto max-h-[90vh] no-scrollbar">
@@ -329,7 +335,6 @@ const manejarRetiro = async (e) => {
               <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={18} /></button>
             </div>
 
-            {/* 🔥 TABS DE SELECCIÓN DE MÉTODO (BOTONES SÓLIDOS) 🔥 */}
             <div className="flex gap-3 mb-6">
               <button 
                 type="button"
@@ -355,7 +360,6 @@ const manejarRetiro = async (e) => {
               </button>
             </div>
 
-            {/* VISTA DINÁMICA DE DATOS SEGÚN EL TIPO */}
             {metodoRecarga === "pago_movil" ? (
               <div className="space-y-4 mb-6 bg-blue-900/10 p-5 rounded-3xl border border-blue-500/20 animate-in fade-in zoom-in-95 duration-200">
                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
@@ -436,14 +440,13 @@ const manejarRetiro = async (e) => {
                   placeholder="Ej: 15.00" 
                   className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" 
                 />
-                {/* 🔥 LÓGICA DE CONVERSIÓN EN TIEMPO REAL PARA PAGO MÓVIL 🔥 */}
                 {metodoRecarga === "pago_movil" && montoRecarga && tasaBCV > 0 && (
                   <p className="text-[10px] font-black text-emerald-400 uppercase mt-2 ml-1 italic animate-in fade-in">
                     Debes transferir: ≈ Bs. {(Number(montoRecarga) * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 )}
               </div>
-                            {/* CAMPO DE REFERENCIA AGREGADO */}
+              
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Número de Referencia</label>
                 <input 
@@ -463,7 +466,7 @@ const manejarRetiro = async (e) => {
         </div>
       )}
 
-      {/* MODAL RETIRO INTACTO */}
+      {/* MODAL RETIRO */}
       {showModalRetiro && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -476,7 +479,6 @@ const manejarRetiro = async (e) => {
               Retiro mínimo: $10. Introduce tus datos de Pago Móvil.
             </p>
           
-                        {/* 🔥 AVISO PROFESIONAL DE DÍA Y HORA DE PAGO 🔥 */}
             <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-3xl mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <Clock size={18} className="text-amber-500" />
@@ -521,6 +523,7 @@ const manejarRetiro = async (e) => {
           </div>
         </div>
       )}
+      
       {/* --- MODAL DE RECIBO DETALLADO --- */}
       {txSeleccionada && (
         <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
