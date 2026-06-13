@@ -53,9 +53,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   const view = pestañaActiva || 'publico';
-  const ADMIN_EMAIL = "damelacola2026@gmail.com";
-  const esAdmin = auth.currentUser?.email ? auth.currentUser.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim() : false;
-
+  // ✅ USA ESTO:
+const esAdmin = userData?.rol === 'admin';
+  
   const viajesCond = userData.viajesRealizados || 0;
   const viajesPas = userData.viajesComoPasajero || 0;
   const totalTrayectoria = viajesCond + viajesPas;
