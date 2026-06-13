@@ -356,6 +356,37 @@ export default function NavegacionPrincipal({ user }) {
     );
   }
 
+    // 🔥 PANTALLA DE CASTIGO: SUSPENSIÓN TEMPORAL POR CANCELACIONES
+  if (userData.suspendidoTemporalmenteHasta && Date.now() < userData.suspendidoTemporalmenteHasta) {
+    const fechaLiberacion = new Date(userData.suspendidoTemporalmenteHasta).toLocaleString('es-ES', { 
+      weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
+    });
+
+    return (
+      <div className="w-full max-w-md mx-auto h-screen bg-slate-950 flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-500">
+        <div className="bg-orange-500/10 p-6 rounded-full mb-6 border border-orange-500/20">
+          <AlertCircle size={60} className="text-orange-500 animate-pulse" />
+        </div>
+        <h1 className="text-white font-black italic uppercase text-2xl tracking-tighter mb-4">
+          Suspensión Temporal
+        </h1>
+        <p className="text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest mb-6">
+          Has alcanzado el límite máximo de cancelaciones. Para proteger a la comunidad, tu cuenta está en pausa.
+        </p>
+        <div className="bg-orange-950/30 border border-orange-900/50 px-5 py-3 rounded-2xl w-full">
+          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Tu cuenta se liberará el:</p>
+          <p className="text-sm font-black text-orange-200 capitalize">{fechaLiberacion}</p>
+        </div>
+        <button 
+          onClick={() => signOut(auth)}
+          className="mt-12 text-slate-500 font-black uppercase text-[10px] border-b border-slate-800 pb-1 hover:text-white transition-colors"
+        >
+          Cerrar Sesión
+        </button>
+      </div>
+    );
+  }
+
   const listaViajes = viajes || [];
   const listaChats = chats || [];
   let totalAlertasViajes = 0;
