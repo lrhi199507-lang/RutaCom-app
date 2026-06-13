@@ -23,8 +23,8 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const [descripcionReporte, setDescripcionReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
-  const ADMIN_EMAIL = "damelacola2026@gmail.com";
-  const esAdmin = userData?.email?.toLowerCase().trim() === ADMIN_EMAIL || userData?.correo?.toLowerCase().trim() === ADMIN_EMAIL;
+  // ✅ USA ESTO:
+  const esAdmin = userData?.rol === 'admin';
   const isSoporte = chat.esSoporte;
   const chatIdReal = isSoporte ? (esAdmin ? chat.id : `soporte_${userData.id}`) : chat.id;
 
