@@ -96,7 +96,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     switch(tipo) {
       case 'recarga':
         textoUsuario = "Dudas sobre Saldo/Recargas";
-        respuestaBot = "💳 Para recargar: Ve a 'Mi Billetera', selecciona Pago Móvil o Binance Pay, realiza la transferencia y sube tu capture. \n\n💰 Para retirar: Ve a Billetera > Retirar y coloca tus datos.\n\n⚠️ NOTA IMPORTANTE:\n1. Retiro mínimo: $10.\n2. Los retiros se procesan exclusivamente los días SÁBADO de 8:00 AM a 5:00 PM.";
+        respuestaBot = "💳 Para recargar: Ve a 'Mi Billetera', selecciona Pago Móvil o Binance Pay, realiza la transferencia y sube tu capture. \n\n💰 Para retirar: Ve a Billetera > Retirar y coloca tus datos.\n\n⚠️ NOTA IMPORTANTE:\n1. Retiro mínimo: $10.\n2. Los retiros se procesan todos los dias de 7:00 PM a 11:00 PM.";
         break;
       case 'publicar':
         textoUsuario = "¿Cómo publico un viaje?";
