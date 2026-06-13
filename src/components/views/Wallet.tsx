@@ -154,14 +154,15 @@ export const Wallet = ({ userData, onRegresar }) => {
 const manejarRetiro = async (e) => {
     e.preventDefault();
     
-    // 🔥 VALIDACIÓN DE DÍA Y HORA (Sábados de 8 AM a 5 PM) 🔥
+        // 🔥 VALIDACIÓN DE HORA (Todos los días de 7 PM a 11 PM) 🔥
     const ahora = new Date();
-    const hoy = ahora.getDay(); // 0 = Domingo, 6 = Sábado
-    const hora = ahora.getHours(); // Formato 24h (0 a 23)
+    const hora24 = ahora.getHours();
+    const esPM = hora24 >= 12; // Verificamos si es la tarde/noche
+    const hora12 = hora24 % 12 || 12; // Convertimos el reloj a formato 1 a 12
 
-    // Bloqueamos si NO es sábado, o si es antes de las 8:00 AM, o si son las 5:00 PM (17:00) o más
-    if (hoy !== 6 || hora < 8 || hora >= 17) {
-      setToastMsg("Los retiros solo están disponibles los SÁBADOS de 8:00 AM a 5:00 PM.");
+    // Bloqueamos si es AM, si es antes de las 7 PM, si son las 11 PM o más, o si es mediodía (12 PM)
+    if (!esPM || hora12 < 7 || hora12 >= 11 || hora24 === 12) {
+      setToastMsg("Los retiros solo están disponibles TODOS LOS DÍAS de 7:00 PM a 11:00 PM.");
       setShowToast(true);
       return;
     }
@@ -202,6 +203,10 @@ const manejarRetiro = async (e) => {
     if (filtroTx === 'gasto') return tx.tipo === 'gasto' || tx.tipo === 'retiro';
     return true;
   });
+
+    const horaBoton24 = new Date().getHours();
+  const botonBloqueadoPorHora = horaBoton24 < 19 || horaBoton24 >= 23;
+  
 
   return (
     <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-x-hidden">
