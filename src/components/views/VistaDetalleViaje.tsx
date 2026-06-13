@@ -491,7 +491,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-    const ejecutarCancelacion = async () => {
+      const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToast({ texto: "Debes seleccionar un motivo", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
@@ -500,24 +500,61 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const miRef = doc(db, "usuarios", userData?.id);
-      const miSnap = await getDoc(miRef);
-      const misDatos = miSnap.exists() ? miSnap.data() : {};
-      
-      // 🔥 SISTEMA DE PENALIZACIÓN (3 STRIKES = 24 HORAS DE SUSPENSIÓN)
-      let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
-      let penalizacion = {};
-      let mensajeToast = "";
+      const viajeRef = doc(db, "Viajes", viaje.id);
+      const idDelChofer = viaje.uidConductor || viaje.idCreador;
 
-      if (strikesActuales >= 3) {
-        penalizacion = {
-          strikesCancelacion: 0, // Reseteamos la cuenta para su futuro regreso
-          suspendidoTemporalmenteHasta: Date.now() + (24 * 60 * 60 * 1000) // Se bloquea por 24 horas exactas
-        };
-        mensajeToast = "Límite de cancelaciones. Cuenta suspendida por 24h.";
-      } else {
-        penalizacion = { strikesCancelacion: strikesActuales };
-        mensajeToast = `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 cancelaciones permitidas.`;
+      // 1. LÓGICA PARA EL PASAJERO (Siempre se le penaliza por cancelar un puesto confirmado)
+      if (modalCancelar.rol === 'pasajero') {
+        const miSnap = await getDoc(miRef);
+        const misDatos = miSnap.exists() ? miSnap.data() : {};
+        let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
+        let penalizacion = strikesActuales >= 3 
+          ? { strikesCancelacion: 0, suspendidoTemporalmenteHasta: Date.now() + (24 * 60 * 60 * 1000) } 
+          : { strikesCancelacion: strikesActuales };
+        
+        const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
+        if (pasajeroAborrar) {
+          await updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) });
+          await updateDoc(miRef, { cancelacionesPasajero: increment(1), ...penalizacion });
+          if (idDelChofer) await enviarNotificacion(idDelChofer, "Asiento Liberado", `${userData?.nombre} ha cancelado su reserva.`, "alerta");
+          setToast({ texto: strikesActuales >= 3 ? "Cuenta suspendida por 24h." : `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 faltas.`, tipo: "exito" });
+        }
+      } 
+      // 2. LÓGICA PARA EL CHOFER (Solo se le penaliza si deja pasajeros botados)
+      else if (modalCancelar.rol === 'chofer') {
+        const tienePasajeros = pasajerosConfirmados.length > 0;
+        let mensajeToast = "Viaje cancelado sin penalización.";
+
+        if (tienePasajeros) {
+          const miSnap = await getDoc(miRef);
+          const misDatos = miSnap.exists() ? miSnap.data() : {};
+          let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
+          
+          let penalizacion = strikesActuales >= 3 
+            ? { strikesCancelacion: 0, suspendidoTemporalmenteHasta: Date.now() + (24 * 60 * 60 * 1000) } 
+            : { strikesCancelacion: strikesActuales };
+          
+          await updateDoc(miRef, { cancelacionesChofer: increment(1), ...penalizacion });
+          mensajeToast = strikesActuales >= 3 ? "Cuenta suspendida por 24h." : `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 faltas.`;
+        }
+
+        await updateDoc(viajeRef, { estado: 'cancelado', motivoCancelacionChofer: motivoCancelacion });
+        for (const p of pasajerosConfirmados) {
+          if (!p) continue;
+          await enviarNotificacion(p.id || p.uid, "Viaje Cancelado", `El viaje desde ${viaje.cO?.split(',')[0]} fue cancelado: ${motivoCancelacion}.`, "alerta");
+        }
+        setToast({ texto: mensajeToast, tipo: "exito" });
       }
+
+      setModalCancelar({ visible: false, rol: null });
+      setTimeout(() => setToast(null), 4000);
+      if (modalCancelar.rol === 'chofer') onRegresar(); 
+      
+    } catch (error) {
+      setToast({ texto: "Error en la operación", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally { setCargando(false); }
+  };
 
       const viajeRef = doc(db, "Viajes", viaje.id);
       const idDelChofer = viaje.uidConductor || viaje.idCreador;
@@ -1279,19 +1316,29 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
       
-      {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
+            {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-red-900/50 text-center max-h-[85vh] overflow-y-auto">
+          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
+            
             <div className="bg-red-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-red-500/20">
               <AlertTriangle size={30} className="text-red-500" />
             </div>
+            
             <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">
               ¿Cancelar {modalCancelar.rol === 'chofer' ? 'el Viaje' : 'tu Asiento'}?
             </h3>
-            <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
-              ¡ATENCIÓN! Cancelar a esta altura sumará una penalización a tu historial.
-            </p>
+            
+            {/* 🔥 AVISO INTELIGENTE: Cambia de color si hay castigo o no 🔥 */}
+            {(modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? (
+              <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
+                ¡ATENCIÓN! Al haber pasajeros involucrados, cancelar sumará un "strike" a tu historial (Límite: 3).
+              </p>
+            ) : (
+              <p className="text-[11px] font-bold text-emerald-400 mb-6 bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
+                Como aún no tienes pasajeros, puedes borrar el viaje sin penalización.
+              </p>
+            )}
 
             <div className="text-left mb-6">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Motivo de cancelación:</p>
@@ -1306,11 +1353,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             
             <div className="flex gap-3">
               <button disabled={cargando} onClick={() => {setModalCancelar({visible: false, rol: null}); setMotivoCancelacion("");}} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">Volver</button>
-              <button disabled={cargando} onClick={ejecutarCancelacion} className="flex-1 bg-red-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-red-900/50 active:scale-95 transition-all">{cargando ? '...' : 'Confirmar'}</button>
+              <button disabled={cargando} onClick={ejecutarCancelacion} className={`flex-1 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg active:scale-95 transition-all ${(modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? 'bg-red-600 shadow-red-900/50' : 'bg-emerald-600 shadow-emerald-900/50'}`}>{cargando ? '...' : 'Confirmar'}</button>
             </div>
           </div>
         </div>
       )}
+      
 
       {idUsuarioVer && <PerfilUsuarioDetalle uid={idUsuarioVer} onClose={() => setIdUsuarioVer(null)} />}
       {verPerfil && <PerfilPublico conductor={{ ...viaje, identidadVerificada: true }} onClose={() => setVerPerfil(false)} setToastMessage={setToastMessage} setShowToast={setShowToast} />}
