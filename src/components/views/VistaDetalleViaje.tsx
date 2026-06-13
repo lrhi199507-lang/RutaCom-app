@@ -491,7 +491,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  const ejecutarCancelacion = async () => {
+    const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToast({ texto: "Debes seleccionar un motivo", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
@@ -500,6 +500,25 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const miRef = doc(db, "usuarios", userData?.id);
+      const miSnap = await getDoc(miRef);
+      const misDatos = miSnap.exists() ? miSnap.data() : {};
+      
+      // 🔥 SISTEMA DE PENALIZACIÓN (3 STRIKES = 24 HORAS DE SUSPENSIÓN)
+      let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
+      let penalizacion = {};
+      let mensajeToast = "";
+
+      if (strikesActuales >= 3) {
+        penalizacion = {
+          strikesCancelacion: 0, // Reseteamos la cuenta para su futuro regreso
+          suspendidoTemporalmenteHasta: Date.now() + (24 * 60 * 60 * 1000) // Se bloquea por 24 horas exactas
+        };
+        mensajeToast = "Límite de cancelaciones. Cuenta suspendida por 24h.";
+      } else {
+        penalizacion = { strikesCancelacion: strikesActuales };
+        mensajeToast = `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 cancelaciones permitidas.`;
+      }
+
       const viajeRef = doc(db, "Viajes", viaje.id);
       const idDelChofer = viaje.uidConductor || viaje.idCreador;
 
@@ -507,23 +526,24 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
         if (pasajeroAborrar) {
           await updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) });
-          await updateDoc(miRef, { cancelacionesPasajero: increment(1) });
+          // Guardamos en Firebase el historial infinito + los strikes activos
+          await updateDoc(miRef, { cancelacionesPasajero: increment(1), ...penalizacion });
           if (idDelChofer) await enviarNotificacion(idDelChofer, "Asiento Liberado", `${userData?.nombre} ha cancelado su reserva.`, "alerta");
-          setToast({ texto: "Reserva cancelada y registrada.", tipo: "exito" });
+          setToast({ texto: mensajeToast, tipo: "exito" });
         }
       } 
       else if (modalCancelar.rol === 'chofer') {
         await updateDoc(viajeRef, { estado: 'cancelado', motivoCancelacionChofer: motivoCancelacion });
-        await updateDoc(miRef, { cancelacionesChofer: increment(1) });
+        await updateDoc(miRef, { cancelacionesChofer: increment(1), ...penalizacion });
         for (const p of pasajerosConfirmados) {
           if (!p) continue;
           await enviarNotificacion(p.id || p.uid, "Viaje Cancelado", `El viaje desde ${viaje.cO?.split(',')[0]} fue cancelado: ${motivoCancelacion}.`, "alerta");
         }
-        setToast({ texto: "Viaje cancelado.", tipo: "exito" });
+        setToast({ texto: mensajeToast, tipo: "exito" });
       }
 
       setModalCancelar({ visible: false, rol: null });
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 4000);
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
     } catch (error) {
@@ -531,6 +551,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
+  
 
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
