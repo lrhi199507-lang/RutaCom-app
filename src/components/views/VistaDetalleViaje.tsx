@@ -139,7 +139,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [ninosExtra, setNinosExtra] = useState(0);
   
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
-   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
+  const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
+  
+  // 🔥 NUEVO ESTADO PARA EL BLOQUEO DEL PASAJERO
+  const [reservaActivaBloqueante, setReservaActivaBloqueante] = useState(false);
+  
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
@@ -177,21 +181,18 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => { if (intervaloGps) clearInterval(intervaloGps); };
   }, [soyConductor, estadoViaje, viaje?.id]);
 
-    // 🔥 NUEVO RADAR: Verifica si el conductor tiene OTRO viaje en curso
+  // 🔥 RADAR CHOFER
   useEffect(() => {
     if (!soyConductor || !userData?.id) return;
     
-    // Buscamos todos los viajes de este conductor
     const qActivos = query(
       collection(db, "Viajes"),
       where("uidConductor", "==", userData.id)
     );
     
     const unsubActivos = onSnapshot(qActivos, (snap) => {
-      // Filtramos localmente para evitar errores de Firebase
       const otroViajeActivo = snap.docs.some(d => {
         const data = d.data();
-        // Es un viaje activo SI NO es el viaje actual, Y está en_curso o buscando
         return d.id !== viaje.id && (data.estado === "buscando" || data.estado === "en_curso");
       });
       setViajeActivoBloqueante(otroViajeActivo);
@@ -199,6 +200,41 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     
     return () => unsubActivos();
   }, [soyConductor, userData?.id, viaje?.id]);
+
+  const pasajerosConfirmados = obtenerArraySeguro(viaje?.pasajeros);
+  const solicitudesPendientes = obtenerArraySeguro(viaje?.reservasPendientes);
+  
+  const miReserva = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
+  const yaSoyPasajero = !!miReserva;
+  const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
+
+  // 🔥 NUEVO RADAR PASAJERO: Evita que el pasajero se clone en 2 viajes distintos
+  useEffect(() => {
+    if (soyConductor || !userData?.id || yaSoyPasajero || yaSolicite) return;
+
+    const verificarBloqueo = async () => {
+      try {
+        const qSol = query(collection(db, "Solicitudes"), where("idPasajero", "==", String(userData.id)));
+        const snap = await getDocs(qSol);
+        let bloqueado = false;
+        
+        for (let docSnap of snap.docs) {
+          const data = docSnap.data();
+          if (data.idViaje !== viaje.id && (data.estado === 'pendiente' || data.estado === 'aprobada')) {
+            const vSnap = await getDoc(doc(db, "Viajes", data.idViaje));
+            if (vSnap.exists() && ['disponible', 'buscando', 'en_curso'].includes(vSnap.data().estado)) {
+               bloqueado = true;
+               break;
+            }
+          }
+        }
+        setReservaActivaBloqueante(bloqueado);
+      } catch (error) { console.error("Error en radar pasajero:", error); }
+    };
+
+    verificarBloqueo();
+  }, [soyConductor, userData?.id, viaje?.id, yaSoyPasajero, yaSolicite]);
+
   
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
@@ -230,17 +266,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   }, [viaje?.estado, viaje?.pasajeros, userData?.id]);
   
-  const pasajerosConfirmados = obtenerArraySeguro(viaje?.pasajeros);
-  const solicitudesPendientes = obtenerArraySeguro(viaje?.reservasPendientes);
-  
   const puestosTotales = Number(viaje?.asientos) || Number(viaje?.puestos) || 1;
   const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
   const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
   const puestosQueQuiero = 1 + adultosExtra + ninosExtra;
   
-  const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
-  const miReserva = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
-  const yaSoyPasajero = !!miReserva;
   const yaCalifico = miReserva?.calificado === true; 
   const mostrarBannerRetorno = viaje?.publicarRegreso && viaje?.tipoRuta !== 'vuelta_de_ruta';
 
@@ -273,7 +303,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) { console.error(error); }
   };
 
-     const iniciarChatPrivado = async (pasajeroObjetivo) => {
+  const iniciarChatPrivado = async (pasajeroObjetivo) => {
     setCargando(true);
     try {
       const miId = String(userData?.id || userData?.uid);
@@ -292,7 +322,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       if (!chatSnap.empty) {
         const chatExistente = chatSnap.docs[0];
         onIniciarChat({ id: chatExistente.id, ...chatExistente.data() });
-        // 🔥 CERRAMOS LA VISTA DEL VIAJE CON UN RETRASO MÍNIMO PARA EVITAR CORTOS CIRCUITOS
         setTimeout(() => onRegresar(), 150); 
       } else {
         const datosNuevoChat = {
@@ -317,7 +346,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
         const nuevoChatRef = await addDoc(collection(db, "Chats"), datosNuevoChat);
         onIniciarChat({ id: nuevoChatRef.id, ...datosNuevoChat });
-        // 🔥 CERRAMOS LA VISTA
         setTimeout(() => onRegresar(), 150);
       }
       
@@ -342,7 +370,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      // Si soy pasajero, mi "objetivo" soy yo mismo para la lógica
       iniciarChatPrivado(userData); 
     }
   };
@@ -693,7 +720,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center flex items-center justify-center gap-2">
                 <Users size={14} /> Pasajeros Confirmados ({pasajerosConfirmados.length})
               </h3>
-                            <div className="space-y-3">
+              <div className="space-y-3">
                  {pasajerosConfirmados.map((p, index) => {
                    if (!p) return null;
                    return (
@@ -711,13 +738,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                          {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
                        
-                         {soyConductor && (
-                         <button disabled={cargando} onClick={(e) => {  e.stopPropagation();  iniciarChatPrivado(p); // <-- ESTO ES VITAL
-                        }} 
-                      className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30" >
-                     <MessageCircle size={16} />
-                     </button>
-                     )}
+                       {soyConductor && (
+                         <button disabled={cargando} onClick={(e) => {  e.stopPropagation();  iniciarChatPrivado(p); }} 
+                          className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30" >
+                          <MessageCircle size={16} />
+                         </button>
+                       )}
                      </div>
                    );
                  })}
@@ -851,8 +877,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                   const puestosPedidos = Number(pasajero.puestosSolicitados) || 1;
                   return (
                     <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm hover:border-blue-300 relative">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">                     {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
-                    </div>
+                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+                           {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-slate-700 uppercase truncate">{String(pasajero.nombre || "Pasajero")}</p>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -860,7 +887,18 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                               {puestosPedidos > 1 && <span className="text-[8px] font-black text-blue-600 uppercase bg-blue-100 px-2 py-0.5 rounded-full">+{puestosPedidos - 1} Acompañante(s)</span>}
                           </div>
                         </div>
-                        {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500 shrink-0" /> : <Lock size={14} className="text-slate-300 shrink-0" />}
+                        
+                        <div className="flex items-center gap-2 shrink-0">
+                          {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500" /> : <Lock size={14} className="text-slate-300" />}
+                          
+                          {/* 🔥 SOLUCIÓN 1: BOTÓN DE CHAT INYECTADO AQUÍ 🔥 */}
+                          {soyConductor && (
+                            <button disabled={cargando} onClick={(e) => { e.stopPropagation(); iniciarChatPrivado(pasajero); }} 
+                              className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shadow-md shadow-slate-900/30">
+                              <MessageCircle size={16} />
+                            </button>
+                          )}
+                        </div>
                     </div>
                   );
                 })}
@@ -910,7 +948,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-            {/* 🔥 REGLA DE ORO: SI HAY UN MODAL ABIERTO, ESTA BARRA AZUL DESAPARECE POR COMPLETO */}
+      {/* 🔥 REGLA DE ORO: SI HAY UN MODAL ABIERTO, ESTA BARRA AZUL DESAPARECE POR COMPLETO */}
       {!hayModalAbierto && (
         <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[100000]">
           
@@ -965,7 +1003,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                     Cancelar
                   </button>
 
-                  {/* 🔥 BOTÓN BLOQUEADO INTELIGENTE SI TIENE OTRO VIAJE */}
                   {viajeActivoBloqueante ? (
                     <button disabled className="flex-[2] bg-slate-800 text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 leading-tight border border-slate-700">
                       <Lock size={16} className="text-amber-500" />
@@ -983,11 +1020,26 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 </div>
               ) : (
                 yaSoyPasajero ? (
-                  <div className="flex-1 bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                    <Check size={16} /> Confirmado
+                  // 🔥 SOLUCIÓN 3: BOTÓN CANCELAR PARA EL PASAJERO 🔥
+                  <div className="flex-1 flex gap-2">
+                    <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200 flex items-center justify-center">
+                      Cancelar
+                    </button>
+                    <div className="flex-[2] bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                      <Check size={16} /> Confirmado
+                    </div>
                   </div>
                 ) : yaSolicite ? (
                   <button disabled={cargando} onClick={cancelarSolicitud} className="flex-1 bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
+                ) : reservaActivaBloqueante ? (
+                  // 🔥 SOLUCIÓN 2: RADAR DE BLOQUEO VISUAL PARA PASAJEROS CLONADOS 🔥
+                  <button disabled className="flex-1 bg-slate-800 text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 border border-slate-700">
+                    <Lock size={16} className="text-amber-500" />
+                    <div className="flex flex-col items-start text-left">
+                      <span>Bloqueado</span>
+                      <span className="text-[7px] text-amber-500/80">Ya tienes otro viaje</span>
+                    </div>
+                  </button>
                 ) : cuposRestantes > 0 ? (
                   <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
                 ) : (
@@ -1093,7 +1145,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      {/* MODAL DE ABORDAJE (PIN) - AHORA CON SCROLL INTERNO SI HACE FALTA */}
+      {/* MODAL DE ABORDAJE (PIN) */}
       {modalAbordaje && (
         <div className="fixed inset-0 z-[110000] flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 pb-8">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[85vh]">
