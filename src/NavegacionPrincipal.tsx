@@ -350,7 +350,7 @@ export default function NavegacionPrincipal({ user }) {
           Cerrar Sesión
         </button>
         <a 
-          href="mailto: damelacola2026@gmail.com?subject=Apelación de Cuenta Suspendida"
+          href="mailto: soportedamelacola@gmail.com?subject=Apelación de Cuenta Suspendida"
           className="mt-6 text-blue-500 font-black uppercase text-[10px] tracking-widest hover:text-blue-400" >  Apelar Decisión (Soporte)  </a>
       </div>
     );
