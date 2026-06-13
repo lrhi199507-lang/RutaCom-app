@@ -491,7 +491,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-      const ejecutarCancelacion = async () => {
+  const ejecutarCancelacion = async () => { // 🔥 ESTE 'async' ES EL QUE FALTABA
     if (!motivoCancelacion) {
       setToast({ texto: "Debes seleccionar un motivo", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
@@ -503,7 +503,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       const viajeRef = doc(db, "Viajes", viaje.id);
       const idDelChofer = viaje.uidConductor || viaje.idCreador;
 
-      // 1. LÓGICA PARA EL PASAJERO (Siempre se le penaliza por cancelar un puesto confirmado)
+      // 1. LÓGICA PARA EL PASAJERO
       if (modalCancelar.rol === 'pasajero') {
         const miSnap = await getDoc(miRef);
         const misDatos = miSnap.exists() ? miSnap.data() : {};
@@ -520,7 +520,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           setToast({ texto: strikesActuales >= 3 ? "Cuenta suspendida por 24h." : `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 faltas.`, tipo: "exito" });
         }
       } 
-      // 2. LÓGICA PARA EL CHOFER (Solo se le penaliza si deja pasajeros botados)
+      // 2. LÓGICA PARA EL CHOFER
       else if (modalCancelar.rol === 'chofer') {
         const tienePasajeros = pasajerosConfirmados.length > 0;
         let mensajeToast = "Viaje cancelado sin penalización.";
@@ -555,41 +555,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
-
-      const viajeRef = doc(db, "Viajes", viaje.id);
-      const idDelChofer = viaje.uidConductor || viaje.idCreador;
-
-      if (modalCancelar.rol === 'pasajero') {
-        const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
-        if (pasajeroAborrar) {
-          await updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) });
-          // Guardamos en Firebase el historial infinito + los strikes activos
-          await updateDoc(miRef, { cancelacionesPasajero: increment(1), ...penalizacion });
-          if (idDelChofer) await enviarNotificacion(idDelChofer, "Asiento Liberado", `${userData?.nombre} ha cancelado su reserva.`, "alerta");
-          setToast({ texto: mensajeToast, tipo: "exito" });
-        }
-      } 
-      else if (modalCancelar.rol === 'chofer') {
-        await updateDoc(viajeRef, { estado: 'cancelado', motivoCancelacionChofer: motivoCancelacion });
-        await updateDoc(miRef, { cancelacionesChofer: increment(1), ...penalizacion });
-        for (const p of pasajerosConfirmados) {
-          if (!p) continue;
-          await enviarNotificacion(p.id || p.uid, "Viaje Cancelado", `El viaje desde ${viaje.cO?.split(',')[0]} fue cancelado: ${motivoCancelacion}.`, "alerta");
-        }
-        setToast({ texto: mensajeToast, tipo: "exito" });
-      }
-
-      setModalCancelar({ visible: false, rol: null });
-      setTimeout(() => setToast(null), 4000);
-      if (modalCancelar.rol === 'chofer') onRegresar(); 
-      
-    } catch (error) {
-      setToast({ texto: "Error en la operación", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
-  };
   
-
+  
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
