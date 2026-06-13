@@ -7,6 +7,18 @@ const ChatCard = ({ chat, currentUserId, onClick }) => {
   const nombreContacto = soyConductor ? chat.nombrePasajero : chat.nombreConductor;
   const fotoContacto = soyConductor ? chat.fotoPasajero : chat.fotoConductor;
 
+  // 🔥 FORMATEADOR DE HORA PROFESIONAL PARA EVITAR EL TEXTO LARGO
+  let horaFormateada = chat.ultimaHora || '00:00';
+  if (chat.timestamp && typeof chat.timestamp === 'number') {
+    const fecha = new Date(chat.timestamp);
+    // Si el chat es de hoy, muestra la hora. Si es de otro día, muestra la fecha.
+    if (fecha.toDateString() === new Date().toDateString()) {
+      horaFormateada = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      horaFormateada = fecha.toLocaleDateString([], { day: '2-digit', month: 'short' });
+    }
+  }
+
   return (
     <div 
       onClick={onClick}
@@ -30,7 +42,7 @@ const ChatCard = ({ chat, currentUserId, onClick }) => {
             {nombreContacto || 'Usuario Dame la cola'}
           </h4>
           <span className={`text-[9px] font-bold whitespace-nowrap mt-0.5 ${isUnread ? 'text-blue-600' : 'text-slate-400'}`}>
-            {chat.ultimaHora || '00:00'}
+            {horaFormateada}
           </span>
         </div>
         
@@ -79,7 +91,21 @@ export const VistaInbox = ({
 
   const safeChatsChofer = chatsChofer || [];
   const safeChatsPasajero = chatsPasajero || [];
-  const todosLosChats = [...safeChatsChofer, ...safeChatsPasajero];
+  
+  // 🔥 LÓGICA DE ORDENADO MATEMÁTICO: Del más reciente (arriba) al más antiguo (abajo)
+  const todosLosChats = [...safeChatsChofer, ...safeChatsPasajero].sort((a, b) => {
+    // Intentamos extraer el valor matemático (timestamp) de cada chat
+    const tiempoA = a.timestamp || 0;
+    const tiempoB = b.timestamp || 0;
+    
+    // Si ambos tienen timestamp, la resta los ordena perfectamente
+    if (tiempoA && tiempoB) {
+      return tiempoB - tiempoA;
+    }
+    
+    // Fallback: Si por error de la base de datos alguno no tiene timestamp, lo mandamos al final
+    return 0;
+  });
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -103,10 +129,8 @@ export const VistaInbox = ({
           
           <div 
             onClick={() => onAbrirChat && onAbrirChat({
-              // 🔥 CAMBIO CRUCIAL: El ID ahora es ÚNICO para cada usuario conectado
               id: `soporte_${userData.id}`,
               esSoporte: true, 
-              // 🔥 CAMBIO CRUCIAL: Le mandamos los datos del usuario al chat para que tú sepas con quién hablas
               usuarioSoporteId: userData.id,
               usuarioSoporteNombre: userData.nombre,
               nombreContacto: "Soporte Dame la cola",
