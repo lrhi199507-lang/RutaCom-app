@@ -476,14 +476,14 @@ const manejarRetiro = async (e) => {
               Retiro mínimo: $10. Introduce tus datos de Pago Móvil.
             </p>
           
-            {/* 🔥 AVISO PROFESIONAL DE DÍA Y HORA DE PAGO 🔥 */}
+                        {/* 🔥 AVISO PROFESIONAL DE DÍA Y HORA DE PAGO 🔥 */}
             <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-3xl mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <Clock size={18} className="text-amber-500" />
                 <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Horario de Retiros</p>
               </div>
               <p className="text-[10px] font-bold text-amber-100 leading-relaxed">
-                El sistema de retiros se habilita <span className="font-black text-white">EXCLUSIVAMENTE los días SÁBADO de 8:00 AM a 5:00 PM</span>. 
+                El sistema de retiros se habilita <span className="font-black text-white">TODOS LOS DÍAS de 7:00 PM a 11:00 PM</span>. 
                 Fuera de este horario, la opción permanecerá bloqueada.
               </p>
             </div>
@@ -514,9 +514,9 @@ const manejarRetiro = async (e) => {
                 <p className="text-[8px] font-black text-red-500/80 uppercase tracking-widest italic text-right mt-1">Titular Inamovible</p>
               </div>
 
-              <button type="submit" disabled={enviando || Number(montoRetiro) > saldoDisponible || Number(montoRetiro) < 10 || !datosBancarios.cedula} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
-                {enviando ? "Procesando..." : "Solicitar Retiro"}
-              </button>
+              <button type="submit" disabled={enviando || Number(montoRetiro) > saldoDisponible || Number(montoRetiro) < 10 || !datosBancarios.cedula || botonBloqueadoPorHora} className="w-full bg-slate-800 text-blue-400 border border-blue-500/30 rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-4">
+             {enviando ? "Procesando..." : "Solicitar Retiro"}
+            </button>
             </form>
           </div>
         </div>
