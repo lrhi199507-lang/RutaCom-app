@@ -6,14 +6,9 @@ import {
   ArrowLeft, MessageCircle, Phone, ShieldCheck, 
   Star, Music, MessageSquare, User, Car, Trophy, Medal, MapPin, BadgeCheck
 } from 'lucide-react';
+import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
-// --- FUNCIÓN PARA CALCULAR EL NIVEL (RANGO) ---
-const calcularNivel = (viajes) => {
-  if (viajes < 5) return { titulo: 'NOVATO', color: 'text-slate-500', bg: 'bg-slate-100', icon: <User size={14} /> };
-  if (viajes < 15) return { titulo: 'RECURRENTE', color: 'text-blue-600', bg: 'bg-blue-100', icon: <MapPin size={14} /> };
-  if (viajes < 50) return { titulo: 'EXPERTO', color: 'text-amber-600', bg: 'bg-amber-100', icon: <Medal size={14} /> };
-  return { titulo: 'LEYENDA', color: 'text-purple-600', bg: 'bg-purple-100', icon: <Trophy size={14} /> };
-};
+const nivel = calcularRangoGlobal(estadisticas.viajesRealizados);
 
 const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: any) => {
   if (!conductor) return null;
@@ -145,10 +140,9 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
         </div>
 
         {/* ETIQUETA DINÁMICA DE NIVEL */}
-        <div className={`${nivel.bg} ${nivel.color} px-3.5 py-2 rounded-[18px] flex items-center gap-2 shadow-sm border border-white`}>
-          {nivel.icon}
-          <span className="text-[9px] font-black italic uppercase tracking-widest">{nivel.titulo}</span>
-        </div>
+        <div className={`${nivel.bgBadge} ${nivel.colorText} px-3.5 py-2 rounded-[18px] flex items-center gap-2 shadow-sm border border-white`}> {nivel.icon}
+         <span className="text-[9px] font-black italic uppercase tracking-widest">{nivel.titulo}</span>
+     </div>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-slate-50 px-6">
