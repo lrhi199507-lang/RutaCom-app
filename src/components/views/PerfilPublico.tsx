@@ -8,8 +8,6 @@ import {
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
-const nivel = calcularRangoGlobal(estadisticas.viajesRealizados);
-
 const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: any) => {
   if (!conductor) return null;
 
@@ -112,7 +110,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     return () => { unmounted = true; };
   }, [conductor]);
 
-  const nivel = calcularNivel(estadisticas.viajesRealizados);
+  const nivel = calcularRangoGlobal(estadisticas.viajesRealizados);
 
     const manejarClickOpiniones = () => {
     if (estadisticas.totalOpiniones === 0) {
