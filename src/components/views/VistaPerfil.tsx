@@ -12,6 +12,7 @@ import {
   Hash, Gauge, LogOut, Camera, Image as ImageIcon 
 } from 'lucide-react';
 import { VistaPanelAdministrativo } from './VistaPanelAdministrativo';
+import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
 const auth = getAuth();
 
@@ -56,38 +57,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   // ✅ USA ESTO:
 const esAdmin = userData?.rol === 'admin';
   
-  const viajesCond = userData.viajesRealizados || 0;
+ const viajesCond = userData.viajesRealizados || 0;
   const viajesPas = userData.viajesComoPasajero || 0;
   const totalTrayectoria = viajesCond + viajesPas;
   
-  const obtenerRango = () => {
-    if (totalTrayectoria >= 50) return "LEYENDA";
-    if (totalTrayectoria >= 20) return "ORO";
-    if (totalTrayectoria >= 10) return "PLATA";
-    return "NOVATO";
-  };
-
-  const obtenerColorRango = (rango: string) => {
-    switch(rango) {
-      case "PLATA": return "bg-slate-400";
-      case "ORO": return "bg-yellow-500";
-      case "LEYENDA": return "bg-slate-900";
-      default: return "bg-blue-600";
-    }
-  };
-
-  const calcularSiguienteNivel = () => {
-    const total = totalTrayectoria;
-    if (total < 10) return { meta: 10, faltan: 10 - total, nombre: "PLATA" };
-    if (total < 20) return { meta: 20, faltan: 20 - total, nombre: "ORO" };
-    if (total < 50) return { meta: 50, faltan: 50 - total, nombre: "LEYENDA" };
-    return { meta: total, faltan: 0, nombre: "MÁXIMO" };
-  };
-
-  const rangoActual = obtenerRango();
-  const proximoNivel = calcularSiguienteNivel();
-  const porcentajeNivel = Math.min((totalTrayectoria / proximoNivel.meta) * 100, 100);
-
+  // NUEVA LÓGICA CONECTADA AL CEREBRO CENTRAL
+  const rangoDatos = calcularRangoGlobal(totalTrayectoria);
+  const faltan = rangoDatos.meta - totalTrayectoria;
+  const porcentajeNivel = Math.min((totalTrayectoria / rangoDatos.meta) * 100, 100);
+  
   const puntosSeguridad = [
     !!userData.kycVerificado, !!userData.licenciaVerificada, !!userData.circulacionVerificada,
     !!userData.rcvVerificado, !!userData.selfieVerificada, !!userData.fotoFrontalVerificada,
@@ -300,8 +278,9 @@ const esAdmin = userData?.rol === 'admin';
             )}
             <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
               <div className="absolute top-5 right-5">
-                <div className={`${obtenerColorRango(rangoActual)} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}>{rangoActual}</div>
-              </div>
+             <div className={`${rangoDatos.bgCard} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}> {rangoDatos.titulo}
+            </div>
+             </div>
               <div className="relative w-28 h-28 mx-auto mb-5">
                 <div className="w-full h-full rounded-full bg-gradient-to-tr from-orange-500 to-slate-200 p-1">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-white">
@@ -327,9 +306,10 @@ const esAdmin = userData?.rol === 'admin';
             <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-4">
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Próximo Nivel: {proximoNivel.nombre}</p>
-                  <p className="text-sm font-black text-slate-800 italic uppercase">{proximoNivel.faltan > 0 ? `Te faltan ${proximoNivel.faltan} viajes` : "¡Leyenda!"}</p>
-                </div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1"> Próximo Nivel: {faltan > 0 ? rangoDatos.meta : 'MÁXIMO'} VJS </p> <p className="text-sm font-black text-slate-800 italic uppercase">
+                  {faltan > 0 ? `Te faltan ${faltan} viajes` : "¡Eres Leyenda!"}
+                  </p>
+                 </div>
                 <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{totalTrayectoria} / {proximoNivel.meta} VJS</div>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
