@@ -310,7 +310,7 @@ const esAdmin = userData?.rol === 'admin';
                   {faltan > 0 ? `Te faltan ${faltan} viajes` : "¡Eres Leyenda!"}
                   </p>
                  </div>
-                <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{totalTrayectoria} / {proximoNivel.meta} VJS</div>
+                <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full"> {totalTrayectoria} / {rangoDatos.meta} VJS </div>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-1000" style={{ width: `${porcentajeNivel}%` }} />
