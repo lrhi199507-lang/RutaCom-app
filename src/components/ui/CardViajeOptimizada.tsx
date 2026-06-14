@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { MapPin, Navigation, Clock, Users, Star, Car, ChevronRight, User, BadgeCheck, Repeat } from 'lucide-react';
+import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
 export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => {
   if (!viaje) return null;
@@ -131,9 +132,16 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
                   {ratingInfo.promedio}
                 </span>
               </div>
-              <span className="text-[9px] font-bold uppercase italic text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                {obtenerNivel(viaje.datosConductor?.viajesRealizados || viaje.viajesRealizados)}
-              </span>
+              {(() => {
+                const totalViajes = viaje.datosConductor?.viajesRealizados || viaje.viajesRealizados || 0;
+                const rango = calcularRangoGlobal(totalViajes);
+                
+                return (
+                  <span className={`text-[9px] font-bold uppercase italic bg-slate-100 px-2 py-0.5 rounded-full ${rango.colorText}`}>
+                    {rango.titulo}
+                  </span>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -227,11 +235,3 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   );
 };
 
-const obtenerNivel = (viajes) => {
-  const num = parseInt(viajes) || 0;
-  if (num === 0) return "Nuevo";
-  if (num < 10) return "Novato";
-  if (num < 50) return "Bronce";
-  if (num < 100) return "Plata";
-  return "Oro";
-};
