@@ -42,11 +42,8 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     };
   }, [onClose]);
   
-  // EFECTO MAGIA: CONSULTAR FIREBASE EN VIVO
   useEffect(() => {
     let unmounted = false;
-    
-    // Obtener ID real del conductor
     const idUsuario = conductor.uidConductor || conductor.idCreador || conductor.id;
 
     if (!idUsuario) {
@@ -56,49 +53,44 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
 
     const cargarEstadisticas = async () => {
       try {
-        // A. Contar Viajes Finalizados
-        const qViajes = query(collection(db, "Viajes"), where("estado", "==", "finalizado"));
-        const snapshotViajes = await getDocs(qViajes);
+        // 🔥 CORRECCIÓN: Leemos directamente el perfil real del usuario
+        const userSnap = await getDocs(query(collection(db, "usuarios"), where("__name__", "==", idUsuario)));
         let contadorViajes = 0;
 
-        snapshotViajes.forEach((docSnap) => {
-          const v = docSnap.data();
-          const esConductor = v.uidConductor === idUsuario || v.idCreador === idUsuario;
-          const esPasajero = v.pasajeros?.some(p => p.id === idUsuario && p.abordado === true);
-          if (esConductor || esPasajero) contadorViajes++;
-        });
+        if (!userSnap.empty) {
+          const uData = userSnap.docs[0].data();
+          const viajesCond = uData.viajesRealizados || 0;
+          const viajesPas = uData.viajesComoPasajero || 0;
+          contadorViajes = viajesCond + viajesPas; // Esto dará 24
+        }
 
+        // Las reseñas se quedan igual para el promedio y comentarios
         const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
         const snapshotResenas = await getDocs(qResenas);
         
         let sumaEstrellas = 0;
         let totalResenas = 0;
-        let resenasObtenidas = []; // NUEVO: Array para guardar los comentarios
+        let resenasObtenidas = [];
 
         snapshotResenas.forEach((docSnap) => {
           const data = docSnap.data();
           sumaEstrellas += data.estrellas || 0;
           totalResenas++;
-          // Guardamos cada reseña en la lista
           resenasObtenidas.push({ id: docSnap.id, ...data });
         });
 
-        // 🔥 ORDENAR POR FECHA (De más reciente a más antigua) 🔥
         resenasObtenidas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-        // 2. MEJORA: Si no hay reseñas, muestra "0.0" estrictamente
         const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "0.0";
 
         if (!unmounted) {
           setEstadisticas({
-            viajesRealizados: contadorViajes,
+            viajesRealizados: contadorViajes, // Ahora sí reflejará los 24 viajes
             promedio: promedioCalculado,
             totalOpiniones: totalResenas
           });
-          setListaResenas(resenasObtenidas); // NUEVO: Guardamos la lista en el estado
+          setListaResenas(resenasObtenidas);
           setCargandoStats(false);
-      }
-
+        }
       } catch (error) {
         console.error("Error cargando estadísticas:", error);
         setCargandoStats(false);
@@ -106,7 +98,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     };
 
     cargarEstadisticas();
-
     return () => { unmounted = true; };
   }, [conductor]);
 
