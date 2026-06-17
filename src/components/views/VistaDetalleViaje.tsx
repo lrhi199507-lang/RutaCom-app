@@ -6,7 +6,7 @@ import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
 import MapaView from '../Map/MapaView';
 import { functions } from '../../firebaseConfig'; 
-import { httpsCallableFromURL } from 'firebase/functions';
+import { httpsCallableFromURL, httpsCallable } from 'firebase/functions';
 import { App } from '@capacitor/app';
 
 import { 
@@ -120,7 +120,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion;
 
   // 🔥 INTERCEPTOR DE TIMEOUT PARA PREVENIR CONGELAMIENTOS EN ZONAS MUERTAS
-  const ejecutarConTimeout = async (promesa, tiempoMs = 7000) => {
+  const ejecutarConTimeout = async (promesa, tiempoMs = 12000) => {
     return Promise.race([
       promesa,
       new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT_RED")), tiempoMs))
@@ -493,57 +493,23 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
     setCargando(true);
     try {
-      const miRef = doc(db, "usuarios", userData?.id);
-      const viajeRef = doc(db, "Viajes", viaje.id);
-      const idDelChofer = viaje.uidConductor || viaje.idCreador;
-
-      if (modalCancelar.rol === 'pasajero') {
-        const miSnap = await ejecutarConTimeout(getDoc(miRef));
-        const misDatos = miSnap.exists() ? miSnap.data() : {};
-        let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
-        let penalizacion = strikesActuales >= 3 
-          ? { strikesCancelacion: 0, suspendidoTemporalmenteHasta: Date.now() + (24 * 60 * 60 * 1000) } 
-          : { strikesCancelacion: strikesActuales };
-        
-        const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
-        if (pasajeroAborrar) {
-          await ejecutarConTimeout(updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) }));
-          await ejecutarConTimeout(updateDoc(miRef, { cancelacionesPasajero: increment(1), ...penalizacion }));
-          if (idDelChofer) await enviarNotificacion(idDelChofer, "Asiento Liberado", `${userData?.nombre} ha cancelado su reserva.`, "alerta");
-          setToast({ texto: strikesActuales >= 3 ? "Cuenta suspendida por 24h." : `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 faltas.`, tipo: "exito" });
-        }
-      } 
-      else if (modalCancelar.rol === 'chofer') {
-        const tienePasajeros = pasajerosConfirmados.length > 0;
-        let mensajeToast = "Viaje cancelado sin penalización.";
-
-        if (tienePasajeros) {
-          const miSnap = await ejecutarConTimeout(getDoc(miRef));
-          const misDatos = miSnap.exists() ? miSnap.data() : {};
-          let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
-          
-          let penalizacion = strikesActuales >= 3 
-            ? { strikesCancelacion: 0, suspendidoTemporalmenteHasta: Date.now() + (24 * 60 * 60 * 1000) } 
-            : { strikesCancelacion: strikesActuales };
-          
-          await ejecutarConTimeout(updateDoc(miRef, { cancelacionesChofer: increment(1), ...penalizacion }));
-          mensajeToast = strikesActuales >= 3 ? "Cuenta suspendida por 24h." : `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 faltas.`;
-        }
-
-        await ejecutarConTimeout(updateDoc(viajeRef, { estado: 'cancelado', motivoCancelacionChofer: motivoCancelacion }));
-        for (const p of pasajerosConfirmados) {
-          if (!p) continue;
-          await enviarNotificacion(p.id || p.uid, "Viaje Cancelado", `El viaje desde ${viaje.cO?.split(',')[0]} fue cancelado: ${motivoCancelacion}.`, "alerta");
-        }
-        setToast({ texto: mensajeToast, tipo: "exito" });
-      }
+      // 🔥 Llamada Segura a Google Cloud Functions 🔥
+      const cancelarEnNube = httpsCallable(functions, 'procesarCancelacionSegura');
+      await ejecutarConTimeout(cancelarEnNube({ 
+        viajeId: viaje.id, 
+        pasajeroId: userData?.id, 
+        rol: modalCancelar.rol, 
+        motivo: motivoCancelacion 
+      }), 12000);
 
       setModalCancelar({ visible: false, rol: null });
+      setToast({ texto: "Cancelación procesada en el servidor", tipo: "exito" });
       setTimeout(() => setToast(null), 4000);
+      
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
     } catch (error: any) {
-      setToast({ texto: error.message === "TIMEOUT_RED" ? "Error de señal. Tu solicitud se procesará al reconectar." : "Error en la operación", tipo: "error" });
+      setToast({ texto: error.message === "TIMEOUT_RED" ? "Red inestable. Validando en segundo plano..." : "Error al cancelar. Intenta de nuevo.", tipo: "error" });
       setTimeout(() => setToast(null), 3500);
     } finally {
       setCargando(false); 
@@ -689,14 +655,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     const cO_seguro = obtenerEstado(viaje.cO || "");
     const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${cD_seguro} desde ${cO_seguro} en Dame la cola.`;
     
-    // 1. EXTRAER UBICACIÓN DEL CARRO (Instantáneo)
     if (viaje.latChofer && viaje.lngChofer) {
       const linkMapa = `https://maps.google.com/?q=${viaje.latChofer},${viaje.lngChofer}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(`${mensajeBase}\n\n📍 Ver ubicación en tiempo real del vehículo:\n${linkMapa}`)}`, '_blank');
       return; 
     }
 
-    // 2. PLAN B: Si el carro aún no tiene señal, usamos el GPS del teléfono
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -706,7 +670,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           window.open(`https://wa.me/?text=${encodeURIComponent(`${mensajeBase}\n\n📍 Ver mi ubicación actual:\n${linkMapa}`)}`, '_blank');
         },
         () => { 
-          // 3. PLAN C: Si fallan los dos GPS, enviamos solo el texto
           window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank'); 
         },
         { enableHighAccuracy: false, timeout: 6000, maximumAge: 15000 }
@@ -1023,11 +986,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </button>
             )}
 
+            {/* 🔥 NUEVA BARRA INFERIOR SEGÚN ESTADO 🔥 */}
             {estadoViaje === 'en_curso' ? (
               soyConductor ? (
-                <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
-                  Finalizar Viaje
-                </button>
+                <div className="flex-1 flex gap-2">
+                  <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="w-14 sm:w-auto sm:px-4 shrink-0 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-1 active:scale-95 transition-all border border-red-200">
+                    <X size={18} strokeWidth={3} />
+                  </button>
+                  <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
+                    Finalizar Viaje
+                  </button>
+                </div>
               ) : (
                 <div className="flex-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
                   <Navigation size={16} /> En Ruta a Destino
@@ -1035,9 +1004,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               )
             ) : estadoViaje === 'buscando' ? (
               soyConductor ? (
-                 <button disabled={cargando} onClick={notificarLlegadaYAbrirModal} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2" >
-                   <MapPin size={16} /> ¡Ya llegué! (Validar)
-                 </button>
+                 <div className="flex-1 flex gap-2">
+                   <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200 flex items-center justify-center gap-1">
+                     <X size={14} strokeWidth={3} /> Cancelar
+                   </button>
+                   <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={notificarLlegadaYAbrirModal} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none" >
+                     <MapPin size={16} /> {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : '¡Ya llegué! (Validar)'}
+                   </button>
+                 </div>
               ) : (
                  <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-1 bg-red-100 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-200">
                    <X size={16} strokeWidth={3} /> Cancelar Asiento
@@ -1286,7 +1260,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           </div>
         </div>
       )}
-
+      
       {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
@@ -1311,7 +1285,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </p>
             ) : (
               <p className="text-[11px] font-bold text-emerald-400 mb-6 bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
-                Como aún no tienes pasajeros, puedes borrar el viaje sin penalización.
+                Como el viaje no tiene pasajeros, puedes cancelarlo sin penalización para publicar uno nuevo.
               </p>
             )}
 
