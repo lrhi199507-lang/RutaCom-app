@@ -44,35 +44,6 @@ const obtenerEstado = (ciudadNombre) => {
   }
 };
 
-let watcherId = null;
-
-const iniciarRastreoChofer = async (viajeId) => {
-  try {
-    watcherId = await Geolocation.watchPosition(
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-      async (position, error) => {
-        if (error) return; 
-        if (position) {
-          await updateDoc(doc(db, "Viajes", viajeId), {
-            posicionChofer: {
-              lat: position.coords.latitude,
-              lon: position.coords.longitude,
-              heading: position.coords.heading || 0
-            }
-          });
-        }
-      }
-    );
-  } catch (error) { console.error("Error iniciando rastreo:", error); }
-};
-
-const detenerRastreoChofer = async () => {
-  if (watcherId != null) {
-    await Geolocation.clearWatch({ id: watcherId });
-    watcherId = null;
-  }
-};
-
 const formatearFechaHoraRetorno = (fechaString, horaString) => {
   try {
     if (!fechaString || typeof fechaString !== 'string') return "";
@@ -117,7 +88,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setToast({texto: msg, tipo: "exito"});
     setTimeout(() => setToast(null), 3000);
   };
-  const setShowToast = (bool) => { if(!bool) setToast(null); };
 
   const [modalAbordaje, setModalAbordaje] = useState(false);
   const [pinesIngresados, setPinesIngresados] = useState({});
@@ -141,7 +111,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
   
-  // 🔥 NUEVOS ESTADOS PARA BLOQUEO DE PASAJERO PERFECTO
   const [reservaActivaBloqueante, setReservaActivaBloqueante] = useState(false);
   const [revisandoBloqueo, setRevisandoBloqueo] = useState(true);
   
@@ -149,6 +118,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const estadoViaje = viaje?.estado || "disponible"; 
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion;
+
+  // 🔥 INTERCEPTOR DE TIMEOUT PARA PREVENIR CONGELAMIENTOS EN ZONAS MUERTAS
+  const ejecutarConTimeout = async (promesa, tiempoMs = 7000) => {
+    return Promise.race([
+      promesa,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT_RED")), tiempoMs))
+    ]);
+  };
 
   useEffect(() => {
     if (window.google && window.google.maps) return;
@@ -159,26 +136,47 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     document.head.appendChild(script);
   }, []);
 
+  // 🔥 SOLUCIÓN AL RASTREO: Un solo Watch inteligente que tolera desconexiones
   useEffect(() => {
-    let intervaloGps;
-    const iniciarTransmision = async () => {
-      try { await Geolocation.requestPermissions(); } catch (e) { console.error("Permiso GPS denegado"); }
-      intervaloGps = setInterval(async () => {
-        try {
-          const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-          await updateDoc(doc(db, "Viajes", viaje.id), {
-            latChofer: position.coords.latitude,
-            lngChofer: position.coords.longitude,
-            ultimaActualizacion: new Date().toISOString()
-          });
-        } catch (error) {}
-      }, 10000); 
+    let watchId = null;
+    
+    const iniciarMonitoreoRuta = async () => {
+      try {
+        await Geolocation.requestPermissions();
+        watchId = await Geolocation.watchPosition(
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+          async (position, error) => {
+            if (error || !position) return;
+            try {
+              await updateDoc(doc(db, "Viajes", viaje.id), {
+                latChofer: position.coords.latitude,
+                lngChofer: position.coords.longitude,
+                posicionChofer: {
+                  lat: position.coords.latitude,
+                  lon: position.coords.longitude,
+                  heading: position.coords.heading || 0
+                },
+                ultimaActualizacion: new Date().toISOString()
+              });
+            } catch (fsError) {
+              // Silencioso: Si falla por red, se reintentará en el próximo movimiento
+            }
+          }
+        );
+      } catch (e) {
+        console.error("Error al activar GPS");
+      }
     };
 
     if (soyConductor && (estadoViaje === 'en_curso' || estadoViaje === 'buscando')) {
-      iniciarTransmision();
+      iniciarMonitoreoRuta();
     }
-    return () => { if (intervaloGps) clearInterval(intervaloGps); };
+
+    return () => {
+      if (watchId !== null) {
+        Geolocation.clearWatch({ id: watchId });
+      }
+    };
   }, [soyConductor, estadoViaje, viaje?.id]);
 
   useEffect(() => {
@@ -203,7 +201,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSoyPasajero = !!miReserva;
   const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
 
-  // 🔥 RADAR PASAJERO REFORZADO (CONDICIÓN DE CARRERA ELIMINADA)
   useEffect(() => {
     if (soyConductor || !userData?.id || yaSoyPasajero || yaSolicite) {
       setRevisandoBloqueo(false);
@@ -225,7 +222,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             if (vSnap.exists()) {
               const vData = vSnap.data();
               if (['disponible', 'buscando', 'en_curso'].includes(vData.estado)) {
-                 // Verificamos que realmente exista dentro del viaje (por si fue cancelado)
                  const enConfirmados = (vData.pasajeros || []).some(p => p && (p.id === userData.id || p.uid === userData.id));
                  const enPendientes = (vData.reservasPendientes || []).some(p => p && (p.id === userData.id || p.uid === userData.id));
                  
@@ -243,17 +239,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           setRevisandoBloqueo(false);
         }
       } catch (error) { 
-        console.error("Error en radar pasajero:", error); 
+        console.error("Error en radar:", error); 
         if (isComponentMounted) setRevisandoBloqueo(false);
       }
     };
 
     verificarBloqueo();
-
     return () => { isComponentMounted = false; };
   }, [soyConductor, userData?.id, viaje?.id, yaSoyPasajero, yaSolicite]);
 
-  
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "Viajes", viajeInicial.id), (docSnap) => {
       if (docSnap.exists()) {
@@ -335,7 +329,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         where("participantes", "array-contains", miId)
       );
       
-      const chatSnap = await getDocs(qChat);
+      const chatSnap = await ejecutarConTimeout(getDocs(qChat));
       
       if (!chatSnap.empty) {
         const chatExistente = chatSnap.docs[0];
@@ -362,15 +356,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           esSoporte: false
         };
 
-        const nuevoChatRef = await addDoc(collection(db, "Chats"), datosNuevoChat);
+        const nuevoChatRef = await ejecutarConTimeout(addDoc(collection(db, "Chats"), datosNuevoChat));
         onIniciarChat({ id: nuevoChatRef.id, ...datosNuevoChat });
         setTimeout(() => onRegresar(), 150);
       }
       
-    } catch (e) {
-      console.error("Error al gestionar sala de chat:", e);
-      setToast({ texto: "Error de conexión al abrir el chat", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
+    } catch (e: any) {
+      console.error(e);
+      setToast({ texto: e.message === "TIMEOUT_RED" ? "Señal débil. Reintentando..." : "Error de conexión al abrir chat", tipo: "error" });
+      setTimeout(() => setToast(null), 3500);
     } finally {
       setCargando(false);
     }
@@ -412,7 +406,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     try {
       let lat = 0; let lng = 0;
       try {
-        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
         lat = position.coords.latitude;
         lng = position.coords.longitude;
       } catch (gpsError) {
@@ -436,12 +430,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         ninosExtra: Number(ninosExtra),
         lat: lat,
         lng: lng,
-        abordado: false,
+        boardado: false,
       };
 
       const esAutoAceptar = viaje.autoAceptar === true;
 
-      await addDoc(collection(db, "Solicitudes"), {
+      await ejecutarConTimeout(addDoc(collection(db, "Solicitudes"), {
         idConductor: String(idConductor),
         nombrePasajero: String(nombreUsuario),
         idViaje: String(viaje.id),
@@ -449,21 +443,21 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         estado: esAutoAceptar ? "aprobada" : "pendiente",
         puestosSolicitados: Number(puestosQueQuiero),
         fecha: serverTimestamp()
-      });
+      }));
 
       if (esAutoAceptar) {
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
-        await updateDoc(viajeRef, {
+        await ejecutarConTimeout(updateDoc(viajeRef, {
           pasajeros: arrayUnion({ 
             ...datosPasajeroBase, estado: 'confirmado', pin: pinGenerado, calificado: false 
           })
-        });
+        }));
         if (idConductor) await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje.`, "exito");
         setToast({ texto: "¡Reserva confirmada!", tipo: "exito" });
       } else {
-        await updateDoc(viajeRef, {
+        await ejecutarConTimeout(updateDoc(viajeRef, {
           reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
-        });
+        }));
         if (idConductor) {
           const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
           await enviarNotificacion(idConductor, "¡Nueva Solicitud!", `${nombreUsuario} quiere unirse a tu viaje${extraTexto}.`, "viaje");
@@ -475,8 +469,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setTimeout(() => setToast(null), 3000);
 
     } catch (e: any) { 
-      console.error("Error en reserva:", e);
-      setToast({ texto: `Error de sistema: ${e.message || "No se pudo procesar"}`, tipo: "error" });
+      console.error(e);
+      setToast({ texto: e.message === "TIMEOUT_RED" ? "Guardando en segundo plano... Revisa en segundos." : "Error de red al procesar reserva", tipo: "error" });
       setTimeout(() => setToast(null), 4000);
     } finally {
       setCargando(false);
@@ -487,11 +481,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const pasajeroAborrar = solicitudesPendientes.find(p => p && p.id === userData?.id);
-      if (pasajeroAborrar) await updateDoc(doc(db, "Viajes", viaje.id), { reservasPendientes: arrayRemove(pasajeroAborrar) });
+      if (pasajeroAborrar) await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { reservasPendientes: arrayRemove(pasajeroAborrar) }));
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  const ejecutarCancelacion = async () => { // 🔥 ESTE 'async' ES EL QUE FALTABA
+  const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToast({ texto: "Debes seleccionar un motivo", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
@@ -503,9 +497,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       const viajeRef = doc(db, "Viajes", viaje.id);
       const idDelChofer = viaje.uidConductor || viaje.idCreador;
 
-      // 1. LÓGICA PARA EL PASAJERO
       if (modalCancelar.rol === 'pasajero') {
-        const miSnap = await getDoc(miRef);
+        const miSnap = await ejecutarConTimeout(getDoc(miRef));
         const misDatos = miSnap.exists() ? miSnap.data() : {};
         let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
         let penalizacion = strikesActuales >= 3 
@@ -514,19 +507,18 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         
         const pasajeroAborrar = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
         if (pasajeroAborrar) {
-          await updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) });
-          await updateDoc(miRef, { cancelacionesPasajero: increment(1), ...penalizacion });
+          await ejecutarConTimeout(updateDoc(viajeRef, { pasajeros: arrayRemove(pasajeroAborrar) }));
+          await ejecutarConTimeout(updateDoc(miRef, { cancelacionesPasajero: increment(1), ...penalizacion }));
           if (idDelChofer) await enviarNotificacion(idDelChofer, "Asiento Liberado", `${userData?.nombre} ha cancelado su reserva.`, "alerta");
           setToast({ texto: strikesActuales >= 3 ? "Cuenta suspendida por 24h." : `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 faltas.`, tipo: "exito" });
         }
       } 
-      // 2. LÓGICA PARA EL CHOFER
       else if (modalCancelar.rol === 'chofer') {
         const tienePasajeros = pasajerosConfirmados.length > 0;
         let mensajeToast = "Viaje cancelado sin penalización.";
 
         if (tienePasajeros) {
-          const miSnap = await getDoc(miRef);
+          const miSnap = await ejecutarConTimeout(getDoc(miRef));
           const misDatos = miSnap.exists() ? miSnap.data() : {};
           let strikesActuales = (misDatos.strikesCancelacion || 0) + 1;
           
@@ -534,11 +526,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             ? { strikesCancelacion: 0, suspendidoTemporalmenteHasta: Date.now() + (24 * 60 * 60 * 1000) } 
             : { strikesCancelacion: strikesActuales };
           
-          await updateDoc(miRef, { cancelacionesChofer: increment(1), ...penalizacion });
+          await ejecutarConTimeout(updateDoc(miRef, { cancelacionesChofer: increment(1), ...penalizacion }));
           mensajeToast = strikesActuales >= 3 ? "Cuenta suspendida por 24h." : `Cancelado. Advertencia: Llevas ${strikesActuales} de 3 faltas.`;
         }
 
-        await updateDoc(viajeRef, { estado: 'cancelado', motivoCancelacionChofer: motivoCancelacion });
+        await ejecutarConTimeout(updateDoc(viajeRef, { estado: 'cancelado', motivoCancelacionChofer: motivoCancelacion }));
         for (const p of pasajerosConfirmados) {
           if (!p) continue;
           await enviarNotificacion(p.id || p.uid, "Viaje Cancelado", `El viaje desde ${viaje.cO?.split(',')[0]} fue cancelado: ${motivoCancelacion}.`, "alerta");
@@ -550,12 +542,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setTimeout(() => setToast(null), 4000);
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
-    } catch (error) {
-      setToast({ texto: "Error en la operación", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
+    } catch (error: any) {
+      setToast({ texto: error.message === "TIMEOUT_RED" ? "Error de señal. Tu solicitud se procesará al reconectar." : "Error en la operación", tipo: "error" });
+      setTimeout(() => setToast(null), 3500);
+    } finally {
+      setCargando(false); 
+    }
   };
-  
   
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
@@ -571,17 +564,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
         const idPasajero = solicitud.id || solicitud.uid;
         
-        await updateDoc(viajeRef, {
+        await ejecutarConTimeout(updateDoc(viajeRef, {
           reservasPendientes: arrayRemove(solicitud),
           pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
-        });
+        }));
         await enviarNotificacion(idPasajero, "¡Cola Aceptada!", `${userData?.nombre} te confirmó. ¡Revisa tu PIN!`, "exito");
       } else {
-        await updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) });
+        await ejecutarConTimeout(updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) }));
         await enviarNotificacion(solicitud.id || solicitud.uid, "Solicitud no confirmada", "El conductor no pudo procesar tu solicitud.", "alerta");
       }
-    } catch (e) { 
-      setToast({ texto: "Fallo de conexión", tipo: "error" });
+    } catch (e: any) { 
+      setToast({ texto: "Fallo de conexión. Intenta de nuevo.", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
@@ -597,12 +590,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         return (pinIngresado === pinReal && pinReal !== "") ? { ...p, abordado: true } : { ...p, abordado: false }; 
       }).filter(Boolean);
 
-      await updateDoc(doc(db, "Viajes", viaje.id), { estado: 'en_curso', pasajeros: pasajerosActualizados });
+      await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { estado: 'en_curso', pasajeros: pasajerosActualizados }));
       setModalAbordaje(false);
       setToast({ texto: "¡Viaje Iniciado!", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
-    } catch (e) { 
-      setToast({ texto: "Error al iniciar", tipo: "error" });
+    } catch (e: any) { 
+      setToast({ texto: "Error al iniciar. Revisa tu señal.", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
@@ -621,7 +614,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const llamarBunker = httpsCallableFromURL(functions, 'https://finalizar-viaje-v2-1080063705561.us-central1.run.app');
-      const resultado = await llamarBunker({ viajeId: viaje.id, ratingsChofer: ratingsChofer });
+      const resultado = await ejecutarConTimeout(llamarBunker({ viajeId: viaje.id, ratingsChofer: ratingsChofer }), 12000);
 
       if (resultado.data.success) {
         pasajerosConfirmados.forEach(p => {
@@ -634,9 +627,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setModalCalificarPasajeros(false);
         onRegresar(); 
       }
-    } catch (e) { 
-      setToast({ texto: "Error al cobrar el viaje", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
+    } catch (e: any) { 
+      setToast({ texto: "Error al cobrar o procesar el viaje. Intenta otra vez.", tipo: "error" });
+      setTimeout(() => setToast(null), 3500);
     } finally { setCargando(false); }
   };
   
@@ -644,7 +637,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
-      await updateDoc(viajeRef, { estado: nuevoEstado });
+      await ejecutarConTimeout(updateDoc(viajeRef, { estado: nuevoEstado }));
       
       if (nuevoEstado === 'buscando') {
         const promesas = pasajerosConfirmados.map(p => {
@@ -657,7 +650,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       
       if (nuevoEstado === 'finalizado') onRegresar(); 
       setTimeout(() => setToast(null), 3000);
-    } catch (e) {
+    } catch (e: any) {
       setToast({ texto: "Error al actualizar estado", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
@@ -671,40 +664,56 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const idChofer = viaje.uidConductor || viaje.idCreador || "SinID";
-      await addDoc(collection(db, "Resenas"), {
+      await ejecutarConTimeout(addDoc(collection(db, "Resenas"), {
         idViaje: viaje.id, idConductor: idChofer, idPasajero: userData?.id || "SinID",
         nombrePasajero: userData?.nombre || "Usuario", estrellas: stars, comentario: String(comentarioResena || ""), fecha: new Date().toISOString()
-      });
+      }));
       const pasajerosActualizados = pasajerosConfirmados.map(p => {
         if (!p) return null;
         return (p.id === userData?.id || p.uid === userData?.id) ? { ...p, calificado: true } : p;
       }).filter(Boolean);
 
-      await updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados });
+      await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados }));
       setModalCalificacion(false);
       setToast({ texto: "¡Gracias por calificar!", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
-    } catch (e) { 
+    } catch (e: any) { 
       setToast({ texto: "Error al guardar reseña", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
 
+  // 🔥 SOLUCIÓN WHATSAPP: Link limpio oficial directo a Google Maps 
   const compartirRuta = () => {
     const cD_seguro = obtenerEstado(viaje.cD || "");
     const cO_seguro = obtenerEstado(viaje.cO || "");
     const mensajeBase = `🚙 ¡Hola! Voy en ruta hacia ${cD_seguro} desde ${cO_seguro} en Dame la cola.`;
+    
+    // 1. EXTRAER UBICACIÓN DEL CARRO (Instantáneo)
+    if (viaje.latChofer && viaje.lngChofer) {
+      const linkMapa = `https://maps.google.com/?q=${viaje.latChofer},${viaje.lngChofer}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${mensajeBase}\n\n📍 Ver ubicación en tiempo real del vehículo:\n${linkMapa}`)}`, '_blank');
+      return; 
+    }
+
+    // 2. PLAN B: Si el carro aún no tiene señal, usamos el GPS del teléfono
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const lat = position.coords.latitude; const lon = position.coords.longitude;
-          const linkMapa = `https://www.google.com/maps?q=${lat},${lon}`;
-          window.open(`https://wa.me/?text=${encodeURIComponent(`${mensajeBase}\n\n📍 Ubicación:\n${linkMapa}`)}`, '_blank');
+          const lat = position.coords.latitude; 
+          const lon = position.coords.longitude;
+          const linkMapa = `https://maps.google.com/?q=${lat},${lon}`;
+          window.open(`https://wa.me/?text=${encodeURIComponent(`${mensajeBase}\n\n📍 Ver mi ubicación actual:\n${linkMapa}`)}`, '_blank');
         },
-        () => { window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank'); },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
+        () => { 
+          // 3. PLAN C: Si fallan los dos GPS, enviamos solo el texto
+          window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank'); 
+        },
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 15000 }
       );
-    } else { window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank'); }
+    } else { 
+      window.open(`https://wa.me/?text=${encodeURIComponent(mensajeBase)}`, '_blank'); 
+    }
   };
 
   return (
@@ -773,12 +782,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                        </div>
                        <div className="flex-1 min-w-0">
                           <p className="font-black text-xs uppercase text-slate-700 truncate">{String(p.nombre || "Usuario")}</p>
-                          <p className={`text-[8px] font-black uppercase mt-0.5 ${p.abordado ? 'text-green-500' : 'text-amber-500'}`}>
-                            {p.abordado ? 'A Bordo (Validado)' : 'Falta Validar PIN'}
+                          <p className={`text-[8px] font-black uppercase mt-0.5 ${p.boardado || p.abordado ? 'text-green-500' : 'text-amber-500'}`}>
+                            {(p.boardado || p.abordado) ? 'A Bordo (Validado)' : 'Falta Validar PIN'}
                           </p>
                        </div>
-                       <div className={`${p.abordado ? 'bg-green-100' : 'bg-amber-100'} p-2 rounded-full shrink-0`}>
-                         {p.abordado ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
+                       <div className={`${(p.boardado || p.abordado) ? 'bg-green-100' : 'bg-amber-100'} p-2 rounded-full shrink-0`}>
+                         {(p.boardado || p.abordado) ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
                        </div>
                        
                        {soyConductor && (
@@ -907,7 +916,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             )}
 
-            {/* PUESTOS */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PUESTOS ({asientosOcupados}/{puestosTotales})</p>
@@ -926,13 +934,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-slate-700 uppercase truncate">{String(pasajero.nombre || "Pasajero")}</p>
                           <div className="flex items-center gap-2 mt-0.5">
-                              {pasajero.abordado && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
+                              {(pasajero.boardado || pasajero.abordado) && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
                               {puestosPedidos > 1 && <span className="text-[8px] font-black text-blue-600 uppercase bg-blue-100 px-2 py-0.5 rounded-full">+{puestosPedidos - 1} Acompañante(s)</span>}
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2 shrink-0">
-                          {pasajero.abordado ? <ShieldCheck size={16} className="text-green-500" /> : <Lock size={14} className="text-slate-300" />}
+                          {(pasajero.boardado || pasajero.abordado) ? <ShieldCheck size={16} className="text-green-500" /> : <Lock size={14} className="text-slate-300" />}
                           
                           {soyConductor && (
                             <button disabled={cargando} onClick={(e) => { e.stopPropagation(); iniciarChatPrivado(pasajero); }} 
@@ -954,7 +962,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </div>
             </div>
 
-            {/* PREFERENCIAS DEL VIAJE */}
             <div className="bg-white p-6 rounded-[35px] border border-slate-100 space-y-5">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
               <div className="grid grid-cols-2 gap-3">
@@ -990,11 +997,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         )}
       </div>
 
-      {/* 🔥 REGLA DE ORO: SI HAY UN MODAL ABIERTO, ESTA BARRA AZUL DESAPARECE POR COMPLETO */}
       {!hayModalAbierto && (
         <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe bg-white/90 backdrop-blur-md border-t border-slate-100 z-[100000]">
           
-          {/* 🛑 ALERTA FLOTANTE: SI HAY UN VIAJE ACTIVO, SE LO RECORDAMOS AQUÍ */}
           {soyConductor && estadoViaje === 'disponible' && viajeActivoBloqueante && (
             <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-max max-w-[95vw] animate-in slide-in-from-bottom duration-300">
               <div className="bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-slate-700">
@@ -1073,7 +1078,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 ) : yaSolicite ? (
                   <button disabled={cargando} onClick={cancelarSolicitud} className="flex-1 bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center shadow-inner transition-all active:scale-95">Cancelar Solicitud</button>
                 ) : revisandoBloqueo ? (
-                  // 🔥 SOLUCIÓN: BOTÓN CARGANDO MIENTRAS EL RADAR HACE SU TRABAJO
                   <button disabled className="flex-1 bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
                     <RefreshCcw size={16} className="animate-spin" /> Verificando...
                   </button>
@@ -1283,7 +1287,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
       
-            {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
+      {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
@@ -1296,7 +1300,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               ¿Cancelar {modalCancelar.rol === 'chofer' ? 'el Viaje' : 'tu Asiento'}?
             </h3>
             
-            {/* 🔥 AVISO INTELIGENTE: Cambia de color si hay castigo o no 🔥 */}
             {(modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? (
               <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
                 ¡ATENCIÓN! Al haber pasajeros involucrados, cancelar sumará un "strike" a tu historial (Límite: 3).
@@ -1326,9 +1329,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
       
-
       {idUsuarioVer && <PerfilUsuarioDetalle uid={idUsuarioVer} onClose={() => setIdUsuarioVer(null)} />}
-      {verPerfil && <PerfilPublico conductor={{ ...viaje, identidadVerificada: true }} onClose={() => setVerPerfil(false)} setToastMessage={setToastMessage} setShowToast={setShowToast} />}
+      {verPerfil && <PerfilPublico conductor={{ ...viaje, identidadVerificada: true }} onClose={() => setVerPerfil(false)} setToastMessage={setToastMessage} setShowToast={(bool) => { if(!bool) setToast(null); }} />}
     </div>
   );
 };
