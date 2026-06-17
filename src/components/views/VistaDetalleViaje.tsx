@@ -1286,7 +1286,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           </div>
         </div>
       )}
-      
+
       {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
@@ -1300,9 +1300,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               ¿Cancelar {modalCancelar.rol === 'chofer' ? 'el Viaje' : 'tu Asiento'}?
             </h3>
             
-            {(modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? (
+            {/* 🔥 ADVERTENCIAS DINÁMICAS SEGÚN EL ESTADO DEL VIAJE 🔥 */}
+            {modalCancelar.rol === 'pasajero' && estadoViaje === 'buscando' ? (
+              <p className="text-[11px] font-bold text-orange-400 mb-6 bg-orange-950/30 p-3 rounded-xl border border-orange-900/50">
+                ¡ATENCIÓN! El chofer ya va en camino a buscarte. Si cancelas ahora, no se te reembolsará el pago para compensar el traslado del conductor.
+              </p>
+            ) : (modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? (
               <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
-                ¡ATENCIÓN! Al haber pasajeros involucrados, cancelar sumará un "strike" a tu historial (Límite: 3).
+                Al haber pasajeros involucrados, cancelar sumará un "strike" a tu historial (Límite: 3). Recibirás el reembolso en tu wallet.
               </p>
             ) : (
               <p className="text-[11px] font-bold text-emerald-400 mb-6 bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
