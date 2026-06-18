@@ -15,6 +15,8 @@ const MapaView = ({
   const googleMap = useRef(null);
   const markers = useRef({ chofer: null, pasajeros: [], origen: null, destino: null });
   const directionsRenderer = useRef(null);
+  const rutaDibujada = useRef(false); // 🔥 Controla que la ruta no nos haga auto-zoom repetidas veces
+
   const [localizando, setLocalizando] = useState(false);
   const [seguimientoManual, setSeguimientoManual] = useState(true);
 
@@ -38,8 +40,17 @@ const MapaView = ({
       polylineOptions: { strokeColor: "#000000", strokeWeight: 5 }
     });
    
-    // Escucha cuando el usuario toma control del mapa con los dedos
-    googleMap.current.addListener('dragstart', () => setSeguimientoManual(false));
+    // 🔥 SOLUCIÓN: Detectar CUALQUIER interacción humana (Arrastrar, Pellizcar, Scroll)
+    const detenerAutoCentrado = () => setSeguimientoManual(false);
+    
+    // Detector de Google Maps
+    googleMap.current.addListener('dragstart', detenerAutoCentrado);
+    
+    // Detectores físicos en la pantalla para capturar los pellizcos de zoom
+    const mapNode = mapRef.current;
+    mapNode.addEventListener('touchstart', detenerAutoCentrado, { passive: true });
+    mapNode.addEventListener('mousedown', detenerAutoCentrado, { passive: true });
+    mapNode.addEventListener('wheel', detenerAutoCentrado, { passive: true });
     
     if (interactivo) {
       googleMap.current.addListener('idle', () => {
@@ -49,9 +60,15 @@ const MapaView = ({
         }
       });
     }
+
+    return () => {
+      mapNode.removeEventListener('touchstart', detenerAutoCentrado);
+      mapNode.removeEventListener('mousedown', detenerAutoCentrado);
+      mapNode.removeEventListener('wheel', detenerAutoCentrado);
+    };
   }, [interactivo]);
 
-  // 2. FUNCIÓN DE CENTRADO MANUAL
+  // 2. FUNCIÓN DE CENTRADO MANUAL DEL CHOFER (GPS INTERNO)
   const obtenerUbicacionActual = async () => {
     setLocalizando(true);
     try {
@@ -70,15 +87,13 @@ const MapaView = ({
     }
   };
 
-    // 3. MARCADORES DE ORIGEN, DESTINO Y RUTA PERSISTENTE
+  // 3. MARCADORES DE ORIGEN, DESTINO Y RUTA
   useEffect(() => {
     if (!googleMap.current || !window.google || interactivo) return;
 
-    // Limpiar marcadores previos
     if (markers.current.origen) markers.current.origen.setMap(null);
     if (markers.current.destino) markers.current.destino.setMap(null);
 
-    // Dibujar Origen (Azul)
     if (origen) {
       markers.current.origen = new window.google.maps.Marker({
         position: { lat: origen.lat, lng: origen.lon },
@@ -87,7 +102,6 @@ const MapaView = ({
       });
     }
 
-    // Dibujar Destino (Verde)
     if (destino) {
       markers.current.destino = new window.google.maps.Marker({
         position: { lat: destino.lat, lng: destino.lon },
@@ -96,7 +110,6 @@ const MapaView = ({
       });
     }
 
-    // Trazar Ruta (Azul profesional, más visible)
     if (origen && destino) {
       const directionsService = new window.google.maps.DirectionsService();
       directionsService.route({
@@ -105,14 +118,17 @@ const MapaView = ({
         travelMode: window.google.maps.TravelMode.DRIVING,
       }, (result, status) => {
         if (status === 'OK') {
+          // 🔥 MAGIA: Si ya dibujamos la ruta antes, le prohibimos hacer zoom automático (preserveViewport: true)
           directionsRenderer.current.setOptions({
+            preserveViewport: rutaDibujada.current, 
             polylineOptions: {
-              strokeColor: "#2563eb", // Azul profesional
+              strokeColor: "#2563eb", 
               strokeWeight: 6,
               strokeOpacity: 0.8
             }
           });
           directionsRenderer.current.setDirections(result);
+          rutaDibujada.current = true; // Marcamos que ya se dibujó para proteger la cámara de futuros saltos
         }
       });
     }
@@ -141,7 +157,7 @@ const MapaView = ({
       }
     }
     
-    // Solo centrar si el usuario NO ha movido el mapa manualmente
+    // Solo centrar si el usuario NO ha movido ni pellizcado el mapa manualmente
     if (seguimientoManual) {
       googleMap.current.panTo({ lat: posicionChofer.lat, lng: posicionChofer.lon });
     }
@@ -178,10 +194,16 @@ const MapaView = ({
     <div className="relative w-full h-full min-h-[300px] bg-slate-100 rounded-inherit overflow-hidden">
       <div ref={mapRef} className="absolute inset-0" style={{ borderRadius: 'inherit' }} />
 
-      {/* BOTÓN FLOTANTE: Aparece solo si el chofer perdió el seguimiento */}
+      {/* BOTÓN RECENTRAR MEJORADO */}
       {!seguimientoManual && !interactivo && (
         <button 
-          onClick={() => setSeguimientoManual(true)}
+          onClick={() => {
+            setSeguimientoManual(true);
+            if (posicionChofer && googleMap.current) {
+              googleMap.current.panTo({ lat: posicionChofer.lat, lng: posicionChofer.lon });
+              googleMap.current.setZoom(17);
+            }
+          }}
           className="absolute top-4 right-4 bg-blue-600 text-white p-3 rounded-2xl shadow-xl z-20 flex items-center gap-2 active:scale-95 transition-all"
         >
           <Target size={16} /> <span className="text-[9px] font-black uppercase">Recentrar</span>
