@@ -509,12 +509,19 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
     } catch (error: any) {
-      setToast({ texto: error.message === "TIMEOUT_RED" ? "Red inestable. Validando en segundo plano..." : "Error al cancelar. Intenta de nuevo.", tipo: "error" });
-      setTimeout(() => setToast(null), 3500);
+      // 1. Imprime el error real en la consola por si acaso
+      console.error("🔥 ERROR REAL DEL SERVIDOR:", error);
+      
+      // 2. Muestra el mensaje EXACTO que manda Google Cloud en la pantalla
+      const mensajeReal = error.message === "TIMEOUT_RED" 
+        ? "Red inestable. Validando en segundo plano..." 
+        : `Fallo: ${error.message}`;
+
+      setToast({ texto: mensajeReal, tipo: "error" });
+      setTimeout(() => setToast(null), 5000); // Le di 5 segundos para que te dé tiempo de leerlo
     } finally {
       setCargando(false); 
     }
-  };
   
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
