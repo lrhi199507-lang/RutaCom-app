@@ -494,7 +494,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       // 🔥 Llamada Segura a Google Cloud Functions 🔥
-      const cancelarEnNube = httpsCallable(functions, 'procesarCancelacionSegura');
+      const cancelarEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
       await ejecutarConTimeout(cancelarEnNube({ 
         viajeId: viaje.id, 
         pasajeroId: userData?.id, 
