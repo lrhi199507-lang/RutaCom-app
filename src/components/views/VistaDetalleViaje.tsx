@@ -522,6 +522,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } finally {
       setCargando(false); 
     }
+  };
   
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
