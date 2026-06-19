@@ -125,21 +125,33 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
-  const solicitudes = viaje.reservasPendientes?.length || 0; // Única declaración
+  const solicitudes = viaje.reservasPendientes?.length || 0; 
   const estadoActual = viaje.estado || 'disponible';
   
   const estaEnCurso = estadoActual === 'en_curso' || estadoActual === 'buscando';
   const esFinalizado = estadoActual === 'finalizado';
 
-  // 🔥 LÓGICA DE COLOR NARANJA: 
   const nuevosConfirmados = viaje.pasajeros?.filter(p => !p.vistoPorChofer)?.length || 0; 
   const botonNaranja = !esFinalizado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
 
+  // 🔥 LÓGICA DEL RELOJ INTERNO (Viajes Vencidos) 🔥
+  const fechaViaje = viaje.fechaSalida || viaje.fecha;
+  const horaViaje = viaje.horaSalida || viaje.hora;
+  let esVencido = false;
+
+  if (fechaViaje && horaViaje && !estaEnCurso && !esFinalizado && pasajerosCount === 0) {
+    const fechaHoraViaje = new Date(`${fechaViaje}T${horaViaje}`);
+    // Margen de 2 horas. Si pasaron 2 horas de la hora de salida y no se inició, está vencido.
+    const limiteTiempo = new Date(fechaHoraViaje.getTime() + (2 * 60 * 60 * 1000)); 
+    if (new Date() > limiteTiempo) {
+      esVencido = true;
+    }
+  }
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
-          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : 'DISPONIBLE'}
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-slate-100 border-slate-200 text-slate-500' : esVencido ? 'bg-slate-200 border-slate-300 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : esVencido ? 'VENCIDO' : 'DISPONIBLE'}
       </div>
 
       {esRetorno && (
@@ -162,7 +174,7 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
           <p className="text-4xl font-black italic text-blue-600 leading-none">${viaje.precio}</p>
         </div>
         
-        {!esFinalizado && (
+        {!esFinalizado && !esVencido && (
           <div className="flex gap-2.5">
             <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500 hover:text-blue-600 transition-colors">
               <Edit2 size={16} />
@@ -201,23 +213,27 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
         </div>
       </div>
 
-      {/* 🔥 BOTÓN INTELIGENTE: NARANJA PERSISTENTE 🔥 */}
+      {/* 🔥 BOTÓN INTELIGENTE ADAPTADO 🔥 */}
       <button 
-        onClick={() => onClickGestionar(viaje)}
+        onClick={() => esVencido ? onDelete(viaje) : onClickGestionar(viaje)}
         className={`w-full mt-4 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
           botonNaranja 
             ? 'bg-orange-500 shadow-orange-500/40 animate-pulse' 
             : esFinalizado
             ? 'bg-slate-800 shadow-slate-900/30'
+            : esVencido
+            ? 'bg-slate-300 text-slate-600 border border-slate-400 shadow-none'
             : 'bg-green-500 shadow-green-500/30'
         }`}
       >
-        {solicitudes > 0 && !esFinalizado ? (
+        {esVencido ? (
+          <><Trash2 size={16} /> Viaje Vencido - Eliminar</>
+        ) : solicitudes > 0 && !esFinalizado ? (
           <><Info size={18} /> ¡Tienes {solicitudes} solicitud{solicitudes > 1 ? 'es' : ''}!</>
         ) : estaEnCurso ? (
           <><Navigation size={16} /> VIAJE ACTIVO - GESTIONAR</>
         ) : esFinalizado ? (
-          <><Star size={16} className="fill-white" /> Ver Resumen del Viaje</>
+          <><Star size={16} className="fill-white" /> Ver Resumen</>
         ) : (
           <><Settings size={16} /> Gestionar Viaje</>
         )}
