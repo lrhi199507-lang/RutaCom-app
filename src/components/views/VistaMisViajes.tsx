@@ -382,9 +382,16 @@ export const VistaMisViajes = ({
     });
   };
   
-  // 🔥 FILTROS SEPARADOS PARA PANTALLA LIMPIA 🔥
+  // 🔥 BLINDAJE DE FILTROS CHOFER 🔥
   const viajesChoferActivos = ordenarViajesChofer(viajesChofer.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
   const viajesChoferHistorial = viajesChofer.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
+
+  // 🔥 BLINDAJE DE FILTROS PASAJERO (AQUÍ ESTÁ LA MAGIA QUE ARREGLA TU PROBLEMA) 🔥
+  const todosViajesPasajero = [...viajesPasajeroActivos, ...viajesPasajeroHistorial];
+  const viajesPasajeroUnicos = Array.from(new Map(todosViajesPasajero.map(item => [item.id, item])).values());
+  
+  const pasajerosActivos = viajesPasajeroUnicos.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado');
+  const pasajerosHistorial = viajesPasajeroUnicos.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -467,9 +474,9 @@ export const VistaMisViajes = ({
             </div>
 
             {subTabPasajero === 'activos' ? (
-              viajesPasajeroActivos.length > 0 ? (
+              pasajerosActivos.length > 0 ? (
                 <div className="space-y-4">
-                  {viajesPasajeroActivos.map(viaje => (
+                  {pasajerosActivos.map(viaje => (
                     <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
                   ))}
                 </div>
@@ -477,13 +484,13 @@ export const VistaMisViajes = ({
                 <div className="text-center py-20 opacity-60">
                   <User size={40} className="mx-auto text-slate-300 mb-4" />
                   <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin reservas</p>
-                  <p className="text-[10px] font-bold text-slate-400 mt-2">No has pedido ninguna cola</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-2">No tienes colas activas</p>
                 </div>
               )
             ) : (
-              viajesPasajeroHistorial.length > 0 ? (
+              pasajerosHistorial.length > 0 ? (
                 <div className="space-y-4 opacity-90">
-                  {viajesPasajeroHistorial.map(viaje => (
+                  {pasajerosHistorial.map(viaje => (
                     <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
                   ))}
                 </div>
