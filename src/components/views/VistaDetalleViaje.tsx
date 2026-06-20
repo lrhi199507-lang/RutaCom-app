@@ -524,32 +524,39 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  const gestionarSolicitud = async (solicitud, accion) => {
+ const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
+      
       if (accion === 'aceptar') {
         const puestosQuePidio = Number(solicitud.puestosSolicitados) || 1;
         if (puestosQuePidio > cuposRestantes) { 
           setToast({ texto: "Sin puestos suficientes", tipo: "error" }); 
-          setTimeout(() => setToast(null), 3000);
           setCargando(false); return; 
         }
-        const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
-        const idPasajero = solicitud.id || solicitud.uid;
+
+        // 🔥 AQUÍ ESTÁ LA MAGIA: Llamamos a la función de la nube para retener el dinero
+        const aceptarEnNube = httpsCallable(functions, 'procesarAceptacionSolicitud');
         
-        await ejecutarConTimeout(updateDoc(viajeRef, {
-          reservasPendientes: arrayRemove(solicitud),
-          pasajeros: arrayUnion({ ...solicitud, estado: 'confirmado', pin: pinGenerado, abordado: false, calificado: false })
+        // Esta función hará: 1. Validar fondos, 2. Mover a SaldoRetenido, 3. Mover a pasajerosConfirmados
+        await ejecutarConTimeout(aceptarEnNube({ 
+          viajeId: viaje.id, 
+          pasajeroId: solicitud.id || solicitud.uid, 
+          puestosSolicitados: puestosQuePidio,
+          precio: viaje.precio
         }));
-        await enviarNotificacion(idPasajero, "¡Cola Aceptada!", `${userData?.nombre} te confirmó. ¡Revisa tu PIN!`, "exito");
+
+        setToast({ texto: "Solicitud aceptada y dinero retenido.", tipo: "exito" });
       } else {
+        // Rechazo normal
         await ejecutarConTimeout(updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) }));
         await enviarNotificacion(solicitud.id || solicitud.uid, "Solicitud no confirmada", "El conductor no pudo procesar tu solicitud.", "alerta");
+        setToast({ texto: "Solicitud rechazada", tipo: "exito" });
       }
     } catch (e: any) { 
-      setToast({ texto: "Fallo de conexión. Intenta de nuevo.", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
+      console.error("Error al gestionar solicitud:", e);
+      setToast({ texto: e.message || "Fallo de conexión.", tipo: "error" });
     } finally { setCargando(false); }
   };
   
