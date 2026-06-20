@@ -401,7 +401,7 @@ export const VistaMisViajes = ({
         <ModalEditarViaje viaje={editingViaje} isOpen={true} onClose={() => setEditingViaje(null)} onSave={handleEditSave}/>
       )}
 
-      <div className="p-4 pt-8 bg-white border-b border-slate-100 sticky top-0 z-50">
+      <div className="p-4 pt-8 bg-white border-b border-slate-100 sticky top-0 z-30">
         <div className="flex items-center gap-4 mb-6">
           <button onClick={onRegresar} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 active:scale-90 transition-all border border-slate-100">
             <ArrowLeft size={20} />
