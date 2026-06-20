@@ -119,7 +119,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion;
 
-  // 🔥 INTERCEPTOR DE TIMEOUT PARA PREVENIR CONGELAMIENTOS EN ZONAS MUERTAS
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
     return Promise.race([
       promesa,
@@ -136,7 +135,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     document.head.appendChild(script);
   }, []);
 
-  // 🔥 SOLUCIÓN AL RASTREO: Un solo Watch inteligente que tolera desconexiones
   useEffect(() => {
     let watchId = null;
     
@@ -158,9 +156,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 },
                 ultimaActualizacion: new Date().toISOString()
               });
-            } catch (fsError) {
-              // Silencioso: Si falla por red, se reintentará en el próximo movimiento
-            }
+            } catch (fsError) {}
           }
         );
       } catch (e) {
@@ -239,7 +235,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           setRevisandoBloqueo(false);
         }
       } catch (error) { 
-        console.error("Error en radar:", error); 
         if (isComponentMounted) setRevisandoBloqueo(false);
       }
     };
@@ -270,8 +265,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   useEffect(() => {
     const esConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
-    const listaPasajeros = obtenerArraySeguro(viaje?.pasajeros);
-    const reservaPasajero = listaPasajeros.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
+    const reservaPasajero = pasajerosConfirmados.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
     
     if (!esConductor && reservaPasajero && viaje?.estado === 'finalizado' && !reservaPasajero.calificado) {
       setModalCalificacion(true);
@@ -312,7 +306,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       await addDoc(collection(db, "Notificaciones"), {
         idDestino: String(idDestino), titulo, mensaje, tipo, leida: false, fecha: new Date().toISOString()
       });
-    } catch (error) { console.error(error); }
+    } catch (error) {}
   };
 
   const iniciarChatPrivado = async (pasajeroObjetivo) => {
@@ -362,8 +356,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       }
       
     } catch (e: any) {
-      console.error(e);
-      setToast({ texto: e.message === "TIMEOUT_RED" ? "Señal débil. Reintentando..." : "Error de conexión al abrir chat", tipo: "error" });
+      setToast({ texto: "Error de conexión al abrir chat", tipo: "error" });
       setTimeout(() => setToast(null), 3500);
     } finally {
       setCargando(false);
@@ -386,7 +379,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-  // 🔥 1. CORRECCIÓN EN SOLICITAR COLA (AUTO-ACEPTAR AHORA PASA POR LA NUBE) 🔥
+  // 🔥 1. FUNCIÓN DE PEDIR COLA (AUTO-ACEPTAR CORREGIDO CON URL) 🔥
   const solicitarCola = async () => {
     const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
     const miSaldoActual = Number(userData?.saldo || 0);
@@ -436,8 +429,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       const esAutoAceptar = viaje.autoAceptar === true;
 
-      // Se guarda la solicitud inicial
-      const solicitudDoc = await ejecutarConTimeout(addDoc(collection(db, "Solicitudes"), {
+      // Se guarda la solicitud
+      await ejecutarConTimeout(addDoc(collection(db, "Solicitudes"), {
         idConductor: String(idConductor),
         nombrePasajero: String(nombreUsuario),
         idViaje: String(viaje.id),
@@ -447,23 +440,23 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         fecha: serverTimestamp()
       }));
 
-      // 🔥 BLINDAJE: SI ES AUTO-ACEPTAR, SE LLAMA A LA NUBE DIRECTAMENTE 🔥
+     // 🔥 AUTO ACEPTAR MEDIANTE URL DIRECTA 🔥
       if (esAutoAceptar) {
-        const aceptarEnNube = httpsCallable(functions, 'procesarAceptacionSolicitud');
+        const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
         
-        await aceptarEnNube({ 
+        await ejecutarConTimeout(procesadorEnNube({ 
+          accion: 'reservar', // <--- ESTO ES LA CLAVE
           viajeId: viaje.id, 
           pasajeroId: String(miId), 
           puestosSolicitados: Number(puestosQueQuiero),
           precio: Number(viaje.precio),
-          // Pasamos los datos extra para que la nube lo añada al arreglo de pasajeros
-          datosExtraPasajero: datosPasajeroBase 
-        });
+          esAutoAceptar: true,
+          datosPasajero: datosPasajeroBase 
+        }));
 
         if (idConductor) await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje automáticamente.`, "exito");
         setToast({ texto: "¡Reserva confirmada y cobrada!", tipo: "exito" });
       } else {
-        // Solo enviamos la solicitud y esperamos al chofer
         await ejecutarConTimeout(updateDoc(viajeRef, {
           reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
         }));
@@ -478,9 +471,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setTimeout(() => setToast(null), 3000);
 
     } catch (e: any) { 
-      console.error(e);
-      setToast({ texto: e.message === "TIMEOUT_RED" ? "Guardando en segundo plano..." : "Error de red al procesar reserva", tipo: "error" });
-      setTimeout(() => setToast(null), 4000);
+      console.error("ERROR REAL AL PEDIR COLA:", e);
+      // 🔥 QUITAMOS LA MÁSCARA DEL ERROR 🔥
+      const mensajeReal = e.message === "TIMEOUT_RED" ? "Red lenta. Procesando..." : `Fallo: ${e.message}`;
+      setToast({ texto: mensajeReal, tipo: "error" });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setCargando(false);
     }
@@ -517,10 +512,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
     } catch (error: any) {
-      console.error("ERROR DEL SERVIDOR:", error);
-      const mensajeReal = error.message === "TIMEOUT_RED" 
-        ? "Red inestable. Procesando..." 
-        : `Fallo: ${error.message}`;
+      const mensajeReal = error.message === "TIMEOUT_RED" ? "Red inestable. Procesando..." : `Fallo: ${error.message}`;
       setToast({ texto: mensajeReal, tipo: "error" });
       setTimeout(() => setToast(null), 5000);
     } finally {
@@ -528,7 +520,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  // 🔥 2. CORRECCIÓN EN GESTIONAR SOLICITUD (EL CHOFER ACEPTA) 🔥
+  // 🔥 2. GESTIONAR SOLICITUD (CHOFER ACEPTA CON URL) 🔥
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
@@ -542,30 +534,31 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           setCargando(false); return; 
         }
 
-        // 🔥 AHORA SÍ: LLAMAMOS A LA NUBE PARA COBRAR ANTES DE CONFIRMAR 🔥
-        const aceptarEnNube = httpsCallable(functions, 'procesarAceptacionSolicitud');
+       // Llamada usando URL Directa a Google Cloud
+        const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
         
-        await ejecutarConTimeout(aceptarEnNube({ 
+        await ejecutarConTimeout(procesadorEnNube({ 
+          accion: 'reservar', // <--- ESTO ES LA CLAVE
           viajeId: viaje.id, 
           pasajeroId: idPasajero, 
           puestosSolicitados: puestosQuePidio,
           precio: Number(viaje.precio),
-          datosExtraPasajero: solicitud // Pasamos los datos del pasajero a la nube
+          esAutoAceptar: false,
+          datosPasajero: solicitud
         }), 15000);
-
-        // Si la nube no lanzó error, significa que cobró bien. Procedemos a notificar
+        
         await enviarNotificacion(idPasajero, "¡Cola Aceptada!", `${userData?.nombre} te confirmó. ¡Revisa tu PIN!`, "exito");
         setToast({ texto: "Pasajero aceptado y saldo retenido", tipo: "exito" });
 
       } else {
-        // Rechazo normal (no cobra dinero)
         await ejecutarConTimeout(updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) }));
         await enviarNotificacion(idPasajero, "Solicitud no confirmada", "El conductor no pudo procesar tu solicitud.", "alerta");
         setToast({ texto: "Solicitud rechazada", tipo: "exito" });
       }
     } catch (e: any) { 
-      console.error("Error al gestionar solicitud:", e);
-      setToast({ texto: e.message === "TIMEOUT_RED" ? "Reintentando cobro en la nube..." : e.message || "Fallo de conexión.", tipo: "error" });
+      const mensajeReal = e.message === "TIMEOUT_RED" ? "Reintentando cobro..." : `Fallo: ${e.message}`;
+      setToast({ texto: mensajeReal, tipo: "error" });
+      setTimeout(() => setToast(null), 5000);
     } finally { 
       setCargando(false); 
     }
