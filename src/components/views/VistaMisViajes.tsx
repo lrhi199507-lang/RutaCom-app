@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import MapaView from '../Map/MapaView'; 
 
-// 🔥 BLINDAJE 1: Prevención de colapso por fechas u horas mal formateadas
 const formatearHora12h = (hora24) => {
   if (!hora24 || typeof hora24 !== 'string') return "";
   try {
@@ -110,7 +109,7 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
 };
 
 const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
-  if (!viaje || typeof viaje !== 'object') return null;
+  if (!viaje) return null;
   
   const pasajerosCount = Array.isArray(viaje.pasajeros) ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
@@ -139,14 +138,6 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
       esVencido = true;
     }
   }
-
-  let origenText = "Origen";
-  if (typeof viaje.cO === 'string' && viaje.cO) origenText = viaje.cO;
-  else if (typeof viaje.origen === 'string' && viaje.origen) origenText = viaje.origen.split(',')[0];
-
-  let destinoText = "Destino";
-  if (typeof viaje.cD === 'string' && viaje.cD) destinoText = viaje.cD;
-  else if (typeof viaje.destino === 'string' && viaje.destino) destinoText = viaje.destino.split(',')[0];
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
@@ -185,12 +176,12 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 
       <div className="flex items-center gap-4 text-center">
         <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{origenText}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || viaje.origen?.split(',')[0] || 'Origen'}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase">Salida</p>
         </div>
         <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
         <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{destinoText}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || viaje.destino?.split(',')[0] || 'Destino'}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase">Llegada</p>
         </div>
       </div>
@@ -244,8 +235,7 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 };
 
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
-  // 🔥 BLINDAJE 2: Seguro anti colapso si un viaje llega corrupto
-  if (!viaje || typeof viaje !== 'object') return null; 
+  if (!viaje) return null; 
 
   let miReserva = null;
   if (Array.isArray(viaje.pasajeros)) {
@@ -260,16 +250,7 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   const esCancelado = estadoActual === 'cancelado';
   const esActivo = !esFinalizado && !esCancelado;
 
-  const conductorNombre = String(viaje.cN || viaje.conductor || "Conductor");
-  const primerNombreConductor = conductorNombre.split(' ')[0] || "Conductor";
-
-  let origenText = "Origen";
-  if (typeof viaje.cO === 'string' && viaje.cO) origenText = viaje.cO;
-  else if (typeof viaje.origen === 'string' && viaje.origen) origenText = viaje.origen.split(',')[0];
-
-  let destinoText = "Destino";
-  if (typeof viaje.cD === 'string' && viaje.cD) destinoText = viaje.cD;
-  else if (typeof viaje.destino === 'string' && viaje.destino) destinoText = viaje.destino.split(',')[0];
+  const nombreChofer = viaje.cN || viaje.conductor || "Conductor";
 
   return (
     <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative overflow-hidden ${esConfirmado && esActivo ? 'border-blue-200' : 'border-slate-100'}`}>
@@ -289,19 +270,19 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
           {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black italic text-white text-xl'>D</div>}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-black italic text-slate-800 uppercase truncate bg-white/80 rounded px-1 -ml-1 inline-block">{conductorNombre}</p>
+          <p className="text-base font-black italic text-slate-800 uppercase truncate bg-white/80 rounded px-1 -ml-1 inline-block">{nombreChofer}</p>
           <p className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5 inline-block ${!esActivo ? 'bg-slate-100 text-slate-500' : 'bg-blue-100/80 text-blue-800'}`}>Chofer Designado</p>
         </div>
       </div>
 
       <div className="flex items-center gap-4 text-center relative z-10 bg-white/90 p-3 rounded-2xl border border-slate-100/50 backdrop-blur-md">
         <div className='flex-1 min-w-0'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{origenText}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || viaje.origen?.split(',')[0] || 'Origen'}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Recogida</p>
         </div>
         <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
         <div className='flex-1 min-w-0'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{destinoText}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || viaje.destino?.split(',')[0] || 'Destino'}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Destino</p>
         </div>
       </div>
@@ -341,7 +322,7 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
               : 'bg-amber-400 text-amber-950 shadow-amber-500/30 border border-amber-300 animate-pulse'
             }`}
           >
-            {yaCalifico ? <><Check size={16} /> Experiencia Calificada</> : <><Star size={16} className="fill-amber-950" /> Calificar a {primerNombreConductor}</>}
+            {yaCalifico ? <><Check size={16} /> Experiencia Calificada</> : <><Star size={16} className="fill-amber-950" /> Calificar Chofer</>}
         </button>
       )}
     </div>
@@ -417,36 +398,39 @@ export const VistaMisViajes = ({
     });
   };
   
-  // 🔥 BLINDAJE 3: Helpers puros para evitar errores nativos
-  const getSafeArray = (arr) => Array.isArray(arr) ? arr : [];
-
-  const safeChofer = getSafeArray(viajesChofer).filter(v => v != null && typeof v === 'object' && v.id);
+  // 🔥 LÓGICA DE FILTRADO 100% NATIVA Y A PRUEBA DE FALLOS 🔥
+  
+  // CHOFER
+  const rawChofer = Array.isArray(viajesChofer) ? viajesChofer : [];
+  const safeChofer = rawChofer.filter(v => v && v.id);
+  
   const viajesChoferActivos = ordenarViajesChofer(safeChofer.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
   const viajesChoferHistorial = safeChofer.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => {
-      const timeA = new Date(a.fecha || a.fechaSalida || 0).getTime();
-      const timeB = new Date(b.fecha || b.fechaSalida || 0).getTime();
-      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+      const timeA = new Date(a.fecha || a.fechaSalida || 0).getTime() || 0;
+      const timeB = new Date(b.fecha || b.fechaSalida || 0).getTime() || 0;
+      return timeB - timeA;
   });
 
-  const rawPasajerosActivos = getSafeArray(viajesPasajeroActivos).filter(v => v != null && typeof v === 'object' && v.id);
-  const rawPasajerosHistorial = getSafeArray(viajesPasajeroHistorial).filter(v => v != null && typeof v === 'object' && v.id);
-
-  // 1. Filtramos los Activos REALES (Expulsamos los cancelados colados)
-  const pasajerosActivos = rawPasajerosActivos.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado');
+  // PASAJERO: Aquí corregimos el problema de "Cancelado en Activos" de forma sencilla
+  const rawPasajerosActivos = Array.isArray(viajesPasajeroActivos) ? viajesPasajeroActivos : [];
+  const rawPasajerosHistorial = Array.isArray(viajesPasajeroHistorial) ? viajesPasajeroHistorial : [];
+  
+  // 1. Agarramos solo los activos REALES (Expulsamos los cancelados/finalizados colados)
+  const pasajerosActivos = rawPasajerosActivos.filter(v => v && v.id && v.estado !== 'finalizado' && v.estado !== 'cancelado');
   
   // 2. Extraemos los "colados" de la lista de activos para unirlos al historial
-  const pasajerosColados = rawPasajerosActivos.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado');
-  const pasajerosHistorialUnsorted = [...rawPasajerosHistorial, ...pasajerosColados];
+  const pasajerosColados = rawPasajerosActivos.filter(v => v && v.id && (v.estado === 'finalizado' || v.estado === 'cancelado'));
+  const pasajerosHistorialUnsorted = [...rawPasajerosHistorial, ...pasajerosColados].filter(v => v && v.id);
   
-  // 3. Limpiamos duplicados con Vanilla JS (100% compatible)
-  const pasajerosHistorialUnicos = pasajerosHistorialUnsorted.filter((v, index, self) => 
-      index === self.findIndex(t => t.id === v.id)
+  // 3. Limpiamos duplicados con Vanilla JS (Soportado por todos los celulares)
+  const pasajerosHistorialUnicos = pasajerosHistorialUnsorted.filter((viaje, index, arrayMismo) => 
+      index === arrayMismo.findIndex((t) => t.id === viaje.id)
   );
 
   const pasajerosHistorial = pasajerosHistorialUnicos.sort((a, b) => {
-      const timeA = new Date(a.fecha || a.fechaSalida || 0).getTime();
-      const timeB = new Date(b.fecha || b.fechaSalida || 0).getTime();
-      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+      const timeA = new Date(a.fecha || a.fechaSalida || 0).getTime() || 0;
+      const timeB = new Date(b.fecha || b.fechaSalida || 0).getTime() || 0;
+      return timeB - timeA;
   });
 
   return (
@@ -457,7 +441,7 @@ export const VistaMisViajes = ({
         <ModalEditarViaje viaje={editingViaje} isOpen={true} onClose={() => setEditingViaje(null)} onSave={handleEditSave}/>
       )}
 
-      {/* 🔥 REPARACIÓN Z-INDEX: (z-30) Para no pisar la campana de notificaciones */}
+      {/* 🔥 z-30 para no tapar notificaciones 🔥 */}
       <div className="p-4 pt-8 bg-white border-b border-slate-100 sticky top-0 z-30">
         <div className="flex items-center gap-4 mb-6">
           <button onClick={onRegresar} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 active:scale-90 transition-all border border-slate-100">
@@ -531,7 +515,7 @@ export const VistaMisViajes = ({
               pasajerosActivos.length > 0 ? (
                 <div className="space-y-4">
                   {pasajerosActivos.map(viaje => (
-                    <ViajeCardPasajero key={viaje.id || Math.random()} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
+                    <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
                   ))}
                 </div>
               ) : (
@@ -545,7 +529,7 @@ export const VistaMisViajes = ({
               pasajerosHistorial.length > 0 ? (
                 <div className="space-y-4 opacity-90">
                   {pasajerosHistorial.map(viaje => (
-                    <ViajeCardPasajero key={viaje.id || Math.random()} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
+                    <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
                   ))}
                 </div>
               ) : (
