@@ -223,6 +223,8 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 };
 
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
+  if (!viaje) return null;
+  
   const miReserva = viaje.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
   const esConfirmado = !!miReserva;
   const yaCalifico = miReserva?.calificado === true;
@@ -383,11 +385,15 @@ export const VistaMisViajes = ({
   };
   
   // 🔥 BLINDAJE DE FILTROS CHOFER 🔥
-  const viajesChoferActivos = ordenarViajesChofer(viajesChofer.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
-  const viajesChoferHistorial = viajesChofer.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
+  const viajesChoferSeguros = Array.isArray(viajesChofer) ? viajesChofer.filter(v => v != null) : [];
+  const viajesChoferActivos = ordenarViajesChofer(viajesChoferSeguros.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
+  const viajesChoferHistorial = viajesChoferSeguros.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
 
-  // 🔥 BLINDAJE DE FILTROS PASAJERO (AQUÍ ESTÁ LA MAGIA QUE ARREGLA TU PROBLEMA) 🔥
-  const todosViajesPasajero = [...viajesPasajeroActivos, ...viajesPasajeroHistorial];
+  // 🔥 BLINDAJE DE FILTROS PASAJERO (AQUÍ SE ARREGLA LA PANTALLA BLANCA) 🔥
+  const arrayActivos = Array.isArray(viajesPasajeroActivos) ? viajesPasajeroActivos : [];
+  const arrayHistorial = Array.isArray(viajesPasajeroHistorial) ? viajesPasajeroHistorial : [];
+  
+  const todosViajesPasajero = [...arrayActivos, ...arrayHistorial].filter(v => v != null);
   const viajesPasajeroUnicos = Array.from(new Map(todosViajesPasajero.map(item => [item.id, item])).values());
   
   const pasajerosActivos = viajesPasajeroUnicos.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado');
