@@ -8,25 +8,35 @@ import {
 } from 'lucide-react';
 import MapaView from '../Map/MapaView'; 
 
+// 🔥 BLINDAJE 1: Prevención de colapso por fechas u horas mal formateadas
 const formatearHora12h = (hora24) => {
-  if (!hora24) return "";
-  const [horas, minutos] = hora24.split(':');
-  const h = parseInt(horas, 10);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${minutos} ${ampm}`;
+  if (!hora24 || typeof hora24 !== 'string') return "";
+  try {
+    const [horas, minutos] = hora24.split(':');
+    const h = parseInt(horas, 10);
+    if (isNaN(h)) return hora24;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutos} ${ampm}`;
+  } catch (e) {
+    return "";
+  }
 };
 
 const formatearFechaCorta = (fechaString) => {
-  if (!fechaString) return "";
-  const partes = fechaString.split('-');
-  if (partes.length !== 3) return fechaString;
-  const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
-  return fecha.toLocaleDateString('es-ES', { 
-    weekday: 'short', 
-    day: 'numeric', 
-    month: 'short' 
-  }).replace('.', ''); 
+  if (!fechaString || typeof fechaString !== 'string') return "";
+  try {
+    const partes = fechaString.split('-');
+    if (partes.length !== 3) return fechaString;
+    const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+    return fecha.toLocaleDateString('es-ES', { 
+      weekday: 'short', 
+      day: 'numeric', 
+      month: 'short' 
+    }).replace('.', ''); 
+  } catch (e) {
+    return "";
+  }
 };
 
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
@@ -100,6 +110,8 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
 };
 
 const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
+  if (!viaje) return null;
+  
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
@@ -110,17 +122,16 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
   const esFinalizado = estadoActual === 'finalizado';
   const esCancelado = estadoActual === 'cancelado';
 
-  const nuevosConfirmados = viaje.pasajeros?.filter(p => !p.vistoPorChofer)?.length || 0; 
+  // 🔥 BLINDAJE 2: Ignorar pasajeros nulos (p &&)
+  const nuevosConfirmados = viaje.pasajeros?.filter(p => p && !p.vistoPorChofer)?.length || 0; 
   const botonNaranja = !esFinalizado && !esCancelado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
 
-  // 🔥 LÓGICA DEL RELOJ INTERNO (Viajes Vencidos) 🔥
   const fechaViaje = viaje.fechaSalida || viaje.fecha;
   const horaViaje = viaje.horaSalida || viaje.hora;
   let esVencido = false;
 
   if (fechaViaje && horaViaje && !estaEnCurso && !esFinalizado && !esCancelado && pasajerosCount === 0) {
     const fechaHoraViaje = new Date(`${fechaViaje}T${horaViaje}`);
-    // Margen de 2 horas. Si pasaron 2 horas de la hora de salida y no se inició, está vencido.
     const limiteTiempo = new Date(fechaHoraViaje.getTime() + (2 * 60 * 60 * 1000)); 
     if (new Date() > limiteTiempo) {
       esVencido = true;
@@ -223,9 +234,10 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 };
 
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
-  if (!viaje) return null;
+  if (!viaje) return null; // 🔥 BLINDAJE 3: Si Firebase manda un viaje fantasma, lo saltamos.
   
-  const miReserva = viaje.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
+  // 🔥 BLINDAJE 4: (p &&) Evita que colapse si un asiento se borró mal de la base de datos
+  const miReserva = viaje.pasajeros?.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
   const esConfirmado = !!miReserva;
   const yaCalifico = miReserva?.calificado === true;
 
@@ -259,12 +271,12 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
 
       <div className="flex items-center gap-4 text-center relative z-10 bg-white/90 p-3 rounded-2xl border border-slate-100/50 backdrop-blur-md">
         <div className='flex-1 min-w-0'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || viaje.origen?.split(',')[0]}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || (typeof viaje.origen === 'string' ? viaje.origen.split(',')[0] : '')}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Recogida</p>
         </div>
         <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
         <div className='flex-1 min-w-0'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || viaje.destino?.split(',')[0]}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || (typeof viaje.destino === 'string' ? viaje.destino.split(',')[0] : '')}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Destino</p>
         </div>
       </div>
@@ -357,12 +369,10 @@ export const VistaMisViajes = ({
       setEditingViaje(null);
       setToastData({ show: true, message: '¡Viaje actualizado en todo el sistema!' });
     } catch (error) {
-      console.error("Error al actualizar:", error);
       setToastData({ show: true, message: 'Error de conexión al guardar' });
     }
   };
 
-  // 🔥 ARCHIVADO SUAVE (SOFT DELETE) 🔥
   const handleArchivarViaje = async (viajeId) => {
     try {
       await updateDoc(doc(db, "Viajes", viajeId), { estado: 'cancelado' });
@@ -379,21 +389,19 @@ export const VistaMisViajes = ({
         (v.estado === 'en_curso' || v.estado === 'buscando') ? 3 : 
         (v.reservasPendientes?.length > 0) ? 2 : 
         (v.pasajeros?.length > 0 && v.estado === 'disponible') ? 1 : 0;
-
       return esImportante(b) - esImportante(a);
     });
   };
   
-  // 🔥 BLINDAJE DE FILTROS CHOFER 🔥
-  const viajesChoferSeguros = Array.isArray(viajesChofer) ? viajesChofer.filter(v => v != null) : [];
+  // 🔥 BLINDAJE 5: Asegurar que todos los arreglos existan y no tengan nulls
+  const viajesChoferSeguros = Array.isArray(viajesChofer) ? viajesChofer.filter(v => v != null && v.id) : [];
   const viajesChoferActivos = ordenarViajesChofer(viajesChoferSeguros.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
   const viajesChoferHistorial = viajesChoferSeguros.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
 
-  // 🔥 BLINDAJE DE FILTROS PASAJERO (AQUÍ SE ARREGLA LA PANTALLA BLANCA) 🔥
   const arrayActivos = Array.isArray(viajesPasajeroActivos) ? viajesPasajeroActivos : [];
   const arrayHistorial = Array.isArray(viajesPasajeroHistorial) ? viajesPasajeroHistorial : [];
   
-  const todosViajesPasajero = [...arrayActivos, ...arrayHistorial].filter(v => v != null);
+  const todosViajesPasajero = [...arrayActivos, ...arrayHistorial].filter(v => v != null && v.id);
   const viajesPasajeroUnicos = Array.from(new Map(todosViajesPasajero.map(item => [item.id, item])).values());
   
   const pasajerosActivos = viajesPasajeroUnicos.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado');
@@ -415,7 +423,6 @@ export const VistaMisViajes = ({
           <h2 className="text-xl font-black italic text-slate-800 tracking-tight uppercase">Mis Rutas</h2>
         </div>
 
-        {/* PESTAÑAS PRINCIPALES */}
         <div className="flex bg-slate-100 p-1.5 rounded-full relative shadow-inner">
           <div className={`absolute top-1.5 bottom-1.5 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-[calc(50%+3px)] w-[calc(50%-6px)]' : 'left-1.5 w-[calc(50%-6px)]'}`} />
           
@@ -430,7 +437,6 @@ export const VistaMisViajes = ({
 
       <div className="flex-1 p-4 pb-24 overflow-y-auto">
         
-        {/* 🔥 PANEL DE CHOFER 🔥 */}
         {activeTab === 'chofer' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             
@@ -470,7 +476,6 @@ export const VistaMisViajes = ({
           </div>
         )}
 
-        {/* 🔥 PANEL DE PASAJERO 🔥 */}
         {activeTab === 'pasajero' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             
