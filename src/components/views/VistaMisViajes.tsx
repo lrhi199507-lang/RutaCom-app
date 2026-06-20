@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import MapaView from '../Map/MapaView'; 
 
-// 🔥 BLINDAJE 1: Prevención de colapso por fechas u horas mal formateadas
 const formatearHora12h = (hora24) => {
   if (!hora24 || typeof hora24 !== 'string') return "";
   try {
@@ -39,7 +38,6 @@ const formatearFechaCorta = (fechaString) => {
   }
 };
 
-// 🔥 BLINDAJE 2: Función maestra para forzar arreglos seguros
 const getSafeArray = (arr) => {
   if (Array.isArray(arr)) return arr;
   if (arr && typeof arr === 'object') return Object.values(arr);
@@ -242,7 +240,6 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 };
 
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
-  // 🔥 BLINDAJE 3: Seguro anti colapso si un viaje llega corrupto
   if (!viaje || typeof viaje !== 'object') return null; 
 
   const listaPasajeros = getSafeArray(viaje.pasajeros);
@@ -387,7 +384,6 @@ export const VistaMisViajes = ({
       };
 
       await updateDoc(viajeRef, datosNuevos);
-
       if (onActualizarViajeFBD) await onActualizarViajeFBD({ ...updatedViaje, ...datosNuevos });
       
       setEditingViaje(null);
@@ -417,7 +413,6 @@ export const VistaMisViajes = ({
     });
   };
   
-  // 🔥 LÓGICA DE FILTRADO 100% NATIVA Y A PRUEBA DE FALLOS 🔥
   const safeChofer = getSafeArray(viajesChofer).filter(v => v && typeof v === 'object' && v.id);
   const viajesChoferActivos = ordenarViajesChofer(safeChofer.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
   const viajesChoferHistorial = safeChofer.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => {
@@ -432,11 +427,12 @@ export const VistaMisViajes = ({
   const pasajerosActivosTodos = rawPasajerosActivos.filter(v => v && typeof v === 'object' && v.id && v.estado !== 'finalizado' && v.estado !== 'cancelado');
   const pasajerosColados = rawPasajerosActivos.filter(v => v && typeof v === 'object' && v.id && (v.estado === 'finalizado' || v.estado === 'cancelado'));
   
+  // 🔥 AQUÍ SE CORRIGIÓ EL ERROR (mapaHistorial) 🔥
   const mapaHistorial = {};
   rawPasajerosHistorial.forEach(v => { if (v && typeof v === 'object' && v.id) mapaHistorial[v.id] = v; });
   pasajerosColados.forEach(v => { if (v && typeof v === 'object' && v.id) mapaHistorial[v.id] = v; });
   
-  const pasajerosHistorialTodos = Object.values(mapHistorial).sort((a, b) => {
+  const pasajerosHistorialTodos = Object.values(mapaHistorial).sort((a, b) => {
       const timeA = new Date(a.fecha || a.fechaSalida || 0).getTime() || 0;
       const timeB = new Date(b.fecha || b.fechaSalida || 0).getTime() || 0;
       return timeB - timeA;
