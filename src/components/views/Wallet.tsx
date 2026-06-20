@@ -28,10 +28,9 @@ export const Wallet = ({ userData, onRegresar }) => {
 
   const [enviando, setEnviando] = useState(false);
   
-  // 🔥 ESTADOS DEL TOAST ACTUALIZADOS 🔥
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState("success"); // Puede ser 'success' o 'error'
+  const [toastType, setToastType] = useState("success");
   
   const [transacciones, setTransacciones] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
@@ -50,17 +49,10 @@ export const Wallet = ({ userData, onRegresar }) => {
           const data = snap.data();
           setTasaBCV(data.tasaBCV || 0);
           if (data.bancoAdmin) {
-            setDatosPagoAdmin({
-              banco: data.bancoAdmin.banco || "No definido",
-              telefono: data.bancoAdmin.telefono || "No definido",
-              cedula: data.bancoAdmin.cedula || "No definido"
-            });
+            setDatosPagoAdmin({ banco: data.bancoAdmin.banco || "No definido", telefono: data.bancoAdmin.telefono || "No definido", cedula: data.bancoAdmin.cedula || "No definido" });
           }
           if (data.binanceAdmin) {
-            setDatosBinanceAdmin({
-              payId: data.binanceAdmin.payId || "No definido",
-              correo: data.binanceAdmin.correo || "No definido"
-            });
+            setDatosBinanceAdmin({ payId: data.binanceAdmin.payId || "No definido", correo: data.binanceAdmin.correo || "No definido" });
           }
         }
       } catch (error) { console.error("Error al obtener datos financieros:", error); }
@@ -77,7 +69,6 @@ export const Wallet = ({ userData, onRegresar }) => {
       setTransacciones(historial);
       setCargandoHistorial(false);
     }, (error) => {
-      console.error("Error en Billetera:", error);
       setToastMsg(`Error de lectura: ${error.message}`);
       setToastType("error");
       setShowToast(true);
@@ -86,8 +77,10 @@ export const Wallet = ({ userData, onRegresar }) => {
     return () => unsub();
   }, [userData?.id]);
 
-  const saldoTotal = userData?.saldo || 0;
-  const saldoRetenido = userData?.saldoRetenido || 0;
+  // 🔥 NUEVOS CÁLCULOS DE SALDO BLINDADOS 🔥
+  const saldoTotal = Number(userData?.saldo || 0);
+  const saldoRetenido = Number(userData?.saldoRetenido || 0); // Congelado al pasajero al reservar
+  const saldoEnTransito = Number(userData?.saldoEnTransito || 0); // Lo que el chofer va a cobrar al finalizar
   const saldoDisponible = saldoTotal - saldoRetenido;
   const saldoConvertido = (saldoDisponible * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
 
@@ -102,27 +95,16 @@ export const Wallet = ({ userData, onRegresar }) => {
   
   const capturarComprobante = async () => {
     try {
-      const image = await CapacitorCamera.getPhoto({
-        quality: 50,
-        width: 800,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Photos 
-      });
-      if (image.dataUrl) {
-        setFotoRecarga(image.dataUrl);
-      }
+      const image = await CapacitorCamera.getPhoto({ quality: 50, width: 800, resultType: CameraResultType.DataUrl, source: CameraSource.Photos });
+      if (image.dataUrl) setFotoRecarga(image.dataUrl);
     } catch (e) { console.log("Selección de imagen cancelada"); }
   };
 
   const manejarRecarga = async (e) => {
     e.preventDefault();
     if (!montoRecarga || !referencia || !fotoRecarga) { 
-      setToastMsg("Debes completar los datos y subir el capture"); 
-      setToastType("error");
-      setShowToast(true); 
-      return; 
+      setToastMsg("Debes completar los datos y subir el capture"); setToastType("error"); setShowToast(true); return; 
     }
-
     setEnviando(true);
     try {
       const nombreArchivo = `comprobantes/${userData.id}_${Date.now()}.jpg`;
@@ -131,46 +113,27 @@ export const Wallet = ({ userData, onRegresar }) => {
       const urlComprobante = await getDownloadURL(storageRef);
 
       await addDoc(collection(db, "PagosPendientes"), {
-        uid: userData.id, 
-        nombre: userData.nombre, 
-        monto: Number(montoRecarga), 
-        referencia: referencia,
-        comprobanteUrl: urlComprobante, 
-        tasaAplicada: tasaBCV, 
-        fecha: new Date().toISOString(), 
-        estado: "pendiente", 
-        tipo: "recarga",
-        metodoPago: metodoRecarga 
+        uid: userData.id, nombre: userData.nombre, monto: Number(montoRecarga), referencia: referencia,
+        comprobanteUrl: urlComprobante, tasaAplicada: tasaBCV, fecha: new Date().toISOString(), 
+        estado: "pendiente", tipo: "recarga", metodoPago: metodoRecarga 
       });
 
-      setToastMsg("Solicitud enviada. Espera la validación."); 
-      setToastType("success");
-      setShowToast(true);
-      setShowModalRecarga(false); 
-      setMontoRecarga(""); 
-      setReferencia("");
-      setFotoRecarga(null);
+      setToastMsg("Solicitud enviada. Espera la validación."); setToastType("success"); setShowToast(true);
+      setShowModalRecarga(false); setMontoRecarga(""); setReferencia(""); setFotoRecarga(null);
     } catch (error) {
-      console.error(error); 
-      setToastMsg("Error al enviar solicitud. Revisa tu conexión."); 
-      setToastType("error");
-      setShowToast(true);
+      setToastMsg("Error al enviar solicitud. Revisa tu conexión."); setToastType("error"); setShowToast(true);
     } finally { setEnviando(false); }
   };
 
   const manejarRetiro = async (e) => {
     e.preventDefault();
-    
     const ahora = new Date();
     const hora24 = ahora.getHours();
     const esPM = hora24 >= 12;
     const hora12 = hora24 % 12 || 12;
 
     if (!esPM || hora12 < 7 || hora12 >= 11 || hora24 === 12) {
-      setToastMsg("Los retiros solo están disponibles TODOS LOS DÍAS de 7:00 PM a 11:00 PM.");
-      setToastType("error");
-      setShowToast(true);
-      return;
+      setToastMsg("Los retiros solo están disponibles TODOS LOS DÍAS de 7:00 PM a 11:00 PM."); setToastType("error"); setShowToast(true); return;
     }
 
     const monto = Number(montoRetiro);
@@ -184,11 +147,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     try {
       await updateDoc(doc(db, "usuarios", userData.id), {
         saldoRetenido: increment(monto),
-        datosBancarios: {
-          banco: datosBancarios.banco,
-          telefono: datosBancarios.telefono,
-          cedula: datosBancarios.cedula
-        }
+        datosBancarios: { banco: datosBancarios.banco, telefono: datosBancarios.telefono, cedula: datosBancarios.cedula }
       });
 
       await addDoc(collection(db, "PagosPendientes"), {
@@ -196,12 +155,10 @@ export const Wallet = ({ userData, onRegresar }) => {
         tasaAplicada: tasaBCV, fecha: new Date().toISOString(), estado: "pendiente", tipo: "retiro"
       });
 
-      setToastMsg("Retiro en proceso. Datos guardados."); 
-      setToastType("success");
-      setShowToast(true);
+      setToastMsg("Retiro en proceso. Datos guardados."); setToastType("success"); setShowToast(true);
       setShowModalRetiro(false); setMontoRetiro("");
     } catch (error) {
-      console.error(error); setToastMsg("Error al procesar el retiro"); setToastType("error"); setShowToast(true);
+      setToastMsg("Error al procesar el retiro"); setToastType("error"); setShowToast(true);
     } finally { setEnviando(false); }
   };
 
@@ -217,7 +174,6 @@ export const Wallet = ({ userData, onRegresar }) => {
   
   return (
     <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-x-hidden">
-      {/* 🔥 COMPONENTE TOAST ACTUALIZADO CON EL TIPO 🔥 */}
       <Toast show={showToast} message={toastMsg} type={toastType} onClose={() => setShowToast(false)} />
 
       <div className="p-6 pt-10 flex justify-between items-center sticky top-0 bg-[#0b1120]/80 backdrop-blur-lg z-50">
@@ -243,11 +199,26 @@ export const Wallet = ({ userData, onRegresar }) => {
               <span className="text-7xl font-black italic text-white tracking-tighter leading-none">{saldoDisponible.toFixed(2)}</span>
             </div>
             
-            {saldoRetenido > 0 && (
-              <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mt-2 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-                ${saldoRetenido.toFixed(2)} Retenidos (En proceso)
-              </p>
-            )}
+            {/* 🔥 INDICADORES VISUALES DE SALDO EN MOVIMIENTO 🔥 */}
+            <div className="flex flex-col gap-2 mt-4 items-center">
+              {saldoRetenido > 0 && (
+                <div className="flex items-center gap-2 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
+                  <Lock size={12} className="text-amber-500" />
+                  <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">
+                    ${saldoRetenido.toFixed(2)} Comprometido en Reservas
+                  </p>
+                </div>
+              )}
+              
+              {saldoEnTransito > 0 && (
+                <div className="flex items-center gap-2 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
+                  <Clock size={12} className="text-emerald-400" />
+                  <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                    + ${saldoEnTransito.toFixed(2)} Ganancias en Tránsito
+                  </p>
+                </div>
+              )}
+            </div>
 
             <div className="mt-6 flex items-center gap-2 bg-slate-950/50 px-5 py-2.5 rounded-full border border-slate-800/50">
               <RefreshCcw size={12} className="text-green-400" />
@@ -293,9 +264,7 @@ export const Wallet = ({ userData, onRegresar }) => {
                 return (
                   <div 
                     key={tx.id} 
-                    onClick={() => {
-                      if (tieneRecibo) setTxSeleccionada(tx);
-                    }}
+                    onClick={() => { if (tieneRecibo) setTxSeleccionada(tx); }}
                     className={`bg-slate-900/80 p-5 rounded-[25px] border border-slate-800 flex items-center justify-between shadow-sm ${tieneRecibo ? 'cursor-pointer active:scale-95 transition-all hover:bg-slate-800/80 hover:border-slate-700' : ''}`}
                   >
                     <div className="flex items-center gap-4">
@@ -326,7 +295,6 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       </div>
 
-      {/* MODAL DE RECARGA */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300 overflow-y-auto max-h-[90vh] no-scrollbar">
@@ -336,26 +304,10 @@ export const Wallet = ({ userData, onRegresar }) => {
             </div>
 
             <div className="flex gap-3 mb-6">
-              <button 
-                type="button"
-                onClick={() => setMetodoRecarga("pago_movil")}
-                className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${
-                  metodoRecarga === "pago_movil" 
-                    ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-900/50" 
-                    : "bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700"
-                }`}
-              >
+              <button type="button" onClick={() => setMetodoRecarga("pago_movil")} className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${metodoRecarga === "pago_movil" ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-900/50" : "bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700"}`}>
                 🇻🇪 Pago Móvil
               </button>
-              <button 
-                type="button"
-                onClick={() => setMetodoRecarga("binance")}
-                className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${
-                  metodoRecarga === "binance" 
-                    ? "bg-amber-500 text-amber-950 border-amber-500 shadow-lg shadow-amber-900/50" 
-                    : "bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700"
-                }`}
-              >
+              <button type="button" onClick={() => setMetodoRecarga("binance")} className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${metodoRecarga === "binance" ? "bg-amber-500 text-amber-950 border-amber-500 shadow-lg shadow-amber-900/50" : "bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700"}`}>
                  Binance Pay
               </button>
             </div>
@@ -417,10 +369,7 @@ export const Wallet = ({ userData, onRegresar }) => {
             </div>
 
             <form onSubmit={manejarRecarga} className="space-y-4">
-              <div 
-                onClick={capturarComprobante}
-                className={`w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${fotoRecarga ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-900 hover:border-slate-600'}`}
-              >
+              <div onClick={capturarComprobante} className={`w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${fotoRecarga ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-900 hover:border-slate-600'}`}>
                 {fotoRecarga ? (
                   <img src={fotoRecarga} className="w-full h-full object-cover rounded-2xl" />
                 ) : (
@@ -433,13 +382,7 @@ export const Wallet = ({ userData, onRegresar }) => {
 
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($ USDT)</label>
-                <input 
-                  type="number" 
-                  value={montoRecarga} 
-                  onChange={(e) => setMontoRecarga(e.target.value)} 
-                  placeholder="Ej: 15.00" 
-                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" 
-                />
+                <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 15.00" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-lg font-black outline-none focus:border-blue-500 transition-all" />
                 {metodoRecarga === "pago_movil" && montoRecarga && tasaBCV > 0 && (
                   <p className="text-[10px] font-black text-emerald-400 uppercase mt-2 ml-1 italic animate-in fade-in">
                     Debes transferir: ≈ Bs. {(Number(montoRecarga) * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -449,13 +392,7 @@ export const Wallet = ({ userData, onRegresar }) => {
               
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Número de Referencia</label>
-                <input 
-                  type="text" 
-                  value={referencia} 
-                  onChange={(e) => setReferencia(e.target.value)} 
-                  placeholder="Ej: 1234 (Últimos dígitos)" 
-                  className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-sm font-black outline-none focus:border-blue-500 transition-all" 
-                />
+                <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Ej: 1234 (Últimos dígitos)" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-sm font-black outline-none focus:border-blue-500 transition-all" />
               </div>
               
               <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50 mt-2">
@@ -466,7 +403,6 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       )}
 
-      {/* MODAL RETIRO */}
       {showModalRetiro && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -505,12 +441,7 @@ export const Wallet = ({ userData, onRegresar }) => {
                 <input type="tel" value={datosBancarios.telefono} onChange={(e) => setDatosBancarios({...datosBancarios, telefono: e.target.value})} placeholder="Teléfono" className="w-full bg-transparent border-b border-slate-800 text-white p-2 text-xs font-bold outline-none focus:border-blue-500" />
                 
                 <div className="relative">
-                  <input 
-                    type="text" 
-                    value={datosBancarios.cedula} 
-                    readOnly
-                    className="w-full bg-slate-950 border-b border-slate-800 text-slate-500 p-2 text-xs font-bold outline-none cursor-not-allowed pr-8" 
-                  />
+                  <input type="text" value={datosBancarios.cedula} readOnly className="w-full bg-slate-950 border-b border-slate-800 text-slate-500 p-2 text-xs font-bold outline-none cursor-not-allowed pr-8" />
                   <Lock size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-600" />
                 </div>
                 <p className="text-[8px] font-black text-red-500/80 uppercase tracking-widest italic text-right mt-1">Titular Inamovible</p>
