@@ -120,7 +120,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion;
 
   // 🔥 INTERCEPTOR DE TIMEOUT PARA PREVENIR CONGELAMIENTOS EN ZONAS MUERTAS
-  const ejecutarConTimeout = async (promesa, tiempoMs = 12000) => {
+  const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
     return Promise.race([
       promesa,
       new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT_RED")), tiempoMs))
@@ -386,6 +386,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
+  // 🔥 1. CORRECCIÓN EN SOLICITAR COLA (AUTO-ACEPTAR AHORA PASA POR LA NUBE) 🔥
   const solicitarCola = async () => {
     const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
     const miSaldoActual = Number(userData?.saldo || 0);
@@ -426,7 +427,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         nombre: String(nombreUsuario), 
         fotoPerfil: userData?.fotoPerfil || null, 
         puestosSolicitados: Number(puestosQueQuiero),
-        adultosExtra: Number(adultosExtra),           
+        adultosExtra: Number(adultosExtra),            
         ninosExtra: Number(ninosExtra),
         lat: lat,
         lng: lng,
@@ -435,7 +436,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
       const esAutoAceptar = viaje.autoAceptar === true;
 
-      await ejecutarConTimeout(addDoc(collection(db, "Solicitudes"), {
+      // Se guarda la solicitud inicial
+      const solicitudDoc = await ejecutarConTimeout(addDoc(collection(db, "Solicitudes"), {
         idConductor: String(idConductor),
         nombrePasajero: String(nombreUsuario),
         idViaje: String(viaje.id),
@@ -445,16 +447,23 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         fecha: serverTimestamp()
       }));
 
+      // 🔥 BLINDAJE: SI ES AUTO-ACEPTAR, SE LLAMA A LA NUBE DIRECTAMENTE 🔥
       if (esAutoAceptar) {
-        const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString();
-        await ejecutarConTimeout(updateDoc(viajeRef, {
-          pasajeros: arrayUnion({ 
-            ...datosPasajeroBase, estado: 'confirmado', pin: pinGenerado, calificado: false 
-          })
-        }));
-        if (idConductor) await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje.`, "exito");
-        setToast({ texto: "¡Reserva confirmada!", tipo: "exito" });
+        const aceptarEnNube = httpsCallable(functions, 'procesarAceptacionSolicitud');
+        
+        await aceptarEnNube({ 
+          viajeId: viaje.id, 
+          pasajeroId: String(miId), 
+          puestosSolicitados: Number(puestosQueQuiero),
+          precio: Number(viaje.precio),
+          // Pasamos los datos extra para que la nube lo añada al arreglo de pasajeros
+          datosExtraPasajero: datosPasajeroBase 
+        });
+
+        if (idConductor) await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje automáticamente.`, "exito");
+        setToast({ texto: "¡Reserva confirmada y cobrada!", tipo: "exito" });
       } else {
+        // Solo enviamos la solicitud y esperamos al chofer
         await ejecutarConTimeout(updateDoc(viajeRef, {
           reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
         }));
@@ -470,7 +479,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     } catch (e: any) { 
       console.error(e);
-      setToast({ texto: e.message === "TIMEOUT_RED" ? "Guardando en segundo plano... Revisa en segundos." : "Error de red al procesar reserva", tipo: "error" });
+      setToast({ texto: e.message === "TIMEOUT_RED" ? "Guardando en segundo plano..." : "Error de red al procesar reserva", tipo: "error" });
       setTimeout(() => setToast(null), 4000);
     } finally {
       setCargando(false);
@@ -493,42 +502,39 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
     setCargando(true);
     try {
-      // 🔥 Llamada Segura a Google Cloud Functions 🔥
       const cancelarEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
       await ejecutarConTimeout(cancelarEnNube({ 
         viajeId: viaje.id, 
         pasajeroId: userData?.id, 
         rol: modalCancelar.rol, 
         motivo: motivoCancelacion 
-      }), 12000);
+      }), 15000);
 
       setModalCancelar({ visible: false, rol: null });
-      setToast({ texto: "Cancelación procesada en el servidor", tipo: "exito" });
+      setToast({ texto: "Cancelación procesada y reembolsada", tipo: "exito" });
       setTimeout(() => setToast(null), 4000);
       
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
     } catch (error: any) {
-      // 1. Imprime el error real en la consola por si acaso
-      console.error("🔥 ERROR REAL DEL SERVIDOR:", error);
-      
-      // 2. Muestra el mensaje EXACTO que manda Google Cloud en la pantalla
+      console.error("ERROR DEL SERVIDOR:", error);
       const mensajeReal = error.message === "TIMEOUT_RED" 
-        ? "Red inestable. Validando en segundo plano..." 
+        ? "Red inestable. Procesando..." 
         : `Fallo: ${error.message}`;
-
       setToast({ texto: mensajeReal, tipo: "error" });
-      setTimeout(() => setToast(null), 5000); // Le di 5 segundos para que te dé tiempo de leerlo
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setCargando(false); 
     }
   };
   
- const gestionarSolicitud = async (solicitud, accion) => {
+  // 🔥 2. CORRECCIÓN EN GESTIONAR SOLICITUD (EL CHOFER ACEPTA) 🔥
+  const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
       const viajeRef = doc(db, "Viajes", viaje.id);
-      
+      const idPasajero = solicitud.id || solicitud.uid;
+
       if (accion === 'aceptar') {
         const puestosQuePidio = Number(solicitud.puestosSolicitados) || 1;
         if (puestosQuePidio > cuposRestantes) { 
@@ -536,28 +542,33 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           setCargando(false); return; 
         }
 
-        // 🔥 AQUÍ ESTÁ LA MAGIA: Llamamos a la función de la nube para retener el dinero
+        // 🔥 AHORA SÍ: LLAMAMOS A LA NUBE PARA COBRAR ANTES DE CONFIRMAR 🔥
         const aceptarEnNube = httpsCallable(functions, 'procesarAceptacionSolicitud');
         
-        // Esta función hará: 1. Validar fondos, 2. Mover a SaldoRetenido, 3. Mover a pasajerosConfirmados
         await ejecutarConTimeout(aceptarEnNube({ 
           viajeId: viaje.id, 
-          pasajeroId: solicitud.id || solicitud.uid, 
+          pasajeroId: idPasajero, 
           puestosSolicitados: puestosQuePidio,
-          precio: viaje.precio
-        }));
+          precio: Number(viaje.precio),
+          datosExtraPasajero: solicitud // Pasamos los datos del pasajero a la nube
+        }), 15000);
 
-        setToast({ texto: "Solicitud aceptada y dinero retenido.", tipo: "exito" });
+        // Si la nube no lanzó error, significa que cobró bien. Procedemos a notificar
+        await enviarNotificacion(idPasajero, "¡Cola Aceptada!", `${userData?.nombre} te confirmó. ¡Revisa tu PIN!`, "exito");
+        setToast({ texto: "Pasajero aceptado y saldo retenido", tipo: "exito" });
+
       } else {
-        // Rechazo normal
+        // Rechazo normal (no cobra dinero)
         await ejecutarConTimeout(updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) }));
-        await enviarNotificacion(solicitud.id || solicitud.uid, "Solicitud no confirmada", "El conductor no pudo procesar tu solicitud.", "alerta");
+        await enviarNotificacion(idPasajero, "Solicitud no confirmada", "El conductor no pudo procesar tu solicitud.", "alerta");
         setToast({ texto: "Solicitud rechazada", tipo: "exito" });
       }
     } catch (e: any) { 
       console.error("Error al gestionar solicitud:", e);
-      setToast({ texto: e.message || "Fallo de conexión.", tipo: "error" });
-    } finally { setCargando(false); }
+      setToast({ texto: e.message === "TIMEOUT_RED" ? "Reintentando cobro en la nube..." : e.message || "Fallo de conexión.", tipo: "error" });
+    } finally { 
+      setCargando(false); 
+    }
   };
   
   const procesarAbordajeEIniciar = async () => {
@@ -595,7 +606,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const llamarBunker = httpsCallableFromURL(functions, 'https://finalizar-viaje-v2-1080063705561.us-central1.run.app');
-      const resultado = await ejecutarConTimeout(llamarBunker({ viajeId: viaje.id, ratingsChofer: ratingsChofer }), 12000);
+      const resultado = await ejecutarConTimeout(llamarBunker({ viajeId: viaje.id, ratingsChofer: ratingsChofer }), 15000);
 
       if (resultado.data.success) {
         pasajerosConfirmados.forEach(p => {
@@ -664,7 +675,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } finally { setCargando(false); }
   };
 
-  // 🔥 SOLUCIÓN WHATSAPP: Link limpio oficial directo a Google Maps 
   const compartirRuta = () => {
     const cD_seguro = obtenerEstado(viaje.cD || "");
     const cO_seguro = obtenerEstado(viaje.cO || "");
@@ -1048,7 +1058,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                       </div>
                     </button>
                   ) : (
-                    <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-500 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all disabled:bg-slate-300">
+                    <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={() => cambiarEstadoViaje('buscando')} className="flex-[2] bg-amber-50 text-amber-600 rounded-[22px] font-black uppercase text-[10px] border border-amber-200 active:scale-95 transition-all disabled:bg-slate-300 disabled:text-white disabled:border-slate-300 shadow-sm shadow-amber-100/50">
                       {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Ir a recoger'}
                     </button>
                   )}
