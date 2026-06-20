@@ -66,15 +66,28 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
   const estado = String(viaje.estado || 'disponible');
   const esActivo = estado !== 'finalizado' && estado !== 'cancelado';
   const esCancelado = estado === 'cancelado';
+  const esFinalizado = estado === 'finalizado';
+  const estaEnCurso = estado === 'en_curso' || estado === 'buscando';
+  const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
   
   let totalPasajeros = 0;
   if (Array.isArray(viaje.pasajeros)) totalPasajeros = viaje.pasajeros.length;
 
+  const solicitudes = Array.isArray(viaje.reservasPendientes) ? viaje.reservasPendientes.length : 0;
+
+  // 🔥 RECUPERADO: Lógica del Botón Naranja 🔥
+  const botonNaranja = esActivo && (solicitudes > 0 || estaEnCurso || totalPasajeros > 0);
+
+  const origenText = viaje.cO || String(viaje.origen || "").split(',')[0] || "Origen";
+  const destinoText = viaje.cD || String(viaje.destino || "").split(',')[0] || "Destino";
+
   return (
     <div className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm relative space-y-4">
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${esActivo ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
-          {esActivo ? (estado === 'buscando' || estado === 'en_curso' ? 'EN CURSO' : 'ACTIVO') : esCancelado ? 'CANCELADO' : 'FINALIZADO'}
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-green-50 border-green-200 text-green-600' : esCancelado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : esCancelado ? 'CANCELADO' : 'DISPONIBLE'}
       </div>
+
+      {esRetorno && <div className="absolute top-6 left-6 text-emerald-600 flex items-center gap-1.5 z-20"><Repeat size={14} className='-rotate-90'/><span className="text-[9px] font-black uppercase tracking-widest">RETORNO</span></div>}
 
       <div className="h-32 rounded-2xl overflow-hidden mb-2 relative pointer-events-none bg-slate-100">
          <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent z-10" />
@@ -103,19 +116,26 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 
       <button disabled={esCancelado} onClick={() => onClickGestionar(viaje)}
         className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all shadow-lg ${
-          esCancelado ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' : esActivo ? 'bg-blue-600 text-white shadow-blue-500/30' : 'bg-slate-800 text-white shadow-slate-900/30'
+          esCancelado ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' : 
+          botonNaranja ? 'bg-orange-500 text-white shadow-orange-500/40 animate-pulse active:scale-95' :
+          esActivo ? 'bg-blue-600 text-white shadow-blue-500/30 active:scale-95' : 
+          'bg-slate-800 text-white shadow-slate-900/30 active:scale-95'
         }`}>
-        {esCancelado ? <><Archive size={16} /> Viaje Cancelado</> : esActivo ? <><Settings size={16} /> Gestionar Viaje</> : <><Star size={16} /> Ver Resumen</>}
+        {esCancelado ? <><Archive size={16} /> Viaje Cancelado</> 
+        : (solicitudes > 0 && esActivo) ? <><Info size={18} /> ¡Tienes {solicitudes} solicitud{solicitudes > 1 ? 'es' : ''}!</>
+        : estaEnCurso ? <><Navigation size={16} /> VIAJE ACTIVO - GESTIONAR</>
+        : (totalPasajeros > 0 && esActivo) ? <><Users size={16} /> Pasajeros Confirmados</>
+        : esActivo ? <><Settings size={16} /> Gestionar Viaje</> 
+        : <><Star size={16} /> Ver Resumen</>}
       </button>
     </div>
   );
 };
 
-// --- 4. TARJETA PASAJERO (SÚPER SIMPLIFICADA Y BLINDADA) ---
+// --- 4. TARJETA PASAJERO ---
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   if (!viaje) return null;
 
-  // Extracción de datos con 0% probabilidad de crasheo
   const estado = String(viaje.estado || 'disponible');
   const esActivo = estado !== 'finalizado' && estado !== 'cancelado';
   const esCancelado = estado === 'cancelado';
@@ -125,7 +145,6 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   const conductor = extractText(viaje.cN || viaje.conductor, "Conductor");
   const precio = String(viaje.precio || '0');
 
-  // Búsqueda segura de reserva
   let esConfirmado = false;
   let yaCalifico = false;
   if (viaje.pasajeros) {
@@ -193,11 +212,9 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-  // Listas completamente aisladas
   let cActivos = []; let cHistorial = [];
   let pActivos = []; let pHistorial = [];
 
-  // FILTRADO CHOFER
   try {
     const listC = Array.isArray(viajesChofer) ? viajesChofer : [];
     listC.forEach(v => {
@@ -208,17 +225,14 @@ export const VistaMisViajes = ({
     });
   } catch (e) {}
 
-  // FILTRADO PASAJERO (A PRUEBA DE BALAS)
   try {
     const arrAct = Array.isArray(viajesPasajeroActivos) ? viajesPasajeroActivos : [];
     const arrHist = Array.isArray(viajesPasajeroHistorial) ? viajesPasajeroHistorial : [];
     
-    // Metemos todos en una sola bolsa y eliminamos duplicados
     const todos = [...arrAct, ...arrHist];
     const unicos = {};
     todos.forEach(v => { if (v && v.id) unicos[v.id] = v; });
 
-    // Los separamos correctamente asegurando que ningún "cancelado" se quede en "activos"
     Object.values(unicos).forEach(v => {
       const est = String(v.estado || '');
       if (est === 'finalizado' || est === 'cancelado') pHistorial.push(v); else pActivos.push(v);
@@ -236,14 +250,6 @@ export const VistaMisViajes = ({
       if (onActualizarViajeFBD) await onActualizarViajeFBD({ ...updatedViaje, ...datosNuevos });
       setEditingViaje(null); setToastData({ show: true, message: 'Actualizado' });
     } catch (error) { setToastData({ show: true, message: 'Error al guardar' }); }
-  };
-
-  const handleArchivarViaje = async (viajeId) => {
-    try {
-      await updateDoc(doc(db, "Viajes", viajeId), { estado: 'cancelado' });
-      if (onActualizarViajeFBD) await onActualizarViajeFBD({ id: viajeId, estado: 'cancelado' });
-      setToastData({ show: true, message: 'Archivado' });
-    } catch (error) { setToastData({ show: true, message: 'Error al archivar' }); }
   };
 
   return (
@@ -267,11 +273,11 @@ export const VistaMisViajes = ({
         {activeTab === 'chofer' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
-              <button onClick={() => setSubTabChofer('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400'}`}>Activos</button>
-              <button onClick={() => setSubTabChofer('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400'}`}>Historial</button>
+              <button onClick={() => setSubTabChofer('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabChofer('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
             {subTabChofer === 'activos' ? (
-              cActivos.length > 0 ? cActivos.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => setEditingViaje(v)} onArchivar={handleArchivarViaje} onClickGestionar={onVerDetalles} />)
+              cActivos.length > 0 ? cActivos.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => setEditingViaje(v)} onArchivar={() => {}} onClickGestionar={onVerDetalles} />)
               : <div className="text-center py-20 opacity-60"><Navigation size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin rutas activas</p></div>
             ) : (
               cHistorial.length > 0 ? cHistorial.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => {}} onArchivar={() => {}} onClickGestionar={onVerDetalles} />)
@@ -283,15 +289,15 @@ export const VistaMisViajes = ({
         {activeTab === 'pasajero' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
-              <button onClick={() => setSubTabPasajero('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400'}`}>Activos</button>
-              <button onClick={() => setSubTabPasajero('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400'}`}>Historial</button>
+              <button onClick={() => setSubTabPasajero('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabPasajero('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
             {subTabPasajero === 'activos' ? (
               pActivos.length > 0 ? pActivos.map(v => <ViajeCardPasajero key={v.id} viaje={v} userData={userData} onClickGestionar={onVerDetalles} />)
               : <div className="text-center py-20 opacity-60"><Users size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin reservas activas</p></div>
             ) : (
               pHistorial.length > 0 ? pHistorial.map(v => <ViajeCardPasajero key={v.id} viaje={v} userData={userData} onClickGestionar={onVerDetalles} />)
-              : <div className="text-center py-20 opacity-60"><Archive size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin historial</p></div>
+              : <div className="text-center py-20 opacity-60"><Archive size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin historial de viajes</p></div>
             )}
           </div>
         )}
