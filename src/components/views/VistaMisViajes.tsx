@@ -110,9 +110,9 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
 };
 
 const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
-  if (!viaje) return null;
+  if (!viaje || typeof viaje !== 'object') return null;
   
-  const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
+  const pasajerosCount = Array.isArray(viaje.pasajeros) ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
   const solicitudes = viaje.reservasPendientes?.length || 0; 
@@ -122,8 +122,10 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
   const esFinalizado = estadoActual === 'finalizado';
   const esCancelado = estadoActual === 'cancelado';
 
-  // 🔥 BLINDAJE 2: Ignorar pasajeros nulos (p &&)
-  const nuevosConfirmados = viaje.pasajeros?.filter(p => p && !p.vistoPorChofer)?.length || 0; 
+  let nuevosConfirmados = 0;
+  if (Array.isArray(viaje.pasajeros)) {
+     nuevosConfirmados = viaje.pasajeros.filter(p => p && !p.vistoPorChofer).length; 
+  }
   const botonNaranja = !esFinalizado && !esCancelado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
 
   const fechaViaje = viaje.fechaSalida || viaje.fecha;
@@ -137,6 +139,14 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
       esVencido = true;
     }
   }
+
+  let origenText = "Origen";
+  if (typeof viaje.cO === 'string' && viaje.cO) origenText = viaje.cO;
+  else if (typeof viaje.origen === 'string' && viaje.origen) origenText = viaje.origen.split(',')[0];
+
+  let destinoText = "Destino";
+  if (typeof viaje.cD === 'string' && viaje.cD) destinoText = viaje.cD;
+  else if (typeof viaje.destino === 'string' && viaje.destino) destinoText = viaje.destino.split(',')[0];
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
@@ -175,12 +185,12 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 
       <div className="flex items-center gap-4 text-center">
         <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || viaje.origen?.split(',')[0]}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{origenText}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase">Salida</p>
         </div>
         <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
         <div className='flex-1'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || viaje.destino?.split(',')[0]}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{destinoText}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase">Llegada</p>
         </div>
       </div>
@@ -234,10 +244,14 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 };
 
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
-  if (!viaje) return null; // 🔥 BLINDAJE 3: Si Firebase manda un viaje fantasma, lo saltamos.
+  // 🔥 BLINDAJE 2: Seguro anti colapso si un viaje llega corrupto
+  if (!viaje || typeof viaje !== 'object') return null; 
+
+  let miReserva = null;
+  if (Array.isArray(viaje.pasajeros)) {
+    miReserva = viaje.pasajeros.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
+  }
   
-  // 🔥 BLINDAJE 4: (p &&) Evita que colapse si un asiento se borró mal de la base de datos
-  const miReserva = viaje.pasajeros?.find(p => p && (p.id === userData?.id || p.uid === userData?.id));
   const esConfirmado = !!miReserva;
   const yaCalifico = miReserva?.calificado === true;
 
@@ -245,6 +259,17 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   const esFinalizado = estadoActual === 'finalizado';
   const esCancelado = estadoActual === 'cancelado';
   const esActivo = !esFinalizado && !esCancelado;
+
+  const conductorNombre = String(viaje.cN || viaje.conductor || "Conductor");
+  const primerNombreConductor = conductorNombre.split(' ')[0] || "Conductor";
+
+  let origenText = "Origen";
+  if (typeof viaje.cO === 'string' && viaje.cO) origenText = viaje.cO;
+  else if (typeof viaje.origen === 'string' && viaje.origen) origenText = viaje.origen.split(',')[0];
+
+  let destinoText = "Destino";
+  if (typeof viaje.cD === 'string' && viaje.cD) destinoText = viaje.cD;
+  else if (typeof viaje.destino === 'string' && viaje.destino) destinoText = viaje.destino.split(',')[0];
 
   return (
     <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative overflow-hidden ${esConfirmado && esActivo ? 'border-blue-200' : 'border-slate-100'}`}>
@@ -264,19 +289,19 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
           {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black italic text-white text-xl'>D</div>}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-black italic text-slate-800 uppercase truncate bg-white/80 rounded px-1 -ml-1 inline-block">{viaje.cN || viaje.conductor || "Conductor"}</p>
+          <p className="text-base font-black italic text-slate-800 uppercase truncate bg-white/80 rounded px-1 -ml-1 inline-block">{conductorNombre}</p>
           <p className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5 inline-block ${!esActivo ? 'bg-slate-100 text-slate-500' : 'bg-blue-100/80 text-blue-800'}`}>Chofer Designado</p>
         </div>
       </div>
 
       <div className="flex items-center gap-4 text-center relative z-10 bg-white/90 p-3 rounded-2xl border border-slate-100/50 backdrop-blur-md">
         <div className='flex-1 min-w-0'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cO || (typeof viaje.origen === 'string' ? viaje.origen.split(',')[0] : '')}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{origenText}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Recogida</p>
         </div>
         <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
         <div className='flex-1 min-w-0'>
-            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{viaje.cD || (typeof viaje.destino === 'string' ? viaje.destino.split(',')[0] : '')}</p>
+            <p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{destinoText}</p>
             <p className="text-[7px] font-black text-slate-400 uppercase mt-0.5">Destino</p>
         </div>
       </div>
@@ -316,7 +341,7 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
               : 'bg-amber-400 text-amber-950 shadow-amber-500/30 border border-amber-300 animate-pulse'
             }`}
           >
-            {yaCalifico ? <><Check size={16} /> Experiencia Calificada</> : <><Star size={16} className="fill-amber-950" /> Calificar a {viaje.cN?.split(' ')[0] || "Conductor"}</>}
+            {yaCalifico ? <><Check size={16} /> Experiencia Calificada</> : <><Star size={16} className="fill-amber-950" /> Calificar a {primerNombreConductor}</>}
         </button>
       )}
     </div>
@@ -363,7 +388,6 @@ export const VistaMisViajes = ({
       };
 
       await updateDoc(viajeRef, datosNuevos);
-
       if (onActualizarViajeFBD) await onActualizarViajeFBD({ ...updatedViaje, ...datosNuevos });
       
       setEditingViaje(null);
@@ -393,19 +417,37 @@ export const VistaMisViajes = ({
     });
   };
   
-  // 🔥 BLINDAJE 5: Asegurar que todos los arreglos existan y no tengan nulls
-  const viajesChoferSeguros = Array.isArray(viajesChofer) ? viajesChofer.filter(v => v != null && v.id) : [];
-  const viajesChoferActivos = ordenarViajesChofer(viajesChoferSeguros.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
-  const viajesChoferHistorial = viajesChoferSeguros.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
+  // 🔥 BLINDAJE 3: Helpers puros para evitar errores nativos
+  const getSafeArray = (arr) => Array.isArray(arr) ? arr : [];
 
-  const arrayActivos = Array.isArray(viajesPasajeroActivos) ? viajesPasajeroActivos : [];
-  const arrayHistorial = Array.isArray(viajesPasajeroHistorial) ? viajesPasajeroHistorial : [];
+  const safeChofer = getSafeArray(viajesChofer).filter(v => v != null && typeof v === 'object' && v.id);
+  const viajesChoferActivos = ordenarViajesChofer(safeChofer.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
+  const viajesChoferHistorial = safeChofer.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => {
+      const timeA = new Date(a.fecha || a.fechaSalida || 0).getTime();
+      const timeB = new Date(b.fecha || b.fechaSalida || 0).getTime();
+      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+  });
+
+  const rawPasajerosActivos = getSafeArray(viajesPasajeroActivos).filter(v => v != null && typeof v === 'object' && v.id);
+  const rawPasajerosHistorial = getSafeArray(viajesPasajeroHistorial).filter(v => v != null && typeof v === 'object' && v.id);
+
+  // 1. Filtramos los Activos REALES (Expulsamos los cancelados colados)
+  const pasajerosActivos = rawPasajerosActivos.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado');
   
-  const todosViajesPasajero = [...arrayActivos, ...arrayHistorial].filter(v => v != null && v.id);
-  const viajesPasajeroUnicos = Array.from(new Map(todosViajesPasajero.map(item => [item.id, item])).values());
+  // 2. Extraemos los "colados" de la lista de activos para unirlos al historial
+  const pasajerosColados = rawPasajerosActivos.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado');
+  const pasajerosHistorialUnsorted = [...rawPasajerosHistorial, ...pasajerosColados];
   
-  const pasajerosActivos = viajesPasajeroUnicos.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado');
-  const pasajerosHistorial = viajesPasajeroUnicos.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
+  // 3. Limpiamos duplicados con Vanilla JS (100% compatible)
+  const pasajerosHistorialUnicos = pasajerosHistorialUnsorted.filter((v, index, self) => 
+      index === self.findIndex(t => t.id === v.id)
+  );
+
+  const pasajerosHistorial = pasajerosHistorialUnicos.sort((a, b) => {
+      const timeA = new Date(a.fecha || a.fechaSalida || 0).getTime();
+      const timeB = new Date(b.fecha || b.fechaSalida || 0).getTime();
+      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -415,6 +457,7 @@ export const VistaMisViajes = ({
         <ModalEditarViaje viaje={editingViaje} isOpen={true} onClose={() => setEditingViaje(null)} onSave={handleEditSave}/>
       )}
 
+      {/* 🔥 REPARACIÓN Z-INDEX: (z-30) Para no pisar la campana de notificaciones */}
       <div className="p-4 pt-8 bg-white border-b border-slate-100 sticky top-0 z-30">
         <div className="flex items-center gap-4 mb-6">
           <button onClick={onRegresar} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 active:scale-90 transition-all border border-slate-100">
@@ -488,7 +531,7 @@ export const VistaMisViajes = ({
               pasajerosActivos.length > 0 ? (
                 <div className="space-y-4">
                   {pasajerosActivos.map(viaje => (
-                    <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
+                    <ViajeCardPasajero key={viaje.id || Math.random()} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
                   ))}
                 </div>
               ) : (
@@ -502,7 +545,7 @@ export const VistaMisViajes = ({
               pasajerosHistorial.length > 0 ? (
                 <div className="space-y-4 opacity-90">
                   {pasajerosHistorial.map(viaje => (
-                    <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
+                    <ViajeCardPasajero key={viaje.id || Math.random()} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
                   ))}
                 </div>
               ) : (
