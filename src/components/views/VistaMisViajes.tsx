@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import Toast from "../ui/Toast";
 import { 
-  ArrowLeft, Edit2, Trash2, Calendar, Clock, Users, 
-  X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star, Navigation 
+  ArrowLeft, Edit2, Calendar, Clock, Users, 
+  X, CheckCircle, Repeat, ArrowLeftRight, Settings, Info, Check, Star, Navigation, Archive
 } from 'lucide-react';
 import MapaView from '../Map/MapaView'; 
 
@@ -27,28 +27,6 @@ const formatearFechaCorta = (fechaString) => {
     day: 'numeric', 
     month: 'short' 
   }).replace('.', ''); 
-};
-
-const ModalConfirmarEliminar = ({ isOpen, onClose, onConfirm }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center">
-      <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
-        <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">¿Eliminar Viaje?</h3>
-        <p className="text-xs font-bold text-slate-400 mb-8">Esta acción no se puede deshacer. (Solo permitido si no hay pasajeros).</p>
-        
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">
-            Cancelar
-          </button>
-          <button onClick={onConfirm} className="flex-1 bg-rose-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-rose-900/50 active:scale-95 transition-all">
-            Sí, Eliminar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
@@ -121,7 +99,7 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   );
 };
 
-const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
+const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
   const pasajerosCount = viaje.pasajeros ? viaje.pasajeros.length : 0;
   const puestosTotales = viaje.asientos || viaje.puestos || 1;
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
@@ -130,16 +108,17 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
   
   const estaEnCurso = estadoActual === 'en_curso' || estadoActual === 'buscando';
   const esFinalizado = estadoActual === 'finalizado';
+  const esCancelado = estadoActual === 'cancelado';
 
   const nuevosConfirmados = viaje.pasajeros?.filter(p => !p.vistoPorChofer)?.length || 0; 
-  const botonNaranja = !esFinalizado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
+  const botonNaranja = !esFinalizado && !esCancelado && (solicitudes > 0 || estaEnCurso || nuevosConfirmados > 0);
 
   // 🔥 LÓGICA DEL RELOJ INTERNO (Viajes Vencidos) 🔥
   const fechaViaje = viaje.fechaSalida || viaje.fecha;
   const horaViaje = viaje.horaSalida || viaje.hora;
   let esVencido = false;
 
-  if (fechaViaje && horaViaje && !estaEnCurso && !esFinalizado && pasajerosCount === 0) {
+  if (fechaViaje && horaViaje && !estaEnCurso && !esFinalizado && !esCancelado && pasajerosCount === 0) {
     const fechaHoraViaje = new Date(`${fechaViaje}T${horaViaje}`);
     // Margen de 2 horas. Si pasaron 2 horas de la hora de salida y no se inició, está vencido.
     const limiteTiempo = new Date(fechaHoraViaje.getTime() + (2 * 60 * 60 * 1000)); 
@@ -150,8 +129,8 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm ${esRetorno ? 'border-dashed border-emerald-200 bg-emerald-50/10' : 'border-slate-100'} relative space-y-4`}>
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-slate-100 border-slate-200 text-slate-500' : esVencido ? 'bg-slate-200 border-slate-300 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
-          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : esVencido ? 'VENCIDO' : 'DISPONIBLE'}
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-green-50 border-green-200 text-green-600' : (esVencido || esCancelado) ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : esCancelado ? 'CANCELADO' : esVencido ? 'VENCIDO' : 'DISPONIBLE'}
       </div>
 
       {esRetorno && (
@@ -162,7 +141,7 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
       )}
 
       {(viaje.coordsOrigen || viaje.coordsDestino) && (
-        <div className="h-32 rounded-2xl overflow-hidden mb-2 relative pointer-events-none">
+        <div className={`h-32 rounded-2xl overflow-hidden mb-2 relative pointer-events-none ${(esFinalizado || esCancelado) ? 'opacity-60 grayscale-[50%]' : ''}`}>
            <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent z-10" />
            <MapaView origen={viaje.coordsOrigen} destino={viaje.coordsDestino} interactivo={false} />
         </div>
@@ -171,16 +150,13 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
       <div className="flex justify-between items-start pt-2">
         <div>
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo ($)</p>
-          <p className="text-4xl font-black italic text-blue-600 leading-none">${viaje.precio}</p>
+          <p className={`text-4xl font-black italic leading-none ${(esFinalizado || esCancelado) ? 'text-slate-400' : 'text-blue-600'}`}>${viaje.precio}</p>
         </div>
         
-        {!esFinalizado && !esVencido && (
+        {!esFinalizado && !esCancelado && !esVencido && (
           <div className="flex gap-2.5">
             <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500 hover:text-blue-600 transition-colors">
               <Edit2 size={16} />
-            </button>
-            <button onClick={onDelete} className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100 text-rose-500 hover:bg-rose-100 transition-colors">
-              <Trash2 size={16} />
             </button>
           </div>
         )}
@@ -213,21 +189,25 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
         </div>
       </div>
 
-      {/* 🔥 BOTÓN INTELIGENTE ADAPTADO 🔥 */}
       <button 
-        onClick={() => esVencido ? onDelete(viaje) : onClickGestionar(viaje)}
-        className={`w-full mt-4 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${
+        disabled={esCancelado}
+        onClick={() => esVencido ? onArchivar(viaje.id) : onClickGestionar(viaje)}
+        className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all shadow-lg ${
           botonNaranja 
-            ? 'bg-orange-500 shadow-orange-500/40 animate-pulse' 
+            ? 'bg-orange-500 text-white shadow-orange-500/40 animate-pulse active:scale-95' 
+            : esCancelado
+            ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none cursor-default'
             : esFinalizado
-            ? 'bg-slate-800 shadow-slate-900/30'
+            ? 'bg-slate-800 text-white shadow-slate-900/30 active:scale-95'
             : esVencido
-            ? 'bg-slate-300 text-slate-600 border border-slate-400 shadow-none'
-            : 'bg-green-500 shadow-green-500/30'
+            ? 'bg-slate-200 text-slate-600 border border-slate-300 shadow-none active:scale-95 hover:bg-slate-300'
+            : 'bg-green-500 text-white shadow-green-500/30 active:scale-95'
         }`}
       >
-        {esVencido ? (
-          <><Trash2 size={16} /> Viaje Vencido - Eliminar</>
+        {esCancelado ? (
+          <><Archive size={16} /> Viaje Cancelado</>
+        ) : esVencido ? (
+          <><Archive size={16} /> Archivar Viaje Vencido</>
         ) : solicitudes > 0 && !esFinalizado ? (
           <><Info size={18} /> ¡Tienes {solicitudes} solicitud{solicitudes > 1 ? 'es' : ''}!</>
         ) : estaEnCurso ? (
@@ -242,31 +222,36 @@ const ViajeCardChofer = ({ viaje, onEdit, onDelete, onClickGestionar }) => {
   );
 };
 
-const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
+const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   const miReserva = viaje.pasajeros?.find(p => p.id === userData?.id || p.uid === userData?.id);
   const esConfirmado = !!miReserva;
   const yaCalifico = miReserva?.calificado === true;
 
+  const estadoActual = viaje.estado || 'disponible';
+  const esFinalizado = estadoActual === 'finalizado';
+  const esCancelado = estadoActual === 'cancelado';
+  const esActivo = !esFinalizado && !esCancelado;
+
   return (
-    <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative overflow-hidden ${esConfirmado && tipo !== 'finalizado' ? 'border-blue-200' : 'border-slate-100'}`}>
+    <div className={`bg-white p-6 rounded-[30px] shadow-sm border space-y-4 relative overflow-hidden ${esConfirmado && esActivo ? 'border-blue-200' : 'border-slate-100'}`}>
       {(viaje.coordsOrigen || viaje.coordsDestino) && (
-        <div className="absolute inset-0 pointer-events-none opacity-40 z-0">
+        <div className={`absolute inset-0 pointer-events-none opacity-40 z-0 ${(!esActivo) ? 'grayscale-[50%]' : ''}`}>
            <MapaView origen={viaje.coordsOrigen} destino={viaje.coordsDestino} interactivo={false} />
            <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px]" />
         </div>
       )}
 
-      <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${tipo === 'activo' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
-          {tipo === 'activo' ? 'ACTIVO' : 'FINALIZADO'}
+      <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${esActivo ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+          {esActivo ? 'ACTIVO' : esCancelado ? 'CANCELADO' : 'FINALIZADO'}
       </div>
       
       <div className="flex items-center gap-4 pt-1 pr-20 relative z-10">
-        <div className="w-12 h-12 rounded-[14px] bg-blue-600 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+        <div className={`w-12 h-12 rounded-[14px] ${!esActivo ? 'bg-slate-400' : 'bg-blue-600'} border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0`}>
           {viaje.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <div className='font-black italic text-white text-xl'>D</div>}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-base font-black italic text-slate-800 uppercase truncate bg-white/80 rounded px-1 -ml-1 inline-block">{viaje.cN || viaje.conductor || "Conductor"}</p>
-          <p className="text-[8px] font-black text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5 inline-block">Chofer Designado</p>
+          <p className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5 inline-block ${!esActivo ? 'bg-slate-100 text-slate-500' : 'bg-blue-100/80 text-blue-800'}`}>Chofer Designado</p>
         </div>
       </div>
 
@@ -293,7 +278,7 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
         </div>
       </div>
 
-      {tipo === 'activo' ? (
+      {esActivo ? (
         <button 
             onClick={() => onClickGestionar(viaje)}
             className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg relative z-10 ${
@@ -303,6 +288,10 @@ const ViajeCardPasajero = ({ viaje, tipo, onClickGestionar, userData }) => {
             }`}
           >
             {esConfirmado ? <><Check size={16} /> ¡Viaje Confirmado! Ver PIN</> : <><Info size={16} /> Esperando Confirmación</>}
+        </button>
+      ) : esCancelado ? (
+        <button disabled className="w-full mt-4 bg-slate-100 text-slate-400 border border-slate-200 rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2 relative z-10">
+          <Archive size={16} /> Viaje Cancelado
         </button>
       ) : (
         <button 
@@ -327,12 +316,13 @@ export const VistaMisViajes = ({
   userData, 
   onRegresar, 
   onActualizarViajeFBD,
-  onEliminarViajeFBD,
   onVerDetalles 
 }) => {
   const [activeTab, setActiveTab] = useState('chofer'); 
+  const [subTabChofer, setSubTabChofer] = useState('activos'); 
+  const [subTabPasajero, setSubTabPasajero] = useState('activos'); 
+
   const [editingViaje, setEditingViaje] = useState(null);
-  const [viajeAEliminar, setViajeAEliminar] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
   useEffect(() => {
@@ -370,127 +360,142 @@ export const VistaMisViajes = ({
     }
   };
 
-  const handleIntentarEliminar = (viaje) => {
-    const tienePasajeros = viaje.pasajeros?.length > 0;
-    const tieneSolicitudes = viaje.reservasPendientes?.length > 0;
-
-    if (tienePasajeros || tieneSolicitudes) {
-      setToastData({ show: true, message: 'Hay reservas. Usa "Gestionar Viaje" para cancelar.' });
-    } else {
-      setViajeAEliminar(viaje.id);
+  // 🔥 ARCHIVADO SUAVE (SOFT DELETE) 🔥
+  const handleArchivarViaje = async (viajeId) => {
+    try {
+      await updateDoc(doc(db, "Viajes", viajeId), { estado: 'cancelado' });
+      if (onActualizarViajeFBD) await onActualizarViajeFBD({ id: viajeId, estado: 'cancelado' });
+      setToastData({ show: true, message: 'Viaje archivado en el historial' });
+    } catch (error) {
+      setToastData({ show: true, message: 'Error de red al archivar' });
     }
   };
 
-  const handleConfirmarEliminar = async () => {
-    if (viajeAEliminar) {
-      try {
-        await deleteDoc(doc(db, "Viajes", viajeAEliminar));
-        if (onEliminarViajeFBD) await onEliminarViajeFBD(viajeAEliminar);
-        setViajeAEliminar(null);
-        setToastData({ show: true, message: 'Viaje eliminado correctamente' });
-      } catch (error) {
-        setViajeAEliminar(null);
-        setToastData({ show: true, message: 'No tienes permisos para borrarlo' });
-      }
-    }
-  };
-
-  // 🔥 LÓGICA DE GRAVEDAD CERO: Ordenar los viajes para que los activos salgan de primeros 🔥
   const ordenarViajesChofer = (viajes) => {
-  return [...viajes].sort((a, b) => {
-    // Definimos qué es "importante"
-    const esImportante = (v) => 
-      (v.estado === 'en_curso' || v.estado === 'buscando') ? 3 : 
-      (v.reservasPendientes?.length > 0) ? 2 : 
-      (v.pasajeros?.length > 0 && v.estado === 'disponible') ? 1 : 0;
+    return [...viajes].sort((a, b) => {
+      const esImportante = (v) => 
+        (v.estado === 'en_curso' || v.estado === 'buscando') ? 3 : 
+        (v.reservasPendientes?.length > 0) ? 2 : 
+        (v.pasajeros?.length > 0 && v.estado === 'disponible') ? 1 : 0;
 
-    return esImportante(b) - esImportante(a);
-  });
-};
+      return esImportante(b) - esImportante(a);
+    });
+  };
   
-  const viajesActivosChoferOrdenados = ordenarViajesChofer(viajesChofer.filter(v => v.estado !== 'finalizado'));
+  // 🔥 FILTROS SEPARADOS PARA PANTALLA LIMPIA 🔥
+  const viajesChoferActivos = ordenarViajesChofer(viajesChofer.filter(v => v.estado !== 'finalizado' && v.estado !== 'cancelado'));
+  const viajesChoferHistorial = viajesChofer.filter(v => v.estado === 'finalizado' || v.estado === 'cancelado').sort((a, b) => new Date(b.fecha || b.fechaSalida || 0).getTime() - new Date(a.fecha || a.fechaSalida || 0).getTime());
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Toast show={toastData.show} message={toastData.message} onClose={() => setToastData({ show: false, message: '' })} />
       
       {editingViaje && (
         <ModalEditarViaje viaje={editingViaje} isOpen={true} onClose={() => setEditingViaje(null)} onSave={handleEditSave}/>
       )}
 
-      <ModalConfirmarEliminar isOpen={!!viajeAEliminar} onClose={() => setViajeAEliminar(null)} onConfirm={handleConfirmarEliminar}/>
-
-      <div className="p-4 pt-8 bg-white">
-        <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 active:scale-95 transition-all">
-          <ArrowLeft size={16} strokeWidth={3} />
-          <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
-        </button>
-      </div>
-
-      <div className="px-5 space-y-6 flex-1 overflow-y-auto pb-32 bg-white">
-        
-        <div className="bg-slate-100 rounded-full p-1.5 flex relative">
-          <div className={`absolute top-1.5 bottom-1.5 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-1.5 w-[calc(50%-6px)]' : 'left-[calc(50%+3px)] w-[calc(50%-6px)]'}`} />
-          <button onClick={() => setActiveTab('pasajero')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors duration-300 ${activeTab === 'pasajero' ? 'text-white' : 'text-slate-500'}`}>
-            Como Pasajero
+      <div className="p-4 pt-8 bg-white border-b border-slate-100 sticky top-0 z-50">
+        <div className="flex items-center gap-4 mb-6">
+          <button onClick={onRegresar} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 active:scale-90 transition-all border border-slate-100">
+            <ArrowLeft size={20} />
           </button>
-          <button onClick={() => setActiveTab('chofer')} className={`relative flex-1 p-3.5 rounded-full text-[11px] font-black uppercase tracking-[2px] transition-colors duration-300 ${activeTab === 'chofer' ? 'text-white' : 'text-slate-500'}`}>
+          <h2 className="text-xl font-black italic text-slate-800 tracking-tight uppercase">Mis Rutas</h2>
+        </div>
+
+        {/* PESTAÑAS PRINCIPALES */}
+        <div className="flex bg-slate-100 p-1.5 rounded-full relative shadow-inner">
+          <div className={`absolute top-1.5 bottom-1.5 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-[calc(50%+3px)] w-[calc(50%-6px)]' : 'left-1.5 w-[calc(50%-6px)]'}`} />
+          
+          <button onClick={() => setActiveTab('chofer')} className={`relative flex-1 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 flex items-center justify-center gap-2 ${activeTab === 'chofer' ? 'text-white' : 'text-slate-500 hover:text-slate-700'}`}>
             Como Chofer
           </button>
+          <button onClick={() => setActiveTab('pasajero')} className={`relative flex-1 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 flex items-center justify-center gap-2 ${activeTab === 'pasajero' ? 'text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+            Como Pasajero
+          </button>
         </div>
+      </div>
 
-        <div className="space-y-10 pt-4">
-          {activeTab === 'pasajero' ? (
-            <div className="space-y-10">
-                <div className="space-y-6">
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Viajes Activos</p>
-                    {viajesPasajeroActivos.length === 0 ? (
-                        <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
-                            <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>Aún no tienes colas reservadas</p>
-                        </div>
-                    ) : (
-                      viajesPasajeroActivos.map(viaje => (
-                        <ViajeCardPasajero key={viaje.id} viaje={viaje} tipo="activo" onClickGestionar={onVerDetalles} userData={userData} />
-                      ))
-                    )}
-                </div>
-
-                {viajesPasajeroHistorial.length > 0 && (
-                  <div className="space-y-6">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Rutas</p>
-                      {viajesPasajeroHistorial.map(viaje => (
-                          <ViajeCardPasajero key={viaje.id} viaje={viaje} tipo="finalizado" onClickGestionar={onVerDetalles} userData={userData} />
-                      ))}
-                  </div>
-                )}
+      <div className="flex-1 p-4 pb-24 overflow-y-auto">
+        
+        {/* 🔥 PANEL DE CHOFER 🔥 */}
+        {activeTab === 'chofer' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            
+            <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
+              <button onClick={() => setSubTabChofer('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabChofer('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
-          ) : (
-            <div className="space-y-10">
-                <div className="space-y-6">
-                    <p className="text-[11px] font-semibold text-blue-500 uppercase tracking-widest px-1">Mis Publicaciones Activas</p>
-                    
-                    {viajesActivosChoferOrdenados.length === 0 ? (
-                        <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50'>
-                            <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>No tienes viajes activos.</p>
-                        </div>
-                    ) : (
-                      viajesActivosChoferOrdenados.map(viaje => (
-                        <ViajeCardChofer key={viaje.id} viaje={viaje} onEdit={() => setEditingViaje(viaje)} onDelete={() => handleIntentarEliminar(viaje)} onClickGestionar={onVerDetalles} />
-                      ))
-                    )}
-                </div>
 
-                {viajesChofer.filter(v => v.estado === 'finalizado').length > 0 && (
-                  <div className="space-y-6 opacity-80">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest px-1">Historial de Viajes Finalizados</p>
-                      {viajesChofer.filter(v => v.estado === 'finalizado').map(viaje => (
-                        <ViajeCardChofer key={viaje.id} viaje={viaje} onEdit={() => {}} onDelete={() => {}} onClickGestionar={onVerDetalles} />
-                      ))}
-                  </div>
-                )}
+            {subTabChofer === 'activos' ? (
+              viajesChoferActivos.length > 0 ? (
+                <div className="space-y-4">
+                  {viajesChoferActivos.map(viaje => (
+                    <ViajeCardChofer key={viaje.id} viaje={viaje} onEdit={() => setEditingViaje(viaje)} onArchivar={handleArchivarViaje} onClickGestionar={onVerDetalles} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 opacity-60">
+                  <Repeat size={40} className="mx-auto text-slate-300 mb-4" />
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Panel Limpio</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-2">No tienes rutas activas pendientes</p>
+                </div>
+              )
+            ) : (
+              viajesChoferHistorial.length > 0 ? (
+                <div className="space-y-4 opacity-90">
+                  {viajesChoferHistorial.map(viaje => (
+                    <ViajeCardChofer key={viaje.id} viaje={viaje} onEdit={() => {}} onArchivar={() => {}} onClickGestionar={onVerDetalles} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 opacity-60">
+                  <Archive size={40} className="mx-auto text-slate-300 mb-4" />
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Historial Vacío</p>
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* 🔥 PANEL DE PASAJERO 🔥 */}
+        {activeTab === 'pasajero' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            
+            <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
+              <button onClick={() => setSubTabPasajero('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabPasajero('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
-          )}
-        </div>
+
+            {subTabPasajero === 'activos' ? (
+              viajesPasajeroActivos.length > 0 ? (
+                <div className="space-y-4">
+                  {viajesPasajeroActivos.map(viaje => (
+                    <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 opacity-60">
+                  <User size={40} className="mx-auto text-slate-300 mb-4" />
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin reservas</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-2">No has pedido ninguna cola</p>
+                </div>
+              )
+            ) : (
+              viajesPasajeroHistorial.length > 0 ? (
+                <div className="space-y-4 opacity-90">
+                  {viajesPasajeroHistorial.map(viaje => (
+                    <ViajeCardPasajero key={viaje.id} viaje={viaje} userData={userData} onClickGestionar={onVerDetalles} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 opacity-60">
+                  <Archive size={40} className="mx-auto text-slate-300 mb-4" />
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin historial de viajes</p>
+                </div>
+              )
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
