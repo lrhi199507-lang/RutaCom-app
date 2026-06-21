@@ -5,10 +5,8 @@ import { CampanaNotificaciones } from "./CampanaNotificaciones";
 export const Header = ({ userData, modo, onAbrirWallet }) => {
   const nombre = userData?.nombre || "Cargando...";
   
-  // 🔥 CORRECCIÓN: Calculamos el saldo disponible real (Saldo Total - Saldo Retenido)
-  const saldoTotal = typeof userData?.saldo === 'number' ? userData.saldo : 0;
-  const saldoRetenido = typeof userData?.saldoRetenido === 'number' ? userData.saldoRetenido : 0;
-  const saldoDisponible = saldoTotal - saldoRetenido;
+  // 🔥 CORRECCIÓN DEFINITIVA: La nube ya restó el dinero, así que 'saldo' es el real
+  const saldoDisponible = typeof userData?.saldo === 'number' ? userData.saldo : 0;
   const saldoFormateado = saldoDisponible.toFixed(2);
 
   return (
