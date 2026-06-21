@@ -77,11 +77,11 @@ export const Wallet = ({ userData, onRegresar }) => {
     return () => unsub();
   }, [userData?.id]);
 
-  // 🔥 NUEVOS CÁLCULOS DE SALDO BLINDADOS 🔥
-  const saldoTotal = Number(userData?.saldo || 0);
-  const saldoRetenido = Number(userData?.saldoRetenido || 0); // Congelado al pasajero al reservar
-  const saldoEnTransito = Number(userData?.saldoEnTransito || 0); // Lo que el chofer va a cobrar al finalizar
-  const saldoDisponible = saldoTotal - saldoRetenido;
+ // 🔥 CÁLCULOS DE SALDO CORREGIDOS 🔥
+  // La nube ya descontó el dinero, así que 'userData.saldo' ES tu saldo real disponible.
+  const saldoDisponible = Number(userData?.saldo || 0); 
+  const saldoRetenido = Number(userData?.saldoRetenido || 0); // Solo para mostrar el letrerito
+  const saldoEnTransito = Number(userData?.saldoEnTransito || 0); 
   const saldoConvertido = (saldoDisponible * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
 
   const copiarDato = async (texto, campo) => {
