@@ -1279,7 +1279,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
       
-      {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
+            {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
@@ -1292,25 +1292,33 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               ¿Cancelar {modalCancelar.rol === 'chofer' ? 'el Viaje' : 'tu Asiento'}?
             </h3>
             
-            {/* 🔥 ADVERTENCIAS DINÁMICAS SEGÚN EL ESTADO DEL VIAJE 🔥 */}
-            {modalCancelar.rol === 'pasajero' && estadoViaje === 'buscando' ? (
-              <p className="text-[11px] font-bold text-orange-400 mb-6 bg-orange-950/30 p-3 rounded-xl border border-orange-900/50">
-                ¡ATENCIÓN! El chofer ya va en camino a buscarte. Si cancelas ahora, no se te reembolsará el pago para compensar el traslado del conductor.
-              </p>
-            ) : (modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? (
-              <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
-                Al haber pasajeros involucrados, cancelar sumará un "strike" a tu historial (Límite: 3). Recibirás el reembolso en tu wallet.
-              </p>
-            ) : (
-              <p className="text-[11px] font-bold text-emerald-400 mb-6 bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
-                Como el viaje no tiene pasajeros, puedes cancelarlo sin penalización para publicar uno nuevo.
-              </p>
-            )}
+            {/* 🔥 ADVERTENCIAS DINÁMICAS SEGÚN EL ROL Y ESTADO CORREGIDAS 🔥 */}
+            {modalCancelar.rol === 'pasajero' ? (
+              estadoViaje === 'buscando' ? (
+                <p className="text-[11px] font-bold text-orange-400 mb-6 bg-orange-950/30 p-3 rounded-xl border border-orange-900/50">
+                  ¡ATENCIÓN! El chofer ya va en camino a buscarte. Si cancelas ahora, indemnizaremos al conductor con tu pago y no habrá reembolso.
+                </p>
+              ) : (
+                <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
+                  Cancelar sumará un "strike" a tu historial (Límite: 3). El monto pagado será reembolsado a tu saldo disponible inmediatamente.
+                </p>
+              )
+            ) : modalCancelar.rol === 'chofer' ? (
+              pasajerosConfirmados.length > 0 ? (
+                <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
+                  ¡ATENCIÓN! Tienes pasajeros confirmados. Al cancelar, el dinero se les reembolsará a ellos inmediatamente y tú recibirás un "strike" en tu historial de chofer (Límite: 3).
+                </p>
+              ) : (
+                <p className="text-[11px] font-bold text-emerald-400 mb-6 bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
+                  Como el viaje no tiene pasajeros confirmados, puedes cancelarlo sin penalización para publicar uno nuevo.
+                </p>
+              )
+            ) : null}
 
             <div className="text-left mb-6">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Motivo de cancelación:</p>
               <div className="space-y-2">
-                {[ "Emergencia personal / Salud", modalCancelar.rol === 'chofer' ? "Falla mecánica del auto" : "Conseguí otra alternativa", modalCancelar.rol === 'chofer' ? "No conseguí suficientes pasajeros" : "Se canceló mi compromiso", "Otro motivo" ].map(motivo => (
+                {[ "Emergencia personal / Salud", modalCancelar.rol === 'chofer' ? "Falla mecánica del auto" : "Conseguí otra alternativa", modalCancelar.rol === 'chofer' ? "No consiguió suficientes pasajeros" : "Se canceló mi compromiso", "Otro motivo" ].map(motivo => (
                   <button key={motivo} onClick={() => setMotivoCancelacion(motivo)} className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${motivoCancelacion === motivo ? 'bg-red-950/50 border-red-500 text-red-200' : 'bg-slate-900 border-slate-800 text-slate-400'}`}>
                     {motivo}
                   </button>
