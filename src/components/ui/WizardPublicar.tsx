@@ -90,11 +90,30 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
   );
 };
 
-const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo }) => {
+const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada }) => {
   const [hora, setHora] = useState("06");
   const [minuto, setMinuto] = useState("00");
   const [periodo, setPeriodo] = useState("AM");
+
+  // Validación de hora actual si la fecha elegida es "hoy"
+  const horaLocalReal = new Date();
+  const esHoy = fechaSeleccionada === `${horaLocalReal.getFullYear()}-${String(horaLocalReal.getMonth() + 1).padStart(2, '0')}-${String(horaLocalReal.getDate()).padStart(2, '0')}`;
+  const horaActual24 = horaLocalReal.getHours();
+
+  useEffect(() => {
+    // Si abren el modal y es para hoy, forzamos la hora base a la hora siguiente actual
+    if (isOpen && esHoy) {
+      const horaMinima = horaActual24 + 1; // Le sumamos 1 hora para dar margen
+      if (horaMinima < 24) {
+        let hFormat = horaMinima % 12 || 12;
+        setHora(String(hFormat).padStart(2, '0'));
+        setPeriodo(horaMinima >= 12 ? 'PM' : 'AM');
+      }
+    }
+  }, [isOpen, esHoy]);
+
   if (!isOpen) return null;
+
   const handleConfirm = () => {
     let h24 = parseInt(hora);
     if (periodo === "PM" && h24 < 12) h24 += 12;
@@ -102,20 +121,57 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo }) => {
     onConfirm(`${String(h24).padStart(2, '0')}:${minuto}`);
     onClose();
   };
+
+  const getHorasPermitidas = () => {
+    const horasBoton = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+    return horasBoton.map(h => {
+      let hNum = parseInt(h);
+      if (periodo === "PM" && hNum < 12) hNum += 12;
+      if (periodo === "AM" && hNum === 12) hNum = 0;
+      
+      // Si es hoy, bloqueamos las horas pasadas (o la actual para dar margen de tiempo)
+      const bloqueada = esHoy && hNum <= horaActual24;
+      return { valor: h, bloqueada };
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-[400] bg-slate-900/40 backdrop-blur-sm flex items-end justify-center">
       <div className="bg-white w-full max-w-sm rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom">
         <div className="flex justify-between items-center mb-6 font-black uppercase italic text-lg">{titulo}<button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500"><X size={18} /></button></div>
-        <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-[30px] p-6 border mb-6">
-          <div className="flex flex-col items-center h-40 overflow-y-auto scrollbar-hide snap-y">{["01","02","03","04","05","06","07","08","09","10","11","12"].map(h => <button key={h} onClick={() => setHora(h)} className={`snap-center text-3xl font-black ${hora === h ? 'text-blue-600 scale-110' : 'text-slate-300'}`}>{h}</button>)}</div>
-          <span className="text-3xl font-black text-slate-300">:</span>
-          <div className="flex flex-col items-center h-40 overflow-y-auto scrollbar-hide snap-y">{["00","15","30","45"].map(m => <button key={m} onClick={() => setMinuto(m)} className={`snap-center text-3xl font-black ${minuto === m ? 'text-blue-600 scale-110' : 'text-slate-300'}`}>{m}</button>)}</div>
-          <div className="flex flex-col gap-2 ml-4">
-            <button onClick={() => setPeriodo("AM")} className={`py-3 px-4 rounded-2xl font-black text-sm ${periodo === "AM" ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}>AM</button>
-            <button onClick={() => setPeriodo("PM")} className={`py-3 px-4 rounded-2xl font-black text-sm ${periodo === "PM" ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}>PM</button>
+        
+        {esHoy && <p className="text-[10px] text-orange-500 font-bold uppercase mb-4 text-center bg-orange-50 py-2 rounded-xl border border-orange-100">Mostrando solo horas disponibles para hoy</p>}
+
+        <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-[30px] p-6 border mb-6 relative">
+          
+          <div className="flex flex-col items-center h-40 overflow-y-auto scrollbar-hide snap-y">
+            {getHorasPermitidas().map(hObj => (
+              <button 
+                key={hObj.valor} 
+                disabled={hObj.bloqueada}
+                onClick={() => setHora(hObj.valor)} 
+                className={`snap-center text-3xl font-black transition-all ${hObj.bloqueada ? 'text-slate-200 opacity-30 line-through' : hora === hObj.valor ? 'text-blue-600 scale-110' : 'text-slate-300'}`}
+              >
+                {hObj.valor}
+              </button>
+            ))}
           </div>
+          
+          <span className="text-3xl font-black text-slate-300">:</span>
+          
+          <div className="flex flex-col items-center h-40 overflow-y-auto scrollbar-hide snap-y">
+            {["00","15","30","45"].map(m => (
+              <button key={m} onClick={() => setMinuto(m)} className={`snap-center text-3xl font-black ${minuto === m ? 'text-blue-600 scale-110' : 'text-slate-300'}`}>{m}</button>
+            ))}
+          </div>
+          
+          <div className="flex flex-col gap-2 ml-4">
+            <button disabled={esHoy && horaActual24 >= 12} onClick={() => setPeriodo("AM")} className={`py-3 px-4 rounded-2xl font-black text-sm transition-all ${periodo === "AM" ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'} ${esHoy && horaActual24 >= 12 ? 'opacity-30 line-through' : ''}`}>AM</button>
+            <button onClick={() => setPeriodo("PM")} className={`py-3 px-4 rounded-2xl font-black text-sm transition-all ${periodo === "PM" ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}>PM</button>
+          </div>
+
         </div>
-        <button onClick={handleConfirm} className="w-full bg-slate-900 text-white rounded-full p-4 font-black uppercase text-xs">Confirmar Hora</button>
+        <button onClick={handleConfirm} className="w-full bg-slate-900 text-white rounded-full p-4 font-black uppercase text-xs active:scale-95 transition-all">Confirmar Hora</button>
       </div>
     </div>
   );
