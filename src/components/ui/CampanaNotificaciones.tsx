@@ -22,19 +22,15 @@ export const CampanaNotificaciones = ({ userData }) => {
         lista.push({ id: d.id, ...d.data() });
       });
       
-      // 🔥 CORRECCIÓN AQUÍ: Extracción de milisegundos reales para evitar el NaN
       lista.sort((a, b) => {
         const obtenerMilis = (item) => {
           const valor = item.fecha || item.timestamp;
           if (!valor) return 0;
-          
           if (valor.toMillis) return valor.toMillis();
           if (valor.toDate) return valor.toDate().getTime();
-          
           return new Date(valor).getTime() || 0;
         };
-
-        return obtenerMilis(b) - obtenerMilis(a); // De más reciente a más antigua
+        return obtenerMilis(b) - obtenerMilis(a);
       });
       
       setNotificaciones(lista);
@@ -43,11 +39,13 @@ export const CampanaNotificaciones = ({ userData }) => {
     return () => unsub();
   }, [userData]);
   
-  const noLeidas = notificaciones.filter(n => !n.leido).length;
+  // 🔥 CORRECCIÓN: Cubrimos ambos casos ('leido' y 'leida')
+  const noLeidas = notificaciones.filter(n => n.leido !== true && n.leida !== true).length;
 
   const marcarComoLeida = async (id) => {
     try {
-      await updateDoc(doc(db, "Notificaciones", id), { leido: true });
+      // Actualizamos ambos para que no haya fallos
+      await updateDoc(doc(db, "Notificaciones", id), { leido: true, leida: true });
     } catch (error) { console.error("Error al marcar leída", error); }
   };
 
@@ -59,13 +57,13 @@ export const CampanaNotificaciones = ({ userData }) => {
 
   const marcarTodasLeidas = async () => {
     const batch = writeBatch(db);
-    const noLeidasArr = notificaciones.filter(n => !n.leido);
+    const noLeidasArr = notificaciones.filter(n => n.leido !== true && n.leida !== true);
     
     if (noLeidasArr.length === 0) return;
 
     noLeidasArr.forEach((n) => {
       const ref = doc(db, "Notificaciones", n.id);
-      batch.update(ref, { leido: true });
+      batch.update(ref, { leido: true, leida: true });
     });
 
     try {
@@ -127,21 +125,24 @@ export const CampanaNotificaciones = ({ userData }) => {
                     <p className="text-[10px] font-black uppercase tracking-widest">No tienes mensajes nuevos</p>
                   </div>
                 ) : (
-                  notificaciones.map(notif => (
-                    <div key={notif.id} className={`p-4 rounded-[20px] flex gap-3 relative transition-colors ${!notif.leido ? 'bg-white border-l-4 border-blue-500 shadow-sm cursor-pointer' : 'bg-slate-100 opacity-70'}`} onClick={() => !notif.leido && marcarComoLeida(notif.id)}>
-                      <div className="shrink-0 mt-0.5">{obtenerIcono(notif.tipo)}</div>
-                      <div className="flex-1 min-w-0 pr-6">
-                        <p className={`text-[10px] uppercase tracking-wider truncate ${!notif.leido ? 'font-black text-slate-800' : 'font-bold text-slate-500'}`}>{notif.titulo}</p>
-                        <p className="text-xs font-medium text-slate-600 mt-0.5 leading-snug">{notif.mensaje}</p>
-                        <p className="text-[8px] font-black text-slate-400 mt-2 uppercase">
-                          {formatearFecha(notif.fecha || notif.timestamp)}
-                        </p>
+                  notificaciones.map(notif => {
+                    const esNoLeida = notif.leido !== true && notif.leida !== true;
+                    return (
+                      <div key={notif.id} className={`p-4 rounded-[20px] flex gap-3 relative transition-colors ${esNoLeida ? 'bg-white border-l-4 border-blue-500 shadow-sm cursor-pointer' : 'bg-slate-100 opacity-70'}`} onClick={() => esNoLeida && marcarComoLeida(notif.id)}>
+                        <div className="shrink-0 mt-0.5">{obtenerIcono(notif.tipo)}</div>
+                        <div className="flex-1 min-w-0 pr-6">
+                          <p className={`text-[10px] uppercase tracking-wider truncate ${esNoLeida ? 'font-black text-slate-800' : 'font-bold text-slate-500'}`}>{notif.titulo}</p>
+                          <p className="text-xs font-medium text-slate-600 mt-0.5 leading-snug">{notif.mensaje}</p>
+                          <p className="text-[8px] font-black text-slate-400 mt-2 uppercase">
+                            {formatearFecha(notif.fecha || notif.timestamp)}
+                          </p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); eliminarNotificacion(notif.id); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); eliminarNotificacion(notif.id); }} className="absolute top-4 right-4 text-slate-300 hover:text-red-500">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
