@@ -451,8 +451,8 @@ const confirmarUbicacionMapa = async () => {
           <button type="button" onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px] transition-all active:scale-95"> Atrás </button>
           <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg disabled:opacity-50 transition-all">Siguiente</button>    
         </div>
-        <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(h) => setViajeForm({...viajeForm, hora: h})} titulo="Hora de Salida" />
-        <ModalHoraCustom isOpen={showTimeModalRegreso} onClose={() => setShowTimeModalRegreso(false)} onConfirm={(h) => setViajeForm({...viajeForm, horaRegreso: h})} titulo="Hora de Retorno" />
+       <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(h) => setViajeForm({...viajeForm, hora: h})} titulo="Hora de Salida" fechaSeleccionada={viajeForm.fecha} />
+        <ModalHoraCustom isOpen={showTimeModalRegreso} onClose={() => setShowTimeModalRegreso(false)} onConfirm={(h) => setViajeForm({...viajeForm, horaRegreso: h})} titulo="Hora de Retorno" fechaSeleccionada={viajeForm.fechaRegreso} />
       </div>
     );
   }
