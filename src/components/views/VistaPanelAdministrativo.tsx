@@ -275,16 +275,45 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     setCargando(true);
     try {
       await updateDoc(doc(db, "usuarios", userId), { kycVerificado: true, licenciaVerificada: true, circulacionVerificada: true, rcvVerificado: true, fotoFrontalVerificada: true, fotoTraseraVerificada: true, fotoLatIzqVerificada: true, fotoLatDerVerificada: true, selfieVerificada: true, estadoRevision: "aprobado" });
+      
+      // 🔥 NOTIFICACIÓN DE APROBACIÓN KYC
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: userId,
+        titulo: "PERFIL VERIFICADO ✅",
+        mensaje: "¡Felicidades! Tus documentos han sido aprobados. Ya tienes la insignia de confianza en tu perfil.",
+        timestamp: Date.now(),
+        leida: false
+      });
+
       await cargarDatosAdmin();
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
   
   const rechazarDocumentos = async (userId: string) => {
     if (!window.confirm("¿Rechazar fotos?")) return;
+    setCargando(true); 
     try {
-      await updateDoc(doc(db, "usuarios", userId), { kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false, fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false, licenciaVerificada: false, rcvVerificado: false, kycFoto: null, selfieFoto: null, fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null, licenciaFoto: null, rcvFoto: null, estadoRevision: "rechazado" });
+      // Se borran las fotos inválidas y se marca como rechazado
+      await updateDoc(doc(db, "usuarios", userId), { 
+        kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false, 
+        fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false, 
+        licenciaVerificada: false, rcvVerificado: false, kycFoto: null, selfieFoto: null, 
+        fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null, 
+        licenciaFoto: null, rcvFoto: null, estadoRevision: "rechazado",
+        mensajeAdmin: "Tus fotos no eran claras o estaban incompletas. Por favor, súbelas de nuevo."
+      });
+      
+      // 🔥 NOTIFICACIÓN DE RECHAZO KYC
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: userId,
+        titulo: "DOCUMENTOS RECHAZADOS ⚠️",
+        mensaje: "Algunas de tus fotos no cumplen con los requisitos o están borrosas. Entra a tu cuenta y vuelve a subirlas.",
+        timestamp: Date.now(),
+        leida: false
+      });
+
       await cargarDatosAdmin(); 
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
   const suspenderUsuario = async (userId: string) => {
