@@ -9,12 +9,61 @@ import { getAuth, signOut } from 'firebase/auth';
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, AlertCircle, AlertTriangle, Car, Palette, 
-  Hash, Gauge, LogOut, Camera, Image as ImageIcon 
+  Hash, Gauge, LogOut, Camera, Image as ImageIcon,
+  BookOpen, Users, Clock, X // <-- Íconos nuevos agregados aquí
 } from 'lucide-react';
 import { VistaPanelAdministrativo } from './VistaPanelAdministrativo';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
 const auth = getAuth();
+
+// --- NUEVO COMPONENTE: MODAL DE REGLAS ---
+const ModalComoFunciona = ({ isOpen, onClose }: any) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[500] bg-slate-900/40 backdrop-blur-sm flex items-end justify-center">
+      <div className="bg-white w-full max-w-md rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto no-scrollbar">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-black italic uppercase text-slate-800 tracking-tighter">¿Cómo funciona?</h2>
+          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500 active:scale-95 transition-all">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-blue-50 p-5 rounded-[25px] flex gap-4">
+            <div className="mt-1"><Users className="text-blue-600" size={24} /></div>
+            <div>
+              <h3 className="font-black uppercase text-[11px] text-blue-800 tracking-widest mb-1">No somos un taxi privado</h3>
+              <p className="text-xs text-blue-700 font-medium leading-relaxed">Dame la Cola conecta a personas que van hacia la misma ciudad. El chofer puede recoger a otros pasajeros en el camino para llenar los asientos vacíos.</p>
+            </div>
+          </div>
+
+          <div className="bg-emerald-50 p-5 rounded-[25px] flex gap-4">
+            <div className="mt-1"><ShieldCheck className="text-emerald-600" size={24} /></div>
+            <div>
+              <h3 className="font-black uppercase text-[11px] text-emerald-800 tracking-widest mb-1">Costos compartidos</h3>
+              <p className="text-xs text-emerald-700 font-medium leading-relaxed">El precio no es el de un viaje privado. Pagas solo por tu asiento para ayudar al conductor a cubrir los gastos de la ruta (gasolina, peajes, etc).</p>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 p-5 rounded-[25px] flex gap-4">
+            <div className="mt-1"><Clock className="text-amber-600" size={24} /></div>
+            <div>
+              <h3 className="font-black uppercase text-[11px] text-amber-800 tracking-widest mb-1">Puntualidad y Respeto</h3>
+              <p className="text-xs text-amber-700 font-medium leading-relaxed">Al ser un viaje compartido, el tiempo de todos vale. Llega a la hora acordada al punto de encuentro para no retrasar a los demás pasajeros.</p>
+            </div>
+          </div>
+        </div>
+
+        <button onClick={onClose} className="w-full bg-slate-900 text-white rounded-full p-4 font-black uppercase text-xs mt-6 active:scale-95 transition-all">
+          ¡Entendido!
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -30,6 +79,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [modalClave, setModalClave] = useState(false);
   const [passActual, setPassActual] = useState('');
   const [passNueva, setPassNueva] = useState('');
+  
+  // --- NUEVO ESTADO PARA CONTROLAR EL MODAL DE REGLAS ---
+  const [showReglas, setShowReglas] = useState(false);
 
   useEffect(() => {
     let listenerHandle: any = null;
@@ -54,14 +106,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   const view = pestañaActiva || 'publico';
-  // ✅ USA ESTO:
-const esAdmin = userData?.rol === 'admin';
+  const esAdmin = userData?.rol === 'admin';
   
- const viajesCond = userData.viajesRealizados || 0;
+  const viajesCond = userData.viajesRealizados || 0;
   const viajesPas = userData.viajesComoPasajero || 0;
   const totalTrayectoria = viajesCond + viajesPas;
   
-  // NUEVA LÓGICA CONECTADA AL CEREBRO CENTRAL
   const rangoDatos = calcularRangoGlobal(totalTrayectoria);
   const faltan = rangoDatos.meta - totalTrayectoria;
   const porcentajeNivel = Math.min((totalTrayectoria / rangoDatos.meta) * 100, 100);
@@ -334,6 +384,24 @@ const esAdmin = userData?.rol === 'admin';
 
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
+            
+            {/* 🔥 NUEVO BOTÓN DE REGLAS AQUÍ ARRIBA 🔥 */}
+            <button 
+              onClick={() => setShowReglas(true)} 
+              className="w-full flex items-center justify-between p-5 bg-blue-50 border border-blue-100 rounded-[30px] active:scale-95 transition-all shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
+                  <BookOpen size={20} />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-black uppercase text-[12px] text-blue-900 tracking-widest mb-0.5">Guía de la App</h3>
+                  <p className="text-[10px] text-blue-700 font-bold">¿Cómo funciona Dame la Cola?</p>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-blue-300" />
+            </button>
+
             {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
               <div className="mx-2 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6">
                 <div className="flex items-start gap-4">
@@ -354,7 +422,7 @@ const esAdmin = userData?.rol === 'admin';
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
                 <MenuButton icon={UserCog} label="Sobre mí (Bio)" value={userData?.bio || "Escribe algo sobre ti..."} onClick={() => { setTipoEdicion({id: 'bio', label: 'Biografía', valor: userData?.bio}); setNuevoValor(userData?.bio || ""); setModalVisible(true); }} />
                 <MenuButton icon={User} label="Correo Electrónico" value={userData.correo || auth.currentUser?.email} onClick={() => { setToast({ texto: "El correo no puede modificarse de forma directa.", tipo: "error" }); }} />
-                <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña" onClick={() => setModalClave(true)} />    
+                <MenuButton icon={ShieldCheck} label="Seguridad" value="Cambiar Contraseña" onClick={() => setModalClave(true)} />   
               </div>
             </div>
 
@@ -523,6 +591,10 @@ const esAdmin = userData?.rol === 'admin';
           )}
         </div>
       )}
+
+      {/* RENDER DEL MODAL DE REGLAS */}
+      <ModalComoFunciona isOpen={showReglas} onClose={() => setShowReglas(false)} />
+
     </div>
   );
 };
