@@ -208,8 +208,10 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         idDestino: pago.uid,
         titulo: "RECARGA EXITOSA 💰",
         mensaje: `Tu recarga de $${pago.monto} ha sido aprobada. El dinero ya está disponible en tu billetera.`,
-        timestamp: Date.now(),
-        leida: false
+        fecha: new Date().toISOString(),
+        tipo: "exito",
+        leida: false,
+        leido: false
       });
 
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
@@ -224,12 +226,14 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
       await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(-pago.monto), saldoRetenido: increment(-pago.monto) });
       
       // 🔥 NOTIFICACIÓN DE RETIRO EXITOSO
-      await addDoc(collection(db, "Notificaciones"), {
+    await addDoc(collection(db, "Notificaciones"), {
         idDestino: pago.uid,
         titulo: "RETIRO COMPLETADO 💸",
         mensaje: `Tu retiro de $${pago.monto} ha sido procesado con éxito. El dinero fue enviado a tu cuenta.`,
-        timestamp: Date.now(),
-        leida: false
+        fecha: new Date().toISOString(),
+        tipo: "exito",
+        leida: false,
+        leido: false
       });
 
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
@@ -248,14 +252,16 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
       }
 
       // 🔥 NOTIFICACIÓN DE PAGO RECHAZADO
-      await addDoc(collection(db, "Notificaciones"), {
+     await addDoc(collection(db, "Notificaciones"), {
         idDestino: pago.uid,
         titulo: pago.tipo === 'retiro' ? "RETIRO RECHAZADO ❌" : "RECARGA RECHAZADA ❌",
         mensaje: pago.tipo === 'retiro' 
           ? `No pudimos procesar tu retiro de $${pago.monto}. Por favor, verifica tus datos bancarios en soporte.` 
           : `Tu recarga de $${pago.monto} ha sido rechazada. El comprobante no es válido o es ilegible.`,
-        timestamp: Date.now(),
-        leida: false
+        fecha: new Date().toISOString(),
+        tipo: "alerta",
+        leida: false,
+        leido: false
       });
 
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
@@ -281,10 +287,12 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
         idDestino: userId,
         titulo: "PERFIL VERIFICADO ✅",
         mensaje: "¡Felicidades! Tus documentos han sido aprobados. Ya tienes la insignia de confianza en tu perfil.",
-        timestamp: Date.now(),
-        leida: false
+        fecha: new Date().toISOString(),
+        tipo: "exito",
+        leida: false,
+        leido: false
       });
-
+      
       await cargarDatosAdmin();
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
@@ -294,13 +302,14 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     setCargando(true); 
     try {
       // Se borran las fotos inválidas y se marca como rechazado
-      await updateDoc(doc(db, "usuarios", userId), { 
-        kycVerificado: false, selfieVerificada: false, fotoFrontalVerificada: false, 
-        fotoTraseraVerificada: false, fotoLatIzqVerificada: false, fotoLatDerVerificada: false, 
-        licenciaVerificada: false, rcvVerificado: false, kycFoto: null, selfieFoto: null, 
-        fotoFrontal: null, fotoTrasera: null, fotoLatIzq: null, fotoLatDer: null, 
-        licenciaFoto: null, rcvFoto: null, estadoRevision: "rechazado",
-        mensajeAdmin: "Tus fotos no eran claras o estaban incompletas. Por favor, súbelas de nuevo."
+    await addDoc(collection(db, "Notificaciones"), {
+        idDestino: userId,
+        titulo: "DOCUMENTOS RECHAZADOS ⚠️",
+        mensaje: "Algunas de tus fotos no cumplen con los requisitos o están borrosas. Entra a tu cuenta y vuelve a subirlas.",
+        fecha: new Date().toISOString(),
+        tipo: "alerta",
+        leida: false,
+        leido: false
       });
       
       // 🔥 NOTIFICACIÓN DE RECHAZO KYC
