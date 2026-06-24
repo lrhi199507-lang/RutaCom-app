@@ -202,6 +202,16 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
       await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(pago.monto) });
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
       await addDoc(collection(db, "Transacciones"), { uid: pago.uid, tipo: "ingreso", monto: pago.monto, descripcion: "Recarga aprobada", fecha: new Date().toISOString() });
+      
+      // 🔥 NOTIFICACIÓN DE RECARGA EXITOSA
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: pago.uid,
+        titulo: "RECARGA EXITOSA 💰",
+        mensaje: `Tu recarga de $${pago.monto} ha sido aprobada. El dinero ya está disponible en tu billetera.`,
+        timestamp: Date.now(),
+        leida: false
+      });
+
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
@@ -212,18 +222,42 @@ export const VistaPanelAdministrativo = ({ setPestañaActiva, onAbrirChat }: any
     try {
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "aprobado", fechaAprobacion: new Date().toISOString() });
       await updateDoc(doc(db, "usuarios", pago.uid), { saldo: increment(-pago.monto), saldoRetenido: increment(-pago.monto) });
+      
+      // 🔥 NOTIFICACIÓN DE RETIRO EXITOSO
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: pago.uid,
+        titulo: "RETIRO COMPLETADO 💸",
+        mensaje: `Tu retiro de $${pago.monto} ha sido procesado con éxito. El dinero fue enviado a tu cuenta.`,
+        timestamp: Date.now(),
+        leida: false
+      });
+
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
   
   const rechazarPago = async (pago: any) => {
-    if(!window.confirm('¿Rechazar?')) return;
+    if(!window.confirm('¿Rechazar este pago?')) return;
     setCargando(true);
     try {
       await updateDoc(doc(db, "PagosPendientes", pago.id), { estado: "rechazado" });
+      
+      // Si era un retiro que se rechazó, le devolvemos el saldo retenido a su billetera principal
       if (pago.tipo === 'retiro') {
         await updateDoc(doc(db, "usuarios", pago.uid), { saldoRetenido: increment(-pago.monto) });
       }
+
+      // 🔥 NOTIFICACIÓN DE PAGO RECHAZADO
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: pago.uid,
+        titulo: pago.tipo === 'retiro' ? "RETIRO RECHAZADO ❌" : "RECARGA RECHAZADA ❌",
+        mensaje: pago.tipo === 'retiro' 
+          ? `No pudimos procesar tu retiro de $${pago.monto}. Por favor, verifica tus datos bancarios en soporte.` 
+          : `Tu recarga de $${pago.monto} ha sido rechazada. El comprobante no es válido o es ilegible.`,
+        timestamp: Date.now(),
+        leida: false
+      });
+
       setPagosAdmin(pagosAdmin.filter(p => p.id !== pago.id));
     } catch (error) { console.error(error); } finally { setCargando(false); }
   };
