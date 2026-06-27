@@ -212,6 +212,24 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
+  // 🔥 NUEVA FUNCIÓN CRÍTICA: Verifica si la fecha y hora ya pasaron
+  const verificarSiExpiro = (viaje) => {
+    try {
+      const fecha = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
+      const hora = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
+      
+      if (!fecha || !hora) return false;
+
+      const [year, month, day] = fecha.split('-');
+      const [hour, minute] = hora.split(':');
+      
+      const fechaViaje = new Date(year, month - 1, day, hour, minute);
+      return fechaViaje < new Date(); // Retorna true si ya pasó
+    } catch (e) {
+      return false;
+    }
+  };
+
   let cActivos = []; let cHistorial = [];
   let pActivos = []; let pHistorial = [];
 
@@ -220,7 +238,13 @@ export const VistaMisViajes = ({
     listC.forEach(v => {
       if (v && v.id) {
         const est = String(v.estado || '');
-        if (est === 'finalizado' || est === 'cancelado') cHistorial.push(v); else cActivos.push(v);
+        const expiro = verificarSiExpiro(v);
+        // 🔥 Si finalizó, canceló, o ya pasó la fecha, va al historial
+        if (est === 'finalizado' || est === 'cancelado' || expiro) {
+          cHistorial.push(v);
+        } else {
+          cActivos.push(v);
+        }
       }
     });
   } catch (e) {}
@@ -235,7 +259,13 @@ export const VistaMisViajes = ({
 
     Object.values(unicos).forEach(v => {
       const est = String(v.estado || '');
-      if (est === 'finalizado' || est === 'cancelado') pHistorial.push(v); else pActivos.push(v);
+      const expiro = verificarSiExpiro(v);
+      // 🔥 Igual para el pasajero: forzar al historial si expiró
+      if (est === 'finalizado' || est === 'cancelado' || expiro) {
+        pHistorial.push(v);
+      } else {
+        pActivos.push(v);
+      }
     });
   } catch (e) {}
 
