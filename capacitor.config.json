@@ -1,0 +1,8 @@
+{
+  "appId": "com.damelacola.app",
+  "appName": "Dame la cola",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
