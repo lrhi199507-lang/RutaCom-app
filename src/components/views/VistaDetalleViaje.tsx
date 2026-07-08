@@ -82,7 +82,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [verPerfil, setVerPerfil] = useState(false);
   const [cargando, setCargando] = useState(false);
   
-  const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
+  const [toast, setToast] = useState(null);
 
   const setToastMessage = (msg) => {
     setToast({texto: msg, tipo: "exito"});
@@ -92,6 +92,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [modalAbordaje, setModalAbordaje] = useState(false);
   const [pinesIngresados, setPinesIngresados] = useState({});
   const [modalFinalizar, setModalFinalizar] = useState(false);
+
+  // 🔥 NUEVO: ESTADO PARA EL TEMPORIZADOR DE ESPERA 🔥
+  const [tiempoEsperaAbordaje, setTiempoEsperaAbordaje] = useState(300); // 300 segundos = 5 minutos
 
   const [modalCalificacion, setModalCalificacion] = useState(false);
   const [stars, setStars] = useState(0);
@@ -197,6 +200,23 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSoyPasajero = !!miReserva;
   const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
 
+  // 🔥 NUEVO: EFFECT PARA EL TEMPORIZADOR DEL MODAL DE ABORDAJE 🔥
+  useEffect(() => {
+    let interval;
+    if (modalAbordaje && tiempoEsperaAbordaje > 0) {
+      interval = setInterval(() => {
+        setTiempoEsperaAbordaje((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [modalAbordaje, tiempoEsperaAbordaje]);
+
+  const formatoTiempo = (segundos) => {
+    const m = Math.floor(segundos / 60);
+    const s = segundos % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   useEffect(() => {
     if (soyConductor || !userData?.id || yaSoyPasajero || yaSolicite) {
       setRevisandoBloqueo(false);
@@ -273,7 +293,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   }, [viaje?.estado, viaje?.pasajeros, userData?.id]);
   
   const puestosTotales = Number(viaje?.asientos) || Number(viaje?.puestos) || 1;
-  const asientosOcupados = pasajerosConfirmados.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
+  // Solo sumamos los asientos de los que no están marcados como 'ausente'
+  const asientosOcupados = pasajerosConfirmados.reduce((total, p) => {
+    return p.abordado === 'ausente' ? total : total + (Number(p?.puestosSolicitados) || 1);
+  }, 0);
   const cuposRestantes = Math.max(0, puestosTotales - asientosOcupados);
   const puestosQueQuiero = 1 + adultosExtra + ninosExtra;
   
@@ -284,8 +307,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const notificarLlegadaYAbrirModal = async () => {
     setModalAbordaje(true); 
+    setTiempoEsperaAbordaje(300); // Reiniciamos el timer cada vez que abre el modal
     const promesasNotificaciones = pasajerosConfirmados.map(p => {
-      if (p && !p.abordado && (p.id || p.uid)) {
+      if (p && !p.abordado && p.abordado !== 'ausente' && (p.id || p.uid)) {
         return enviarNotificacion(
           p.id || p.uid,
           "🚘 ¡Tu chofer ha llegado!",
@@ -355,7 +379,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => onRegresar(), 150);
       }
       
-    } catch (e: any) {
+    } catch (e) {
       setToast({ texto: "Error de conexión al abrir chat", tipo: "error" });
       setTimeout(() => setToast(null), 3500);
     } finally {
@@ -379,7 +403,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-  // 🔥 1. FUNCIÓN DE PEDIR COLA (AUTO-ACEPTAR CORREGIDO CON URL) 🔥
   const solicitarCola = async () => {
     const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
     const miSaldoActual = Number(userData?.saldo || 0);
@@ -424,12 +447,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         ninosExtra: Number(ninosExtra),
         lat: lat,
         lng: lng,
-        boardado: false,
+        boardado: false, // Legacy
+        abordado: false, // Nueva propiedad individual
       };
 
       const esAutoAceptar = viaje.autoAceptar === true;
 
-      // Se guarda la solicitud
       await ejecutarConTimeout(addDoc(collection(db, "Solicitudes"), {
         idConductor: String(idConductor),
         nombrePasajero: String(nombreUsuario),
@@ -440,12 +463,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         fecha: serverTimestamp()
       }));
 
-     // 🔥 AUTO ACEPTAR MEDIANTE URL DIRECTA 🔥
       if (esAutoAceptar) {
         const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
         
         await ejecutarConTimeout(procesadorEnNube({ 
-          accion: 'reservar', // <--- ESTO ES LA CLAVE
+          accion: 'reservar', 
           viajeId: viaje.id, 
           pasajeroId: String(miId), 
           puestosSolicitados: Number(puestosQueQuiero),
@@ -470,9 +492,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setModalAcompanantes(false); 
       setTimeout(() => setToast(null), 3000);
 
-    } catch (e: any) { 
-      console.error("ERROR REAL AL PEDIR COLA:", e);
-      // 🔥 QUITAMOS LA MÁSCARA DEL ERROR 🔥
+    } catch (e) { 
       const mensajeReal = e.message === "TIMEOUT_RED" ? "Red lenta. Procesando..." : `Fallo: ${e.message}`;
       setToast({ texto: mensajeReal, tipo: "error" });
       setTimeout(() => setToast(null), 5000);
@@ -511,7 +531,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
-    } catch (error: any) {
+    } catch (error) {
       const mensajeReal = error.message === "TIMEOUT_RED" ? "Red inestable. Procesando..." : `Fallo: ${error.message}`;
       setToast({ texto: mensajeReal, tipo: "error" });
       setTimeout(() => setToast(null), 5000);
@@ -520,7 +540,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  // 🔥 2. GESTIONAR SOLICITUD (CHOFER ACEPTA CON URL) 🔥
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
     try {
@@ -534,11 +553,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           setCargando(false); return; 
         }
 
-       // Llamada usando URL Directa a Google Cloud
         const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
         
         await ejecutarConTimeout(procesadorEnNube({ 
-          accion: 'reservar', // <--- ESTO ES LA CLAVE
+          accion: 'reservar', 
           viajeId: viaje.id, 
           pasajeroId: idPasajero, 
           puestosSolicitados: puestosQuePidio,
@@ -555,7 +573,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         await enviarNotificacion(idPasajero, "Solicitud no confirmada", "El conductor no pudo procesar tu solicitud.", "alerta");
         setToast({ texto: "Solicitud rechazada", tipo: "exito" });
       }
-    } catch (e: any) { 
+    } catch (e) { 
       const mensajeReal = e.message === "TIMEOUT_RED" ? "Reintentando cobro..." : `Fallo: ${e.message}`;
       setToast({ texto: mensajeReal, tipo: "error" });
       setTimeout(() => setToast(null), 5000);
@@ -564,25 +582,72 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
   
-  const procesarAbordajeEIniciar = async () => {
+  // 🔥 NUEVO: FUNCIÓN PARA VALIDAR UN SOLO PASAJERO A LA VEZ 🔥
+  const validarPinIndividual = async (pasajero) => {
+    const idPasajero = pasajero.id || pasajero.uid;
+    const pinIngresado = String(pinesIngresados[idPasajero] || "").trim();
+    const pinReal = String(pasajero.pin || "").trim();
+
+    if (pinIngresado !== pinReal || pinReal === "") {
+      setToast({ texto: "PIN Incorrecto", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
     setCargando(true);
     try {
       const pasajerosActualizados = pasajerosConfirmados.map(p => {
         if (!p) return null;
-        const idPasajero = p.id || p.uid;
-        const pinIngresado = String(pinesIngresados[idPasajero] || "").trim();
-        const pinReal = String(p.pin || "").trim();
-        return (pinIngresado === pinReal && pinReal !== "") ? { ...p, abordado: true } : { ...p, abordado: false }; 
+        if ((p.id || p.uid) === idPasajero) return { ...p, abordado: true };
+        return p;
       }).filter(Boolean);
 
-      await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { estado: 'en_curso', pasajeros: pasajerosActualizados }));
+      await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados }));
+      setToast({ texto: `${pasajero.nombre} validado con éxito`, tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e) {
+      setToast({ texto: "Error al validar. Revisa tu señal.", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // 🔥 NUEVO: FUNCIÓN PARA MARCAR COMO AUSENTE 🔥
+  const marcarPasajeroAusente = async (pasajero) => {
+    setCargando(true);
+    try {
+      const pasajerosActualizados = pasajerosConfirmados.map(p => {
+        if (!p) return null;
+        if ((p.id || p.uid) === (pasajero.id || pasajero.uid)) return { ...p, abordado: 'ausente' };
+        return p;
+      }).filter(Boolean);
+
+      await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados }));
+      setToast({ texto: `${pasajero.nombre} marcado como ausente`, tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e) {
+      setToast({ texto: "Error al actualizar.", tipo: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // 🔥 NUEVO: FUNCIÓN MAESTRA PARA INICIAR EL VIAJE DEFINITIVO 🔥
+  const iniciarRutaDefinitiva = async () => {
+    setCargando(true);
+    try {
+      await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { estado: 'en_curso' }));
       setModalAbordaje(false);
-      setToast({ texto: "¡Viaje Iniciado!", tipo: "exito" });
+      setToast({ texto: "¡Buen Viaje! Ruta Iniciada", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
-    } catch (e: any) { 
-      setToast({ texto: "Error al iniciar. Revisa tu señal.", tipo: "error" });
+    } catch (e) { 
+      setToast({ texto: "Error al iniciar ruta.", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
+    } finally { 
+      setCargando(false); 
+    }
   };
 
   const iniciarFinalizacion = () => {
@@ -612,7 +677,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setModalCalificarPasajeros(false);
         onRegresar(); 
       }
-    } catch (e: any) { 
+    } catch (e) { 
       setToast({ texto: "Error al cobrar o procesar el viaje. Intenta otra vez.", tipo: "error" });
       setTimeout(() => setToast(null), 3500);
     } finally { setCargando(false); }
@@ -635,7 +700,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       
       if (nuevoEstado === 'finalizado') onRegresar(); 
       setTimeout(() => setToast(null), 3000);
-    } catch (e: any) {
+    } catch (e) {
       setToast({ texto: "Error al actualizar estado", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
@@ -662,7 +727,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       setModalCalificacion(false);
       setToast({ texto: "¡Gracias por calificar!", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
-    } catch (e: any) { 
+    } catch (e) { 
       setToast({ texto: "Error al guardar reseña", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
@@ -756,22 +821,25 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               <div className="space-y-3">
                  {pasajerosConfirmados.map((p, index) => {
                    if (!p) return null;
+                   const ausente = p.abordado === 'ausente';
+                   const aBordo = p.abordado === true || p.boardado === true;
+
                    return (
-                     <div key={`hud-${p.id || p.uid || index}`} className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-[25px] border border-slate-100">
+                     <div key={`hud-${p.id || p.uid || index}`} className={`flex items-center gap-3 p-3.5 rounded-[25px] border ${ausente ? 'bg-red-50/50 border-red-100 opacity-60' : 'bg-slate-50 border-slate-100'}`}>
                        <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                           {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-400" />}
                        </div>
                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-xs uppercase text-slate-700 truncate">{String(p.nombre || "Usuario")}</p>
-                          <p className={`text-[8px] font-black uppercase mt-0.5 ${p.boardado || p.abordado ? 'text-green-500' : 'text-amber-500'}`}>
-                            {(p.boardado || p.abordado) ? 'A Bordo (Validado)' : 'Falta Validar PIN'}
+                          <p className={`font-black text-xs uppercase truncate ${ausente ? 'text-red-700 line-through' : 'text-slate-700'}`}>{String(p.nombre || "Usuario")}</p>
+                          <p className={`text-[8px] font-black uppercase mt-0.5 ${aBordo ? 'text-green-500' : (ausente ? 'text-red-500' : 'text-amber-500')}`}>
+                            {aBordo ? 'A Bordo (Validado)' : (ausente ? 'No se presentó' : 'Falta Validar PIN')}
                           </p>
                        </div>
-                       <div className={`${(p.boardado || p.abordado) ? 'bg-green-100' : 'bg-amber-100'} p-2 rounded-full shrink-0`}>
-                         {(p.boardado || p.abordado) ? <ShieldCheck size={18} className="text-green-600" /> : <Clock size={18} className="text-amber-600" />}
+                       <div className={`${aBordo ? 'bg-green-100' : (ausente ? 'bg-red-100' : 'bg-amber-100')} p-2 rounded-full shrink-0`}>
+                         {aBordo ? <ShieldCheck size={18} className="text-green-600" /> : (ausente ? <X size={18} className="text-red-600" /> : <Clock size={18} className="text-amber-600" />)}
                        </div>
                        
-                       {soyConductor && (
+                       {soyConductor && !ausente && (
                          <button disabled={cargando} onClick={(e) => {  e.stopPropagation();  iniciarChatPrivado(p); }} 
                           className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30" >
                           <MessageCircle size={16} />
@@ -907,23 +975,27 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 {pasajerosConfirmados.map((pasajero, index) => {
                   if (!pasajero) return null;
                   const puestosPedidos = Number(pasajero.puestosSolicitados) || 1;
+                  const ausente = pasajero.abordado === 'ausente';
+                  const aBordo = pasajero.abordado === true || pasajero.boardado === true;
+
                   return (
-                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className="border-2 border-blue-100 bg-blue-50/20 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm hover:border-blue-300 relative">
+                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className={`border-2 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm relative ${ausente ? 'border-red-100 bg-red-50/20 opacity-60' : 'border-blue-100 bg-blue-50/20 hover:border-blue-300'}`}>
                         <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
                            {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-700 uppercase truncate">{String(pasajero.nombre || "Pasajero")}</p>
+                          <p className={`text-xs font-bold uppercase truncate ${ausente ? 'text-red-700 line-through' : 'text-slate-700'}`}>{String(pasajero.nombre || "Pasajero")}</p>
                           <div className="flex items-center gap-2 mt-0.5">
-                              {(pasajero.boardado || pasajero.abordado) && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
-                              {puestosPedidos > 1 && <span className="text-[8px] font-black text-blue-600 uppercase bg-blue-100 px-2 py-0.5 rounded-full">+{puestosPedidos - 1} Acompañante(s)</span>}
+                              {aBordo && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
+                              {ausente && <span className="text-[8px] font-black text-red-600 uppercase">No Presentó</span>}
+                              {puestosPedidos > 1 && !ausente && <span className="text-[8px] font-black text-blue-600 uppercase bg-blue-100 px-2 py-0.5 rounded-full">+{puestosPedidos - 1} Acompañante(s)</span>}
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2 shrink-0">
-                          {(pasajero.boardado || pasajero.abordado) ? <ShieldCheck size={16} className="text-green-500" /> : <Lock size={14} className="text-slate-300" />}
+                          {aBordo ? <ShieldCheck size={16} className="text-green-500" /> : (ausente ? <X size={14} className="text-red-300" /> : <Lock size={14} className="text-slate-300" />)}
                           
-                          {soyConductor && (
+                          {soyConductor && !ausente && (
                             <button disabled={cargando} onClick={(e) => { e.stopPropagation(); iniciarChatPrivado(pasajero); }} 
                               className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shadow-md shadow-slate-900/30">
                               <MessageCircle size={16} />
@@ -1004,7 +1076,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               </button>
             )}
 
-            {/* 🔥 NUEVA BARRA INFERIOR SEGÚN ESTADO 🔥 */}
             {estadoViaje === 'en_curso' ? (
               soyConductor ? (
                 <div className="flex-1 flex gap-2">
@@ -1027,7 +1098,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                      <X size={14} strokeWidth={3} /> Cancelar
                    </button>
                    <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={notificarLlegadaYAbrirModal} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none" >
-                     <MapPin size={16} /> {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : '¡Ya llegué! (Validar)'}
+                     <MapPin size={16} /> {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Verificar Pasajeros'}
                    </button>
                  </div>
               ) : (
@@ -1129,7 +1200,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
             <div className="space-y-4 overflow-y-auto no-scrollbar mb-6 flex-1">
               {pasajerosConfirmados.map((p, index) => {
-                if (!p) return null;
+                if (!p || p.abordado === 'ausente') return null; // No calificar al que no se presentó
                 const pid = p.id || p.uid;
                 const rat = ratingsChofer[pid] || { estrellas: 0, comentario: "" };
                 return (
@@ -1186,39 +1257,99 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
 
-      {/* MODAL DE ABORDAJE (PIN) */}
+      {/* 🔥 MODAL DE ABORDAJE COMPLETAMENTE REESCRITO 🔥 */}
       {modalAbordaje && (
         <div className="fixed inset-0 z-[110000] flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 pb-8">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[85vh]">
             <div className="flex justify-between items-center mb-6 shrink-0">
-              <h3 className="text-lg font-black italic uppercase text-slate-800">Verificación de Abordaje</h3>
+              <h3 className="text-lg font-black italic uppercase text-slate-800">Verificar Abordaje</h3>
               <button onClick={() => setModalAbordaje(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} /></button>
             </div>
-            <p className="text-xs font-bold text-slate-500 mb-6 shrink-0">Solicita el PIN secreto a tus pasajeros para confirmar que están en el auto.</p>
-            <div className="space-y-4 overflow-y-auto mb-6 flex-1">
+            <p className="text-xs font-bold text-slate-500 mb-6 shrink-0">Valida los PIN por separado a medida que suben los pasajeros.</p>
+            
+            <div className="space-y-4 overflow-y-auto mb-6 flex-1 pr-2">
               {pasajerosConfirmados.map((p, index) => {
                 if (!p) return null;
                 const idPasajero = p.id || p.uid;
-                const pinCorrecto = String(pinesIngresados[idPasajero] || "").trim() === String(p.pin || "").trim() && p.pin;
+                const ausente = p.abordado === 'ausente';
+                const yaA Bordo = p.abordado === true || p.boardado === true;
+
+                if (ausente) {
+                  return (
+                    <div key={`pin-${idPasajero || index}`} className="p-4 rounded-3xl border-2 border-red-100 bg-red-50 flex items-center justify-between opacity-70">
+                       <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center"><User size={18} className="text-red-400" /></div>
+                         <p className="text-xs font-black uppercase text-red-700 line-through">{String(p.nombre || "Usuario")}</p>
+                       </div>
+                       <span className="text-[9px] font-black uppercase text-red-500 bg-white px-2 py-1 rounded-full border border-red-100">No se presentó</span>
+                    </div>
+                  );
+                }
+
+                if (yaABordo) {
+                  return (
+                    <div key={`pin-${idPasajero || index}`} className="p-4 rounded-3xl border-2 border-green-500 bg-green-50 flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center overflow-hidden">
+                           {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-green-600" />}
+                         </div>
+                         <p className="text-xs font-black uppercase text-slate-700">{String(p.nombre || "Usuario")}</p>
+                       </div>
+                       <ShieldCheck size={24} className="text-green-500" />
+                    </div>
+                  );
+                }
+
                 return (
-                  <div key={`pin-${idPasajero || index}`} className={`p-4 rounded-3xl border-2 transition-all flex flex-col gap-3 ${pinCorrecto ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-slate-50'}`}>
+                  <div key={`pin-${idPasajero || index}`} className="p-4 rounded-3xl border-2 border-slate-100 bg-slate-50 flex flex-col gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
                          {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-400" />}
                       </div>
                       <p className="flex-1 text-xs font-black uppercase text-slate-700 truncate">{String(p.nombre || "Usuario")}</p>
-                      {pinCorrecto ? <Unlock size={18} className="text-green-500" /> : <Lock size={18} className="text-slate-400" />}
                     </div>
-                    {!pinCorrecto ? (
-                       <input type="number" placeholder="Ingresar PIN de 4 dígitos" value={pinesIngresados[idPasajero] || ''} onChange={(e) => setPinesIngresados({...pinesIngresados, [idPasajero]: e.target.value})} className="w-full bg-white border border-slate-200 rounded-2xl p-3 text-center text-lg font-black tracking-[10px] outline-none focus:border-blue-500" maxLength={4} />
-                    ) : (
-                      <div className="bg-green-500 text-white text-[10px] font-black uppercase text-center py-2 rounded-xl">Pasajero Validado</div>
-                    )}
+                    
+                    <div className="flex gap-2">
+                       <input type="number" placeholder="PIN" value={pinesIngresados[idPasajero] || ''} onChange={(e) => setPinesIngresados({...pinesIngresados, [idPasajero]: e.target.value})} className="flex-[2] bg-white border border-slate-200 rounded-xl p-3 text-center text-lg font-black tracking-[5px] outline-none focus:border-blue-500" maxLength={4} />
+                       <button disabled={cargando} onClick={() => validarPinIndividual(p)} className="flex-1 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase shadow-md active:scale-95 transition-all">Validar</button>
+                    </div>
+
+                    <button disabled={tiempoEsperaAbordaje > 0 || cargando} onClick={() => marcarPasajeroAusente(p)} className={`w-full py-2.5 rounded-xl border border-red-200 text-[9px] font-black uppercase tracking-wider transition-all ${tiempoEsperaAbordaje > 0 ? 'bg-slate-100 text-slate-400' : 'bg-red-50 text-red-600 active:scale-95'}`}>
+                      {tiempoEsperaAbordaje > 0 ? `Se activa en ${formatoTiempo(tiempoEsperaAbordaje)}` : 'Marcar como "No se presentó"'}
+                    </button>
                   </div>
                 );
               })}
             </div>
-            <button onClick={procesarAbordajeEIniciar} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all shrink-0">Confirmar e Iniciar Viaje</button>
+            
+            {(() => {
+              // Validamos que TODOS los confirmados ya tengan status true o ausente
+              const todosListos = pasajerosConfirmados.length > 0 && pasajerosConfirmados.every(p => p.abordado === true || p.boardado === true || p.abordado === 'ausente');
+              const alMenosUnoABordo = pasajerosConfirmados.some(p => p.abordado === true || p.boardado === true);
+              
+              if (todosListos) {
+                if (alMenosUnoABordo) {
+                  return (
+                    <button onClick={iniciarRutaDefinitiva} disabled={cargando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all shrink-0">
+                      ¡Iniciar Viaje a Destino!
+                    </button>
+                  );
+                } else {
+                  return (
+                    <div className="w-full bg-red-100 text-red-600 rounded-2xl p-4 font-black uppercase text-[10px] text-center border border-red-200">
+                      Nadie se presentó. Cancela el viaje.
+                    </div>
+                  );
+                }
+              }
+
+              return (
+                 <div className="w-full bg-slate-100 text-slate-400 rounded-2xl p-4 font-black uppercase text-[10px] text-center tracking-widest">
+                   Validando Pasajeros...
+                 </div>
+              );
+            })()}
+
           </div>
         </div>
       )}
@@ -1279,7 +1410,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         </div>
       )}
       
-            {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
+      {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
@@ -1292,7 +1423,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               ¿Cancelar {modalCancelar.rol === 'chofer' ? 'el Viaje' : 'tu Asiento'}?
             </h3>
             
-            {/* 🔥 ADVERTENCIAS DINÁMICAS SEGÚN EL ROL Y ESTADO CORREGIDAS 🔥 */}
             {modalCancelar.rol === 'pasajero' ? (
               estadoViaje === 'buscando' ? (
                 <p className="text-[11px] font-bold text-orange-400 mb-6 bg-orange-950/30 p-3 rounded-xl border border-orange-900/50">
