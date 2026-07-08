@@ -1272,7 +1272,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                 if (!p) return null;
                 const idPasajero = p.id || p.uid;
                 const ausente = p.abordado === 'ausente';
-                const yaA Bordo = p.abordado === true || p.boardado === true;
+                const yaABordo = p.abordado === true || p.boardado === true;
 
                 if (ausente) {
                   return (
