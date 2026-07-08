@@ -1309,11 +1309,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                       <p className="flex-1 text-xs font-black uppercase text-slate-700 truncate">{String(p.nombre || "Usuario")}</p>
                     </div>
                     
-                    <div className="flex gap-2">
-                       <input type="number" placeholder="PIN" value={pinesIngresados[idPasajero] || ''} onChange={(e) => setPinesIngresados({...pinesIngresados, [idPasajero]: e.target.value})} className="flex-[2] bg-white border border-slate-200 rounded-xl p-3 text-center text-lg font-black tracking-[5px] outline-none focus:border-blue-500" maxLength={4} />
-                       <button disabled={cargando} onClick={() => validarPinIndividual(p)} className="flex-1 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase shadow-md active:scale-95 transition-all">Validar</button>
-                    </div>
-
+                    // CÓDIGO NUEVO (Cópialo y pégalo)
+                <div className="flex flex-col gap-2 mt-2">
+                 <input type="number" placeholder="PIN" value={pinesIngresados[idPasajero] || ''} onChange={(e) => setPinesIngresados({...pinesIngresados, [idPasajero]: e.target.value})} 
+                   className="w-full bg-white border border-slate-200 rounded-xl p-3 text-center text-2xl font-black tracking-[10px] outline-none focus:border-blue-500 shadow-inner" maxLength={4} />
+                 <button 
+                disabled={cargando || (pinesIngresados[idPasajero] || '').length < 4} onClick={() => validarPinIndividual(p)} className="w-full py-3.5 bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:bg-slate-300" >
+               Validar PIN
+                 </button>
+                </div>
                     <button disabled={tiempoEsperaAbordaje > 0 || cargando} onClick={() => marcarPasajeroAusente(p)} className={`w-full py-2.5 rounded-xl border border-red-200 text-[9px] font-black uppercase tracking-wider transition-all ${tiempoEsperaAbordaje > 0 ? 'bg-slate-100 text-slate-400' : 'bg-red-50 text-red-600 active:scale-95'}`}>
                       {tiempoEsperaAbordaje > 0 ? `Se activa en ${formatoTiempo(tiempoEsperaAbordaje)}` : 'Marcar como "No se presentó"'}
                     </button>
