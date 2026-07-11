@@ -455,7 +455,7 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       )}
       
-      {/* --- MODAL DE RECIBO DETALLADO --- */}
+     {/* --- MODAL DE RECIBO DETALLADO --- */}
       {txSeleccionada && (
         <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-[#0f172a] w-full max-w-sm rounded-[40px] p-8 border border-slate-800 animate-in slide-in-from-bottom duration-300">
@@ -464,21 +464,43 @@ export const Wallet = ({ userData, onRegresar }) => {
               <button onClick={() => setTxSeleccionada(null)} className="p-2 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={18} /></button>
             </div>
             
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 leading-relaxed">
               Desglose de la transacción <br/><span className="text-white font-black">{txSeleccionada.descripcion || "Viaje Realizado"}</span>
             </p>
 
-            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner">
-               <div className="flex justify-between items-center text-[11px] font-bold text-slate-400">
-                 <span>Pago del pasajero:</span>
-                 <span>${((Number(txSeleccionada.monto) || 0) / 0.9).toFixed(2)}</span>
-               </div>
-               <div className="flex justify-between items-center text-[11px] font-bold text-red-400">
-                 <span>Comisión app (10%):</span>
-                 <span>-${(((Number(txSeleccionada.monto) || 0) / 0.9) * 0.1).toFixed(2)}</span>
-               </div>
+            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner max-h-[40vh] overflow-y-auto no-scrollbar">
                
-               <div className="h-px bg-slate-800 w-full my-2"></div>
+               {/* 🔥 LÓGICA DE DESGLOSE INDIVIDUAL (VIAJES NUEVOS) 🔥 */}
+               {txSeleccionada.desglose && txSeleccionada.desglose.length > 0 ? (
+                 <div className="space-y-4">
+                   {txSeleccionada.desglose.map((pasajero, idx) => (
+                     <div key={idx} className="border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
+                       <div className="flex justify-between items-center mb-1">
+                         <span className="text-[11px] font-black text-slate-300 uppercase">{pasajero.nombre} {pasajero.puestos > 1 ? `(${pasajero.puestos} ptos)` : ''}</span>
+                         <span className="text-[11px] font-black text-emerald-400">+${Number(pasajero.gananciaNeta).toFixed(2)}</span>
+                       </div>
+                       <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+                         <span>Pago: ${Number(pasajero.montoTotalPagado).toFixed(2)}</span>
+                         <span className="text-red-400/80">Comisión: -${Number(pasajero.comision).toFixed(2)}</span>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 /* LÓGICA ANTIGUA (Por si abren un recibo viejo que no tenía desglose) */
+                 <>
+                   <div className="flex justify-between items-center text-[11px] font-bold text-slate-400">
+                     <span>Pago global pasajeros:</span>
+                     <span>${((Number(txSeleccionada.monto) || 0) / 0.9).toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between items-center text-[11px] font-bold text-red-400">
+                     <span>Comisión app global (10%):</span>
+                     <span>-${(((Number(txSeleccionada.monto) || 0) / 0.9) * 0.1).toFixed(2)}</span>
+                   </div>
+                 </>
+               )}
+               
+               <div className="h-px bg-slate-700 w-full my-3"></div>
                
                <div className="flex justify-between items-center text-base font-black text-emerald-400">
                  <span>Total Acreditado:</span>
