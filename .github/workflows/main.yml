@@ -60,7 +60,7 @@ jobs:
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest @capacitor/assets@latest --legacy-peer-deps
           
           # 2. Creamos el archivo de configuración en formato JSON
-          echo '{"appId": "com.rutacom.app", "appName": "Dame la cola", "webDir": "dist", "server": {"androidScheme": "https"}}' > capacitor.config.json
+          echo '{"appId": "com.damelacola.app", "appName": "Dame la cola", "webDir": "dist", "server": {"androidScheme": "https"}}' > capacitor.config.json
           rm -f capacitor.config.ts || true
           
           # 3. Agregamos la plataforma Android
