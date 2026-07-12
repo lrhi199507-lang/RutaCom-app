@@ -71,7 +71,7 @@ jobs:
           npx cap sync android
           # 🔥 INYECCIÓN DE VERSIÓN (SE DEBE HACER AQUÍ)
           sed -i 's/versionCode [0-9]*/versionCode 999/' android/app/build.gradle
-          sed -i 's/versionName "[0-9.]*"/versionName "9.9.9"/' android/app/build.gradle
+          sed -i 's/versionName "[0-9.]*"/versionName "99"/' android/app/build.gradle
 
           # 7. INYECTAR TU LOGO (LA SOLUCIÓN)
           mkdir -p assets
