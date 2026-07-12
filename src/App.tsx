@@ -31,27 +31,28 @@ export default function App() {
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [slideActual, setSlideActual] = useState(0);
 
-  // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
+ // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
   const [requiereActualizar, setRequiereActualizar] = useState(false);
-
-  // VALIDACIONES DE CONTRASEÑA EN TIEMPO REAL
-  const tieneSeis = password.length >= 6;
-  const tieneMayus = /[A-Z]/.test(password);
-  const tieneNum = /[0-9]/.test(password);
-  const passwordValida = tieneSeis && tieneMayus && tieneNum;
-
-  const [mensajeCarga, setMensajeCarga] = useState("Conectando...");
+  const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
 
   // 🔥 3. CONSULTAR FIREBASE AL ABRIR LA APP 🔥
   useEffect(() => {
     const verificarVersion = async () => {
       try {
-        const docRef = doc(db, "Configuracion", "App");
+        // CUIDADO: "app" en minúscula tal como lo tienes en Firebase
+        const docRef = doc(db, "Configuracion", "app");
         const snap = await getDoc(docRef);
+        
         if (snap.exists()) {
           const data = snap.data();
-          const versionMinima = Number(data.versionMinimaRequired || 0);
+          // Leemos exactamente los campos de tu imagen
+          const versionMinima = Number(data.version_minima || 0);
           
+          if (data.url_playstore) {
+            setUrlTienda(data.url_playstore);
+          }
+          
+          // Si la versión actual de la app (ej. 8) es menor a la mínima exigida (ej. 9), se bloquea
           if (VERSION_APP_ACTUAL < versionMinima) {
             setRequiereActualizar(true);
           }
@@ -62,7 +63,7 @@ export default function App() {
     };
     verificarVersion();
   }, []);
-
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user); 
@@ -252,8 +253,9 @@ const manejarOlvidoClave = async () => {
         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[2px] max-w-xs mb-10 leading-relaxed border border-slate-800 bg-slate-900/50 p-4 rounded-2xl">
           Hemos mejorado la seguridad del sistema y el flujo de los viajes. Para seguir pidiendo o dando colas, debes instalar la última versión.
         </p>
-        <button 
-          onClick={() => window.open('https://play.google.com/store/apps/details?id=com.damelacola.app', '_system')}
+       <button 
+          // Usa la URL que sacamos de Firebase
+          onClick={() => window.open(urlTienda, '_system')}
           className="w-full max-w-xs bg-blue-600 hover:bg-blue-500 text-white rounded-2xl p-5 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all"
         >
           Ir a Play Store
