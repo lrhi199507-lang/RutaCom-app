@@ -5,12 +5,15 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged 
 } from 'firebase/auth';
-import { doc, setDoc, updateDoc, addDoc, collection } from 'firebase/firestore'; // ✅ Importamos addDoc y collection
+import { doc, getDoc, setDoc, updateDoc, addDoc, collection } from 'firebase/firestore'; 
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation'; 
-import { Check, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff } from 'lucide-react'; 
+import { Check, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff, RefreshCcw, AlertTriangle } from 'lucide-react'; 
 
 import NavegacionPrincipal from './NavegacionPrincipal';
+
+// 🔥 1. VERSIÓN ACTUAL DE LA APP (CÁMBIALA CADA VEZ QUE SUBAS ALGO A PLAY STORE) 🔥
+const VERSION_APP_ACTUAL = 8; 
 
 export default function App() {
   // ESTADOS DE AUTENTICACIÓN Y FLUJO
@@ -22,12 +25,14 @@ export default function App() {
   const [cargando, setCargando] = useState(false);
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
   
-  
   const [usuario, setUsuario] = useState<any>(undefined); 
   
   // ESTADOS DEL ONBOARDING
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [slideActual, setSlideActual] = useState(0);
+
+  // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
+  const [requiereActualizar, setRequiereActualizar] = useState(false);
 
   // VALIDACIONES DE CONTRASEÑA EN TIEMPO REAL
   const tieneSeis = password.length >= 6;
@@ -36,6 +41,27 @@ export default function App() {
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
   const [mensajeCarga, setMensajeCarga] = useState("Conectando...");
+
+  // 🔥 3. CONSULTAR FIREBASE AL ABRIR LA APP 🔥
+  useEffect(() => {
+    const verificarVersion = async () => {
+      try {
+        const docRef = doc(db, "Configuracion", "App");
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          const versionMinima = Number(data.versionMinimaRequired || 0);
+          
+          if (VERSION_APP_ACTUAL < versionMinima) {
+            setRequiereActualizar(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error al verificar versión:", error);
+      }
+    };
+    verificarVersion();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -60,7 +86,6 @@ const manejarOlvidoClave = async () => {
       timestamp: Date.now()
     });
 
-    // ✅ Aquí cambiamos el alert gris por tu Toast elegante
     setToast({ 
       texto: "¡Enviado! Revisa tu bandeja de entrada para restablecer tu clave.", 
       tipo: "exito" 
@@ -150,7 +175,6 @@ const manejarOlvidoClave = async () => {
           vehiculo: { marca: "", modelo: "", placa: "", color: "" }
         });
 
-        // 🔥 DISPARADOR A TELEGRAM: NUEVO USUARIO 🔥
         try {
           await addDoc(collection(db, "Notificaciones"), {
             idDestino: "ADMIN_TELEGRAM",
@@ -161,7 +185,7 @@ const manejarOlvidoClave = async () => {
         } catch (errorTelegram) {
           console.error("Error al avisar a Telegram:", errorTelegram);
         }
-                // ✉️ DISPARADOR: SOLICITAR CORREO DE VERIFICACIÓN PREMIUM ✉️
+                
         try {
           await addDoc(collection(db, "Notificaciones"), {
             idDestino: "CORREO_VERIFICACION",
@@ -215,7 +239,30 @@ const manejarOlvidoClave = async () => {
     }
   ];
 
-  // 🔥 PANTALLA DE CARGA (SPLASH SCREEN) 🔥
+  // 🔥 4. MURO DE CONTENCIÓN: SI LA APP ES VIEJA, NUNCA PASA DE AQUÍ 🔥
+  if (requiereActualizar) {
+    return (
+      <div className="fixed inset-0 z-[999999] bg-[#0f172a] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+        <div className="bg-blue-600/10 w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-blue-500/20">
+          <RefreshCcw size={40} className="text-blue-400 animate-spin" style={{ animationDuration: '3s' }} />
+        </div>
+        <h2 className="text-3xl font-black italic text-white uppercase tracking-tighter leading-none mb-4">
+          Actualización<br />Obligatoria
+        </h2>
+        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[2px] max-w-xs mb-10 leading-relaxed border border-slate-800 bg-slate-900/50 p-4 rounded-2xl">
+          Hemos mejorado la seguridad del sistema y el flujo de los viajes. Para seguir pidiendo o dando colas, debes instalar la última versión.
+        </p>
+        <button 
+          onClick={() => window.open('https://play.google.com/store/apps/details?id=com.damelacola.app', '_system')}
+          className="w-full max-w-xs bg-blue-600 hover:bg-blue-500 text-white rounded-2xl p-5 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all"
+        >
+          Ir a Play Store
+        </button>
+      </div>
+    );
+  }
+
+  // PANTALLA DE CARGA (SPLASH SCREEN)
   if (usuario === undefined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
