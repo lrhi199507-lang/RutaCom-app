@@ -31,6 +31,8 @@ export default function App() {
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [slideActual, setSlideActual] = useState(0);
 
+  const [mensajeCarga, setMensajeCarga] = useState("Conectando..."); 
+
  // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
   const [requiereActualizar, setRequiereActualizar] = useState(false);
   const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
