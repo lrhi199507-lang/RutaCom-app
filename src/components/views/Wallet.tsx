@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { db, storage } from "../../firebaseConfig"; 
+import { db, storage, functions } from "../../firebaseConfig"; // 🔥 IMPORTAMOS functions AQUÍ
 import { doc, getDoc, updateDoc, collection, addDoc, increment, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage"; 
+import { httpsCallable } from "firebase/functions"; // 🔥 IMPORTAMOS httpsCallable AQUÍ
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'; 
 import { 
   History, ArrowUpRight, ArrowDownLeft, 
@@ -78,9 +79,8 @@ export const Wallet = ({ userData, onRegresar }) => {
   }, [userData?.id]);
 
  // 🔥 CÁLCULOS DE SALDO CORREGIDOS 🔥
-  // La nube ya descontó el dinero, así que 'userData.saldo' ES tu saldo real disponible.
   const saldoDisponible = Number(userData?.saldo || 0); 
-  const saldoRetenido = Number(userData?.saldoRetenido || 0); // Solo para mostrar el letrerito
+  const saldoRetenido = Number(userData?.saldoRetenido || 0); 
   const saldoEnTransito = Number(userData?.saldoEnTransito || 0); 
   const saldoConvertido = (saldoDisponible * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2 });
 
@@ -125,6 +125,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     } finally { setEnviando(false); }
   };
 
+  // 🔥 NUEVA LÓGICA DE RETIRO BLINDADA CON CLOUD FUNCTIONS 🔥
   const manejarRetiro = async (e) => {
     e.preventDefault();
     const ahora = new Date();
@@ -145,21 +146,26 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     setEnviando(true);
     try {
-      await updateDoc(doc(db, "usuarios", userData.id), {
-        saldoRetenido: increment(monto),
-        datosBancarios: { banco: datosBancarios.banco, telefono: datosBancarios.telefono, cedula: datosBancarios.cedula }
+      // Llamamos directamente a la nube para evitar fraudes en la app
+      const solicitarRetiroCloud = httpsCallable(functions, 'solicitarRetiroSeguro');
+      await solicitarRetiroCloud({
+        monto: monto,
+        datosBancarios: datosBancarios
       });
 
-      await addDoc(collection(db, "PagosPendientes"), {
-        uid: userData.id, nombre: userData.nombre, monto: monto, datosBancarios: datosBancarios,
-        tasaAplicada: tasaBCV, fecha: new Date().toISOString(), estado: "pendiente", tipo: "retiro"
-      });
-
-      setToastMsg("Retiro en proceso. Datos guardados."); setToastType("success"); setShowToast(true);
-      setShowModalRetiro(false); setMontoRetiro("");
+      setToastMsg("Retiro en proceso. El dinero ha sido congelado."); 
+      setToastType("success"); 
+      setShowToast(true);
+      setShowModalRetiro(false); 
+      setMontoRetiro("");
     } catch (error) {
-      setToastMsg("Error al procesar el retiro"); setToastType("error"); setShowToast(true);
-    } finally { setEnviando(false); }
+      console.error(error);
+      setToastMsg(error.message || "Error al procesar el retiro"); 
+      setToastType("error"); 
+      setShowToast(true);
+    } finally { 
+      setEnviando(false); 
+    }
   };
 
   const transaccionesFiltradas = transacciones.filter(tx => {
@@ -205,7 +211,7 @@ export const Wallet = ({ userData, onRegresar }) => {
                 <div className="flex items-center gap-2 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
                   <Lock size={12} className="text-amber-500" />
                   <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">
-                    ${saldoRetenido.toFixed(2)} Comprometido en Reservas
+                    ${saldoRetenido.toFixed(2)} Bloqueado (Retiro/Reserva)
                   </p>
                 </div>
               )}
