@@ -37,6 +37,23 @@ export default function App() {
   const [requiereActualizar, setRequiereActualizar] = useState(false);
   const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
 
+  // 🔥 ESTADOS DEL ONBOARDING
+  const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
+  const [slideActual, setSlideActual] = useState(0);
+  const [mensajeCarga, setMensajeCarga] = useState("Conectando..."); 
+
+  // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
+  const [requiereActualizar, setRequiereActualizar] = useState(false);
+  const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
+
+  // ==========================================
+  // 🔥 AQUÍ ESTÁ LA SOLUCIÓN: VARIABLES DE CONTRASEÑA 🔥
+  // ==========================================
+  const tieneSeis = password.length >= 6;
+  const tieneMayus = /[A-Z]/.test(password);
+  const tieneNum = /[0-9]/.test(password);
+  const passwordValida = tieneSeis && tieneMayus && tieneNum;
+
   // 🔥 3. CONSULTAR FIREBASE AL ABRIR LA APP 🔥
   useEffect(() => {
     const verificarVersion = async () => {
