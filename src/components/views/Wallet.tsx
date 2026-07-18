@@ -129,6 +129,8 @@ export const Wallet = ({ userData, onRegresar }) => {
   // 🔥 NUEVA LÓGICA DE RETIRO BLINDADA CON CLOUD FUNCTIONS 🔥
   const manejarRetiro = async (e) => {
     e.preventDefault();
+    // 🔥 TEMPORAL PARA PRUEBAS: Comentamos la validación de hora
+    /*
     const ahora = new Date();
     const hora24 = ahora.getHours();
     const esPM = hora24 >= 12;
@@ -137,6 +139,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     if (!esPM || hora12 < 7 || hora12 >= 11 || hora24 === 12) {
       setToastMsg("Los retiros solo están disponibles TODOS LOS DÍAS de 7:00 PM a 11:00 PM."); setToastType("error"); setShowToast(true); return;
     }
+    */
 
     const monto = Number(montoRetiro);
     const MINIMO_RETIRO = 10; 
