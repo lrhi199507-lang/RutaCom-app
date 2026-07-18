@@ -259,19 +259,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   
   const verificarCuentaCorreo = async () => {
     if (!auth.currentUser) return;
-    
-    setCargando(true); 
+    setCargando(true);
     try {
-      // Dispara el correo nativo de la plantilla de Firebase
-      await sendEmailVerification(auth.currentUser);
-      
-      setToast({ texto: "Correo enviado con éxito. Revisa tu bandeja.", tipo: "exito" });
-    } catch (error: any) { 
-      if (error.code === 'auth/too-many-requests') {
-        setToast({ texto: "Espera un momento antes de reenviar.", tipo: "error" });
-      } else {
-        setToast({ texto: "Error al enviar el correo.", tipo: "error" });
-      }
+      // Dejamos la orden para que Google Cloud la procese
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: "CORREO_VERIFICACION",
+        email: auth.currentUser.email?.toLowerCase().trim(),
+        nombre: userData.nombre || "Viajero", 
+        timestamp: Date.now()
+      });
+      setToast({ texto: "Solicitud enviada. Revisa tu correo en un momento.", tipo: "exito" });
+    } catch (error) { 
+      setToast({ texto: "Error al solicitar el envío.", tipo: "error" });
     } finally {
       setCargando(false);
     }
