@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { db, storage, functions } from "../../firebaseConfig"; // 🔥 IMPORTAMOS functions AQUÍ
 import { doc, getDoc, updateDoc, collection, addDoc, increment, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage"; 
+import { getAuth } from "firebase/auth";
 import { httpsCallable } from "firebase/functions"; // 🔥 IMPORTAMOS httpsCallable AQUÍ
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'; 
 import { 
