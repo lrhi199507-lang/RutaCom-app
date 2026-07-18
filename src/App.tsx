@@ -33,21 +33,12 @@ export default function App() {
 
   const [mensajeCarga, setMensajeCarga] = useState("Conectando..."); 
 
- // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
-  const [requiereActualizar, setRequiereActualizar] = useState(false);
-  const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
-
-  // 🔥 ESTADOS DEL ONBOARDING
-  const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
-  const [slideActual, setSlideActual] = useState(0);
-  const [mensajeCarga, setMensajeCarga] = useState("Conectando..."); 
-
   // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
   const [requiereActualizar, setRequiereActualizar] = useState(false);
   const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
 
   // ==========================================
-  // 🔥 AQUÍ ESTÁ LA SOLUCIÓN: VARIABLES DE CONTRASEÑA 🔥
+  // 🔥 VARIABLES DE SEGURIDAD PARA CONTRASEÑA 🔥
   // ==========================================
   const tieneSeis = password.length >= 6;
   const tieneMayus = /[A-Z]/.test(password);
@@ -58,20 +49,17 @@ export default function App() {
   useEffect(() => {
     const verificarVersion = async () => {
       try {
-        // CUIDADO: "app" en minúscula tal como lo tienes en Firebase
         const docRef = doc(db, "Configuracion", "app");
         const snap = await getDoc(docRef);
         
         if (snap.exists()) {
           const data = snap.data();
-          // Leemos exactamente los campos de tu imagen
           const versionMinima = Number(data.version_minima || 0);
           
           if (data.url_playstore) {
             setUrlTienda(data.url_playstore);
           }
           
-          // Si la versión actual de la app (ej. 8) es menor a la mínima exigida (ej. 9), se bloquea
           if (VERSION_APP_ACTUAL < versionMinima) {
             setRequiereActualizar(true);
           }
@@ -168,7 +156,7 @@ const manejarOlvidoClave = async () => {
     e.preventDefault();
     
     if (esRegistro && (!nombre.trim() || !passwordValida)) {
-      alert("Por favor, ingresa tu nombre completo para continuar.");
+      alert("Por favor, ingresa tu nombre completo y una contraseña válida para continuar.");
       return;
     }
     
@@ -273,7 +261,6 @@ const manejarOlvidoClave = async () => {
           Hemos mejorado la seguridad del sistema y el flujo de los viajes. Para seguir pidiendo o dando colas, debes instalar la última versión.
         </p>
        <button 
-          // Usa la URL que sacamos de Firebase
           onClick={() => window.open(urlTienda, '_system')}
           className="w-full max-w-xs bg-blue-600 hover:bg-blue-500 text-white rounded-2xl p-5 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all"
         >
