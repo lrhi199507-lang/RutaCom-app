@@ -326,33 +326,35 @@ export const Wallet = ({ userData, onRegresar }) => {
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-loose">No hay movimientos aquí</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {transaccionesFiltradas.map((tx) => {
+            {transaccionesFiltradas.map((tx) => {
                 const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga';
-                const tieneRecibo = tx.tipo === 'ingreso'; 
+                const esRechazo = tx.tipo === 'rechazo'; // 🔥 Detectamos el rechazo
+                const tieneRecibo = tx.tipo === 'ingreso' || esRechazo; // 🔥 Ahora el rechazo también es clickeable
 
                 return (
                   <div 
                     key={tx.id} 
                     onClick={() => { if (tieneRecibo) setTxSeleccionada(tx); }}
-                    className={`bg-slate-900/80 p-5 rounded-[25px] border border-slate-800 flex items-center justify-between shadow-sm ${tieneRecibo ? 'cursor-pointer active:scale-95 transition-all hover:bg-slate-800/80 hover:border-slate-700' : ''}`}
+                    className={`bg-slate-900/80 p-5 rounded-[25px] border flex items-center justify-between shadow-sm ${esRechazo ? 'border-orange-500/30' : 'border-slate-800'} ${tieneRecibo ? 'cursor-pointer active:scale-95 transition-all hover:bg-slate-800/80' : ''}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${esIngreso ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                        {esIngreso ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                      {/* 🔥 Cambiamos el color e ícono si es rechazo */}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${esIngreso ? 'bg-emerald-500/10 text-emerald-400' : esRechazo ? 'bg-orange-500/10 text-orange-400' : 'bg-red-500/10 text-red-400'}`}>
+                        {esIngreso ? <ArrowDownLeft size={20} /> : esRechazo ? <X size={20} /> : <ArrowUpRight size={20} />}
                       </div>
                       <div>
-                        <p className="text-xs font-black text-slate-300 uppercase">{tx.descripcion}</p>
+                        <p className={`text-xs font-black uppercase ${esRechazo ? 'text-orange-400' : 'text-slate-300'}`}>{tx.descripcion}</p>
                         <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5 tracking-widest">{new Date(tx.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' })}</p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-3">
-                      <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {esIngreso ? '+' : '-'}${Number(tx.monto).toFixed(2)}
+                      {/* 🔥 Si es rechazo, tachamos el monto para indicar que no se sumó/restó */}
+                      <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : esRechazo ? 'text-slate-500 line-through' : 'text-red-400'}`}>
+                        {esIngreso ? '+' : esRechazo ? '' : '-'}${Number(tx.monto).toFixed(2)}
                       </p>
                       {tieneRecibo && (
-                        <div className="bg-slate-800 p-2 rounded-full text-blue-400 border border-slate-700 shadow-sm">
+                        <div className={`p-2 rounded-full border shadow-sm ${esRechazo ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' : 'bg-slate-800 text-blue-400 border-slate-700'}`}>
                           <Info size={16} />
                         </div>
                       )}
@@ -538,44 +540,56 @@ export const Wallet = ({ userData, onRegresar }) => {
               Desglose de la transacción <br/><span className="text-white font-black">{txSeleccionada.descripcion || "Viaje Realizado"}</span>
             </p>
 
-            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner max-h-[40vh] overflow-y-auto no-scrollbar">
+           <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner max-h-[40vh] overflow-y-auto no-scrollbar">
                
-               {/* 🔥 LÓGICA DE DESGLOSE INDIVIDUAL (VIAJES NUEVOS) 🔥 */}
-               {txSeleccionada.desglose && txSeleccionada.desglose.length > 0 ? (
-                 <div className="space-y-4">
-                   {txSeleccionada.desglose.map((pasajero, idx) => (
-                     <div key={idx} className="border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
-                       <div className="flex justify-between items-center mb-1">
-                         <span className="text-[11px] font-black text-slate-300 uppercase">{pasajero.nombre} {pasajero.puestos > 1 ? `(${pasajero.puestos} ptos)` : ''}</span>
-                         <span className="text-[11px] font-black text-emerald-400">+${Number(pasajero.gananciaNeta).toFixed(2)}</span>
-                       </div>
-                       <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-                         <span>Pago: ${Number(pasajero.montoTotalPagado).toFixed(2)}</span>
-                         <span className="text-red-400/80">Comisión: -${Number(pasajero.comision).toFixed(2)}</span>
-                       </div>
-                     </div>
-                   ))}
+               {/* 🔥 LÓGICA DE RECHAZO 🔥 */}
+               {txSeleccionada.tipo === "rechazo" ? (
+                 <div className="bg-orange-500/10 border border-orange-500/30 p-6 rounded-3xl text-center shadow-inner">
+                    <AlertTriangle size={36} className="text-orange-500 mx-auto mb-4" />
+                    <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-2">Motivo del Administrador</p>
+                    <p className="text-sm font-bold text-white leading-relaxed">{txSeleccionada.motivo || "Problemas con la validación de tu solicitud."}</p>
                  </div>
                ) : (
-                 /* LÓGICA ANTIGUA (Por si abren un recibo viejo que no tenía desglose) */
+                 /* SI NO ES RECHAZO, MOSTRAMOS EL RECIBO NORMAL (NUEVO O VIEJO) */
                  <>
-                   <div className="flex justify-between items-center text-[11px] font-bold text-slate-400">
-                     <span>Pago global pasajeros:</span>
-                     <span>${((Number(txSeleccionada.monto) || 0) / 0.9).toFixed(2)}</span>
-                   </div>
-                   <div className="flex justify-between items-center text-[11px] font-bold text-red-400">
-                     <span>Comisión app global (10%):</span>
-                     <span>-${(((Number(txSeleccionada.monto) || 0) / 0.9) * 0.1).toFixed(2)}</span>
+                   {/* LÓGICA DE DESGLOSE INDIVIDUAL (VIAJES NUEVOS) */}
+                   {txSeleccionada.desglose && txSeleccionada.desglose.length > 0 ? (
+                     <div className="space-y-4">
+                       {txSeleccionada.desglose.map((pasajero, idx) => (
+                         <div key={idx} className="border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
+                           <div className="flex justify-between items-center mb-1">
+                             <span className="text-[11px] font-black text-slate-300 uppercase">{pasajero.nombre} {pasajero.puestos > 1 ? `(${pasajero.puestos} ptos)` : ''}</span>
+                             <span className="text-[11px] font-black text-emerald-400">+${Number(pasajero.gananciaNeta).toFixed(2)}</span>
+                           </div>
+                           <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+                             <span>Pago: ${Number(pasajero.montoTotalPagado).toFixed(2)}</span>
+                             <span className="text-red-400/80">Comisión: -${Number(pasajero.comision).toFixed(2)}</span>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   ) : (
+                     /* LÓGICA ANTIGUA (Por si abren un recibo viejo que no tenía desglose) */
+                     <>
+                       <div className="flex justify-between items-center text-[11px] font-bold text-slate-400">
+                         <span>Pago global pasajeros:</span>
+                         <span>${((Number(txSeleccionada.monto) || 0) / 0.9).toFixed(2)}</span>
+                       </div>
+                       <div className="flex justify-between items-center text-[11px] font-bold text-red-400">
+                         <span>Comisión app global (10%):</span>
+                         <span>-${(((Number(txSeleccionada.monto) || 0) / 0.9) * 0.1).toFixed(2)}</span>
+                       </div>
+                     </>
+                   )}
+                   
+                   <div className="h-px bg-slate-700 w-full my-3"></div>
+                   
+                   <div className="flex justify-between items-center text-base font-black text-emerald-400">
+                     <span>Total Acreditado:</span>
+                     <span>${(Number(txSeleccionada.monto) || 0).toFixed(2)}</span>
                    </div>
                  </>
                )}
-               
-               <div className="h-px bg-slate-700 w-full my-3"></div>
-               
-               <div className="flex justify-between items-center text-base font-black text-emerald-400">
-                 <span>Total Acreditado:</span>
-                 <span>${(Number(txSeleccionada.monto) || 0).toFixed(2)}</span>
-               </div>
             </div>
 
             <button onClick={() => setTxSeleccionada(null)} className="w-full bg-slate-800 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest mt-6 active:scale-95 transition-all hover:bg-slate-700 border border-slate-700">
