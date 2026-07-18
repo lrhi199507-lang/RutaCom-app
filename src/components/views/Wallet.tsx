@@ -326,10 +326,11 @@ export const Wallet = ({ userData, onRegresar }) => {
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-loose">No hay movimientos aquí</p>
             </div>
           ) : (
-            {transaccionesFiltradas.map((tx) => {
+            <div className="space-y-3">
+              {transaccionesFiltradas.map((tx) => {
                 const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga';
-                const esRechazo = tx.tipo === 'rechazo'; // 🔥 Detectamos el rechazo
-                const tieneRecibo = tx.tipo === 'ingreso' || esRechazo; // 🔥 Ahora el rechazo también es clickeable
+                const esRechazo = tx.tipo === 'rechazo'; 
+                const tieneRecibo = tx.tipo === 'ingreso' || esRechazo; 
 
                 return (
                   <div 
@@ -338,7 +339,6 @@ export const Wallet = ({ userData, onRegresar }) => {
                     className={`bg-slate-900/80 p-5 rounded-[25px] border flex items-center justify-between shadow-sm ${esRechazo ? 'border-orange-500/30' : 'border-slate-800'} ${tieneRecibo ? 'cursor-pointer active:scale-95 transition-all hover:bg-slate-800/80' : ''}`}
                   >
                     <div className="flex items-center gap-4">
-                      {/* 🔥 Cambiamos el color e ícono si es rechazo */}
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${esIngreso ? 'bg-emerald-500/10 text-emerald-400' : esRechazo ? 'bg-orange-500/10 text-orange-400' : 'bg-red-500/10 text-red-400'}`}>
                         {esIngreso ? <ArrowDownLeft size={20} /> : esRechazo ? <X size={20} /> : <ArrowUpRight size={20} />}
                       </div>
@@ -349,7 +349,6 @@ export const Wallet = ({ userData, onRegresar }) => {
                     </div>
                     
                     <div className="flex items-center gap-3">
-                      {/* 🔥 Si es rechazo, tachamos el monto para indicar que no se sumó/restó */}
                       <p className={`text-base font-black italic ${esIngreso ? 'text-emerald-400' : esRechazo ? 'text-slate-500 line-through' : 'text-red-400'}`}>
                         {esIngreso ? '+' : esRechazo ? '' : '-'}${Number(tx.monto).toFixed(2)}
                       </p>
