@@ -210,8 +210,9 @@ export const Wallet = ({ userData, onRegresar }) => {
     return true;
   });
 
-  const horaBoton24 = new Date().getHours();
-  const botonBloqueadoPorHora = horaBoton24 < 19 || horaBoton24 >= 23;
+ // const horaBoton24 = new Date().getHours();
+  // const botonBloqueadoPorHora = horaBoton24 < 19 || horaBoton24 >= 23;
+  const botonBloqueadoPorHora = false; // 🔥 TEMPORAL PARA PRUEBAS
   
   return (
     <div className="min-h-screen bg-[#0b1120] font-sans pb-24 relative overflow-x-hidden">
