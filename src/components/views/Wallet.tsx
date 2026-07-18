@@ -146,18 +146,52 @@ export const Wallet = ({ userData, onRegresar }) => {
 
     setEnviando(true);
     try {
-      // Llamamos directamente a la nube para evitar fraudes en la app
-      const solicitarRetiroCloud = httpsCallable(functions, 'solicitarRetiroSeguro');
-      await solicitarRetiroCloud({
-        monto: monto,
-        datosBancarios: datosBancarios
+      // 1. Obtenemos el token de autenticación del usuario actual
+      const auth = getAuth(); // Asegúrate de importar getAuth de "firebase/auth" al inicio del archivo
+      const user = auth.currentUser;
+      
+      if (!user) {
+         throw new Error("Usuario no autenticado localmente");
+      }
+      
+      const token = await user.getIdToken();
+
+      // 2. Preparamos los datos EXACTAMENTE como los espera tu backend (index.js)
+      // Tu backend hace: const { data } = req.body;
+      const payload = {
+        data: {
+          monto: monto,
+          datosBancarios: datosBancarios
+        }
+      };
+
+      // 3. Hacemos el fetch a la URL de Cloud Run
+      const URL_DE_TU_CLOUD_RUN = "https://solicitar-retiro-seguro-1080063705561.us-central1.run.app";
+      
+      const response = await fetch(URL_DE_TU_CLOUD_RUN, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` // Enviamos el token para que tu admin.auth().verifyIdToken funcione
+        },
+        body: JSON.stringify(payload)
       });
 
+      // 4. Procesamos la respuesta
+      const responseData = await response.json();
+
+      if (!response.ok) {
+         // Si el backend devuelve status 500, capturamos el mensaje de error
+         throw new Error(responseData?.data?.error || "Error interno del servidor");
+      }
+
+      // Si todo sale bien (status 200)
       setToastMsg("Retiro en proceso. El dinero ha sido congelado."); 
       setToastType("success"); 
       setShowToast(true);
       setShowModalRetiro(false); 
       setMontoRetiro("");
+
     } catch (error) {
       console.error(error);
       setToastMsg(error.message || "Error al procesar el retiro"); 
