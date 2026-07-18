@@ -3,7 +3,7 @@ import { App } from '@capacitor/app';
 import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendEmailVerification } from 'firebase/auth';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getAuth, signOut } from 'firebase/auth';
 import { 
@@ -259,16 +259,21 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   
   const verificarCuentaCorreo = async () => {
     if (!auth.currentUser) return;
+    
+    setCargando(true); 
     try {
-      await addDoc(collection(db, "Notificaciones"), {
-        idDestino: "CORREO_VERIFICACION",
-        email: auth.currentUser.email?.toLowerCase().trim(),
-        nombre: userData.nombre || "Viajero", 
-        timestamp: Date.now()
-      });
-      setToast({ texto: "Correo enviado con éxito", tipo: "exito" });
-    } catch (error) { 
-      setToast({ texto: "Error al solicitar envío", tipo: "error" });
+      // Dispara el correo nativo de la plantilla de Firebase
+      await sendEmailVerification(auth.currentUser);
+      
+      setToast({ texto: "Correo enviado con éxito. Revisa tu bandeja.", tipo: "exito" });
+    } catch (error: any) { 
+      if (error.code === 'auth/too-many-requests') {
+        setToast({ texto: "Espera un momento antes de reenviar.", tipo: "error" });
+      } else {
+        setToast({ texto: "Error al enviar el correo.", tipo: "error" });
+      }
+    } finally {
+      setCargando(false);
     }
   };
 
