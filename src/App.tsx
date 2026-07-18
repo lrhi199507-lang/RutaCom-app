@@ -3,8 +3,7 @@ import { auth, db } from './firebaseConfig';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  onAuthStateChanged,
-  sendEmailVerification
+  onAuthStateChanged
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, addDoc, collection } from 'firebase/firestore'; 
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -184,8 +183,6 @@ const manejarOlvidoClave = async () => {
           vehiculo: { marca: "", modelo: "", placa: "", color: "" }
         });
 
-      // ... (código donde guardas los datos del usuario en firestore) ...
-
         try {
           await addDoc(collection(db, "Notificaciones"), {
             idDestino: "ADMIN_TELEGRAM",
@@ -196,11 +193,17 @@ const manejarOlvidoClave = async () => {
           console.error("Error al avisar a Telegram:", errorTelegram);
         }
                 
-        // 🔥 ESTO REEMPLAZA AL CÓDIGO VIEJO DE CORREO
+        // 🔥 NUEVO SISTEMA DE CORREO PROFESIONAL 🔥
+        // Al guardar este documento, la Cloud Function se activará y enviará el diseño HTML
         try {
-          await sendEmailVerification(res.user);
+          await addDoc(collection(db, "Notificaciones"), {
+            idDestino: "CORREO_VERIFICACION",
+            email: email.toLowerCase().trim(),
+            nombre: nombre.trim(),
+            timestamp: Date.now()
+          });
         } catch (errorCorreo) {
-          console.error("Error al enviar correo de verificación:", errorCorreo);
+          console.error("Error al solicitar el correo pro:", errorCorreo);
         }
 
         setMostrarOnboarding(true);
