@@ -101,7 +101,7 @@ export const Wallet = ({ userData, onRegresar }) => {
     } catch (e) { console.log("Selección de imagen cancelada"); }
   };
 
-  const manejarRecarga = async (e) => {
+ const manejarRecarga = async (e) => {
     e.preventDefault();
     if (!montoRecarga || !referencia || !fotoRecarga) { 
       setToastMsg("Debes completar los datos y subir el capture"); setToastType("error"); setShowToast(true); return; 
@@ -118,6 +118,31 @@ export const Wallet = ({ userData, onRegresar }) => {
         comprobanteUrl: urlComprobante, tasaAplicada: tasaBCV, fecha: new Date().toISOString(), 
         estado: "pendiente", tipo: "recarga", metodoPago: metodoRecarga 
       });
+
+      // 👇 --- INICIO DE NOTIFICACIÓN A TELEGRAM --- 👇
+      try {
+        const botToken = "8943485402:AAFwOhXY6BQDy2p09PxSE4BsfxGZ9g1nqWQ";
+        const chatId = "6402827355";
+        
+        // Armamos el mensaje con todos los datos clave de la recarga
+        const mensaje = `🔔 *NUEVA RECARGA SOLICITADA* 🔔\n\n💰 *Monto:* $${montoRecarga}\n📝 *Referencia:* ${referencia}\n💳 *Método:* ${metodoRecarga.replace("_", " ")}\n👤 *Usuario:* ${userData.nombre}\n🆔 *ID:* ${userData.id}`;
+        
+        const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        
+        await fetch(telegramUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: mensaje,
+            parse_mode: 'Markdown'
+          })
+        });
+      } catch (errorTelegram) {
+        console.error("Error al enviar mensaje a Telegram:", errorTelegram);
+        // Si Telegram falla, la recarga igual sigue su curso sin interrumpir al usuario
+      }
+      // 👆 --- FIN DE NOTIFICACIÓN A TELEGRAM --- 👆
 
       setToastMsg("Solicitud enviada. Espera la validación."); setToastType("success"); setShowToast(true);
       setShowModalRecarga(false); setMontoRecarga(""); setReferencia(""); setFotoRecarga(null);
