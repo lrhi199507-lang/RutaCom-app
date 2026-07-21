@@ -193,17 +193,32 @@ const manejarOlvidoClave = async () => {
           console.error("Error al avisar a Telegram:", errorTelegram);
         }
                 
-        // 🔥 NUEVO SISTEMA DE CORREO PROFESIONAL 🔥
-        // Al guardar este documento, la Cloud Function se activará y enviará el diseño HTML
+       // 🔥 NUEVO SISTEMA DE CORREO CON LA EXTENSIÓN DE FIREBASE 🔥
         try {
-          await addDoc(collection(db, "Notificaciones"), {
-            idDestino: "CORREO_VERIFICACION",
-            email: email.toLowerCase().trim(),
-            nombre: nombre.trim(),
-            timestamp: Date.now()
+          // OJO: Aquí colocarás el enlace real a donde quieres que vaya el usuario al pulsar el botón
+          const linkDeVerificacion = "https://tu-app-damelacola.com/verificar"; 
+
+          const miPlantillaHTML = `
+            <div style="font-family: Arial, sans-serif; text-align: center; padding: 30px; background-color: #f8fafc; border-radius: 20px; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0;">
+              <h2 style="color: #0f172a; font-style: italic; font-weight: 900; font-size: 24px; margin-bottom: 10px;">¡Bienvenido a DameLaCola, ${nombre.trim().split(' ')[0]}! 🚗</h2>
+              <p style="color: #475569; font-size: 16px; line-height: 1.5;">Estamos muy emocionados de tenerte en nuestra comunidad.</p>
+              <p style="color: #475569; font-size: 16px; line-height: 1.5; margin-bottom: 25px;">Haz clic en el botón de abajo para verificar tu cuenta y empezar a pedir o dar colas de forma segura:</p>
+              <a href="${linkDeVerificacion}" style="background-color: #2563eb; color: white; padding: 16px 32px; text-decoration: none; border-radius: 16px; display: inline-block; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: 12px; box-shadow: 0 10px 20px rgba(37,99,235,0.3);">
+                Verificar mi Cuenta
+              </a>
+            </div>
+          `;
+
+          await addDoc(collection(db, "correos_salientes"), {
+            to: email.toLowerCase().trim(),
+            message: {
+              subject: "¡Verifica tu cuenta en DameLaCola! 🚀",
+              html: miPlantillaHTML
+            }
           });
+          console.log("¡Correo encolado para envío por la extensión!");
         } catch (errorCorreo) {
-          console.error("Error al solicitar el correo pro:", errorCorreo);
+          console.error("Error al encolar el correo:", errorCorreo);
         }
 
         setMostrarOnboarding(true);
