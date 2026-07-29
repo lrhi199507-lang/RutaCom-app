@@ -209,13 +209,38 @@ const manejarOlvidoClave = async () => {
             </div>
           `;
 
-          await addDoc(collection(db, "correos_salientes"), {
-            to: email.toLowerCase().trim(),
-            message: {
-              subject: "¡Verifica tu cuenta en DameLaCola! 🚀",
-              html: miPlantillaHTML
-            }
-          });
+     await addDoc(collection(db, "correos_salientes"), {
+  to: email.toLowerCase().trim(),
+  message: {
+    subject: "🚗 ¡Bienvenido! Confirma tu cuenta - DameLaCola",
+    html: `
+      <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 10px; text-align: center;">
+        <div style="background-color: #0f172a; max-width: 600px; margin: 0 auto; border-radius: 12px; padding: 40px 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+          
+          <!-- Logo D -->
+          <div style="background-color: #2563eb; color: #ffffff; width: 64px; height: 64px; line-height: 64px; border-radius: 16px; font-size: 32px; font-weight: bold; margin: 0 auto 20px auto;">
+            D
+          </div>
+          
+          <!-- Título -->
+          <h1 style="color: #ffffff; font-size: 26px; margin-bottom: 12px; margin-top: 0;">DameLaCola</h1>
+          
+          <!-- Mensaje -->
+          <p style="color: #94a3b8; font-size: 16px; line-height: 1.5; margin-bottom: 35px; padding: 0 20px;">
+            ¡Hola <strong>Viajero</strong>! Confirma tu correo para empezar a viajar seguro.
+          </p>
+          
+          <!-- Botón de Confirmación -->
+          <a href="https://tu-app-damelacola.com/verificar" style="background-color: #2563eb; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+            Confirmar mi cuenta
+          </a>
+          
+        </div>
+      </div>
+    `
+  }
+});
+          
           console.log("¡Correo encolado para envío por la extensión!");
         } catch (errorCorreo) {
           console.error("Error al encolar el correo:", errorCorreo);
