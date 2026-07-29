@@ -198,48 +198,37 @@ const manejarOlvidoClave = async () => {
           // OJO: Aquí colocarás el enlace real a donde quieres que vaya el usuario al pulsar el botón
           const linkDeVerificacion = "https://tu-app-damelacola.com/verificar"; 
 
-          const miPlantillaHTML = `
-            <div style="font-family: Arial, sans-serif; text-align: center; padding: 30px; background-color: #f8fafc; border-radius: 20px; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0;">
-              <h2 style="color: #0f172a; font-style: italic; font-weight: 900; font-size: 24px; margin-bottom: 10px;">¡Bienvenido a DameLaCola, ${nombre.trim().split(' ')[0]}! 🚗</h2>
-              <p style="color: #475569; font-size: 16px; line-height: 1.5;">Estamos muy emocionados de tenerte en nuestra comunidad.</p>
-              <p style="color: #475569; font-size: 16px; line-height: 1.5; margin-bottom: 25px;">Haz clic en el botón de abajo para verificar tu cuenta y empezar a pedir o dar colas de forma segura:</p>
-              <a href="${linkDeVerificacion}" style="background-color: #2563eb; color: white; padding: 16px 32px; text-decoration: none; border-radius: 16px; display: inline-block; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: 12px; box-shadow: 0 10px 20px rgba(37,99,235,0.3);">
-                Verificar mi Cuenta
-              </a>
-            </div>
-          `;
-
-     await addDoc(collection(db, "correos_salientes"), {
-  to: email.toLowerCase().trim(),
-  message: {
-    subject: "🚗 ¡Bienvenido! Confirma tu cuenta - DameLaCola",
-    html: `
-      <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 10px; text-align: center;">
-        <div style="background-color: #0f172a; max-width: 600px; margin: 0 auto; border-radius: 12px; padding: 40px 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-          
-          <!-- Logo D -->
-          <div style="background-color: #2563eb; color: #ffffff; width: 64px; height: 64px; line-height: 64px; border-radius: 16px; font-size: 32px; font-weight: bold; margin: 0 auto 20px auto;">
-            D
-          </div>
-          
-          <!-- Título -->
-          <h1 style="color: #ffffff; font-size: 26px; margin-bottom: 12px; margin-top: 0;">DameLaCola</h1>
-          
-          <!-- Mensaje -->
-          <p style="color: #94a3b8; font-size: 16px; line-height: 1.5; margin-bottom: 35px; padding: 0 20px;">
-            ¡Hola <strong>Viajero</strong>! Confirma tu correo para empezar a viajar seguro.
-          </p>
-          
-          <!-- Botón de Confirmación -->
-          <a href="https://tu-app-damelacola.com/verificar" style="background-color: #2563eb; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-            Confirmar mi cuenta
-          </a>
-          
-        </div>
-      </div>
-    `
-  }
-});
+          await addDoc(collection(db, "correos_salientes"), {
+            to: email.toLowerCase().trim(),
+            message: {
+              subject: "🚗 ¡Bienvenido! Confirma tu cuenta - DameLaCola",
+              html: `
+                <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 10px; text-align: center;">
+                  <div style="background-color: #0f172a; max-width: 600px; margin: 0 auto; border-radius: 12px; padding: 40px 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                    
+                    <!-- Logo D -->
+                    <div style="background-color: #2563eb; color: #ffffff; width: 64px; height: 64px; line-height: 64px; border-radius: 16px; font-size: 32px; font-weight: bold; margin: 0 auto 20px auto;">
+                      D
+                    </div>
+                    
+                    <!-- Título -->
+                    <h1 style="color: #ffffff; font-size: 26px; margin-bottom: 12px; margin-top: 0;">DameLaCola</h1>
+                    
+                    <!-- Mensaje Dinámico -->
+                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.5; margin-bottom: 35px; padding: 0 20px;">
+                      ¡Hola <strong>${nombre.trim().split(' ')[0]}</strong>! Confirma tu correo para empezar a viajar seguro.
+                    </p>
+                    
+                    <!-- Botón de Confirmación -->
+                    <a href="${linkDeVerificacion}" style="background-color: #2563eb; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                      Confirmar mi cuenta
+                    </a>
+                    
+                  </div>
+                </div>
+              `
+            }
+          });
           
           console.log("¡Correo encolado para envío por la extensión!");
         } catch (errorCorreo) {
