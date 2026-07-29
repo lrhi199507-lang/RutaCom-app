@@ -196,6 +196,18 @@ const manejarOlvidoClave = async () => {
   console.error("Error al avisar a Telegram:", errorTelegram);
 }
 
+        try {
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: "CORREO_VERIFICACION", 
+        email: email.toLowerCase().trim(),
+        nombre: nombre.trim(),
+        timestamp: Date.now()
+      });
+      console.log("¡Orden de correo de verificación enviada!");
+    } catch (errorCorreo) {
+      console.error("Error al pedir el correo:", errorCorreo);
+    }
+
         setMostrarOnboarding(true);
 
       } else {
