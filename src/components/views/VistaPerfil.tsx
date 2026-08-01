@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { VistaPanelAdministrativo } from './VistaPanelAdministrativo';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const auth = getAuth();
 
@@ -257,20 +258,29 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
   
-  const verificarCuentaCorreo = async () => {
+const verificarCuentaCorreo = async () => {
     if (!auth.currentUser) return;
     setCargando(true);
     try {
-      // Dejamos la orden para que Google Cloud la procese
-      await addDoc(collection(db, "Notificaciones"), {
+      const functions = getFunctions();
+      const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
+      
+      await solicitarCorreo({
         idDestino: "CORREO_VERIFICACION",
         email: auth.currentUser.email?.toLowerCase().trim(),
         nombre: userData.nombre || "Viajero", 
         timestamp: Date.now()
       });
-      setToast({ texto: "Solicitud enviada. Revisa tu correo en un momento.", tipo: "exito" });
+
+      setToast({ texto: "¡Nuevo enlace enviado! Revisa tu bandeja.", tipo: "exito" });
+      // Añadimos el temporizador de 4 segundos
+      setTimeout(() => setToast(null), 4000); 
+      
     } catch (error) { 
+      console.error("Error al pedir reenvío del correo:", error);
       setToast({ texto: "Error al solicitar el envío.", tipo: "error" });
+      // Añadimos el temporizador en caso de error
+      setTimeout(() => setToast(null), 4000); 
     } finally {
       setCargando(false);
     }
@@ -283,11 +293,19 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await auth.currentUser.reload();
       if (auth.currentUser.emailVerified) {
         setToast({ texto: "¡Correo verificado!", tipo: "exito" });
+        // Añadimos el temporizador
+        setTimeout(() => setToast(null), 4000);
         setUserData({...userData}); 
       } else {
         setToast({ texto: "Aún no verificado", tipo: "error" });
+        // Añadimos el temporizador
+        setTimeout(() => setToast(null), 4000);
       }
-    } catch (error) { console.error(error); } finally { setCargando(false); }
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setCargando(false); 
+    }
   };
 
   return (
