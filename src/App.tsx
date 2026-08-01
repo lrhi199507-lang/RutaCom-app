@@ -9,7 +9,7 @@ import { doc, getDoc, setDoc, updateDoc, addDoc, collection } from 'firebase/fir
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation'; 
 import { Check, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff, RefreshCcw, AlertTriangle } from 'lucide-react'; 
-
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import NavegacionPrincipal from './NavegacionPrincipal';
 
 // 🔥 1. VERSIÓN ACTUAL DE LA APP (CÁMBIALA CADA VEZ QUE SUBAS ALGO A PLAY STORE) 🔥
@@ -17,6 +17,7 @@ const VERSION_APP_ACTUAL = 8;
 
 export default function App() {
   // ESTADOS DE AUTENTICACIÓN Y FLUJO
+  const functions = getFunctions();
   const [esRegistro, setEsRegistro] = useState(false);
   const [email, setEmail] = useState('');
   const [nombre, setNombre] = useState('');
@@ -87,7 +88,9 @@ const manejarOlvidoClave = async () => {
 
   setCargando(true);
   try {
-    await addDoc(collection(db, "Notificaciones"), {
+    // LLAMADA DIRECTA A V2
+    const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
+    await solicitarCorreo({
       idDestino: "CORREO_OLVIDO",
       email: email.toLowerCase().trim(),
       nombre: "Viajero",
@@ -196,18 +199,19 @@ const manejarOlvidoClave = async () => {
   console.error("Error al avisar a Telegram:", errorTelegram);
 }
 
-        try {
-      await addDoc(collection(db, "Notificaciones"), {
+       try {
+      // LLAMADA DIRECTA A V2
+      const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
+      await solicitarCorreo({
         idDestino: "CORREO_VERIFICACION", 
         email: email.toLowerCase().trim(),
         nombre: nombre.trim(),
         timestamp: Date.now()
       });
-      console.log("¡Orden de correo de verificación enviada!");
+      console.log("¡Orden de correo de verificación enviada directo al backend!");
     } catch (errorCorreo) {
-      console.error("Error al pedir el correo:", errorCorreo);
+      console.error("Error al pedir el correo a la función V2:", errorCorreo);
     }
-
         setMostrarOnboarding(true);
 
       } else {
