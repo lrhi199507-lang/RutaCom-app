@@ -82,7 +82,9 @@ jobs:
           sed -i 's/versionCode [0-9]*/versionCode 13/' android/app/build.gradle
           
           echo "Actualizada versión a ${VERSION_NAME} (code 4)"
-          
+
+          # 🚀 ACTIVAR OPTIMIZACIÓN R8 Y REDUCCIÓN DE CÓDIGO/RECURSOS
+          sed -i 's/minifyEnabled false/minifyEnabled true\n        shrinkResources true/' android/app/build.gradle
 
           # 7. INYECTAR PERMISOS (SOLO GPS NORMAL Y NOTIFICACIONES, CERO SEGUNDO PLANO)
           sed -i '/<manifest/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
