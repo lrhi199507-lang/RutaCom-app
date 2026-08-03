@@ -102,7 +102,8 @@ const manejarOlvidoClave = async () => {
       tipo: "exito" 
     });
     setTimeout(() => setToast(null), 5000);
-  } catch (error: any) {
+} catch (error: any) {
+    console.error("❌ ERROR REAL EN FRONTEND:", error);
     setToast({ texto: "Hubo un problema al procesar la solicitud.", tipo: "error" });
     setTimeout(() => setToast(null), 4000);
   } finally {
