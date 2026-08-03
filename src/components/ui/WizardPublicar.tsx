@@ -373,16 +373,19 @@ const confirmarUbicacionMapa = async () => {
     );
   }
 
-// PASO 2: DETALLES 
+  // PASO 2: DETALLES 
   if (pasoWizard === 2) {
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
     const distancia = calcularDistanciaKm(viajeForm.coordsOrigen, viajeForm.coordsDestino);
     const resultadoPrecio = calcularRangoPrecio(distancia, Number(viajeForm.precio));
 
-    // --- NUEVO: CÁLCULO DE COMISIÓN ---
-    const precioOriginal = Number(viajeForm.precio) || 0;
-    const comision = precioOriginal * 0.10;
-    const gananciaNeta = precioOriginal - comision;
+    // --- NUEVO: CÁLCULO DINÁMICO POR ASIENTOS ---
+    const precioUnitario = Number(viajeForm.precio) || 0;
+    const asientosCount = Number(viajeForm.asientos) || 1; // Si está vacío o es 0, toma 1 por defecto
+    
+    const precioTotalGlobal = precioUnitario * asientosCount;
+    const comisionTotal = precioTotalGlobal * 0.10;
+    const gananciaNetaTotal = precioTotalGlobal - comisionTotal;
     
   return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
@@ -396,24 +399,27 @@ const confirmarUbicacionMapa = async () => {
         </div>
                 <div className="bg-slate-50 p-5 rounded-[30px] border border-slate-100">
            <div className="flex gap-4">
-             <div className="flex-[2]"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $</p><input type="number" placeholder="0.00" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic outline-none text-blue-600 focus:border-blue-400 border-slate-100 transition-colors" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} /></div>
+             <div className="flex-[2]"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $ (Por puesto)</p><input type="number" placeholder="0.00" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic outline-none text-blue-600 focus:border-blue-400 border-slate-100 transition-colors" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} /></div>
              <div className="flex-1"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">🪑 Asientos</p><input type="number" placeholder="1-4" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic outline-none text-slate-700 border-slate-100" value={viajeForm.asientos || ""} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} /></div>
            </div>
 
-           {/* --- NUEVO: DESGLOSE DE COMISIÓN --- */}
-           {precioOriginal > 0 && (
+           {/* --- DESGLOSE DE COMISIÓN MULTIPLICADO POR ASIENTOS --- */}
+           {precioUnitario > 0 && (
              <div className="mt-4 p-4 bg-white rounded-[20px] border border-slate-100 flex flex-col gap-1.5 shadow-sm animate-in zoom-in-95">
+               <div className="flex justify-between items-center text-[10px] font-black uppercase text-blue-600 mb-1 border-b pb-1">
+                 <span>Cálculo global ({asientosCount} {asientosCount === 1 ? 'puesto' : 'puestos'}):</span>
+               </div>
                <div className="flex justify-between items-center text-[11px] font-bold text-slate-500">
-                 <span>El pasajero paga:</span>
-                 <span>${precioOriginal.toFixed(2)}</span>
+                 <span>El pasajero paga (Total):</span>
+                 <span>${precioTotalGlobal.toFixed(2)}</span>
                </div>
                <div className="flex justify-between items-center text-[11px] font-bold text-red-500">
                  <span>Tarifa de servicio (10%):</span>
-                 <span>-${comision.toFixed(2)}</span>
+                 <span>-${comisionTotal.toFixed(2)}</span>
                </div>
                <div className="flex justify-between items-center text-sm font-black text-emerald-600 mt-2 pt-2 border-t border-slate-50">
-                 <span>Tu ganancia neta:</span>
-                 <span>${gananciaNeta.toFixed(2)}</span>
+                 <span>Tu ganancia neta total:</span>
+                 <span>${gananciaNetaTotal.toFixed(2)}</span>
                </div>
              </div>
            )}
@@ -428,6 +434,7 @@ const confirmarUbicacionMapa = async () => {
             </div>
            )}
         </div>
+
         <div className="grid grid-cols-3 gap-2">
             {[ {id:'ac', i:'❄️', l:'Aire'}, {id:'noFumar', i:'🚭', l:'Sin Humo'}, {id:'mascotas', i:'🐾', l:'Mascotas'} ].map(p => (
               <button key={p.id} onClick={() => setViajeForm({...viajeForm, preferencias: {...viajeForm.preferencias, [p.id]: !viajeForm.preferencias?.[p.id]}})} className={`p-3 rounded-[20px] border-2 flex flex-col items-center transition-all ${viajeForm.preferencias?.[p.id] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-50 bg-white text-slate-400'}`}>
