@@ -451,7 +451,6 @@ export const Wallet = ({ userData, onRegresar }) => {
                   </div>
                 </div>
                 </div>
-              </div>
             )}
 
             <div className="bg-orange-500/10 border border-orange-500/30 p-3.5 rounded-2xl mb-6 flex items-start gap-3">
