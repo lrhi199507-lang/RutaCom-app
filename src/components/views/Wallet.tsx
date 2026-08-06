@@ -103,9 +103,15 @@ export const Wallet = ({ userData, onRegresar }) => {
 
  const manejarRecarga = async (e) => {
     e.preventDefault();
-    if (!montoRecarga || !referencia || !fotoRecarga) { 
+    
+    // 🔥 1. Validación separada por método de pago
+    if (metodoRecarga === "pago_movil" && (!montoRecarga || !referencia || !fotoRecarga)) {
       setToastMsg("Debes completar los datos y subir el capture"); setToastType("error"); setShowToast(true); return; 
     }
+    if (metodoRecarga === "binance" && (!montoRecarga || !fotoRecarga)) {
+      setToastMsg("Debes indicar el monto y subir el capture"); setToastType("error"); setShowToast(true); return; 
+    }
+
     setEnviando(true);
     try {
       const nombreArchivo = `comprobantes/${userData.id}_${Date.now()}.jpg`;
@@ -113,8 +119,11 @@ export const Wallet = ({ userData, onRegresar }) => {
       await uploadString(storageRef, fotoRecarga, 'data_url');
       const urlComprobante = await getDownloadURL(storageRef);
 
+      // 🔥 2. Si es binance, guardamos "Binance P2P" en la base de datos para no dejar el campo vacío
+      const refFinal = metodoRecarga === "binance" ? "Binance P2P" : referencia;
+
       await addDoc(collection(db, "PagosPendientes"), {
-        uid: userData.id, nombre: userData.nombre, monto: Number(montoRecarga), referencia: referencia,
+        uid: userData.id, nombre: userData.nombre, monto: Number(montoRecarga), referencia: refFinal,
         comprobanteUrl: urlComprobante, tasaAplicada: tasaBCV, fecha: new Date().toISOString(), 
         estado: "pendiente", tipo: "recarga", metodoPago: metodoRecarga 
       });
@@ -124,23 +133,18 @@ export const Wallet = ({ userData, onRegresar }) => {
         const botToken = "8943485402:AAFwOhXY6BQDy2p09PxSE4BsfxGZ9g1nqWQ";
         const chatId = "6402827355";
         
-        // Armamos el mensaje con todos los datos clave de la recarga
-        const mensaje = `🔔 *NUEVA RECARGA SOLICITADA* 🔔\n\n💰 *Monto:* $${montoRecarga}\n📝 *Referencia:* ${referencia}\n💳 *Método:* ${metodoRecarga.replace("_", " ")}\n👤 *Usuario:* ${userData.nombre}\n🆔 *ID:* ${userData.id}`;
+        // Se usa refFinal para que en Telegram diga "Binance P2P" en vez de vacío
+        const mensaje = `🔔 *NUEVA RECARGA SOLICITADA* 🔔\n\n💰 *Monto:* $${montoRecarga}\n📝 *Referencia:* ${refFinal}\n💳 *Método:* ${metodoRecarga.replace("_", " ")}\n👤 *Usuario:* ${userData.nombre}\n🆔 *ID:* ${userData.id}`;
         
         const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
         
         await fetch(telegramUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: mensaje,
-            parse_mode: 'Markdown'
-          })
+          body: JSON.stringify({ chat_id: chatId, text: mensaje, parse_mode: 'Markdown' })
         });
       } catch (errorTelegram) {
         console.error("Error al enviar mensaje a Telegram:", errorTelegram);
-        // Si Telegram falla, la recarga igual sigue su curso sin interrumpir al usuario
       }
       // 👆 --- FIN DE NOTIFICACIÓN A TELEGRAM --- 👆
 
@@ -429,6 +433,19 @@ export const Wallet = ({ userData, onRegresar }) => {
                     </div>
                   </div>
                 </div>
+               {/* 🔥 NUEVO AVISO ESTRICTO DE TITULARIDAD (TIPO BINANCE P2P) 🔥 */}
+                <div className="mt-5 bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex items-start gap-3 shadow-inner">
+                  <Lock size={20} className="text-red-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">⚠️ Regla de Titularidad</p>
+                    <p className="text-[9px] font-bold text-slate-300 leading-relaxed">
+                      La transferencia debe hacerse desde una cuenta de Binance registrada con <span className="text-white font-black bg-red-500/20 px-1 py-0.5 rounded">TU MISMO CORREO</span> ({userData?.email || userData?.correo || "registrado en tu perfil"}).
+                    </p>
+                    <p className="text-[8.5px] font-black text-red-500/80 uppercase tracking-wider mt-1">
+                      🚫 Pagos de terceros serán rechazados.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -461,10 +478,12 @@ export const Wallet = ({ userData, onRegresar }) => {
                 )}
               </div>
               
-              <div>
-                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Número de Referencia</label>
-                <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Ej: 1234 (Últimos dígitos)" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-sm font-black outline-none focus:border-blue-500 transition-all" />
-              </div>
+             {metodoRecarga === "pago_movil" && (
+                <div>
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Número de Referencia</label>
+                  <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Ej: 1234 (Últimos dígitos)" className="w-full bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 text-sm font-black outline-none focus:border-blue-500 transition-all" />
+                </div>
+              )}
               
               <button type="submit" disabled={enviando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all disabled:opacity-50 mt-2">
                 {enviando ? "Procesando Notificación..." : "Notificar Pago Realizado"}
