@@ -434,7 +434,7 @@ export const Wallet = ({ userData, onRegresar }) => {
                 <div className="mt-5 bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex items-start gap-3 shadow-inner">
                   <Lock size={20} className="text-red-500 shrink-0 mt-0.5" />
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">⚠️ Regla de Seguridad P2P</p>
+                    <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">⚠️ Regla de Seguridad</p>
                     <p className="text-[9px] font-bold text-slate-300 leading-relaxed">
                       Por seguridad antilavado, los fondos deben provenir de <span className="text-white font-black bg-red-500/20 px-1 py-0.5 rounded">TU PROPIA CUENTA</span>.
                     </p>
