@@ -522,13 +522,20 @@ const confirmarUbicacionMapa = async () => {
                   asientos: Number(viajeForm.asientos) || 1
                 };
 
+                // 🔥 GENERAMOS EL CÓDIGO DE ENLACE DIRECTO 🔥
+                const idEnlaceUnico = `enlace_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
                 if (viajeForm.publicarRegreso) {
-                   const objetoIda = { ...datosBase, conRetornoProgramado: true, tipoRuta: "ida_y_vuelta" };
+                   // Le inyectamos el idEnlace a la IDA
+                   const objetoIda = { ...datosBase, conRetornoProgramado: true, tipoRuta: "ida_y_vuelta", idEnlace: idEnlaceUnico };
                    await publicarRuta(objetoIda, true);
+                   
+                   // Le inyectamos EL MISMO idEnlace a la VUELTA
                    await publicarRuta({
                     ...objetoIda, origen: viajeForm.destino, destino: viajeForm.origen, cO: ciudadDest, cD: ciudadOri,
                     coordsOrigen: viajeForm.coordsDestino, coordsDestino: viajeForm.coordsOrigen,
-                    fecha: viajeForm.fechaRegreso, hora: viajeForm.horaRegreso || viajeForm.hora, tipoRuta: "vuelta_de_ruta", conRetornoProgramado: false
+                    fecha: viajeForm.fechaRegreso, hora: viajeForm.horaRegreso || viajeForm.hora, 
+                    tipoRuta: "vuelta_de_ruta", conRetornoProgramado: false, idEnlace: idEnlaceUnico
                    }, true);
                 } else {
                   await publicarRuta({ ...datosBase, conRetornoProgramado: false, tipoRuta: "solo_ida" }, true);
