@@ -111,6 +111,28 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [modalTerminos, setModalTerminos] = useState(false);
   const [adultosExtra, setAdultosExtra] = useState(0);
   const [ninosExtra, setNinosExtra] = useState(0);
+
+  // 🔥 NUEVO: Estados para el "Modelo Aerolínea" (Ida y Vuelta)
+  const [viajeRetorno, setViajeRetorno] = useState(null);
+  const [reservarIdaYVuelta, setReservarIdaYVuelta] = useState(false);
+
+  // 🔥 NUEVO: Buscador automático directo por enlace gemelo
+  useEffect(() => {
+    const buscarRetorno = async () => {
+      if (viaje?.conRetornoProgramado && viaje?.idEnlace) {
+        try {
+          const qRetorno = query(
+            collection(db, "Viajes"),
+            where("idEnlace", "==", viaje.idEnlace),
+            where("tipoRuta", "==", "vuelta_de_ruta")
+          );
+          const snap = await getDocs(qRetorno);
+          if (!snap.empty) setViajeRetorno({ id: snap.docs[0].id, ...snap.docs[0].data() });
+        } catch (error) { console.error("Error buscando retorno:", error); }
+      }
+    };
+    buscarRetorno();
+  }, [viaje?.conRetornoProgramado, viaje?.idEnlace]);
   
   const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
@@ -404,8 +426,12 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
   };
 
-  const solicitarCola = async () => {
-    const costoTotalPeticion = Number(viaje?.precio || 0) * puestosQueQuiero;
+const solicitarCola = async () => {
+    // 🔥 LÓGICA DE COBRO ACTUALIZADA: Sumamos ida y vuelta si aplica
+    const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
+    const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
+    const costoTotalPeticion = costoViajeIda + costoViajeVuelta;
+    
     const miSaldoActual = Number(userData?.saldo || 0);
 
     if (miSaldoActual < costoTotalPeticion) {
@@ -415,9 +441,21 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     }
 
     if (puestosQueQuiero > cuposRestantes) {
-      setToast({ texto: "No hay suficientes puestos", tipo: "error" });
+      setToast({ texto: "No hay suficientes puestos para la Ida", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
       return;
+    }
+
+    // Verificamos si hay cupo también en el regreso
+    if (reservarIdaYVuelta && viajeRetorno) {
+      const psjsRetorno = Array.isArray(viajeRetorno.pasajeros) ? viajeRetorno.pasajeros : Object.values(viajeRetorno.pasajeros || {});
+      const asientosVueltaOcupados = psjsRetorno.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
+      const cuposVueltaRestantes = (Number(viajeRetorno.asientos) || Number(viajeRetorno.puestos) || 4) - asientosVueltaOcupados;
+      if (puestosQueQuiero > cuposVueltaRestantes) {
+         setToast({ texto: "No hay puestos suficientes para el Regreso", tipo: "error" });
+         setTimeout(() => setToast(null), 3500);
+         return;
+      }
     }
 
     setCargando(true);
@@ -425,81 +463,67 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       let lat = 0; let lng = 0;
       try {
         const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
-        lat = position.coords.latitude;
-        lng = position.coords.longitude;
+        lat = position.coords.latitude; lng = position.coords.longitude;
       } catch (gpsError) {
         setToast({ texto: "Enciende tu GPS o Ubicación para pedir la cola", tipo: "error" });
         setTimeout(() => setToast(null), 4000);
-        setCargando(false);
-        return; 
+        setCargando(false); return; 
       }
 
       const miId = userData?.id || userData?.uid;
-      const idConductor = viaje?.uidConductor || viaje?.idCreador;
-      const viajeRef = doc(db, "Viajes", viaje.id);
       const nombreUsuario = userData?.nombre || "Usuario";
-      
-      const datosPasajeroBase = {
-        id: String(miId), 
-        nombre: String(nombreUsuario), 
-        fotoPerfil: userData?.fotoPerfil || null, 
-        puestosSolicitados: Number(puestosQueQuiero),
-        adultosExtra: Number(adultosExtra),            
-        ninosExtra: Number(ninosExtra),
-        lat: lat,
-        lng: lng,
-        boardado: false, // Legacy
-        abordado: false, // Nueva propiedad individual
-      };
-
       const esAutoAceptar = viaje.autoAceptar === true;
 
-      await ejecutarConTimeout(addDoc(collection(db, "Solicitudes"), {
-        idConductor: String(idConductor),
-        nombrePasajero: String(nombreUsuario),
-        idViaje: String(viaje.id),
-        idPasajero: String(miId),
-        estado: esAutoAceptar ? "aprobada" : "pendiente",
-        puestosSolicitados: Number(puestosQueQuiero),
-        fecha: serverTimestamp()
-      }));
+      const datosPasajeroBase = {
+        id: String(miId), nombre: String(nombreUsuario), fotoPerfil: userData?.fotoPerfil || null, 
+        puestosSolicitados: Number(puestosQueQuiero), adultosExtra: Number(adultosExtra), ninosExtra: Number(ninosExtra),
+        lat: lat, lng: lng, boardado: false, abordado: false, 
+      };
 
-      if (esAutoAceptar) {
-        const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
+      // 🔥 FUNCIÓN INTERNA: Procesa una reserva individualmente
+      const procesarReservaUnica = async (viajeObjetivo) => {
+        const idConductorObj = viajeObjetivo.uidConductor || viajeObjetivo.idCreador;
         
-        await ejecutarConTimeout(procesadorEnNube({ 
-          accion: 'reservar', 
-          viajeId: viaje.id, 
-          pasajeroId: String(miId), 
-          puestosSolicitados: Number(puestosQueQuiero),
-          precio: Number(viaje.precio),
-          esAutoAceptar: true,
-          datosPasajero: datosPasajeroBase 
-        }));
+        await addDoc(collection(db, "Solicitudes"), {
+          idConductor: String(idConductorObj), nombrePasajero: String(nombreUsuario), idViaje: String(viajeObjetivo.id),
+          idPasajero: String(miId), estado: esAutoAceptar ? "aprobada" : "pendiente",
+          puestosSolicitados: Number(puestosQueQuiero), fecha: serverTimestamp()
+        });
 
-        if (idConductor) await enviarNotificacion(idConductor, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje automáticamente.`, "exito");
-        setToast({ texto: "¡Reserva confirmada y cobrada!", tipo: "exito" });
-      } else {
-        await ejecutarConTimeout(updateDoc(viajeRef, {
-          reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
-        }));
-        if (idConductor) {
-          const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
-          await enviarNotificacion(idConductor, "¡Nueva Solicitud!", `${nombreUsuario} quiere unirse a tu viaje${extraTexto}.`, "viaje");
+        if (esAutoAceptar) {
+          const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
+          await procesadorEnNube({ 
+            accion: 'reservar', viajeId: viajeObjetivo.id, pasajeroId: String(miId), puestosSolicitados: Number(puestosQueQuiero),
+            precio: Number(viajeObjetivo.precio), esAutoAceptar: true, datosPasajero: datosPasajeroBase 
+          });
+          if (idConductorObj) await enviarNotificacion(idConductorObj, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje.`, "exito");
+        } else {
+          await updateDoc(doc(db, "Viajes", viajeObjetivo.id), {
+            reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
+          });
+          if (idConductorObj) {
+            const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
+            await enviarNotificacion(idConductorObj, "¡Nueva Solicitud!", `${nombreUsuario} quiere unirse a tu viaje${extraTexto}.`, "viaje");
+          }
         }
-        setToast({ texto: "Solicitud enviada al chofer", tipo: "exito" });
+      };
+
+      // 1. Procesamos el viaje principal (IDA)
+      await ejecutarConTimeout(procesarReservaUnica(viaje));
+
+      // 2. Si marcó "Ida y Vuelta", procesamos el segundo viaje (VUELTA)
+      if (reservarIdaYVuelta && viajeRetorno) {
+        await ejecutarConTimeout(procesarReservaUnica(viajeRetorno));
       }
-      
+
+      setToast({ texto: esAutoAceptar ? "¡Reserva confirmada!" : "Solicitud enviada al chofer", tipo: "exito" });
       setModalAcompanantes(false); 
       setTimeout(() => setToast(null), 3000);
 
     } catch (e) { 
       const mensajeReal = e.message === "TIMEOUT_RED" ? "Red lenta. Procesando..." : `Fallo: ${e.message}`;
-      setToast({ texto: mensajeReal, tipo: "error" });
-      setTimeout(() => setToast(null), 5000);
-    } finally {
-      setCargando(false);
-    }
+      setToast({ texto: mensajeReal, tipo: "error" }); setTimeout(() => setToast(null), 5000);
+    } finally { setCargando(false); }
   };
   
   const cancelarSolicitud = async () => {
