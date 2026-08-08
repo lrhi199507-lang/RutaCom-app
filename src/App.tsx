@@ -45,6 +45,7 @@ export default function App() {
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
+  // 🔥 3. CONSULTAR FIREBASE AL ABRIR LA APP (AUTOMÁTICO) 🔥
   useEffect(() => {
     const verificarVersion = async () => {
       try {
@@ -59,22 +60,17 @@ export default function App() {
             setUrlTienda(data.url_playstore);
           }
           
+          // Obtenemos automáticamente el build (versionCode) de la app instalada
           const info = await CapacitorApp.getInfo();
+          const versionInstalada = Number(info.build || 0); 
           
-          // Nota: Si pruebas en el navegador Web de tu PC, Capacitor a veces no lee el "build".
-          // Por eso forzamos a que si falla o es web, lea 14.
-          const versionInstalada = Number(info.build || 14); 
-          
-          // 🔥 LA TRAMPA: Esto te mostrará en la cara qué números está comparando
-          alert(`Firebase pide Mínimo: ${versionMinima}\nTu App instalada tiene: ${versionInstalada}`);
+          console.log(`Versión Mínima Requerida: ${versionMinima} | Versión Instalada: ${versionInstalada}`);
 
           if (versionInstalada < versionMinima) {
             setRequiereActualizar(true);
           }
         }
       } catch (error) {
-        // Si salta esta alerta, es porque Firebase bloqueó la lectura por las Reglas
-        alert("Error leyendo Firebase. Revisa las reglas o tu internet.");
         console.error("Error al verificar versión:", error);
       } finally {
         setVerificandoVersion(false);
@@ -82,7 +78,6 @@ export default function App() {
     };
     verificarVersion();
   }, []);
-  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user); 
