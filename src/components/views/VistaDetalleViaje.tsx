@@ -108,6 +108,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   
   const [modalAcompanantes, setModalAcompanantes] = useState(false);
+  const [modalTerminos, setModalTerminos] = useState(false);
   const [adultosExtra, setAdultosExtra] = useState(0);
   const [ninosExtra, setNinosExtra] = useState(0);
   
@@ -120,7 +121,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion;
+  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos;
 
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
     return Promise.race([
@@ -1153,8 +1154,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
                     </div>
                   </button>
                 ) : cuposRestantes > 0 ? (
-                  <button disabled={cargando} onClick={() => setModalAcompanantes(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
-                ) : (
+                    <button disabled={cargando} onClick={() => setModalTerminos(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
+                    ) : (
                   <button disabled className="flex-1 bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
                 )
               )
@@ -1354,6 +1355,56 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
               );
             })()}
 
+          </div>
+        </div>
+      )}
+
+      {modalTerminos && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
+          <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative max-h-[85vh] overflow-y-auto border-[3px] border-amber-400">
+             
+             <div className="bg-amber-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border-2 border-amber-200">
+                <ShieldCheck size={30} className="text-amber-600" />
+             </div>
+             
+             <h3 className="text-lg font-black italic uppercase text-slate-800 text-center mb-4">Acuerdos de Viaje</h3>
+             
+             <div className="space-y-4 mb-6">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-3 shadow-sm">
+                   <Clock size={22} className="text-blue-500 shrink-0 mt-0.5" />
+                   <div>
+                      <p className="text-[10px] font-black uppercase text-slate-700">El tiempo es valioso</p>
+                      <p className="text-[10px] font-bold text-slate-500 mt-1 leading-relaxed">Si necesitas cancelar, hazlo <span className="text-slate-700 font-black">con anticipación</span>. Así no perderás tu dinero ni le harás perder tiempo al chofer.</p>
+                   </div>
+                </div>
+
+                <div className="bg-orange-50 p-4 rounded-2xl border border-orange-200 flex gap-3 shadow-sm">
+                   <Navigation size={22} className="text-orange-500 shrink-0 mt-0.5" />
+                   <div>
+                      <p className="text-[10px] font-black uppercase text-orange-700">Chofer en Camino</p>
+                      <p className="text-[10px] font-bold text-orange-800 mt-1 leading-relaxed">Si cancelas en el momento que el chofer ya marcó que salió a buscarte, <span className="font-black text-red-600">NO habrá reembolso</span>. El pago irá completo al chofer por su gasolina.</p>
+                   </div>
+                </div>
+
+                <div className="bg-red-50 p-4 rounded-2xl border border-red-200 flex gap-3 shadow-sm">
+                   <AlertTriangle size={22} className="text-red-500 shrink-0 mt-0.5" />
+                   <div>
+                      <p className="text-[10px] font-black uppercase text-red-700">Cancelaciones y Suspensiones</p>
+                      <p className="text-[10px] font-bold text-red-800 mt-1 leading-relaxed">Para mantener la seriedad, al acumular <span className="font-black">3 viajes cancelados</span> tu cuenta será suspendida por 24 hrs o hasta revisión de Soporte.</p>
+                   </div>
+                </div>
+             </div>
+
+             <button 
+                onClick={() => { setModalTerminos(false); setModalAcompanantes(true); }} 
+                className="w-full bg-amber-400 text-amber-950 rounded-[20px] p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-400/30 active:scale-95 transition-all">
+                Aceptar y Continuar
+             </button>
+             <button 
+                onClick={() => setModalTerminos(false)} 
+                className="w-full text-slate-400 font-black uppercase text-[10px] mt-4 tracking-widest active:scale-95 transition-colors hover:text-slate-600">
+                Cancelar Reserva
+             </button>
           </div>
         </div>
       )}
