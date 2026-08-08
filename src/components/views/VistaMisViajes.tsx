@@ -212,9 +212,18 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-  // 🔥 NUEVA FUNCIÓN CRÍTICA: Verifica si la fecha y hora ya pasaron
-  const verificarSiExpiro = (viaje) => {
+// 🔥 NUEVA FUNCIÓN INTELIGENTE: Detecta si un viaje expiró vacío
+  const esViajeFantasma = (viaje) => {
     try {
+      const estado = String(viaje.estado || 'disponible');
+      
+      // Si el viaje ya inició o está buscando, NO es fantasma (aunque vaya tarde)
+      if (estado === 'en_curso' || estado === 'buscando') return false;
+      
+      // Si el viaje tiene pasajeros confirmados, NO es fantasma (los pasajeros lo están esperando)
+      if (Array.isArray(viaje.pasajeros) && viaje.pasajeros.length > 0) return false;
+
+      // Evaluamos la fecha y hora
       const fecha = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
       const hora = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
       
@@ -222,9 +231,9 @@ export const VistaMisViajes = ({
 
       const [year, month, day] = fecha.split('-');
       const [hour, minute] = hora.split(':');
-      
       const fechaViaje = new Date(year, month - 1, day, hour, minute);
-      return fechaViaje < new Date(); // Retorna true si ya pasó
+      
+      return new Date() > fechaViaje; // Retorna true solo si la hora ya pasó Y está vacío
     } catch (e) {
       return false;
     }
@@ -237,10 +246,11 @@ export const VistaMisViajes = ({
     const listC = Array.isArray(viajesChofer) ? viajesChofer : [];
     listC.forEach(v => {
       if (v && v.id) {
-        const est = String(v.estado || '');
-        const expiro = verificarSiExpiro(v);
-        // 🔥 Si finalizó, canceló, o ya pasó la fecha, va al historial
-        if (est === 'finalizado' || est === 'cancelado' || expiro) {
+        const est = String(v.estado || 'disponible');
+        const expiradoVacio = esViajeFantasma(v);
+        
+        // Si finalizó, canceló, o es un "fantasma", va al historial
+        if (est === 'finalizado' || est === 'cancelado' || expiradoVacio) {
           cHistorial.push(v);
         } else {
           cActivos.push(v);
@@ -258,10 +268,9 @@ export const VistaMisViajes = ({
     todos.forEach(v => { if (v && v.id) unicos[v.id] = v; });
 
     Object.values(unicos).forEach(v => {
-      const est = String(v.estado || '');
-      const expiro = verificarSiExpiro(v);
-      // 🔥 Igual para el pasajero: forzar al historial si expiró
-      if (est === 'finalizado' || est === 'cancelado' || expiro) {
+      const est = String(v.estado || 'disponible');
+      // Para el pasajero la regla es igual
+      if (est === 'finalizado' || est === 'cancelado') {
         pHistorial.push(v);
       } else {
         pActivos.push(v);
