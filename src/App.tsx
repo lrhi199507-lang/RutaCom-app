@@ -8,10 +8,10 @@ import {
 import { doc, getDoc, setDoc, updateDoc, addDoc, collection } from 'firebase/firestore'; 
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation'; 
+import { App as CapacitorApp } from '@capacitor/app';
 import { Check, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff, RefreshCcw, AlertTriangle } from 'lucide-react'; 
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import NavegacionPrincipal from './NavegacionPrincipal';
-import { App as CapacitorApp } from '@capacitor/app';
 
 export default function App() {
   // ESTADOS DE AUTENTICACIÓN Y FLUJO
@@ -24,8 +24,8 @@ export default function App() {
   const [cargando, setCargando] = useState(false);
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
   
-// 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
-  const [verificandoVersion, setVerificandoVersion] = useState(true); // <-- ESTADO NUEVO
+  // ESTADOS DE BLOQUEO POR VERSIÓN (ÚNICOS Y SIN DUPLICADOS)
+  const [verificandoVersion, setVerificandoVersion] = useState(true);
   const [requiereActualizar, setRequiereActualizar] = useState(false);
   const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
   
@@ -37,19 +37,15 @@ export default function App() {
 
   const [mensajeCarga, setMensajeCarga] = useState("Conectando..."); 
 
-  // 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
-  const [requiereActualizar, setRequiereActualizar] = useState(false);
-  const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
-
   // ==========================================
-  // 🔥 VARIABLES DE SEGURIDAD PARA CONTRASEÑA 🔥
+  // VARIABLES DE SEGURIDAD PARA CONTRASEÑA
   // ==========================================
   const tieneSeis = password.length >= 6;
   const tieneMayus = /[A-Z]/.test(password);
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
-  // 🔥 3. CONSULTAR FIREBASE AL ABRIR LA APP (AUTOMÁTICO) 🔥
+  // CONSULTAR FIREBASE Y VERIFICAR VERSIÓN AUTOMÁTICA DEL CELULAR
   useEffect(() => {
     const verificarVersion = async () => {
       try {
@@ -64,13 +60,12 @@ export default function App() {
             setUrlTienda(data.url_playstore);
           }
           
-          // 🔥 AQUÍ LEEMOS EL BUILD ACTUAL DEL CELULAR AUTOMÁTICAMENTE 🔥
+          // Obtenemos automáticamente el build (versionCode) de la app instalada
           const info = await CapacitorApp.getInfo();
           const versionInstalada = Number(info.build || 0); 
           
           console.log(`Versión Mínima Requerida: ${versionMinima} | Versión Instalada: ${versionInstalada}`);
 
-          // Comparamos los números enteros
           if (versionInstalada < versionMinima) {
             setRequiereActualizar(true);
           }
@@ -91,37 +86,36 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-const manejarOlvidoClave = async () => {
-  if (!email.trim() || !email.includes('@')) {
-    setToast({ texto: "Escribe un correo válido para ayudarte.", tipo: "error" });
-    setTimeout(() => setToast(null), 4000);
-    return;
-  }
+  const manejarOlvidoClave = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      setToast({ texto: "Escribe un correo válido para ayudarte.", tipo: "error" });
+      setTimeout(() => setToast(null), 4000);
+      return;
+    }
 
-  setCargando(true);
-  try {
-    // LLAMADA DIRECTA A V2
-    const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
-    await solicitarCorreo({
-      idDestino: "CORREO_OLVIDO",
-      email: email.toLowerCase().trim(),
-      nombre: "Viajero",
-      timestamp: Date.now()
-    });
+    setCargando(true);
+    try {
+      const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
+      await solicitarCorreo({
+        idDestino: "CORREO_OLVIDO",
+        email: email.toLowerCase().trim(),
+        nombre: "Viajero",
+        timestamp: Date.now()
+      });
 
-    setToast({ 
-      texto: "¡Enviado! Revisa tu bandeja de entrada para restablecer tu clave.", 
-      tipo: "exito" 
-    });
-    setTimeout(() => setToast(null), 5000);
-} catch (error: any) {
-    console.error("❌ ERROR REAL EN FRONTEND:", error);
-    setToast({ texto: "Hubo un problema al procesar la solicitud.", tipo: "error" });
-    setTimeout(() => setToast(null), 4000);
-  } finally {
-    setCargando(false);
-  }
-};
+      setToast({ 
+        texto: "¡Enviado! Revisa tu bandeja de entrada para restablecer tu clave.", 
+        tipo: "exito" 
+      });
+      setTimeout(() => setToast(null), 5000);
+    } catch (error: any) {
+      console.error("❌ ERROR REAL EN FRONTEND:", error);
+      setToast({ texto: "Hubo un problema al procesar la solicitud.", tipo: "error" });
+      setTimeout(() => setToast(null), 4000);
+    } finally {
+      setCargando(false);
+    }
+  };
 
   useEffect(() => {
     if (usuario !== undefined) return;
@@ -168,7 +162,7 @@ const manejarOlvidoClave = async () => {
     return () => { PushNotifications.removeAllListeners(); };
   }, [usuario]);
   
-    const manejarAutenticacion = async (e: any) => {
+  const manejarAutenticacion = async (e: any) => {
     e.preventDefault();
     
     if (esRegistro && (!nombre.trim() || !passwordValida)) {
@@ -199,32 +193,30 @@ const manejarOlvidoClave = async () => {
           vehiculo: { marca: "", modelo: "", placa: "", color: "" }
         });
 
-    try {
-  await addDoc(collection(db, "Notificaciones"), {
-    idDestino: "ADMIN_TELEGRAM",
-    titulo: "NUEVO REGISTRO 👤",
-    mensaje: `👤 Usuario: ${nombre.trim()}\n📧 Correo: ${email.toLowerCase().trim()}`,
-    nombre: nombre.trim(),
-    email: email.toLowerCase().trim(),
-    timestamp: Date.now()
-  });
-} catch (errorTelegram) {
-  console.error("Error al avisar a Telegram:", errorTelegram);
-}
+        try {
+          await addDoc(collection(db, "Notificaciones"), {
+            idDestino: "ADMIN_TELEGRAM",
+            titulo: "NUEVO REGISTRO 👤",
+            mensaje: `👤 Usuario: ${nombre.trim()}\n📧 Correo: ${email.toLowerCase().trim()}`,
+            nombre: nombre.trim(),
+            email: email.toLowerCase().trim(),
+            timestamp: Date.now()
+          });
+        } catch (errorTelegram) {
+          console.error("Error al avisar a Telegram:", errorTelegram);
+        }
 
-       try {
-      // LLAMADA DIRECTA A V2
-      const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
-      await solicitarCorreo({
-        idDestino: "CORREO_VERIFICACION", 
-        email: email.toLowerCase().trim(),
-        nombre: nombre.trim(),
-        timestamp: Date.now()
-      });
-      console.log("¡Orden de correo de verificación enviada directo al backend!");
-    } catch (errorCorreo) {
-      console.error("Error al pedir el correo a la función V2:", errorCorreo);
-    }
+        try {
+          const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
+          await solicitarCorreo({
+            idDestino: "CORREO_VERIFICACION", 
+            email: email.toLowerCase().trim(),
+            nombre: nombre.trim(),
+            timestamp: Date.now()
+          });
+        } catch (errorCorreo) {
+          console.error("Error al pedir el correo a la función V2:", errorCorreo);
+        }
         setMostrarOnboarding(true);
 
       } else {
@@ -267,10 +259,10 @@ const manejarOlvidoClave = async () => {
     }
   ];
 
-  // 🔥 4. MURO DE CONTENCIÓN: SI LA APP ES VIEJA, NUNCA PASA DE AQUÍ 🔥
+  // MURO DE CONTENCIÓN: SI LA APP ES VIEJA
   if (requiereActualizar) {
     return (
-      <div className="fixed inset-0 z-[999999] bg-[#0f172a] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+      <div className="fixed inset-0 z-[99999] bg-[#0f172a] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
         <div className="bg-blue-600/10 w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-blue-500/20">
           <RefreshCcw size={40} className="text-blue-400 animate-spin" style={{ animationDuration: '3s' }} />
         </div>
@@ -280,7 +272,7 @@ const manejarOlvidoClave = async () => {
         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[2px] max-w-xs mb-10 leading-relaxed border border-slate-800 bg-slate-900/50 p-4 rounded-2xl">
           Hemos mejorado la seguridad del sistema y el flujo de los viajes. Para seguir pidiendo o dando colas, debes instalar la última versión.
         </p>
-       <button 
+        <button 
           onClick={() => window.open(urlTienda, '_system')}
           className="w-full max-w-xs bg-blue-600 hover:bg-blue-500 text-white rounded-2xl p-5 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/50 active:scale-95 transition-all"
         >
@@ -462,7 +454,7 @@ const manejarOlvidoClave = async () => {
         </button>
       </form>
 
-      {/* 🔥 BOTÓN DE OLVIDÉ MI CONTRASEÑA 🔥 */}
+      {/* BOTÓN DE OLVIDÉ MI CONTRASEÑA */}
       {!esRegistro && (
         <button 
           onClick={manejarOlvidoClave}
@@ -483,17 +475,17 @@ const manejarOlvidoClave = async () => {
       </button>
 
       {toast && (
-  <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
-    <div className={`px-6 py-4 rounded-[25px] shadow-2xl flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-[#0f172a] border border-blue-500/30' : 'bg-red-500'}`}>
-      {toast.tipo === 'exito' ? (
-        <ShieldCheck size={20} className="text-blue-400 shrink-0" />
-      ) : (
-        <AlertTriangle size={20} className="shrink-0" />
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
+          <div className={`px-6 py-4 rounded-[25px] shadow-2xl flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-[#0f172a] border border-blue-500/30' : 'bg-red-500'}`}>
+            {toast.tipo === 'exito' ? (
+              <ShieldCheck size={20} className="text-blue-400 shrink-0" />
+            ) : (
+              <AlertTriangle size={20} className="shrink-0" />
+            )}
+            <span className="leading-relaxed">{toast.texto}</span>
+          </div>
+        </div>
       )}
-      <span className="leading-relaxed">{toast.texto}</span>
-    </div>
-  </div>
-)}
     </div>
   );
 }
