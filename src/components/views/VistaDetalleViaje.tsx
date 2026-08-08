@@ -427,7 +427,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
 const solicitarCola = async () => {
-    // 🔥 LÓGICA DE COBRO ACTUALIZADA: Sumamos ida y vuelta si aplica
+    // 1. Cálculos de costo correctos
     const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
     const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
     const costoTotalPeticion = costoViajeIda + costoViajeVuelta;
@@ -446,11 +446,12 @@ const solicitarCola = async () => {
       return;
     }
 
-    // Verificamos si hay cupo también en el regreso
+    // 2. Validación estricta de cupos para el retorno
     if (reservarIdaYVuelta && viajeRetorno) {
       const psjsRetorno = Array.isArray(viajeRetorno.pasajeros) ? viajeRetorno.pasajeros : Object.values(viajeRetorno.pasajeros || {});
       const asientosVueltaOcupados = psjsRetorno.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
       const cuposVueltaRestantes = (Number(viajeRetorno.asientos) || Number(viajeRetorno.puestos) || 4) - asientosVueltaOcupados;
+      
       if (puestosQueQuiero > cuposVueltaRestantes) {
          setToast({ texto: "No hay puestos suficientes para el Regreso", tipo: "error" });
          setTimeout(() => setToast(null), 3500);
@@ -463,38 +464,57 @@ const solicitarCola = async () => {
       let lat = 0; let lng = 0;
       try {
         const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
-        lat = position.coords.latitude; lng = position.coords.longitude;
+        lat = position.coords.latitude; 
+        lng = position.coords.longitude;
       } catch (gpsError) {
         setToast({ texto: "Enciende tu GPS o Ubicación para pedir la cola", tipo: "error" });
         setTimeout(() => setToast(null), 4000);
-        setCargando(false); return; 
+        setCargando(false); 
+        return; 
       }
 
       const miId = userData?.id || userData?.uid;
       const nombreUsuario = userData?.nombre || "Usuario";
-      const esAutoAceptar = viaje.autoAceptar === true;
 
       const datosPasajeroBase = {
-        id: String(miId), nombre: String(nombreUsuario), fotoPerfil: userData?.fotoPerfil || null, 
-        puestosSolicitados: Number(puestosQueQuiero), adultosExtra: Number(adultosExtra), ninosExtra: Number(ninosExtra),
-        lat: lat, lng: lng, boardado: false, abordado: false, 
+        id: String(miId), 
+        nombre: String(nombreUsuario), 
+        fotoPerfil: userData?.fotoPerfil || null, 
+        puestosSolicitados: Number(puestosQueQuiero), 
+        adultosExtra: Number(adultosExtra), 
+        ninosExtra: Number(ninosExtra),
+        lat: lat, 
+        lng: lng, 
+        boardado: false, 
+        abordado: false, 
       };
 
-      // 🔥 FUNCIÓN INTERNA: Procesa una reserva individualmente
+      // 🔥 FUNCIÓN INTERNA BLINDADA: Ahora evalúa de forma independiente a cada viaje
       const procesarReservaUnica = async (viajeObjetivo) => {
         const idConductorObj = viajeObjetivo.uidConductor || viajeObjetivo.idCreador;
+        // Evalúa si ESTE viaje en específico es de auto-aceptar
+        const autoAceptaViaje = viajeObjetivo.autoAceptar === true; 
         
         await addDoc(collection(db, "Solicitudes"), {
-          idConductor: String(idConductorObj), nombrePasajero: String(nombreUsuario), idViaje: String(viajeObjetivo.id),
-          idPasajero: String(miId), estado: esAutoAceptar ? "aprobada" : "pendiente",
-          puestosSolicitados: Number(puestosQueQuiero), fecha: serverTimestamp()
+          idConductor: String(idConductorObj), 
+          nombrePasajero: String(nombreUsuario), 
+          idViaje: String(viajeObjetivo.id),
+          idPasajero: String(miId), 
+          estado: autoAceptaViaje ? "aprobada" : "pendiente",
+          puestosSolicitados: Number(puestosQueQuiero), 
+          fecha: serverTimestamp()
         });
 
-        if (esAutoAceptar) {
+        if (autoAceptaViaje) {
           const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
           await procesadorEnNube({ 
-            accion: 'reservar', viajeId: viajeObjetivo.id, pasajeroId: String(miId), puestosSolicitados: Number(puestosQueQuiero),
-            precio: Number(viajeObjetivo.precio), esAutoAceptar: true, datosPasajero: datosPasajeroBase 
+            accion: 'reservar', 
+            viajeId: viajeObjetivo.id, 
+            pasajeroId: String(miId), 
+            puestosSolicitados: Number(puestosQueQuiero),
+            precio: Number(viajeObjetivo.precio), 
+            esAutoAceptar: true, 
+            datosPasajero: datosPasajeroBase 
           });
           if (idConductorObj) await enviarNotificacion(idConductorObj, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje.`, "exito");
         } else {
@@ -508,22 +528,25 @@ const solicitarCola = async () => {
         }
       };
 
-      // 1. Procesamos el viaje principal (IDA)
-      await ejecutarConTimeout(procesarReservaUnica(viaje));
+      // 3. Procesamos la IDA asegurando que termine antes de continuar
+      await ejecutarConTimeout(procesarReservaUnica(viaje), 15000);
 
-      // 2. Si marcó "Ida y Vuelta", procesamos el segundo viaje (VUELTA)
+      // 4. Si marcó "Ida y Vuelta", procesamos la VUELTA inmediatamente después (evita colisión de escritura)
       if (reservarIdaYVuelta && viajeRetorno) {
-        await ejecutarConTimeout(procesarReservaUnica(viajeRetorno));
+        await ejecutarConTimeout(procesarReservaUnica(viajeRetorno), 15000);
       }
 
-      setToast({ texto: esAutoAceptar ? "¡Reserva confirmada!" : "Solicitud enviada al chofer", tipo: "exito" });
+      setToast({ texto: viaje.autoAceptar ? "¡Reserva de viaje(s) confirmada!" : "Solicitud doble enviada al chofer", tipo: "exito" });
       setModalAcompanantes(false); 
       setTimeout(() => setToast(null), 3000);
 
     } catch (e) { 
-      const mensajeReal = e.message === "TIMEOUT_RED" ? "Red lenta. Procesando..." : `Fallo: ${e.message}`;
-      setToast({ texto: mensajeReal, tipo: "error" }); setTimeout(() => setToast(null), 5000);
-    } finally { setCargando(false); }
+      const mensajeReal = e.message === "TIMEOUT_RED" ? "Red inestable. Validando..." : `Fallo: ${e.message}`;
+      setToast({ texto: mensajeReal, tipo: "error" }); 
+      setTimeout(() => setToast(null), 5000);
+    } finally { 
+      setCargando(false); 
+    }
   };
   
   const cancelarSolicitud = async () => {
