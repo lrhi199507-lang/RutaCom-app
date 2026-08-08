@@ -489,8 +489,8 @@ const solicitarCola = async () => {
         abordado: false, 
       };
 
-      // 🔥 FUNCIÓN INTERNA BLINDADA: Ahora evalúa de forma independiente a cada viaje
-      const procesarReservaUnica = async (viajeObjetivo) => {
+      // 🔥 FUNCIÓN INTERNA BLINDADA: Ahora evalúa de forma independiente a cada viaje y personaliza las notificaciones
+      const procesarReservaUnica = async (viajeObjetivo, esRetorno = false) => {
         const idConductorObj = viajeObjetivo.uidConductor || viajeObjetivo.idCreador;
         // Evalúa si ESTE viaje en específico es de auto-aceptar
         const autoAceptaViaje = viajeObjetivo.autoAceptar === true; 
@@ -505,6 +505,21 @@ const solicitarCola = async () => {
           fecha: serverTimestamp()
         });
 
+        // --- 🔥 LÓGICA DE TEXTOS DE NOTIFICACIÓN INTELIGENTE 🔥 ---
+        const extraTexto = puestosQueQuiero > 1 ? ` con ${puestosQueQuiero - 1} acompañante(s)` : "";
+        let tituloNoti = autoAceptaViaje ? "¡Nuevo Pasajero!" : "¡Nueva Solicitud!";
+        let cuerpoNoti = `${nombreUsuario} ${autoAceptaViaje ? 'se unió a' : 'quiere unirse a'} tu viaje${extraTexto}.`;
+
+        if (reservarIdaYVuelta) {
+            if (esRetorno) {
+                tituloNoti = autoAceptaViaje ? "¡Regreso Confirmado! 🔁" : "¡Solicitud de Regreso! 🔁";
+                cuerpoNoti = `${nombreUsuario} también ${autoAceptaViaje ? 'aseguró' : 'solicitó'} su puesto para el viaje de VUELTA${extraTexto}.`;
+            } else {
+                tituloNoti = autoAceptaViaje ? "¡Pasajero Ida y Vuelta! ✈️" : "¡Solicitud Ida y Vuelta! ✈️";
+                cuerpoNoti = `${nombreUsuario} ${autoAceptaViaje ? 'se unió a' : 'quiere unirse a'} tu viaje de IDA, y también va en el de REGRESO${extraTexto}.`;
+            }
+        }
+
         if (autoAceptaViaje) {
           const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
           await procesadorEnNube({ 
@@ -516,24 +531,23 @@ const solicitarCola = async () => {
             esAutoAceptar: true, 
             datosPasajero: datosPasajeroBase 
           });
-          if (idConductorObj) await enviarNotificacion(idConductorObj, "¡Nuevo Pasajero!", `${nombreUsuario} se unió a tu viaje.`, "exito");
+          if (idConductorObj) await enviarNotificacion(idConductorObj, tituloNoti, cuerpoNoti, "exito");
         } else {
           await updateDoc(doc(db, "Viajes", viajeObjetivo.id), {
             reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
           });
           if (idConductorObj) {
-            const extraTexto = puestosQueQuiero > 1 ? ` y ${puestosQueQuiero - 1} acompañante(s)` : "";
-            await enviarNotificacion(idConductorObj, "¡Nueva Solicitud!", `${nombreUsuario} quiere unirse a tu viaje${extraTexto}.`, "viaje");
+            await enviarNotificacion(idConductorObj, tituloNoti, cuerpoNoti, "viaje");
           }
         }
       };
 
-      // 3. Procesamos la IDA asegurando que termine antes de continuar
-      await ejecutarConTimeout(procesarReservaUnica(viaje), 15000);
+      // 3. Procesamos la IDA asegurando que termine antes de continuar (le pasamos false porque NO es el retorno)
+      await ejecutarConTimeout(procesarReservaUnica(viaje, false), 15000);
 
-      // 4. Si marcó "Ida y Vuelta", procesamos la VUELTA inmediatamente después (evita colisión de escritura)
+      // 4. Si marcó "Ida y Vuelta", procesamos la VUELTA (le pasamos true porque SÍ es el retorno)
       if (reservarIdaYVuelta && viajeRetorno) {
-        await ejecutarConTimeout(procesarReservaUnica(viajeRetorno), 15000);
+        await ejecutarConTimeout(procesarReservaUnica(viajeRetorno, true), 15000);
       }
 
       setToast({ texto: viaje.autoAceptar ? "¡Reserva de viaje(s) confirmada!" : "Solicitud doble enviada al chofer", tipo: "exito" });
