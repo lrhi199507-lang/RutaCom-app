@@ -13,9 +13,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import NavegacionPrincipal from './NavegacionPrincipal';
 import { App as CapacitorApp } from '@capacitor/app';
 
-// 🔥 1. VERSIÓN ACTUAL DE LA APP (CÁMBIALA CADA VEZ QUE SUBAS ALGO A PLAY STORE) 🔥
-const VERSION_APP_ACTUAL = 8; 
-
 export default function App() {
   // ESTADOS DE AUTENTICACIÓN Y FLUJO
   const functions = getFunctions();
@@ -52,45 +49,40 @@ export default function App() {
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
 
-  // 🔥 3. CONSULTAR FIREBASE AL ABRIR LA APP 🔥
- useEffect(() => {
-  const verificarVersion = async () => {
-    try {
-      // 1. Consultamos la versión mínima requerida en Firebase
-      const docRef = doc(db, "Configuracion", "app");
-      const snap = await getDoc(docRef);
-      
-      if (snap.exists()) {
-        const data = snap.data();
-        const versionMinimaFirebase = Number(data.version_minima || 0); // Ej: 108
+  // 🔥 3. CONSULTAR FIREBASE AL ABRIR LA APP (AUTOMÁTICO) 🔥
+  useEffect(() => {
+    const verificarVersion = async () => {
+      try {
+        const docRef = doc(db, "Configuracion", "app");
+        const snap = await getDoc(docRef);
         
-        if (data.url_playstore) {
-          setUrlTienda(data.url_playstore);
-        }
-        
-        // 2. Obtenemos automáticamente la versión desde la configuración de la app
-        const info = await CapacitorApp.getInfo();
-        
-        // info.version lee el texto de tu package.json (ej: "1.0.8")
-        // Lo convertimos a un número entero eliminando los puntos para poder compararlo
-        const versionString = info.version || "1.0.0";
-        const versionInstalada = Number(versionString.replace(/\./g, '')); // Ej: "1.0.8" se convierte en 108
-        
-        console.log(`Versión Mínima Firebase: ${versionMinimaFirebase} | Versión Instalada App: ${versionInstalada}`);
+        if (snap.exists()) {
+          const data = snap.data();
+          const versionMinima = Number(data.version_minima || 0);
+          
+          if (data.url_playstore) {
+            setUrlTienda(data.url_playstore);
+          }
+          
+          // 🔥 AQUÍ LEEMOS EL BUILD ACTUAL DEL CELULAR AUTOMÁTICAMENTE 🔥
+          const info = await CapacitorApp.getInfo();
+          const versionInstalada = Number(info.build || 0); 
+          
+          console.log(`Versión Mínima Requerida: ${versionMinima} | Versión Instalada: ${versionInstalada}`);
 
-        // 3. Comparamos
-        if (versionInstalada < versionMinimaFirebase) {
-          setRequiereActualizar(true);
+          // Comparamos los números enteros
+          if (versionInstalada < versionMinima) {
+            setRequiereActualizar(true);
+          }
         }
+      } catch (error) {
+        console.error("Error al verificar versión:", error);
+      } finally {
+        setVerificandoVersion(false);
       }
-    } catch (error) {
-      console.error("Error al verificar versión:", error);
-    } finally {
-      setVerificandoVersion(false);
-    }
-  };
-  verificarVersion();
-}, []);
+    };
+    verificarVersion();
+  }, []);
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
