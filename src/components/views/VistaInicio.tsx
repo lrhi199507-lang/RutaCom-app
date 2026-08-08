@@ -222,7 +222,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   };
 
-  // --- FILTRO INTELIGENTE ---
+ // --- FILTRO INTELIGENTE ---
   const viajesFiltrados = useMemo(() => {
     const lista = Array.isArray(viajes) ? viajes : [];
     const RADIO_KM = 25; 
@@ -230,8 +230,34 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     const fechaBusquedaBase = new Date(fechaSeleccionada);
     const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
+    // 🔥 NUEVA FUNCIÓN INTELIGENTE: Detecta si un viaje expiró vacío
+    const esViajeFantasma = (viaje) => {
+      try {
+        const estado = String(viaje.estado || 'disponible');
+        if (estado === 'en_curso' || estado === 'buscando') return false;
+        if (Array.isArray(viaje.pasajeros) && viaje.pasajeros.length > 0) return false;
+
+        const fecha = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
+        const hora = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
+        
+        if (!fecha || !hora) return false;
+
+        const [year, month, day] = fecha.split('-');
+        const [hour, minute] = hora.split(':');
+        const fechaViaje = new Date(year, month - 1, day, hour, minute);
+        
+        return new Date() > fechaViaje;
+      } catch (e) {
+        return false;
+      }
+    };
+
     const filtrados = lista.filter(v => {
+      // 1. Ocultar si el viaje ya no está disponible (en curso, cancelado, etc.)
       if (v.estado && v.estado !== 'disponible') return false;
+
+      // 🔥 2. Ocultar viajes "fantasma" que expiraron sin pasajeros
+      if (esViajeFantasma(v)) return false;
 
       let coincideOrigen = true;
       if (origen.trim() !== "") {
@@ -280,7 +306,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       return ordenPrecio === 'asc' ? precioA - precioB : precioB - precioA;
     });
   }, [viajes, origen, destino, fechaSeleccionada, pasajeros, ordenPrecio, totalPasajeros, coordsOrigen, coordsDestino]);
-
   const formatearFechaBusqueda = (date) => {
     return date.toLocaleDateString('es-ES', { 
       weekday: 'short', day: 'numeric', month: 'short' 
