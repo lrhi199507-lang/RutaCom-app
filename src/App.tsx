@@ -26,6 +26,11 @@ export default function App() {
   const [cargando, setCargando] = useState(false);
   const [toast, setToast] = useState<{texto: string, tipo: 'exito'|'error'} | null>(null);
   
+// 🔥 2. ESTADO DE BLOQUEO POR VERSIÓN 🔥
+  const [verificandoVersion, setVerificandoVersion] = useState(true); // <-- ESTADO NUEVO
+  const [requiereActualizar, setRequiereActualizar] = useState(false);
+  const [urlTienda, setUrlTienda] = useState('https://play.google.com/store/apps/details?id=com.damelacola.app');
+  
   const [usuario, setUsuario] = useState<any>(undefined); 
   
   // ESTADOS DEL ONBOARDING
@@ -57,20 +62,22 @@ export default function App() {
           const data = snap.data();
           const versionMinima = Number(data.version_minima || 0);
           
-          if (data.url_playstore) {
-            setUrlTienda(data.url_playstore);
-          }
+          if (data.url_playstore) setUrlTienda(data.url_playstore);
           
           if (VERSION_APP_ACTUAL < versionMinima) {
             setRequiereActualizar(true);
           }
         }
       } catch (error) {
-        console.error("Error al verificar versión:", error);
+        console.error("Error al verificar versión (Revisa tus reglas de Firestore):", error);
+      } finally {
+        // Obligamos a la app a quitar la pantalla de carga SOLO cuando termine de revisar
+        setVerificandoVersion(false);
       }
     };
     verificarVersion();
   }, []);
+
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -279,7 +286,7 @@ const manejarOlvidoClave = async () => {
   }
 
   // PANTALLA DE CARGA (SPLASH SCREEN)
-  if (usuario === undefined) {
+  if (usuario === undefined || verificandoVersion) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
