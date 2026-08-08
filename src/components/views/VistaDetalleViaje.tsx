@@ -1469,17 +1469,43 @@ const solicitarCola = async () => {
                   <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"><Users size={16} /></div>
                   <div><p className="text-sm font-black text-slate-700 uppercase leading-none">Niños</p></div>
                 </div>
-                <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-1 border border-slate-100">
+               <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-1 border border-slate-100">
                   <button onClick={() => setNinosExtra(Math.max(0, ninosExtra - 1))} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-slate-600">-</button>
                   <span className="font-black w-4 text-center">{ninosExtra}</span>
                   <button onClick={() => setNinosExtra(ninosExtra + 1)} disabled={puestosQueQuiero >= cuposRestantes} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-blue-600 disabled:opacity-50">+</button>
                 </div>
               </div>
+
+              {/* 🔥 NUEVO SWITCH: IDA Y VUELTA 🔥 */}
+              {viajeRetorno && (
+                <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-2xl mt-4 animate-in slide-in-from-bottom">
+                   <div className="flex items-center gap-3">
+                      <Repeat size={20} className="text-emerald-500 shrink-0" />
+                      <div>
+                         <p className="text-[10px] font-black uppercase text-emerald-700 tracking-wider">Asegurar Regreso</p>
+                         <p className="text-[9px] font-bold text-emerald-600/80 mt-0.5">El {formatearFechaHoraRetorno(viajeRetorno.fecha, viajeRetorno.hora)}</p>
+                      </div>
+                   </div>
+                   <button onClick={() => setReservarIdaYVuelta(!reservarIdaYVuelta)} className={`w-12 h-6 rounded-full relative transition-colors ${reservarIdaYVuelta ? 'bg-emerald-500 shadow-md shadow-emerald-500/30' : 'bg-slate-300'}`}>
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${reservarIdaYVuelta ? 'left-7' : 'left-1'}`} />
+                   </button>
+                </div>
+              )}
+
             </div>
 
+            {/* 🔥 ACTUALIZADO: PRECIO DINÁMICO 🔥 */}
             <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl mb-6">
-               <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider">Asientos a ocupar</span>
-               <span className="text-xl font-black italic text-blue-600">{puestosQueQuiero} / {cuposRestantes}</span>
+               <div>
+                  <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider block">Asientos a ocupar</span>
+                  {reservarIdaYVuelta && <span className="text-[9px] font-bold text-emerald-600 uppercase block mt-1">+ Retorno Incluido</span>}
+               </div>
+               <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 block mb-1">{puestosQueQuiero} / {cuposRestantes} Disponibles</span>
+                  <span className="text-xl font-black italic text-blue-600">
+                    ${(Number(viaje?.precio || 0) * puestosQueQuiero) + (reservarIdaYVuelta && viajeRetorno ? Number(viajeRetorno.precio || 0) * puestosQueQuiero : 0)}
+                  </span>
+               </div>
             </div>
 
             <button disabled={cargando || puestosQueQuiero > cuposRestantes} onClick={solicitarCola} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:bg-slate-300 disabled:shadow-none">
