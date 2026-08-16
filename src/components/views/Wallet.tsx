@@ -329,9 +329,15 @@ export const Wallet = ({ userData, onRegresar }) => {
           ) : (
             <div className="space-y-3">
               {transaccionesFiltradas.map((tx) => {
-                const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga';
+                const esIngreso = tx.tipo === 'ingreso' || tx.tipo === 'recarga' || tx.tipo === 'reembolso';
                 const esRechazo = tx.tipo === 'rechazo'; 
-                const tieneRecibo = tx.tipo === 'ingreso' || esRechazo; 
+                
+                // 🔥 EL CANDADO: Detectamos si es una recarga, un retiro o un reembolso leyendo su descripción
+                const descMinuscula = (tx.descripcion || "").toLowerCase();
+                const esTransaccionDeSaldo = descMinuscula.includes("recarga") || descMinuscula.includes("retiro") || descMinuscula.includes("reembolso") || tx.tipo === "recarga" || tx.tipo === "egreso";
+
+                // Solo tendrá recibo (y se le podrá hacer clic) si ES un ingreso de viaje (NO de saldo) o si es un rechazo (para leer el motivo).
+                const tieneRecibo = (tx.tipo === 'ingreso' && !esTransaccionDeSaldo) || esRechazo;
 
                 return (
                   <div 
