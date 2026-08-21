@@ -67,11 +67,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       if (primeraCarga && isSoporte && !esAdmin) {
         if (historialMensajes.length === 0) {
           addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-            texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
-            uidRemitente: 'admin',
-            timestamp: serverTimestamp(),
-            participantes: [userData.id, 'admin']
-          });
+  texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖...`,
+  uidRemitente: 'admin',
+  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
+  participantes: [userData.id, 'admin']
+});
         }
         primeraCarga = false;
       }
@@ -127,17 +127,18 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
     try {
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-        texto: textoUsuario,
-        uidRemitente: userData.id,
-        timestamp: serverTimestamp(),
-        participantes: [userData.id, 'admin']
-      });
-      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-        texto: respuestaBot,
-        uidRemitente: 'admin',
-        timestamp: serverTimestamp(),
-        participantes: [userData.id, 'admin']
-      });
+  texto: textoUsuario,
+  uidRemitente: userData.id,
+  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
+  participantes: [userData.id, 'admin']
+});
+
+await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+  texto: respuestaBot,
+  uidRemitente: 'admin',
+  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
+  participantes: [userData.id, 'admin']
+});
     } catch (error) {
       console.error("Error guardando comandos del bot", error);
       alert("Error en el bot: " + error.message); 
@@ -154,13 +155,13 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       setNuevoMsg(""); 
       
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-        texto: texto,
-        uidRemitente: userData.id,
-        timestamp: serverTimestamp(),
-        participantes: isSoporte 
-          ? [userData.id, "admin"] 
-          : [chat.uidPasajero, chat.uidConductor]
-      });
+  texto: texto,
+  uidRemitente: userData.id,
+  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
+  participantes: isSoporte 
+    ? [userData.id, "admin"] 
+    : [chat.uidPasajero, chat.uidConductor]
+});
 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
