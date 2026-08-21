@@ -61,20 +61,23 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     let primeraCarga = true;
 
     const unsub = onSnapshot(q, (snap) => {
-      const historialMensajes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const historialMensajes = snap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data({ serverTimestamps: "estimate" }) 
+      }));
       setMensajes(historialMensajes);
 
-      if (primeraCarga && isSoporte && !esAdmin) {
+            if (primeraCarga && isSoporte && !esAdmin) {
         if (historialMensajes.length === 0) {
           addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-  texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖...`,
-  uidRemitente: 'admin',
-  timestamp: Timestamp.now(), // <-- CAMBIAR AQUÍ
-  participantes: [userData.id, 'admin']
-});
+            texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
+            uidRemitente: 'admin',
+            timestamp: serverTimestamp(), // <-- AQUÍ ESTÁ EL CAMBIO
+            participantes: [userData.id, 'admin']
+          });
         }
         primeraCarga = false;
-      }
+       }
 
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
@@ -125,27 +128,27 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         return; 
     }
 
-        try {
-      const tiempoUsuario = Timestamp.now();
-      const tiempoBot = Timestamp.fromMillis(Date.now() + 100); 
-
+            try {
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: textoUsuario,
         uidRemitente: userData.id,
-        timestamp: tiempoUsuario, 
+        timestamp: serverTimestamp(), 
         participantes: [userData.id, 'admin']
       });
       
+      // Una pausa de 200ms para garantizar que el bot responda de segundo
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
         texto: respuestaBot,
         uidRemitente: 'admin',
-        timestamp: tiempoBot, 
+        timestamp: serverTimestamp(), 
         participantes: [userData.id, 'admin']
       });
     } catch (error) {
       console.error("Error guardando comandos del bot", error);
       alert("Error en el bot: " + error.message); 
-        }
+            }
   };
 
   const enviar = async (e, textoSugerido = null) => {
@@ -157,14 +160,15 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     try {
       setNuevoMsg(""); 
       
-      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-  texto: texto,
-  uidRemitente: userData.id,
-  timestamp: Timestamp.now(), 
-  participantes: isSoporte 
-    ? [userData.id, "admin"] 
-    : [chat.uidPasajero, chat.uidConductor]
-});
+            await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: texto,
+        uidRemitente: userData.id,
+        timestamp: serverTimestamp(), 
+        participantes: isSoporte 
+          ? [userData.id, "admin"] 
+          : [chat.uidPasajero, chat.uidConductor]
+      });
+      
 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
