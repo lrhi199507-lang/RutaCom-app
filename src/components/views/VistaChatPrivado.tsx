@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc } from "firebase/firestore";
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc, Timestamp } from "firebase/firestore";
 import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X, Map, Zap, CreditCard, Car, LifeBuoy } from 'lucide-react';
 
 const IconoWhatsApp = ({ size = 20, className = "" }) => (
@@ -69,7 +69,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
   texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖...`,
   uidRemitente: 'admin',
-  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
+  timestamp: Timestamp.now()), // <-- CAMBIAR AQUÍ
   participantes: [userData.id, 'admin']
 });
         }
@@ -125,24 +125,27 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         return; 
     }
 
-    try {
-      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-  texto: textoUsuario,
-  uidRemitente: userData.id,
-  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
-  participantes: [userData.id, 'admin']
-});
+        try {
+      const tiempoUsuario = Timestamp.now();
+      const tiempoBot = Timestamp.fromMillis(Date.now() + 100); 
 
-await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
-  texto: respuestaBot,
-  uidRemitente: 'admin',
-  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
-  participantes: [userData.id, 'admin']
-});
+      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: textoUsuario,
+        uidRemitente: userData.id,
+        timestamp: tiempoUsuario, 
+        participantes: [userData.id, 'admin']
+      });
+      
+      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        texto: respuestaBot,
+        uidRemitente: 'admin',
+        timestamp: tiempoBot, 
+        participantes: [userData.id, 'admin']
+      });
     } catch (error) {
       console.error("Error guardando comandos del bot", error);
       alert("Error en el bot: " + error.message); 
-    }
+        }
   };
 
   const enviar = async (e, textoSugerido = null) => {
@@ -157,7 +160,7 @@ await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
       await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
   texto: texto,
   uidRemitente: userData.id,
-  timestamp: Date.now(), // <-- CAMBIAR AQUÍ
+  timestamp: Timestamp.now(), 
   participantes: isSoporte 
     ? [userData.id, "admin"] 
     : [chat.uidPasajero, chat.uidConductor]
