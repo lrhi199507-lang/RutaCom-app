@@ -69,7 +69,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
   texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖...`,
   uidRemitente: 'admin',
-  timestamp: Timestamp.now()), // <-- CAMBIAR AQUÍ
+  timestamp: Timestamp.now(), // <-- CAMBIAR AQUÍ
   participantes: [userData.id, 'admin']
 });
         }
