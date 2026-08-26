@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc, Timestamp } from "firebase/firestore";
-import { ChevronLeft, Send, User, ShieldCheck, Info, Headset, Phone, AlertTriangle, Lock, X, Map, Zap, CreditCard, Car, LifeBuoy } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc, addDoc } from "firebase/firestore";
+import { ChevronLeft, Send, User, ShieldCheck, Info, AlertTriangle, Lock, Map, Zap, CreditCard, Car, LifeBuoy, Copy, X } from 'lucide-react';
 
 const IconoWhatsApp = ({ size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -18,12 +18,10 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const [toast, setToast] = useState(null); 
   const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
   
-  // NUEVOS ESTADOS DE REPORTE
   const [motivoSeleccionado, setMotivoSeleccionado] = useState("");
   const [descripcionReporte, setDescripcionReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
-  // ✅ USA ESTO:
   const esAdmin = userData?.rol === 'admin';
   const isSoporte = chat.esSoporte;
   const chatIdReal = isSoporte ? (esAdmin ? chat.id : `soporte_${userData.id}`) : chat.id;
@@ -61,18 +59,22 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     let primeraCarga = true;
 
     const unsub = onSnapshot(q, (snap) => {
+      // Usamos estimate para que no ignore los mensajes que acaban de salir de nuestro celular
       const historialMensajes = snap.docs.map(d => ({ 
         id: d.id, 
         ...d.data({ serverTimestamps: "estimate" }) 
       }));
+      
       setMensajes(historialMensajes);
 
-            if (primeraCarga && isSoporte && !esAdmin) {
+      // 🔥 CORRECCIÓN 1: Usar setDoc para el mensaje de bienvenida
+      if (primeraCarga && isSoporte && !esAdmin) {
         if (historialMensajes.length === 0) {
-          addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+          const botMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
+          setDoc(botMsgRef, {
             texto: `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`,
             uidRemitente: 'admin',
-            timestamp: serverTimestamp(), // <-- AQUÍ ESTÁ EL CAMBIO
+            timestamp: serverTimestamp(),
             participantes: [userData.id, 'admin']
           });
         }
@@ -119,36 +121,69 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         break;
       case 'humano':
         await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema complejo.");
-        await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+        
+        // 🔥 CORRECCIÓN 2: Generar ID local para el bot y evitar el error "Document already exists"
+        const humanoRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
+        await setDoc(humanoRef, {
           texto: "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.",
           uidRemitente: 'admin',
           timestamp: serverTimestamp(),
           participantes: [userData.id, 'admin']
         });
+
+        await setDoc(doc(db, "Chats", chatIdReal), {
+            ultimoMensaje: "⏳ ¡Entendido! Un asesor humano ha sido notificado...",
+            ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            mensajesSinLeer: 1,
+            remitenteUltimoMensaje: 'admin',
+            timestamp: Date.now()
+        }, { merge: true });
+        
         return; 
     }
 
-            try {
-      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+    try {
+      // 🔥 CORRECCIÓN 3: Reemplazar addDoc por setDoc con referencia local pre-generada
+      const userMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
+      await setDoc(userMsgRef, {
         texto: textoUsuario,
         uidRemitente: userData.id,
         timestamp: serverTimestamp(), 
         participantes: [userData.id, 'admin']
       });
-      
-      // Una pausa de 200ms para garantizar que el bot responda de segundo
-      await new Promise(resolve => setTimeout(resolve, 200));
 
-      await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+      // Actualizamos el chat principal para que refleje nuestro mensaje
+      await setDoc(doc(db, "Chats", chatIdReal), {
+        ultimoMensaje: textoUsuario,
+        ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        remitenteUltimoMensaje: userData.id,
+        timestamp: Date.now()
+      }, { merge: true });
+      
+      // Pausa corta para asegurar orden visual
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const botMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
+      await setDoc(botMsgRef, {
         texto: respuestaBot,
         uidRemitente: 'admin',
         timestamp: serverTimestamp(), 
         participantes: [userData.id, 'admin']
       });
+
+      // Actualizamos el chat principal para que refleje la respuesta del bot
+      await setDoc(doc(db, "Chats", chatIdReal), {
+        ultimoMensaje: respuestaBot,
+        ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        mensajesSinLeer: 1,
+        remitenteUltimoMensaje: 'admin',
+        timestamp: Date.now()
+      }, { merge: true });
+
     } catch (error) {
       console.error("Error guardando comandos del bot", error);
       alert("Error en el bot: " + error.message); 
-            }
+    }
   };
 
   const enviar = async (e, textoSugerido = null) => {
@@ -160,7 +195,9 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     try {
       setNuevoMsg(""); 
       
-            await addDoc(collection(db, `Chats/${chatIdReal}/Mensajes`), {
+      // 🔥 CORRECCIÓN 4: Reemplazar addDoc en el envío manual
+      const nuevoMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
+      await setDoc(nuevoMsgRef, {
         texto: texto,
         uidRemitente: userData.id,
         timestamp: serverTimestamp(), 
@@ -169,7 +206,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           : [chat.uidPasajero, chat.uidConductor]
       });
       
-
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -193,6 +229,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       }
 
       if (idDestinoNotif) {
+        // En Notificaciones SÍ podemos usar addDoc porque no requerimos verlo en pantalla de inmediato
         await addDoc(collection(db, "Notificaciones"), {
           idDestino: idDestinoNotif,
           idEmisor: userData.id,
@@ -277,7 +314,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   };
   
   return (
-    // 🔥 AQUÍ ES EL z-[120000] QUE GARANTIZA QUE ESTÉ POR ENCIMA DEL VIAJE
     <div className="fixed inset-0 bg-white z-[120000] flex flex-col animate-in slide-in-from-right duration-300">
       
       {/* HEADER */}
@@ -316,7 +352,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         )}
       </div>
 
-      {/* CUERPO DE MENSAJES (CORREGIDO Y CON HORA) */}
+      {/* CUERPO DE MENSAJES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         <div className="flex justify-center mb-6 mt-2">
           <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-2xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
@@ -421,7 +457,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </div>
       )}
 
-      {/* MODAL DE REPORTE ACTUALIZADO */}
+      {/* MODAL DE REPORTE */}
       {mostrarModalReporte && (
         <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[30px] p-6 w-full max-w-sm shadow-2xl relative">
