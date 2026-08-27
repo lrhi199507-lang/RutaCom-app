@@ -10,15 +10,14 @@ import {
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, AlertCircle, AlertTriangle, Car, Palette, 
   Hash, Gauge, LogOut, Camera, Image as ImageIcon,
-  BookOpen, Users, Clock, X // <-- Íconos nuevos agregados aquí
+  BookOpen, Users, Clock, X 
 } from 'lucide-react';
-import { VistaPanelAdministrativo } from './VistaPanelAdministrativo';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const auth = getAuth();
 
-// --- NUEVO COMPONENTE: MODAL DE REGLAS ---
+// --- MODAL DE REGLAS ---
 const ModalComoFunciona = ({ isOpen, onClose }: any) => {
   if (!isOpen) return null;
 
@@ -81,7 +80,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const [passActual, setPassActual] = useState('');
   const [passNueva, setPassNueva] = useState('');
   
-  // --- NUEVO ESTADO PARA CONTROLAR EL MODAL DE REGLAS ---
   const [showReglas, setShowReglas] = useState(false);
 
   useEffect(() => {
@@ -107,7 +105,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
   const view = pestañaActiva || 'publico';
-  const esAdmin = userData?.rol === 'admin';
   
   const viajesCond = userData.viajesRealizados || 0;
   const viajesPas = userData.viajesComoPasajero || 0;
@@ -273,13 +270,11 @@ const verificarCuentaCorreo = async () => {
       });
 
       setToast({ texto: "¡Nuevo enlace enviado! Revisa tu bandeja.", tipo: "exito" });
-      // Añadimos el temporizador de 4 segundos
       setTimeout(() => setToast(null), 4000); 
       
     } catch (error) { 
       console.error("Error al pedir reenvío del correo:", error);
       setToast({ texto: "Error al solicitar el envío.", tipo: "error" });
-      // Añadimos el temporizador en caso de error
       setTimeout(() => setToast(null), 4000); 
     } finally {
       setCargando(false);
@@ -293,12 +288,10 @@ const verificarCuentaCorreo = async () => {
       await auth.currentUser.reload();
       if (auth.currentUser.emailVerified) {
         setToast({ texto: "¡Correo verificado!", tipo: "exito" });
-        // Añadimos el temporizador
         setTimeout(() => setToast(null), 4000);
         setUserData({...userData}); 
       } else {
         setToast({ texto: "Aún no verificado", tipo: "error" });
-        // Añadimos el temporizador
         setTimeout(() => setToast(null), 4000);
       }
     } catch (error) { 
@@ -319,14 +312,12 @@ const verificarCuentaCorreo = async () => {
         </div>
       )}
 
-      {view !== 'admin' && (
-        <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100">
-          <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
-            <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
-            <button onClick={() => setPestañaActiva('cuenta')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'cuenta' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Cuenta</button>
-          </div>
+      <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100">
+        <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
+          <button onClick={() => setPestañaActiva('publico')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'publico' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Perfil</button>
+          <button onClick={() => setPestañaActiva('cuenta')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${view === 'cuenta' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>Mi Cuenta</button>
         </div>
-      )}
+      </div>
 
       <div className="flex-1 overflow-y-auto pb-32">
         {view === 'publico' && (
@@ -407,7 +398,6 @@ const verificarCuentaCorreo = async () => {
         {view === 'cuenta' && (
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
             
-            {/* 🔥 NUEVO BOTÓN DE REGLAS AQUÍ ARRIBA 🔥 */}
             <button 
               onClick={() => setShowReglas(true)} 
               className="w-full flex items-center justify-between p-5 bg-blue-50 border border-blue-100 rounded-[30px] active:scale-95 transition-all shadow-sm"
@@ -492,22 +482,8 @@ const verificarCuentaCorreo = async () => {
               </div>
             </div>
 
-            {esAdmin && (
-              <button onClick={() => setPestañaActiva('admin')} className="w-full bg-slate-900 text-white p-5 rounded-[30px] flex items-center justify-between shadow-xl mt-6">
-                <div className="flex items-center gap-4"><ShieldCheck size={20} className="text-red-500" /><p className="font-black text-xs uppercase italic">Control Maestro</p></div>
-                <ChevronRight size={20} />
-              </button>
-            )}
-
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 mt-4"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
-        )}
-
-        {view === 'admin' && esAdmin && (
-          <VistaPanelAdministrativo 
-            setPestañaActiva={setPestañaActiva}
-            onAbrirChat={onAbrirChat}
-          />
         )}
       </div>
 
