@@ -141,7 +141,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         break;
       case 'publicar':
         textoUsuario = "¿Cómo publico un viaje?";
-        respuestaBot = "🚙 Toca el botón '+' en la app. Selecciona ruta, fecha, y precio. Recuerda: debes tener tu Vehículo y Cédula verificados en 'Mi Perfil'.";
+        respuestaBot = "🚙 Toca el botón ➕ en la app. Selecciona ruta, fecha, y precio. Recuerda: debes tener tu Vehículo y Cédula verificados en 'Mi Perfil'.";
         break;
       case 'verificar':
         textoUsuario = "Problemas con Verificación / KYC";
