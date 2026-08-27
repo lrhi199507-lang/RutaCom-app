@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from "../../firebaseConfig"; 
-import { collection, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc, addDoc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, serverTimestamp, setDoc, doc, addDoc, getDoc } from "firebase/firestore";
 import { ChevronLeft, Send, User, ShieldCheck, Info, AlertTriangle, Lock, Map, Zap, CreditCard, Car, LifeBuoy, Copy, X } from 'lucide-react';
 
 const IconoWhatsApp = ({ size = 20, className = "" }) => (
@@ -36,7 +36,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
   const sugerenciasNormales = isSoporte ? [] : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
 
-  // 🔥 VARIABLE DE PARTICIPANTES OBLIGATORIA PARA LAS REGLAS DE FIREBASE 🔥
   const arregloParticipantes = isSoporte ? [userData.id, "admin"] : [chat.uidPasajero, chat.uidConductor];
 
   useEffect(() => {
@@ -51,70 +50,84 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     (p.id === chat.uidPasajero || p.uid === chat.uidPasajero) && p.estado === 'confirmado'
   );
 
+  // 🔥 SOLUCIÓN A LOS MENSAJES RETRASADOS 🔥
   useEffect(() => {
     if (!chatIdReal) return;
     
-    const q = query(
-      collection(db, `Chats/${chatIdReal}/Mensajes`),
-      orderBy("timestamp", "asc")
-    );
+    let unsub = () => {};
+    let isMounted = true;
 
-    let primeraCarga = true;
+    const inicializarChat = async () => {
+      try {
+        // 1. Si es primera vez, aseguramos que el documento padre exista para que Firebase no rechace el listener
+        if (isSoporte && !esAdmin) {
+          const chatRef = doc(db, "Chats", chatIdReal);
+          const chatSnap = await getDoc(chatRef);
 
-    const unsub = onSnapshot(q, (snap) => {
-      const historialMensajes = snap.docs.map(d => ({ 
-        id: d.id, 
-        ...d.data({ serverTimestamps: "estimate" }) 
-      }));
-      
-      setMensajes(historialMensajes);
+          if (!chatSnap.exists()) {
+            const welcomeText = `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`;
+            
+            // Creamos el chat principal
+            await setDoc(chatRef, {
+              ultimoMensaje: welcomeText,
+              ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              mensajesSinLeer: 1,
+              remitenteUltimoMensaje: 'admin',
+              timestamp: Date.now(),
+              participantes: arregloParticipantes,
+              esSoporte: true,
+              uidPasajero: userData.id,
+              nombrePasajero: userData.nombre,
+              ruta: "Soporte Técnico"
+            });
 
-      // 🔥 CORRECCIÓN CRÍTICA: Crear el Documento Padre del Chat para evitar "Permission Denied"
-      if (primeraCarga && isSoporte && !esAdmin) {
-        if (historialMensajes.length === 0) {
-          const welcomeText = `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`;
-          
-          // 1. Aseguramos que el chat principal exista con sus participantes (Para las Reglas)
-          setDoc(doc(db, "Chats", chatIdReal), {
-            ultimoMensaje: welcomeText,
-            ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            mensajesSinLeer: 1,
-            remitenteUltimoMensaje: 'admin',
-            timestamp: Date.now(),
-            participantes: arregloParticipantes,
-            esSoporte: true,
-            uidPasajero: userData.id,
-            nombrePasajero: userData.nombre,
-            ruta: "Soporte Técnico"
-          }, { merge: true });
-
-          // 2. Creamos el mensaje real
-          const botMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
-          setDoc(botMsgRef, {
-            texto: welcomeText,
-            uidRemitente: 'admin',
-            timestamp: serverTimestamp(),
-            participantes: arregloParticipantes
-          });
+            // Creamos el mensaje de bienvenida
+            const botMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
+            await setDoc(botMsgRef, {
+              texto: welcomeText,
+              uidRemitente: 'admin',
+              timestamp: serverTimestamp(),
+              participantes: arregloParticipantes
+            });
+          }
         }
-        primeraCarga = false;
-       }
 
-      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    });
+        if (!isMounted) return;
 
-    const limpiarNotificaciones = async () => {
-      if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
-        // Al limpiar, también pasamos participantes por si las dudas
-        await setDoc(doc(db, "Chats", chatIdReal), { 
-          mensajesSinLeer: 0,
-          participantes: arregloParticipantes 
-        }, { merge: true });
+        // 2. AHORA SÍ, iniciamos la escucha en tiempo real
+        const q = query(
+          collection(db, `Chats/${chatIdReal}/Mensajes`),
+          orderBy("timestamp", "asc")
+        );
+
+        unsub = onSnapshot(q, (snap) => {
+          const historialMensajes = snap.docs.map(d => ({ 
+            id: d.id, 
+            ...d.data({ serverTimestamps: "estimate" }) 
+          }));
+          setMensajes(historialMensajes);
+          setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+        });
+
+        // 3. Limpiamos las notificaciones pendientes
+        if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
+          await setDoc(doc(db, "Chats", chatIdReal), { 
+            mensajesSinLeer: 0,
+            participantes: arregloParticipantes 
+          }, { merge: true });
+        }
+
+      } catch (error) {
+        console.error("Error al inicializar el chat:", error);
       }
     };
-    limpiarNotificaciones();
 
-    return () => unsub();
+    inicializarChat();
+
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, [chatIdReal]);
 
   const ejecutarComandoBot = async (tipo) => {
@@ -159,7 +172,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             mensajesSinLeer: 1,
             remitenteUltimoMensaje: 'admin',
             timestamp: Date.now(),
-            participantes: arregloParticipantes, // 🔥 CANDADO REGLAS
+            participantes: arregloParticipantes,
             ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: userData.id, nombrePasajero: userData.nombre, ruta: "Soporte Técnico" } : {})
         }, { merge: true });
         
@@ -167,7 +180,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     }
 
     try {
-      // 1. Mensaje del Usuario
       const userMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
       await setDoc(userMsgRef, {
         texto: textoUsuario,
@@ -181,11 +193,10 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         remitenteUltimoMensaje: userData.id,
         timestamp: Date.now(),
-        participantes: arregloParticipantes, // 🔥 CANDADO REGLAS
+        participantes: arregloParticipantes,
         ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: userData.id, nombrePasajero: userData.nombre, ruta: "Soporte Técnico" } : {})
       }, { merge: true });
       
-      // 2. Respuesta instantánea del Bot
       await new Promise(resolve => setTimeout(resolve, 300));
 
       const botMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
@@ -202,7 +213,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         mensajesSinLeer: 1,
         remitenteUltimoMensaje: 'admin',
         timestamp: Date.now(),
-        participantes: arregloParticipantes, // 🔥 CANDADO REGLAS
+        participantes: arregloParticipantes,
         ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: userData.id, nombrePasajero: userData.nombre, ruta: "Soporte Técnico" } : {})
       }, { merge: true });
 
@@ -226,7 +237,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         texto: texto,
         uidRemitente: userData.id,
         timestamp: serverTimestamp(), 
-        participantes: arregloParticipantes // 🔥 CANDADO REGLAS
+        participantes: arregloParticipantes 
       });
       
       await setDoc(doc(db, "Chats", chatIdReal), {
@@ -235,7 +246,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         mensajesSinLeer: 1, 
         remitenteUltimoMensaje: userData.id,
         timestamp: Date.now(),
-        participantes: arregloParticipantes, // 🔥 CANDADO REGLAS
+        participantes: arregloParticipantes,
         ...(isSoporte && !esAdmin ? {
             esSoporte: true,
             uidPasajero: userData.id,
