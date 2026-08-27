@@ -46,11 +46,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     return () => unsubViaje();
   }, [chat.idViaje, isSoporte]);
 
-  const pasajeroConfirmado = viajeActual?.pasajeros?.some(p => 
-    (p.id === chat.uidPasajero || p.uid === chat.uidPasajero) && p.estado === 'confirmado'
-  );
-
-  // 🔥 SOLUCIÓN A LOS MENSAJES RETRASADOS 🔥
+  // INICIALIZACIÓN DEL CHAT
   useEffect(() => {
     if (!chatIdReal) return;
     
@@ -59,7 +55,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
     const inicializarChat = async () => {
       try {
-        // 1. Si es primera vez, aseguramos que el documento padre exista para que Firebase no rechace el listener
         if (isSoporte && !esAdmin) {
           const chatRef = doc(db, "Chats", chatIdReal);
           const chatSnap = await getDoc(chatRef);
@@ -67,11 +62,10 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           if (!chatSnap.exists()) {
             const welcomeText = `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`;
             
-            // Creamos el chat principal
             await setDoc(chatRef, {
               ultimoMensaje: welcomeText,
               ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              mensajesSinLeer: 1,
+              mensajesSinLeer: 0, // 🔥 CORRECCIÓN: 0 porque lo estás viendo en vivo
               remitenteUltimoMensaje: 'admin',
               timestamp: Date.now(),
               participantes: arregloParticipantes,
@@ -81,7 +75,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
               ruta: "Soporte Técnico"
             });
 
-            // Creamos el mensaje de bienvenida
             const botMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
             await setDoc(botMsgRef, {
               texto: welcomeText,
@@ -94,11 +87,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
 
         if (!isMounted) return;
 
-        // 2. AHORA SÍ, iniciamos la escucha en tiempo real
-        const q = query(
-          collection(db, `Chats/${chatIdReal}/Mensajes`),
-          orderBy("timestamp", "asc")
-        );
+        const q = query(collection(db, `Chats/${chatIdReal}/Mensajes`), orderBy("timestamp", "asc"));
 
         unsub = onSnapshot(q, (snap) => {
           const historialMensajes = snap.docs.map(d => ({ 
@@ -108,14 +97,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           setMensajes(historialMensajes);
           setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         });
-
-        // 3. Limpiamos las notificaciones pendientes
-        if (chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== userData.id) {
-          await setDoc(doc(db, "Chats", chatIdReal), { 
-            mensajesSinLeer: 0,
-            participantes: arregloParticipantes 
-          }, { merge: true });
-        }
 
       } catch (error) {
         console.error("Error al inicializar el chat:", error);
@@ -130,6 +111,23 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     };
   }, [chatIdReal]);
 
+  // 🔥 NUEVO: ESCÁNER EN VIVO PARA LIMPIAR NOTIFICACIONES AL INSTANTE 🔥
+  useEffect(() => {
+    if (!chatIdReal || mensajes.length === 0) return;
+    
+    // Revisamos el último mensaje de la lista
+    const ultimoMsg = mensajes[mensajes.length - 1];
+    
+    // Si el último mensaje NO es mío, significa que la otra persona (o el bot) me escribió
+    // Como tengo la pantalla abierta, fuerzo el contador a 0 instantáneamente.
+    if (ultimoMsg.uidRemitente !== userData.id) {
+      setDoc(doc(db, "Chats", chatIdReal), { 
+        mensajesSinLeer: 0,
+        participantes: arregloParticipantes 
+      }, { merge: true }).catch(err => console.log(err));
+    }
+  }, [mensajes, chatIdReal, userData.id]);
+
   const ejecutarComandoBot = async (tipo) => {
     let respuestaBot = "";
     let textoUsuario = "";
@@ -141,7 +139,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         break;
       case 'publicar':
         textoUsuario = "¿Cómo publico un viaje?";
-        respuestaBot = "🚙 Toca el botón ➕ en la app. Selecciona ruta, fecha, y precio. Recuerda: debes tener tu Vehículo y Cédula verificados en 'Mi Perfil'.";
+        respuestaBot = "🚙 Toca el botón central ➕ (Publicar) en la barra inferior de la app. Selecciona ruta, fecha, y precio. Recuerda: debes tener tu Vehículo y Cédula verificados en 'Mi Perfil'.";
         break;
       case 'verificar':
         textoUsuario = "Problemas con Verificación / KYC";
@@ -169,7 +167,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         await setDoc(doc(db, "Chats", chatIdReal), {
             ultimoMensaje: "⏳ ¡Entendido! Un asesor humano ha sido notificado...",
             ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            mensajesSinLeer: 1,
+            mensajesSinLeer: 0, // 🔥 CORRECCIÓN: 0 porque estás en la pantalla
             remitenteUltimoMensaje: 'admin',
             timestamp: Date.now(),
             participantes: arregloParticipantes,
@@ -210,7 +208,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: respuestaBot,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        mensajesSinLeer: 1,
+        mensajesSinLeer: 0, // 🔥 CORRECCIÓN: 0 porque estás en la pantalla
         remitenteUltimoMensaje: 'admin',
         timestamp: Date.now(),
         participantes: arregloParticipantes,
@@ -243,7 +241,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        mensajesSinLeer: 1, 
+        mensajesSinLeer: 1, // 🔥 Aquí sí debe ser 1, porque la OTRA persona no está en el chat
         remitenteUltimoMensaje: userData.id,
         timestamp: Date.now(),
         participantes: arregloParticipantes,
