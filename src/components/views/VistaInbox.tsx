@@ -92,20 +92,22 @@ export const VistaInbox = ({
   const safeChatsChofer = chatsChofer || [];
   const safeChatsPasajero = chatsPasajero || [];
   
-  // 🔥 LÓGICA DE ORDENADO MATEMÁTICO: Del más reciente (arriba) al más antiguo (abajo)
-  const todosLosChats = [...safeChatsChofer, ...safeChatsPasajero].sort((a, b) => {
-    // Intentamos extraer el valor matemático (timestamp) de cada chat
-    const tiempoA = a.timestamp || 0;
-    const tiempoB = b.timestamp || 0;
-    
-    // Si ambos tienen timestamp, la resta los ordena perfectamente
-    if (tiempoA && tiempoB) {
-      return tiempoB - tiempoA;
-    }
-    
-    // Fallback: Si por error de la base de datos alguno no tiene timestamp, lo mandamos al final
-    return 0;
-  });
+  // 🔥 LÓGICA DE FILTRADO Y ORDENADO MATEMÁTICO 🔥
+  const todosLosChats = [...safeChatsChofer, ...safeChatsPasajero]
+    .filter(chat => !chat.esSoporte) // 🔒 EL CANDADO: Oculta el chat si tiene esSoporte en true
+    .sort((a, b) => {
+      // Intentamos extraer el valor matemático (timestamp) de cada chat
+      const tiempoA = a.timestamp || 0;
+      const tiempoB = b.timestamp || 0;
+      
+      // Si ambos tienen timestamp, la resta los ordena perfectamente
+      if (tiempoA && tiempoB) {
+        return tiempoB - tiempoA;
+      }
+      
+      // Fallback: Si por error de la base de datos alguno no tiene timestamp, lo mandamos al final
+      return 0;
+    });
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
