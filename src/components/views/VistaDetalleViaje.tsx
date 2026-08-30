@@ -356,13 +356,20 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     } catch (error) {}
   };
 
-  const iniciarChatPrivado = async (pasajeroObjetivo) => {
+  const iniciarChatPrivado = async (usuarioObjetivo) => {
     setCargando(true);
     try {
       const miId = String(userData?.id || userData?.uid);
-      const idChofer = String(viaje.uidConductor || viaje.idCreador);
-      const idPas = String(pasajeroObjetivo.id || pasajeroObjetivo.uid);
       
+      // Aseguramos los IDs y Roles correctamente
+      const idChofer = String(viaje.uidConductor || viaje.idCreador);
+      
+      // Si soy el chofer, el objetivo es el pasajero de la lista.
+      // Si soy pasajero, el objetivo DEBE ser el chofer del viaje.
+      const idPas = soyConductor 
+        ? String(usuarioObjetivo.id || usuarioObjetivo.uid) 
+        : miId;
+
       const qChat = query(
         collection(db, "Chats"),
         where("idViaje", "==", viaje.id),
@@ -377,24 +384,46 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         onIniciarChat({ id: chatExistente.id, ...chatExistente.data() });
         setTimeout(() => onRegresar(), 150); 
       } else {
+        // BLINDAJE DE DATOS PARA EVITAR PANTALLAS BLANCAS
         const datosNuevoChat = {
-          estadoViaje: estadoViaje,
-          fotoConductor: soyConductor ? (userData?.fotoPerfil || null) : (viaje.fotoPerfil || null),
-          fotoPasajero: soyConductor ? (pasajeroObjetivo.fotoPerfil || null) : (userData?.fotoPerfil || null),
-          idViaje: viaje.id,
+          estadoViaje: estadoViaje || "disponible",
+          idViaje: viaje.id || "ID_DESCONOCIDO",
           mensajesSinLeer: 0,
-          nombreConductor: soyConductor ? String(userData?.nombre || "Conductor") : String(viaje.cN || viaje.conductor || "Conductor"),
-          nombrePasajero: soyConductor ? String(pasajeroObjetivo.nombre || "Pasajero") : String(userData?.nombre || "Pasajero"),
           participantes: [idChofer, idPas],
           ruta: viaje.cO ? `${viaje.cO.split(',')[0]} - ${viaje.cD?.split(',')[0]}` : "Detalle de Ruta",
-          telefonoConductor: soyConductor ? (userData?.telefono || "") : (viaje.telefono || ""),
-          telefonoPasajero: soyConductor ? (pasajeroObjetivo.telefono || "") : (userData?.telefono || ""),
           timestamp: Date.now(),
           uidConductor: idChofer,
           uidPasajero: idPas,
           ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           ultimoMensaje: "Chat iniciado",
-          esSoporte: false
+          esSoporte: false,
+          
+          // NOMBRES BLINDADOS
+          nombreConductor: soyConductor 
+            ? String(userData?.nombre || "Conductor") 
+            : String(usuarioObjetivo?.nombre || viaje?.cN || viaje?.conductor || "Conductor"),
+            
+          nombrePasajero: soyConductor 
+            ? String(usuarioObjetivo?.nombre || "Pasajero") 
+            : String(userData?.nombre || "Pasajero"),
+            
+          // FOTOS BLINDADAS
+          fotoConductor: soyConductor 
+            ? (userData?.fotoPerfil || null) 
+            : (usuarioObjetivo?.fotoPerfil || viaje?.fotoPerfil || null),
+            
+          fotoPasajero: soyConductor 
+            ? (usuarioObjetivo?.fotoPerfil || null) 
+            : (userData?.fotoPerfil || null),
+            
+          // TELÉFONOS BLINDADOS
+          telefonoConductor: soyConductor 
+            ? (userData?.telefono || "") 
+            : (usuarioObjetivo?.telefono || viaje?.telefono || ""),
+            
+          telefonoPasajero: soyConductor 
+            ? (usuarioObjetivo?.telefono || "") 
+            : (userData?.telefono || "")
         };
 
         const nuevoChatRef = await ejecutarConTimeout(addDoc(collection(db, "Chats"), datosNuevoChat));
@@ -403,6 +432,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       }
       
     } catch (e) {
+      console.error("Error abriendo chat:", e);
       setToast({ texto: "Error de conexión al abrir chat", tipo: "error" });
       setTimeout(() => setToast(null), 3500);
     } finally {
@@ -422,7 +452,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      iniciarChatPrivado(userData); 
+      // SI SOY PASAJERO: Mi objetivo de charla es el CONDUCTOR del viaje (No yo mismo)
+      const objChofer = {
+        id: viaje.uidConductor || viaje.idCreador,
+        nombre: viaje.cN || viaje.conductor || "Conductor",
+        fotoPerfil: viaje.fotoPerfil || null,
+        telefono: viaje.telefono || ""
+      };
+      iniciarChatPrivado(objChofer); 
     }
   };
 
