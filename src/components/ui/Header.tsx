@@ -12,9 +12,9 @@ export const Header = ({ userData, modo, onAbrirWallet }) => {
   return (
     <header className="bg-white px-6 pt-6 pb-4 flex items-center justify-between sticky top-0 z-50 border-b border-slate-50">
       <div className="flex items-center gap-3">
-        {/* Logo 'D' Slim (w-10 y rounded-14) */}
-        <div className="w-10 h-10 rounded-[14px] bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
-          <span className="font-black text-white text-lg italic">D</span>
+        {/* 🔥 AQUÍ ESTÁ TU NUEVO LOGO 🔥 */}
+        <div className="w-10 h-10 rounded-[14px] bg-white flex items-center justify-center shadow-lg shadow-blue-100 overflow-hidden shrink-0">
+          <img src="/icon.png" alt="Logo Dame la Cola" className="w-full h-full object-cover" />
         </div>
 
         <div>
