@@ -3,7 +3,7 @@ import { Wallet } from 'lucide-react';
 import { CampanaNotificaciones } from "./CampanaNotificaciones";
 
 // Tu logo que ya arreglamos
-import logoApp from '../../logo.png';
+import logoApp from '../../icon.png';
 
 export const Header = ({ userData, modo, onAbrirWallet }) => {
   const nombre = userData?.nombre || "Cargando...";
