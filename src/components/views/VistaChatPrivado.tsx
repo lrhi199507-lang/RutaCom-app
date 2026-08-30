@@ -22,29 +22,36 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const [descripcionReporte, setDescripcionReporte] = useState("");
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
-  const esAdmin = userData?.rol === 'admin';
-  const isSoporte = chat.esSoporte;
-  const chatIdReal = isSoporte ? (esAdmin ? chat.id : `soporte_${userData.id}`) : chat.id;
+  // 🔥 EL ESCUDO ANTI-PANTALLA BLANCA 🔥
+  // Si los props aún no terminan de llegar, esperamos en lugar de colapsar
+  if (!chat || !userData) return null;
 
-  const soyConductor = !isSoporte && chat.uidConductor === userData.id;
-  const idOtroUsuario = soyConductor ? chat.uidPasajero : chat.uidConductor;
+  // 🔥 ID UNIVERSAL SEGURO 🔥
+  const miId = String(userData?.id || userData?.uid || "invitado");
+
+  const esAdmin = userData?.rol === 'admin';
+  const isSoporte = chat?.esSoporte;
+  const chatIdReal = isSoporte ? (esAdmin ? chat?.id : `soporte_${miId}`) : chat?.id;
+
+  const soyConductor = !isSoporte && chat?.uidConductor === miId;
+  const idOtroUsuario = soyConductor ? chat?.uidPasajero : chat?.uidConductor;
   
-  const nombreContacto = isSoporte ? (esAdmin ? (chat.nombrePasajero || "Usuario") : "Soporte Oficial") : (soyConductor ? chat.nombrePasajero : chat.nombreConductor);
-  const fotoContacto = isSoporte ? null : (soyConductor ? chat.fotoPasajero : chat.fotoConductor);
+  const nombreContacto = isSoporte ? (esAdmin ? (chat?.nombrePasajero || "Usuario") : "Soporte Oficial") : (soyConductor ? chat?.nombrePasajero : chat?.nombreConductor);
+  const fotoContacto = isSoporte ? null : (soyConductor ? chat?.fotoPasajero : chat?.fotoConductor);
 
   const sugerenciasPasajero = ["¡Hola! ¿Aún tienes cupo disponible?", "¿Cuál es el punto exacto?", "Llevo equipaje, ¿hay problema?"];
   const sugerenciasChofer = ["¡Hola! Sí, aún tengo cupo.", "Estoy confirmando los pasajeros.", "El punto de encuentro es el de la app."];
   const sugerenciasNormales = isSoporte ? [] : (soyConductor ? sugerenciasChofer : sugerenciasPasajero);
 
-  const arregloParticipantes = isSoporte ? [userData.id, "admin"] : [chat.uidPasajero, chat.uidConductor];
+  const arregloParticipantes = isSoporte ? [miId, "admin"] : [String(chat?.uidPasajero || ""), String(chat?.uidConductor || "")];
 
   useEffect(() => {
-    if (isSoporte || !chat.idViaje) return;
+    if (isSoporte || !chat?.idViaje) return;
     const unsubViaje = onSnapshot(doc(db, "Viajes", chat.idViaje), (docSnap) => {
       if (docSnap.exists()) setViajeActual(docSnap.data());
     });
     return () => unsubViaje();
-  }, [chat.idViaje, isSoporte]);
+  }, [chat?.idViaje, isSoporte]);
 
   // INICIALIZACIÓN DEL CHAT
   useEffect(() => {
@@ -60,18 +67,18 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           const chatSnap = await getDoc(chatRef);
 
           if (!chatSnap.exists()) {
-            const welcomeText = `¡Hola ${userData.nombre}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`;
+            const welcomeText = `¡Hola ${userData?.nombre || 'Usuario'}! Soy el asistente inteligente de Dame la cola 🤖. Toca una de las opciones de abajo para ayudarte al instante, o pide hablar con un asesor humano.`;
             
             await setDoc(chatRef, {
               ultimoMensaje: welcomeText,
               ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              mensajesSinLeer: 0, // 🔥 CORRECCIÓN: 0 porque lo estás viendo en vivo
+              mensajesSinLeer: 0,
               remitenteUltimoMensaje: 'admin',
               timestamp: Date.now(),
               participantes: arregloParticipantes,
               esSoporte: true,
-              uidPasajero: userData.id,
-              nombrePasajero: userData.nombre,
+              uidPasajero: miId,
+              nombrePasajero: userData?.nombre || 'Usuario',
               ruta: "Soporte Técnico"
             });
 
@@ -111,22 +118,19 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     };
   }, [chatIdReal]);
 
-  // 🔥 NUEVO: ESCÁNER EN VIVO PARA LIMPIAR NOTIFICACIONES AL INSTANTE 🔥
+  // ESCÁNER EN VIVO PARA LIMPIAR NOTIFICACIONES
   useEffect(() => {
     if (!chatIdReal || mensajes.length === 0) return;
     
-    // Revisamos el último mensaje de la lista
     const ultimoMsg = mensajes[mensajes.length - 1];
     
-    // Si el último mensaje NO es mío, significa que la otra persona (o el bot) me escribió
-    // Como tengo la pantalla abierta, fuerzo el contador a 0 instantáneamente.
-    if (ultimoMsg.uidRemitente !== userData.id) {
+    if (ultimoMsg.uidRemitente !== miId) {
       setDoc(doc(db, "Chats", chatIdReal), { 
         mensajesSinLeer: 0,
         participantes: arregloParticipantes 
       }, { merge: true }).catch(err => console.log(err));
     }
-  }, [mensajes, chatIdReal, userData.id]);
+  }, [mensajes, chatIdReal, miId]);
 
   const ejecutarComandoBot = async (tipo) => {
     let respuestaBot = "";
@@ -167,11 +171,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         await setDoc(doc(db, "Chats", chatIdReal), {
             ultimoMensaje: "⏳ ¡Entendido! Un asesor humano ha sido notificado...",
             ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            mensajesSinLeer: 0, // 🔥 CORRECCIÓN: 0 porque estás en la pantalla
+            mensajesSinLeer: 0, 
             remitenteUltimoMensaje: 'admin',
             timestamp: Date.now(),
             participantes: arregloParticipantes,
-            ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: userData.id, nombrePasajero: userData.nombre, ruta: "Soporte Técnico" } : {})
+            ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: miId, nombrePasajero: userData?.nombre || 'Usuario', ruta: "Soporte Técnico" } : {})
         }, { merge: true });
         
         return; 
@@ -181,7 +185,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       const userMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
       await setDoc(userMsgRef, {
         texto: textoUsuario,
-        uidRemitente: userData.id,
+        uidRemitente: miId,
         timestamp: serverTimestamp(), 
         participantes: arregloParticipantes
       });
@@ -189,10 +193,10 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: textoUsuario,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        remitenteUltimoMensaje: userData.id,
+        remitenteUltimoMensaje: miId,
         timestamp: Date.now(),
         participantes: arregloParticipantes,
-        ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: userData.id, nombrePasajero: userData.nombre, ruta: "Soporte Técnico" } : {})
+        ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: miId, nombrePasajero: userData?.nombre || 'Usuario', ruta: "Soporte Técnico" } : {})
       }, { merge: true });
       
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -208,11 +212,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: respuestaBot,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        mensajesSinLeer: 0, // 🔥 CORRECCIÓN: 0 porque estás en la pantalla
+        mensajesSinLeer: 0, 
         remitenteUltimoMensaje: 'admin',
         timestamp: Date.now(),
         participantes: arregloParticipantes,
-        ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: userData.id, nombrePasajero: userData.nombre, ruta: "Soporte Técnico" } : {})
+        ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: miId, nombrePasajero: userData?.nombre || 'Usuario', ruta: "Soporte Técnico" } : {})
       }, { merge: true });
 
     } catch (error) {
@@ -233,7 +237,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       const nuevoMsgRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
       await setDoc(nuevoMsgRef, {
         texto: texto,
-        uidRemitente: userData.id,
+        uidRemitente: miId,
         timestamp: serverTimestamp(), 
         participantes: arregloParticipantes 
       });
@@ -241,14 +245,14 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       await setDoc(doc(db, "Chats", chatIdReal), {
         ultimoMensaje: texto,
         ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        mensajesSinLeer: 1, // 🔥 Aquí sí debe ser 1, porque la OTRA persona no está en el chat
-        remitenteUltimoMensaje: userData.id,
+        mensajesSinLeer: 1, 
+        remitenteUltimoMensaje: miId,
         timestamp: Date.now(),
         participantes: arregloParticipantes,
         ...(isSoporte && !esAdmin ? {
             esSoporte: true,
-            uidPasajero: userData.id,
-            nombrePasajero: userData.nombre,
+            uidPasajero: miId,
+            nombrePasajero: userData?.nombre || 'Usuario',
             ruta: "Soporte Técnico"
         } : {})
       }, { merge: true });
@@ -257,14 +261,14 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       if (!isSoporte) {
         idDestinoNotif = idOtroUsuario; 
       } else if (isSoporte && esAdmin) {
-        idDestinoNotif = chat.uidPasajero; 
+        idDestinoNotif = chat?.uidPasajero; 
       }
 
       if (idDestinoNotif) {
         await addDoc(collection(db, "Notificaciones"), {
           idDestino: idDestinoNotif,
-          idEmisor: userData.id,
-          titulo: isSoporte ? "Soporte Dame la cola" : `Mensaje de ${userData.nombre}`,
+          idEmisor: miId,
+          titulo: isSoporte ? "Soporte Dame la cola" : `Mensaje de ${userData?.nombre || 'Usuario'}`,
           mensaje: texto,
           tipo: "chat",
           idReferencia: chatIdReal,
@@ -279,13 +283,17 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     }
   };
 
+  const pasajeroConfirmado = viajeActual?.pasajeros?.some(p => 
+    (p.id === chat?.uidPasajero || p.uid === chat?.uidPasajero) && p.estado === 'confirmado'
+  );
+
   const abrirWhatsApp = () => {
     if (!pasajeroConfirmado) {
       setToast({ texto: "🔒 El número se habilita al confirmar", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
       return;
     }
-    const numeroDestino = soyConductor ? chat.telefonoPasajero : chat.telefonoConductor;
+    const numeroDestino = soyConductor ? chat?.telefonoPasajero : chat?.telefonoConductor;
     if (!numeroDestino) {
       setToast({ texto: "El usuario no registró su número", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
@@ -295,7 +303,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     if (numeroLimpio.startsWith('0')) numeroLimpio = '58' + numeroLimpio.substring(1);
     else if (!numeroLimpio.startsWith('58')) numeroLimpio = '58' + numeroLimpio; 
     
-    const mensaje = `¡Hola! Te escribo desde Dame la cola por el viaje: ${chat.ruta}.`;
+    const mensaje = `¡Hola! Te escribo desde Dame la cola por el viaje: ${chat?.ruta || 'Detalle de Ruta'}.`;
     const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
   };
@@ -315,12 +323,12 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     
     try {
       await addDoc(collection(db, "Reportes"), {
-        idDenunciante: userData?.id || "Desconocido",
+        idDenunciante: miId,
         nombreDenunciante: userData?.nombre || "Usuario",
         rolDenunciante: soyConductor ? 'conductor' : 'pasajero',
         idDenunciado: idOtroUsuario || "Desconocido",
         nombreDenunciado: nombreContacto || "Usuario",
-        idViaje: chat.idViaje || "N/A",
+        idViaje: chat?.idViaje || "N/A",
         idChat: chatIdReal || "N/A",
         motivo: motivoSeleccionado,
         descripcion: descripcionReporte.trim(),
@@ -361,7 +369,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             {nombreContacto} {isSoporte ? <ShieldCheck size={14} className="text-blue-400" /> : <ShieldCheck size={14} className="text-green-500" />}
           </h3>
           <p className={`text-[10px] font-bold truncate uppercase tracking-widest ${isSoporte ? 'text-blue-300' : 'text-slate-400'}`}>
-            {isSoporte ? (esAdmin ? 'Usuario pidiendo ayuda' : 'Asistente 24/7') : chat.ruta}
+            {isSoporte ? (esAdmin ? 'Usuario pidiendo ayuda' : 'Asistente 24/7') : chat?.ruta}
           </p>
         </div>
 
@@ -392,7 +400,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         </div>
 
         {mensajes.map((m) => {
-          const soyYo = m.uidRemitente === userData.id;
+          const soyYo = m.uidRemitente === miId;
           const esBot = m.uidRemitente === 'admin';
           
           let horaStr = "Enviando...";
