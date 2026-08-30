@@ -86,12 +86,12 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
   return (
     <div
       onClick={onClickDetalle}
-      className={`bg-white p-5 rounded-[30px] border shadow-sm transition-all relative overflow-hidden cursor-pointer active:scale-[0.98] ${estaLleno ? 'border-red-100 opacity-90' : 'border-slate-100 hover:border-blue-100'}`}
+      className={`bg-white p-5 rounded-[30px] border shadow-sm transition-all relative overflow-hidden cursor-pointer active:scale-[0.98] ${estaLleno ? 'border-red-100 opacity-90' : 'border-slate-100 hover:border-[#063971]/30'}`}
     >
       
-      {/* ETIQUETA DE RUTA CON RETORNO */}
+      {/* ETIQUETA DE RUTA CON RETORNO (Azul Tránsito) */}
       {esRutaCompleta && (
-        <div className="absolute top-0 right-0 bg-blue-600 text-white px-4 py-1 rounded-bl-2xl flex items-center gap-1.5 shadow-sm">
+        <div className="absolute top-0 right-0 bg-[#063971] text-white px-4 py-1 rounded-bl-2xl flex items-center gap-1.5 shadow-sm">
           <Repeat size={10} className="animate-pulse" />
           <span className="text-[8px] font-black uppercase italic tracking-wider">Ruta con Retorno</span>
         </div>
@@ -101,11 +101,11 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
       <div className="flex justify-between items-start gap-2">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           
-          {/* AVATAR: SE PONE GRIS SI ESTÁ LLENO */}
-          <div className={`w-12 h-12 rounded-[14px] border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center ${estaLleno ? 'bg-slate-300' : 'bg-blue-600'}`}>
+          {/* AVATAR: Azul Tránsito o Gris si está lleno */}
+          <div className={`w-12 h-12 rounded-[14px] border-2 border-white shadow-sm overflow-hidden shrink-0 flex items-center justify-center ${estaLleno ? 'bg-slate-300' : 'bg-[#063971]'}`}>
             {viaje.fotoPerfil ? ( 
               <img 
-             src={ viaje.fotoPerfil ||  viaje.datosConductor?.foto ||  viaje.foto || // A veces Firebase guarda fotos extra
+             src={ viaje.fotoPerfil ||  viaje.datosConductor?.foto ||  viaje.foto ||
     'https://ui-avatars.com/api/?name=' + (viaje.conductor || 'D')
   } 
   className={`w-full h-full object-cover ${estaLleno ? 'grayscale opacity-80' : ''}`} 
@@ -119,7 +119,8 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <h3 className={`text-sm font-black italic uppercase truncate tracking-tight leading-none ${estaLleno ? 'text-slate-500' : 'text-slate-800'}`}>
+              {/* NOMBRE CONDUCTOR: Gris Oscuro */}
+              <h3 className={`text-sm font-black italic uppercase truncate tracking-tight leading-none ${estaLleno ? 'text-slate-500' : 'text-[#1F2937]'}`}>
                 {viaje.conductor || viaje.cN || "Usuario"}
               </h3>
               <BadgeCheck size={16} className={`shrink-0 ${estaLleno ? 'text-slate-300' : 'text-green-500 fill-green-100'}`} strokeWidth={2.5} />
@@ -146,9 +147,9 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           </div>
         </div>
 
-        {/* ÁREA DE PRECIO Y BADGE DE CUPOS */}
+        {/* ÁREA DE PRECIO (VERDE ÉXITO) Y BADGE DE CUPOS */}
         <div className={`text-right shrink-0 ${esRutaCompleta ? 'mt-6' : ''}`}>
-          <p className={`text-2xl font-black italic leading-none ${estaLleno ? 'text-slate-400' : 'text-blue-600'}`}>
+          <p className={`text-2xl font-black italic leading-none ${estaLleno ? 'text-slate-400' : 'text-[#10B981]'}`}>
             ${viaje.precio || "0"}
           </p>
           <div className="mt-1 flex justify-end">
@@ -168,11 +169,12 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
       {/* RUTA SEGURA */}
       <div className="flex items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 mt-2">
         <div className="flex-1 min-w-0 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full border border-blue-200 flex items-center justify-center bg-white shrink-0">
-            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+          {/* PUNTITO ORIGEN: Azul Tránsito */}
+          <div className="w-7 h-7 rounded-full border border-[#063971]/20 flex items-center justify-center bg-white shrink-0">
+            <div className="w-2 h-2 bg-[#063971] rounded-full"></div>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-black text-slate-800 truncate">
+            <p className="text-sm font-black text-[#1F2937] truncate">
               {formatearLugar(viaje.origen || viaje.cO, 0)}
             </p>
             <p className="text-[9px] font-bold text-slate-400 truncate uppercase">
@@ -185,15 +187,16 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
 
         <div className="flex-1 min-w-0 flex items-center justify-end gap-2 text-right">
           <div className="min-w-0">
-            <p className="text-sm font-black text-slate-800 truncate">
+            <p className="text-sm font-black text-[#1F2937] truncate">
               {formatearLugar(viaje.destino || viaje.cD, 0)}
             </p>
             <p className="text-[9px] font-bold text-slate-400 truncate uppercase">
               {formatearLugar(viaje.destino || viaje.cD, 1) || viaje.eD || "Ver mapa"}
             </p>
           </div>
-          <div className="w-7 h-7 rounded-full border border-green-200 flex items-center justify-center bg-white shrink-0">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          {/* PUNTITO DESTINO: Verde Éxito */}
+          <div className="w-7 h-7 rounded-full border border-[#10B981]/30 flex items-center justify-center bg-white shrink-0">
+            <div className="w-2 h-2 bg-[#10B981] rounded-full"></div>
           </div>
         </div>
       </div>
@@ -204,7 +207,7 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
           <Clock size={14} />
           <p className="text-[10px] font-bold truncate flex items-center gap-1">
             Salida: 
-            <span className='font-black'>
+            <span className='font-black text-[#1F2937]'>
               {viaje.hora ? new Date(`2000-01-01T${viaje.hora}`).toLocaleTimeString('en-US', { 
                 hour: 'numeric', 
                 minute: '2-digit', 
@@ -222,16 +225,16 @@ export const CardViajeOptimizada = ({ viaje, onClickDetalle, onClickPedir }) => 
         <div className={`flex items-center gap-2 ${estaLleno ? 'text-red-500' : 'text-slate-500'}`}>
           <Users size={14} />
           <p className="text-[10px] font-bold">
-            {estaLleno ? <span className="font-black uppercase">Agotado</span> : <>Libres: <span className='font-black'>{cuposRestantes}</span></>}
+            {estaLleno ? <span className="font-black uppercase">Agotado</span> : <>Libres: <span className='font-black text-[#1F2937]'>{cuposRestantes}</span></>}
           </p>
         </div>
         
         <div className="flex items-center gap-2 text-slate-500 col-span-2 border-t border-slate-50 pt-2">
-          <Clock size={14} className="text-blue-400" /> <p className="text-[10px] font-bold">  Fecha: <span className='font-black'>{formatearFechaManual(fechaCorrecta)}</span></p>
+          {/* ICONO RELOJ: Azul Tránsito */}
+          <Clock size={14} className="text-[#063971]" /> <p className="text-[10px] font-bold">  Fecha: <span className='font-black text-[#1F2937]'>{formatearFechaManual(fechaCorrecta)}</span></p>
         </div>  
       </div>
-     
+      
     </div>
   );
 };
-
