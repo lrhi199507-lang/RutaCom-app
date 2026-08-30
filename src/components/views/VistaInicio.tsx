@@ -51,13 +51,12 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
           return; 
         }
 
-        // 🔥 EL ANTÍDOTO ANDROID: CREAMOS EL CANAL OFICIAL ANTES DE REGISTRAR 🔥
         await PushNotifications.createChannel({
-          id: 'alertas_viajes', // El ID secreto que usará el Búnker
+          id: 'alertas_viajes', 
           name: 'Alertas de Viajes',
           description: 'Avisos urgentes sobre tus viajes y reservas',
-          importance: 5, // 5 = Máxima prioridad (Suena y sale en pantalla)
-          visibility: 1, // Visible en la pantalla de bloqueo
+          importance: 5, 
+          visibility: 1, 
         });
 
         await PushNotifications.register();
@@ -206,7 +205,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     }
   };
 
-  // FÓRMULA DE DISTANCIA (HAVERSINE)
   const calcularDistancia = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
     const R = 6371; 
@@ -222,7 +220,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   };
 
-// --- FILTRO INTELIGENTE ---
   const viajesFiltrados = useMemo(() => {
     const lista = Array.isArray(viajes) ? viajes : [];
     const RADIO_KM = 25; 
@@ -230,7 +227,6 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     const fechaBusquedaBase = new Date(fechaSeleccionada);
     const fechaBusquedaStr = `${fechaBusquedaBase.getFullYear()}-${String(fechaBusquedaBase.getMonth() + 1).padStart(2, '0')}-${String(fechaBusquedaBase.getDate()).padStart(2, '0')}`;
 
-    // 🔥 NUEVA LÓGICA ESTRICTA: El viaje expiró para la búsqueda
     const elViajeYaPaso = (viaje) => {
       try {
         const fecha = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
@@ -240,10 +236,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
 
         const [year, month, day] = fecha.split('-');
         const [hour, minute] = hora.split(':');
-        // Construimos la hora exacta del viaje
         const fechaViaje = new Date(year, month - 1, day, hour, minute);
         
-        // Retorna TRUE si la hora actual es mayor a la hora del viaje
         return new Date() > fechaViaje;
       } catch (e) {
         return false;
@@ -251,10 +245,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
     };
 
     const filtrados = lista.filter(v => {
-      // 1. Ocultar si el viaje ya no está disponible (en curso, cancelado, etc.)
       if (v.estado && v.estado !== 'disponible') return false;
 
-      // 🔥 2. LÓGICA ESTRICTA: Ocultar automáticamente si la hora ya pasó (tenga o no pasajeros)
       if (elViajeYaPaso(v)) return false;
 
       let coincideOrigen = true;
@@ -318,20 +310,20 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         <div className="bg-white rounded-[35px] shadow-xl border border-slate-100 p-2 space-y-1 relative">
           
           <div className="bg-slate-50/50 rounded-[28px] overflow-hidden">
-            <div className="flex items-center gap-3 p-4 focus-within:bg-blue-50/30 transition-colors">
-              <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+            <div className="flex items-center gap-3 p-4 focus-within:bg-[#063971]/5 transition-colors">
+              <div className="w-2 h-2 rounded-full bg-[#063971] shrink-0" />
               <input 
                 value={origen}
                 onChange={(e) => manejarBusqueda(e.target.value, 'origen')}
                 placeholder="¿Desde dónde sales?" 
-                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] w-full placeholder:text-slate-400"
               />
               <div className="flex items-center gap-3 shrink-0">
                 {origen && <X size={16} className="text-slate-300 active:scale-90" onClick={() => { setOrigen(""); setCoordsOrigen(null); }} />}
                 <div className="w-[1px] h-5 bg-slate-200" />
                 <button 
                   onClick={() => { setTipoMapa('origen'); setCoordsTemporales(coordsOrigen || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
-                  className="text-slate-400 hover:text-blue-600 active:scale-90 transition-all"
+                  className="text-slate-400 hover:text-[#063971] active:scale-90 transition-all"
                 >
                   <Map size={18} />
                 </button>
@@ -340,20 +332,20 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
             
             <div className="h-[1px] bg-white mx-4" />
             
-            <div className="flex items-center gap-3 p-4 focus-within:bg-green-50/30 transition-colors">
-              <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+            <div className="flex items-center gap-3 p-4 focus-within:bg-[#063971]/5 transition-colors">
+              <div className="w-2 h-2 rounded-full bg-[#063971] shrink-0" />
               <input 
                 value={destino}
                 onChange={(e) => manejarBusqueda(e.target.value, 'destino')}
                 placeholder="¿A dónde vas?" 
-                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-slate-700 w-full placeholder:text-slate-400"
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] w-full placeholder:text-slate-400"
               />
               <div className="flex items-center gap-3 shrink-0">
                 {destino && <X size={16} className="text-slate-300 active:scale-90" onClick={() => { setDestino(""); setCoordsDestino(null); }} />}
                 <div className="w-[1px] h-5 bg-slate-200" />
                 <button 
                   onClick={() => { setTipoMapa('destino'); setCoordsTemporales(coordsDestino || {lat: 10.1620, lon: -67.9567}); setShowMapaModal(true); }}
-                  className="text-slate-400 hover:text-green-600 active:scale-90 transition-all"
+                  className="text-slate-400 hover:text-[#063971] active:scale-90 transition-all"
                 >
                   <Map size={18} />
                 </button>
@@ -366,8 +358,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
               onClick={() => setShowCalendar(true)}
               className="flex-1 flex items-center gap-2 p-3 bg-slate-50/50 rounded-2xl active:scale-95 transition-all"
             >
-              <Calendar size={16} className="text-blue-600" />
-              <span className="text-[11px] font-black text-slate-700 italic capitalize">
+              <Calendar size={16} className="text-[#063971]" />
+              <span className="text-[11px] font-black text-[#1F2937] italic capitalize">
                 {formatearFechaBusqueda(fechaSeleccionada)}
               </span>
             </button>
@@ -376,8 +368,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
               onClick={() => setShowPasajeros(true)}
               className="flex-1 flex items-center gap-2 p-3 bg-slate-50/50 rounded-2xl active:scale-95 transition-all"
             >
-              <Users size={16} className="text-blue-600" />
-              <span className="text-[11px] font-black text-slate-700 italic uppercase">
+              <Users size={16} className="text-[#063971]" />
+              <span className="text-[11px] font-black text-[#1F2937] italic uppercase">
                 {totalPasajeros} {totalPasajeros === 1 ? 'Persona' : 'Personas'}
               </span>
             </button>
@@ -387,11 +379,11 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
             <div className="absolute left-4 right-4 top-[45%] bg-white shadow-2xl rounded-3xl border border-slate-100 z-[110] overflow-hidden">
               {sugerencias.map((s, i) => ( 
               <button  key={i} onClick={() => seleccionarSugerencia(s)}
-              className="w-full p-4 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-50 last:border-none"
+              className="w-full p-4 text-left hover:bg-[#063971]/5 flex items-center gap-3 border-b border-slate-50 last:border-none"
               >
                   <MapPin size={14} className="text-slate-300" />
                   <div className="truncate">
-                    <p className="text-xs font-black text-slate-700 truncate">{s.ciudad}</p>
+                    <p className="text-xs font-black text-[#1F2937] truncate">{s.ciudad}</p>
                     <p className="text-[9px] font-bold text-slate-400 uppercase truncate">{s.estado}</p>
                   </div>
                 </button>
@@ -401,12 +393,12 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         </div>
 
         <div className="space-y-4 px-1">
-         <h2 className="text-sm font-black italic uppercase text-slate-800 flex justify-between items-center px-1">
+         <h2 className="text-sm font-black italic uppercase text-[#1F2937] flex justify-between items-center px-1">
             <div className="flex items-center gap-2">
               {fechaSeleccionada.toDateString() === new Date().toDateString() 
                 ? "Colas para Hoy" 
                 : `Colas: ${formatearFechaBusqueda(fechaSeleccionada)}`}
-              <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full not-italic">
+              <span className="text-[10px] bg-[#063971]/10 text-[#063971] px-2 py-0.5 rounded-full not-italic">
                 {viajesFiltrados.length}
               </span>
             </div>
@@ -414,13 +406,13 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
             <button 
               onClick={() => setOrdenPrecio(ordenPrecio === 'asc' ? 'desc' : 'asc')}
               className={`flex items-center gap-2 px-3 py-2 rounded-2xl transition-all active:scale-95 border ${
-                ordenPrecio === 'asc' ? 'bg-blue-50 border-blue-100 shadow-sm' : 'bg-white border-slate-200 shadow-sm'
+                ordenPrecio === 'asc' ? 'bg-[#063971]/5 border-[#063971]/20 shadow-sm' : 'bg-white border-slate-200 shadow-sm'
               }`}
             >
-              <span className={`text-[9px] font-black uppercase italic ${ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-500'}`}>
+              <span className={`text-[9px] font-black uppercase italic ${ordenPrecio === 'asc' ? 'text-[#063971]' : 'text-slate-500'}`}>
                 {ordenPrecio === 'asc' ? 'Más baratos' : 'Precio alto'}
               </span>
-              <div className={ordenPrecio === 'asc' ? 'text-blue-600' : 'text-slate-400'}>
+              <div className={ordenPrecio === 'asc' ? 'text-[#063971]' : 'text-slate-400'}>
                 {ordenPrecio === 'asc' ? (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/><path d="M12 15V4"/></svg>
                 ) : (
@@ -441,7 +433,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
               return (
                 <div key={viaje.id} className={viajeLleno ? 'opacity-65 pointer-events-none relative pt-3 mb-2' : 'relative'}>
                   {viajeLleno && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black uppercase text-center py-1.5 px-5 rounded-full z-20 shadow-lg border border-slate-700 whitespace-nowrap flex items-center gap-1">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-[#1F2937] text-white text-[9px] font-black uppercase text-center py-1.5 px-5 rounded-full z-20 shadow-lg border border-[#1F2937] whitespace-nowrap flex items-center gap-1">
                       🚫 Cupos Completos
                     </div>
                   )}
@@ -458,7 +450,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
                 <Search size={24} />
               </div>
-              <p className="text-slate-800 font-black italic uppercase text-xs mb-1">No hay colas disponibles</p>
+              <p className="text-[#1F2937] font-black italic uppercase text-xs mb-1">No hay colas disponibles</p>
               <p className="text-slate-400 font-bold text-[10px] uppercase leading-tight">
                 No encontramos viajes para {totalPasajeros} {totalPasajeros === 1 ? 'persona' : 'personas'} el {formatearFechaBusqueda(fechaSeleccionada)}.
               </p>
@@ -468,40 +460,40 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       </div>
 
       {showPasajeros && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-lg font-black italic uppercase text-slate-800">¿Quiénes viajan?</h3>
-              <button onClick={() => setShowPasajeros(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} /></button>
+              <h3 className="text-lg font-black italic uppercase text-[#1F2937]">¿Quiénes viajan?</h3>
+              <button onClick={() => setShowPasajeros(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} className="text-slate-500"/></button>
             </div>
 
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-black italic uppercase text-sm text-slate-700 leading-none">Adultos</p>
+                  <p className="font-black italic uppercase text-sm text-[#1F2937] leading-none">Adultos</p>
                   <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Mayores de 12 años</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <button onClick={() => setPasajeros(p => ({...p, adultos: Math.max(1, p.adultos - 1)}))} className="w-10 h-10 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-50"><Minus size={16} /></button>
-                  <span className="font-black italic text-lg w-4 text-center">{pasajeros.adultos}</span>
-                  <button onClick={() => setPasajeros(p => ({...p, adultos: Math.min(4, p.adultos + 1)}))} className="w-10 h-10 rounded-full border-2 border-blue-600 flex items-center justify-center text-blue-600 active:bg-blue-50"><Plus size={16} /></button>
+                  <span className="font-black italic text-lg w-4 text-[#1F2937] text-center">{pasajeros.adultos}</span>
+                  <button onClick={() => setPasajeros(p => ({...p, adultos: Math.min(4, p.adultos + 1)}))} className="w-10 h-10 rounded-full border-2 border-[#063971] flex items-center justify-center text-[#063971] active:bg-[#063971]/5"><Plus size={16} /></button>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-black italic uppercase text-sm text-slate-700 leading-none">Niños</p>
+                  <p className="font-black italic uppercase text-sm text-[#1F2937] leading-none">Niños</p>
                   <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Menores de 12 años</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <button onClick={() => setPasajeros(p => ({...p, niños: Math.max(0, p.niños - 1)}))} className="w-10 h-10 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-50"><Minus size={16} /></button>
-                  <span className="font-black italic text-lg w-4 text-center">{pasajeros.niños}</span>
-                  <button onClick={() => setPasajeros(p => ({...p, niños: Math.min(3, p.niños + 1)}))} className="w-10 h-10 rounded-full border-2 border-blue-600 flex items-center justify-center text-blue-600 active:bg-blue-50"><Plus size={16} /></button>
+                  <span className="font-black italic text-lg w-4 text-[#1F2937] text-center">{pasajeros.niños}</span>
+                  <button onClick={() => setPasajeros(p => ({...p, niños: Math.min(3, p.niños + 1)}))} className="w-10 h-10 rounded-full border-2 border-[#063971] flex items-center justify-center text-[#063971] active:bg-[#063971]/5"><Plus size={16} /></button>
                 </div>
               </div>
             </div>
 
-            <button onClick={() => setShowPasajeros(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase italic text-sm mt-10 shadow-lg active:scale-95 transition-all">
+            <button onClick={() => setShowPasajeros(false)} className="w-full py-4 bg-[#063971] text-white rounded-2xl font-black uppercase italic text-sm mt-10 shadow-lg active:scale-95 transition-all">
               Confirmar {totalPasajeros} {totalPasajeros === 1 ? 'Viajero' : 'Viajeros'}
             </button>
           </div>
@@ -509,11 +501,11 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
       )}
 
       {showCalendar && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2">
-              <h3 className="text-lg font-black italic uppercase text-slate-800">¿Cuándo sales?</h3>
-              <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} /></button>
+              <h3 className="text-lg font-black italic uppercase text-[#1F2937]">¿Cuándo sales?</h3>
+              <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} className="text-slate-500"/></button>
             </div>
             
             <div className="space-y-2">
@@ -527,19 +519,19 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
                     onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
                     className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
                       fechaSeleccionada.toDateString() === d.toDateString() 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
-                      : 'bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100'
+                      ? 'bg-[#063971] border-[#063971] text-white shadow-lg' 
+                      : 'bg-slate-50 border-transparent text-[#1F2937] hover:bg-slate-100'
                     }`}
                   >
                     <div className="text-left">
-                      <p className={`text-[10px] font-black uppercase ${fechaSeleccionada.toDateString() === d.toDateString() ? 'text-blue-100' : 'text-slate-400'}`}>
+                      <p className={`text-[10px] font-black uppercase ${fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white/80' : 'text-slate-400'}`}>
                         {i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
                       </p>
                       <p className="text-sm font-black italic uppercase">
                         {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
                       </p>
                     </div>
-                    <ChevronRight size={18} className={fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white' : 'text-blue-600'} />
+                    <ChevronRight size={18} className={fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white' : 'text-[#063971]'} />
                   </button>
                 );
               })}
@@ -552,7 +544,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
            <div className="p-4 flex items-center justify-between shadow-sm z-10">
               <div>
-                <h3 className="font-black uppercase italic text-slate-800 text-sm">
+                <h3 className="font-black uppercase italic text-[#1F2937] text-sm">
                   Ubica tu {tipoMapa === 'origen' ? 'Punto de Salida' : 'Destino'}
                 </h3>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
@@ -577,7 +569,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
               <button 
                 onClick={confirmarUbicacionMapa}
                 disabled={buscandoDireccion}
-                className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:opacity-50"
+                className="w-full bg-[#063971] text-white rounded-full p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-[#063971]/30 active:scale-95 transition-all disabled:opacity-50"
               >
                 {buscandoDireccion ? 'Traduciendo Dirección...' : 'Confirmar Ubicación'}
               </button>
