@@ -8,7 +8,7 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
       {/* BOTÓN 1: BUSCAR */}
       <button 
         onClick={() => { setVista("inicio"); setModo("pasajero"); }} 
-        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "inicio" && modo === "pasajero" ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "inicio" && modo === "pasajero" ? "text-[#063971]" : "text-slate-300 hover:text-[#063971]"}`}
       >
         <Search size={20} strokeWidth={3} />
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Buscar</span>
@@ -17,7 +17,7 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
       {/* BOTÓN 2: TUS VIAJES (AHORA CON NOTIFICADOR DE SOLICITUDES) */}
       <button 
         onClick={() => setVista("mis_viajes")} 
-        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "mis_viajes" ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "mis_viajes" ? "text-[#063971]" : "text-slate-300 hover:text-[#063971]"}`}
       >
         <div className="relative">
           <Map size={20} strokeWidth={3} />
@@ -31,7 +31,7 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Viajes</span>
       </button>
 
-      {/* BOTÓN 3: PUBLICAR */}
+      {/* BOTÓN 3: PUBLICAR (AZUL TRÁNSITO OFICIAL) */}
       <button 
         onClick={() => {
           setVista("publicar"); 
@@ -40,8 +40,8 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
         }} 
         className={`flex flex-col items-center gap-1 flex-1 transition-all active:scale-90 ${
           vista === "publicar" 
-            ? "text-blue-600 scale-110" 
-            : "text-amber-500 hover:text-amber-600" 
+            ? "text-[#063971] scale-110 drop-shadow-md" 
+            : "text-[#063971] opacity-80 hover:opacity-100" 
         }`}
       >
         <PlusCircle size={26} strokeWidth={3} /> 
@@ -51,7 +51,7 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
       {/* BOTÓN 4: MENSAJES */}
       <button 
         onClick={() => setVista("inbox")} 
-        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "inbox" ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "inbox" ? "text-[#063971]" : "text-slate-300 hover:text-[#063971]"}`}
       >
         <div className="relative">
           <MessageSquare size={20} strokeWidth={3} />
@@ -65,7 +65,7 @@ export const Navbar = ({ vista, modo, setVista, setModo, setPasoWizard, tieneMen
       {/* BOTÓN 5: PERFIL */}
       <button 
         onClick={() => setVista("perfil")} 
-        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "perfil" ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 ${vista === "perfil" ? "text-[#063971]" : "text-slate-300 hover:text-[#063971]"}`}
       >
         <User size={20} strokeWidth={3} />
         <span className="text-[9px] font-black uppercase italic tracking-tighter">Perfil</span>
