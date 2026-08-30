@@ -23,7 +23,6 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
   const [enviandoReporte, setEnviandoReporte] = useState(false);
 
   // 🔥 EL ESCUDO ANTI-PANTALLA BLANCA 🔥
-  // Si los props aún no terminan de llegar, esperamos en lugar de colapsar
   if (!chat || !userData) return null;
 
   // 🔥 ID UNIVERSAL SEGURO 🔥
@@ -356,19 +355,19 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     <div className="fixed inset-0 bg-white z-[120000] flex flex-col animate-in slide-in-from-right duration-300">
       
       {/* HEADER */}
-      <div className={`p-4 border-b flex items-center gap-3 shadow-sm pt-8 ${isSoporte ? 'bg-slate-900 text-white' : 'bg-white'}`}>
-        <button onClick={onRegresar} className={`p-2 -ml-2 rounded-full transition-colors ${isSoporte ? 'text-white hover:bg-slate-800' : 'text-blue-600 hover:bg-slate-100'}`}>
+      <div className={`p-4 border-b flex items-center gap-3 shadow-sm pt-8 ${isSoporte ? 'bg-[#1F2937] text-white' : 'bg-white'}`}>
+        <button onClick={onRegresar} className={`p-2 -ml-2 rounded-full transition-colors ${isSoporte ? 'text-white hover:bg-slate-700' : 'text-[#063971] hover:bg-slate-100'}`}>
           <ChevronLeft size={28} />
         </button>
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${isSoporte ? 'bg-blue-600 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
-          {fotoContacto ? <img src={fotoContacto} className="w-full h-full object-cover"/> : (isSoporte ? <Zap size={20} /> : <User size={20} />)}
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center border overflow-hidden shrink-0 ${isSoporte ? 'bg-transparent border-slate-600 text-white' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
+          {fotoContacto ? <img src={fotoContacto} className="w-full h-full object-cover"/> : (isSoporte ? <Zap size={20} className="text-amber-400" /> : <User size={20} />)}
         </div>
         
         <div className="flex-1 min-w-0">
-          <h3 className={`font-black italic uppercase text-sm tracking-tighter truncate flex items-center gap-1 ${isSoporte ? 'text-white' : 'text-slate-800'}`}>
-            {nombreContacto} {isSoporte ? <ShieldCheck size={14} className="text-blue-400" /> : <ShieldCheck size={14} className="text-green-500" />}
+          <h3 className={`font-black italic uppercase text-sm tracking-tighter truncate flex items-center gap-1 ${isSoporte ? 'text-white' : 'text-[#1F2937]'}`}>
+            {nombreContacto} {isSoporte ? <ShieldCheck size={14} className="text-white/80" /> : <ShieldCheck size={14} className="text-[#10B981]" />}
           </h3>
-          <p className={`text-[10px] font-bold truncate uppercase tracking-widest ${isSoporte ? 'text-blue-300' : 'text-slate-400'}`}>
+          <p className={`text-[10px] font-bold truncate uppercase tracking-widest ${isSoporte ? 'text-white/60' : 'text-slate-400'}`}>
             {isSoporte ? (esAdmin ? 'Usuario pidiendo ayuda' : 'Asistente 24/7') : chat?.ruta}
           </p>
         </div>
@@ -376,13 +375,13 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         {!isSoporte && (
           <div className="flex items-center gap-1 pr-1">
             {onVerViaje && (
-              <button onClick={manejarVerViaje} className="px-3 py-1.5 mr-1 bg-blue-600 text-white shadow-md shadow-blue-600/30 rounded-full transition-all active:scale-95 flex items-center gap-1.5">
+              <button onClick={manejarVerViaje} className="px-3 py-1.5 mr-1 bg-[#063971] text-white shadow-md shadow-[#063971]/30 rounded-full transition-all active:scale-95 flex items-center gap-1.5">
                 <Map size={14} strokeWidth={3} />
                 <span className="text-[9px] font-black uppercase tracking-widest">Viaje</span>
               </button>
             )}
-            <button onClick={abrirWhatsApp} type="button" className={`p-2 rounded-full transition-all active:scale-90 ${pasajeroConfirmado ? 'text-green-500 hover:bg-green-50' : 'text-slate-300 hover:bg-slate-50'}`}>
-              {pasajeroConfirmado ? <IconoWhatsApp size={22} className="text-green-500" /> : <Lock size={20} className="text-slate-300" />}
+            <button onClick={abrirWhatsApp} type="button" className={`p-2 rounded-full transition-all active:scale-90 ${pasajeroConfirmado ? 'text-[#10B981] hover:bg-[#10B981]/10' : 'text-slate-300 hover:bg-slate-50'}`}>
+              {pasajeroConfirmado ? <IconoWhatsApp size={22} className="text-[#10B981]" /> : <Lock size={20} className="text-slate-300" />}
             </button>
             <button onClick={() => setMostrarModalReporte(true)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90">
               <AlertTriangle size={18} strokeWidth={2.5} />
@@ -394,7 +393,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       {/* CUERPO DE MENSAJES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         <div className="flex justify-center mb-6 mt-2">
-          <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-2xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-blue-100 shadow-sm">
+          <div className="bg-[#063971]/5 text-[#063971] px-4 py-2 rounded-2xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-[#063971]/10 shadow-sm">
             <Info size={12} /> {isSoporte ? (esAdmin ? 'Respondiendo como Soporte' : 'Conexión Segura con Soporte') : 'Inicio del chat seguro'}
           </div>
         </div>
@@ -413,13 +412,13 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             <div key={m.id} className={`flex w-full mb-2 ${soyYo ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] flex flex-col shadow-sm ${
                 soyYo 
-                ? 'bg-blue-600 text-white rounded-[20px] rounded-tr-none' 
+                ? 'bg-[#063971] text-white rounded-[20px] rounded-tr-none' 
                 : esBot 
-                  ? 'bg-slate-800 text-white border border-slate-700 rounded-[20px] rounded-tl-none'
-                  : 'bg-white text-slate-700 border border-slate-200 rounded-[20px] rounded-tl-none'
+                  ? 'bg-[#1F2937] text-white border border-[#1F2937] rounded-[20px] rounded-tl-none'
+                  : 'bg-white text-[#1F2937] border border-slate-200 rounded-[20px] rounded-tl-none'
               }`}>
                 <span className="p-3 px-4 pb-1 text-sm font-bold whitespace-pre-wrap">{m.texto}</span>
-                <span className={`px-4 pb-2 text-[9px] text-right font-black tracking-wider ${soyYo ? 'text-blue-300' : 'text-slate-400'}`}>
+                <span className={`px-4 pb-2 text-[9px] text-right font-black tracking-wider ${soyYo ? 'text-white/70' : 'text-slate-400'}`}>
                   {horaStr}
                 </span>
               </div>
@@ -449,8 +448,8 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             <button onClick={() => ejecutarComandoBot('emergencia')} className="bg-red-50 border border-red-200 text-red-600 p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-sm">
               <AlertTriangle size={14} /> Emergencia / Grúa
             </button>
-            <button onClick={() => ejecutarComandoBot('humano')} className="bg-slate-900 text-white p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-md shadow-slate-900/20">
-              <LifeBuoy size={14} className="text-blue-400" /> Asesor Humano
+            <button onClick={() => ejecutarComandoBot('humano')} className="bg-[#1F2937] text-white p-2.5 rounded-[15px] flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-wider active:scale-95 shadow-md shadow-[#1F2937]/20">
+              <LifeBuoy size={14} className="text-white/70" /> Asesor Humano
             </button>
           </div>
         ) : (
@@ -459,7 +458,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
               {sugerenciasNormales.map((sug, idx) => (
                 <button 
                   key={idx} type="button" onClick={() => enviar(null, sug)}
-                  className="whitespace-nowrap bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shrink-0"
+                  className="whitespace-nowrap bg-slate-50 hover:bg-[#063971]/5 border border-slate-200 hover:border-[#063971]/30 text-slate-600 hover:text-[#063971] px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shrink-0"
                 >
                   {sug}
                 </button>
@@ -474,11 +473,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             value={nuevoMsg}
             onChange={(e) => setNuevoMsg(e.target.value)}
             placeholder="Escribe un mensaje..."
-            className="flex-1 bg-slate-100 p-4 px-6 rounded-full text-xs font-bold outline-none border-none text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
+            className="flex-1 bg-slate-100 p-4 px-6 rounded-full text-xs font-bold outline-none border-none text-[#1F2937] placeholder:text-slate-400 focus:ring-2 focus:ring-[#063971]/20 transition-all"
           />
           <button 
             type="submit"
-            className="bg-blue-600 w-12 h-12 flex items-center justify-center rounded-full text-white shadow-lg active:scale-90 transition-transform disabled:bg-slate-300"
+            className="bg-[#063971] w-12 h-12 flex items-center justify-center rounded-full text-white shadow-lg shadow-[#063971]/20 active:scale-90 transition-transform disabled:bg-slate-300"
             disabled={!nuevoMsg.trim()}
           >
             <Send size={18} className="ml-1" />
@@ -489,8 +488,8 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       {/* TOAST FLOTANTE */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
-          <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
-            {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
+          <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-[#1F2937]' : 'bg-red-500'}`}>
+            {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-[#10B981] shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="truncate whitespace-nowrap">{toast.texto}</span>
           </div>
         </div>
@@ -506,17 +505,17 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
             
             <div className="flex items-center gap-3 mb-4 text-red-500">
               <AlertTriangle size={24} strokeWidth={2.5} />
-              <h3 className="font-black italic uppercase tracking-tighter">Reportar Usuario</h3>
+              <h3 className="font-black italic uppercase tracking-tighter text-[#1F2937]">Reportar Usuario</h3>
             </div>
             
             <p className="text-xs font-medium text-slate-500 mb-4">
-              ¿Por qué estás reportando a <span className="font-bold text-slate-800">{nombreContacto}</span>? Tu reporte nos ayuda a mantener la comunidad segura.
+              ¿Por qué estás reportando a <span className="font-bold text-[#1F2937]">{nombreContacto}</span>? Tu reporte nos ayuda a mantener la comunidad segura.
             </p>
 
             <select
               value={motivoSeleccionado}
               onChange={(e) => setMotivoSeleccionado(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-[15px] p-3 text-sm font-bold text-slate-700 outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all mb-3 appearance-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-[15px] p-3 text-sm font-bold text-[#1F2937] outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all mb-3 appearance-none"
             >
               <option value="" disabled>Selecciona el motivo principal...</option>
               <option value="Falta de respeto o acoso">Falta de respeto o acoso</option>
@@ -531,7 +530,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
               value={descripcionReporte}
               onChange={(e) => setDescripcionReporte(e.target.value)}
               placeholder="Explica brevemente los detalles de lo sucedido..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-[15px] p-3 text-sm font-medium outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all resize-none h-24 mb-4"
+              className="w-full bg-slate-50 border border-slate-200 rounded-[15px] p-3 text-sm font-medium text-[#1F2937] outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all resize-none h-24 mb-4"
             ></textarea>
 
             <button
