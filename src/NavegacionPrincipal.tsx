@@ -82,13 +82,11 @@ export default function NavegacionPrincipal({ user }) {
       setViajes(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 🔥 LA SOLUCIÓN: Le decimos a Firebase que SOLO escuche nuestros chats. 
-    // Lo ordenamos en memoria (sort) para no tener que crear Índices Complejos en la base de datos.
     const unsubC = onSnapshot(
       query(collection(db, "Chats"), where("participantes", "array-contains", user.uid)), 
       (s) => {
         const chatsData = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        chatsData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Ordena del más nuevo al más viejo
+        chatsData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); 
         setChats(chatsData);
       },
       (error) => {
@@ -99,29 +97,19 @@ export default function NavegacionPrincipal({ user }) {
     return () => { unsubU(); unsubV(); unsubC(); };
   }, [user]);
 
-      // 🔥 EL CEREBRO MAESTRO DE NAVEGACIÓN 🔥
   useEffect(() => {
     const configurarBotonAtras = async () => {
-      // 1. MATAMOS cualquier listener fantasma acumulado
       await App.removeAllListeners();
-
-      // 2. Creamos EL ÚNICO controlador de toda la app
       await App.addListener('backButton', () => {
-
-        // Prioridad 1: Perfil Público abierto
         if (window.perfilPublicoAbierto) {
           window.dispatchEvent(new Event('cerrarPerfilGlobal'));
           return;
         }
-
-        // Prioridad 2: Chat Privado
         if (vista === "chat_individual") {
           setChatActivo(null);
           setVista("inbox");
           return;
         }
-
-        // Prioridad 3: Publicar Viaje (Retrocede pasos)
         if (vista === "publicar") {
           if (pasoWizard > 1) {
             setPasoWizard(prev => prev - 1);
@@ -130,20 +118,14 @@ export default function NavegacionPrincipal({ user }) {
           }
           return;
         }
-
-        // Prioridad 4: Detalle de Viaje abierto
         if (viajeSel) {
           setViajeSel(null);
           return;
         }
-
-        // Prioridad 5: Cualquier otra pestaña vuelve a inicio
         if (vista !== 'inicio') {
           setVista('inicio');
           return;
         }
-
-        // Prioridad 6: Salir de la app
         App.exitApp();
       });
     };
@@ -151,25 +133,21 @@ export default function NavegacionPrincipal({ user }) {
     configurarBotonAtras();
 
   }, [vista, viajeSel, pasoWizard, chatActivo]); 
-  // ↑ Es VITAL que estas variables estén en el corchete
 
    const iniciarChat = async (datos) => {
     if (!userData?.id || !datos?.id) return;
     
     try {
-      // 🔥 EL PARCHE MAESTRO: Si la orden ya trae el chat armado desde VistaDetalleViaje, ábrelo de una!
       if (datos.participantes && typeof datos.mensajesSinLeer !== 'undefined') {
         setChatActivo(datos);
         setVista("chat_individual");
-        setViajeSel(null); // Cierra la pantalla del viaje para no causar conflictos
+        setViajeSel(null); 
         return;
       }
 
-      // --- Lógica original para el pasajero ---
       const conductorId = datos.uidConductor || datos.idCreador;
       const soyConductor = conductorId === userData.id;
 
-      // Si es conductor y la orden no trajo el chat armado, lo mandamos al inbox por seguridad
       if (soyConductor) {
          setVista("inbox");
          return;
@@ -215,7 +193,7 @@ export default function NavegacionPrincipal({ user }) {
 
       setChatActivo(chatDataCompleto);
       setVista("chat_individual");
-      setViajeSel(null); // 🔥 Aseguramos cerrar la vista del viaje aquí también
+      setViajeSel(null); 
       
     } catch (error) {
       console.error("Error al iniciar chat:", error);
@@ -315,15 +293,16 @@ export default function NavegacionPrincipal({ user }) {
     }
   };
 
+  // 🔥 PANTALLA DE CARGA CON LOS NUEVOS COLORES 🔥
   if (!userData) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0b1120] text-white font-sans relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white text-[#1F2937] font-sans relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#063971]/10 rounded-full blur-[100px] animate-pulse"></div>
         <div className="relative z-10 flex flex-col items-center animate-in fade-in duration-500">
-          <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 flex items-center justify-center shadow-xl">
-            <RefreshCcw size={28} className="text-blue-500 animate-spin" />
+          <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex items-center justify-center shadow-xl">
+            <RefreshCcw size={28} className="text-[#063971] animate-spin" />
           </div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] mt-6 animate-pulse">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mt-6 animate-pulse">
             Sincronizando perfil...
           </p>
         </div>
@@ -331,55 +310,56 @@ export default function NavegacionPrincipal({ user }) {
     );
   }
 
+  // 🔥 PANTALLA DE CUENTA SUSPENDIDA CON ALTO CONTRASTE 🔥
   if (userData.cuentaSuspendida === true) {
     return (
-      <div className="w-full max-w-md mx-auto h-screen bg-slate-950 flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-500">
-        <div className="bg-red-500/10 p-6 rounded-full mb-6 border border-red-500/20">
-          <AlertCircle size={60} className="text-red-500 animate-pulse" />
+      <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-500">
+        <div className="bg-red-50 p-6 rounded-full mb-6 border border-red-100">
+          <AlertCircle size={60} className="text-red-600 animate-pulse" />
         </div>
-        <h1 className="text-white font-black italic uppercase text-2xl tracking-tighter mb-4">
+        <h1 className="text-[#1F2937] font-black italic uppercase text-2xl tracking-tighter mb-4">
           Cuenta Suspendida
         </h1>
-        <p className="text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest">
-          Tu acceso a <span className="text-blue-500">Dame la cola</span> ha sido restringido.
+        <p className="text-slate-500 text-xs font-bold leading-relaxed uppercase tracking-widest">
+          Tu acceso a <span className="text-[#063971]">Dame la cola</span> ha sido restringido.
         </p>
         <button 
           onClick={() => signOut(auth)}
-          className="mt-12 text-slate-500 font-black uppercase text-[10px] border-b border-slate-800 pb-1 hover:text-white transition-colors"
+          className="mt-12 text-slate-400 font-black uppercase text-[10px] border-b border-slate-200 pb-1 hover:text-[#1F2937] transition-colors"
         >
           Cerrar Sesión
         </button>
         <a 
           href="mailto: soportedamelacola@gmail.com?subject=Apelación de Cuenta Suspendida"
-          className="mt-6 text-blue-500 font-black uppercase text-[10px] tracking-widest hover:text-blue-400" >  Apelar Decisión (Soporte)  </a>
+          className="mt-6 text-[#063971] font-black uppercase text-[10px] tracking-widest hover:opacity-80" >  Apelar Decisión (Soporte)  </a>
       </div>
     );
   }
 
-    // 🔥 PANTALLA DE CASTIGO: SUSPENSIÓN TEMPORAL POR CANCELACIONES
+  // 🔥 PANTALLA DE SUSPENSIÓN TEMPORAL CON ALTO CONTRASTE 🔥
   if (userData.suspendidoTemporalmenteHasta && Date.now() < userData.suspendidoTemporalmenteHasta) {
     const fechaLiberacion = new Date(userData.suspendidoTemporalmenteHasta).toLocaleString('es-ES', { 
       weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
     });
 
     return (
-      <div className="w-full max-w-md mx-auto h-screen bg-slate-950 flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-500">
-        <div className="bg-orange-500/10 p-6 rounded-full mb-6 border border-orange-500/20">
+      <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col items-center justify-center p-10 text-center animate-in fade-in duration-500">
+        <div className="bg-orange-50 p-6 rounded-full mb-6 border border-orange-100">
           <AlertCircle size={60} className="text-orange-500 animate-pulse" />
         </div>
-        <h1 className="text-white font-black italic uppercase text-2xl tracking-tighter mb-4">
+        <h1 className="text-[#1F2937] font-black italic uppercase text-2xl tracking-tighter mb-4">
           Suspensión Temporal
         </h1>
-        <p className="text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest mb-6">
+        <p className="text-slate-500 text-xs font-bold leading-relaxed uppercase tracking-widest mb-6">
           Has alcanzado el límite máximo de cancelaciones. Para proteger a la comunidad, tu cuenta está en pausa.
         </p>
-        <div className="bg-orange-950/30 border border-orange-900/50 px-5 py-3 rounded-2xl w-full">
-          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Tu cuenta se liberará el:</p>
-          <p className="text-sm font-black text-orange-200 capitalize">{fechaLiberacion}</p>
+        <div className="bg-orange-50 border border-orange-200 px-5 py-3 rounded-2xl w-full">
+          <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Tu cuenta se liberará el:</p>
+          <p className="text-sm font-black text-orange-700 capitalize">{fechaLiberacion}</p>
         </div>
         <button 
           onClick={() => signOut(auth)}
-          className="mt-12 text-slate-500 font-black uppercase text-[10px] border-b border-slate-800 pb-1 hover:text-white transition-colors"
+          className="mt-12 text-slate-400 font-black uppercase text-[10px] border-b border-slate-200 pb-1 hover:text-[#1F2937] transition-colors"
         >
           Cerrar Sesión
         </button>
@@ -412,9 +392,10 @@ export default function NavegacionPrincipal({ user }) {
     );
   }
 
+  // FONDO BLANCO PARA LA BILLETERA
   if (verWallet) {
     return (
-      <div className="w-full max-w-md mx-auto h-screen bg-[#0b1120] flex flex-col relative overflow-hidden z-[100]">
+      <div className="w-full max-w-md mx-auto h-screen bg-white flex flex-col relative overflow-hidden z-[100]">
         <Wallet userData={userData} onRegresar={() => setVerWallet(false)} />
       </div>
     );
