@@ -2,7 +2,7 @@ import React from 'react';
 import { Wallet } from 'lucide-react';
 import { CampanaNotificaciones } from "./CampanaNotificaciones";
 
-// Tu logo que ya arreglamos
+// 🔥 Buscamos directamente el icon.png que metiste en src 🔥
 import logoApp from '../../icon.png';
 
 export const Header = ({ userData, modo, onAbrirWallet }) => {
