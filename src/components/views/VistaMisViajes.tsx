@@ -40,20 +40,32 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.name === 'precio' || e.target.name === 'asientos' ? parseInt(e.target.value) || '' : e.target.value }));
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center">
-      <div className="bg-[#0f172a] w-full max-w-md rounded-[35px] shadow-2xl p-8 relative">
-        <button onClick={onClose} className="absolute top-6 right-6 text-slate-500 hover:text-white"><X size={24} /></button>
-        <h3 className="text-center text-xs font-black text-blue-500 uppercase tracking-[4px] mb-8">Editar Mi Viaje</h3>
+    <div className="fixed inset-0 bg-[#1F2937]/80 backdrop-blur-sm z-[90] p-6 flex items-center justify-center animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-[35px] shadow-2xl p-8 relative border border-slate-100">
+        <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-[#1F2937] transition-colors"><X size={24} /></button>
+        <h3 className="text-center text-xs font-black text-[#063971] uppercase tracking-[4px] mb-8">Editar Mi Viaje</h3>
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Fecha</label><input type="date" name="fechaForm" value={formData.fechaForm} onChange={handleChange} className="w-full bg-slate-800 text-white rounded-xl p-3.5 text-sm font-bold outline-none" /></div>
-            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Hora</label><input type="time" name="horaForm" value={formData.horaForm} onChange={handleChange} className="w-full bg-slate-800 text-white rounded-xl p-3.5 text-sm font-bold outline-none" /></div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Fecha</label>
+              <input type="date" name="fechaForm" value={formData.fechaForm} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] rounded-xl p-3.5 text-sm font-bold outline-none focus:border-[#063971]/50 transition-colors" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Hora</label>
+              <input type="time" name="horaForm" value={formData.horaForm} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] rounded-xl p-3.5 text-sm font-bold outline-none focus:border-[#063971]/50 transition-colors" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Costo ($)</label><input type="number" name="precio" value={formData.precio} onChange={handleChange} className="w-full bg-slate-800 text-white rounded-xl p-3.5 text-sm font-bold outline-none" /></div>
-            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Puestos</label><input type="number" name="asientos" value={formData.asientos} onChange={handleChange} className="w-full bg-slate-800 text-white rounded-xl p-3.5 text-sm font-bold outline-none" /></div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Costo ($)</label>
+              <input type="number" name="precio" value={formData.precio} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 text-[#10B981] rounded-xl p-3.5 text-sm font-bold outline-none focus:border-[#10B981]/50 transition-colors" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Puestos</label>
+              <input type="number" name="asientos" value={formData.asientos} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] rounded-xl p-3.5 text-sm font-bold outline-none focus:border-[#063971]/50 transition-colors" />
+            </div>
           </div>
-          <button onClick={() => onSave({ id: viaje.id, tipoRuta: viaje.tipoRuta, ...formData })} className="w-full bg-blue-600 text-white rounded-full p-4 font-black uppercase text-xs tracking-[3px] shadow-lg active:scale-95 transition-all mt-4">Guardar Cambios</button>
+          <button onClick={() => onSave({ id: viaje.id, tipoRuta: viaje.tipoRuta, ...formData })} className="w-full bg-[#063971] text-white rounded-full p-4 font-black uppercase text-xs tracking-[3px] shadow-lg shadow-[#063971]/30 active:scale-95 transition-all mt-4 hover:bg-blue-800">Guardar Cambios</button>
         </div>
       </div>
     </div>
@@ -75,19 +87,18 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 
   const solicitudes = Array.isArray(viaje.reservasPendientes) ? viaje.reservasPendientes.length : 0;
 
-  // 🔥 RECUPERADO: Lógica del Botón Naranja 🔥
   const botonNaranja = esActivo && (solicitudes > 0 || estaEnCurso || totalPasajeros > 0);
 
   const origenText = viaje.cO || String(viaje.origen || "").split(',')[0] || "Origen";
   const destinoText = viaje.cD || String(viaje.destino || "").split(',')[0] || "Destino";
 
   return (
-    <div className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm relative space-y-4">
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-green-50 border-green-200 text-green-600' : esCancelado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+    <div className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm relative space-y-4 hover:border-[#063971]/20 transition-colors">
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' : esCancelado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-[#063971]/10 border-[#063971]/20 text-[#063971]'}`}>
           {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : esCancelado ? 'CANCELADO' : 'DISPONIBLE'}
       </div>
 
-      {esRetorno && <div className="absolute top-6 left-6 text-emerald-600 flex items-center gap-1.5 z-20"><Repeat size={14} className='-rotate-90'/><span className="text-[9px] font-black uppercase tracking-widest">RETORNO</span></div>}
+      {esRetorno && <div className="absolute top-6 left-6 text-[#10B981] flex items-center gap-1.5 z-20"><Repeat size={14} className='-rotate-90'/><span className="text-[9px] font-black uppercase tracking-widest">RETORNO</span></div>}
 
       <div className="h-32 rounded-2xl overflow-hidden mb-2 relative pointer-events-none bg-slate-100">
          <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent z-10" />
@@ -97,29 +108,29 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
       <div className="flex justify-between items-start pt-2">
         <div>
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo ($)</p>
-          <p className="text-4xl font-black italic text-blue-600 leading-none">${viaje.precio || '0'}</p>
+          <p className="text-4xl font-black italic text-[#10B981] leading-none">${viaje.precio || '0'}</p>
         </div>
-        {esActivo && <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500"><Edit2 size={16} /></button>}
+        {esActivo && <button onClick={onEdit} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-500 hover:text-[#063971] hover:bg-[#063971]/5 transition-colors"><Edit2 size={16} /></button>}
       </div>
 
       <div className="flex items-center gap-4 text-center">
-        <div className='flex-1'><p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{extractText(viaje.cO || viaje.origen, "Origen")}</p><p className="text-[7px] font-black text-slate-400 uppercase">Salida</p></div>
+        <div className='flex-1'><p className="text-[11px] font-bold text-[#1F2937] uppercase italic truncate">{extractText(viaje.cO || viaje.origen, "Origen")}</p><p className="text-[7px] font-black text-slate-400 uppercase">Salida</p></div>
         <ArrowLeftRight className='text-slate-300 shrink-0' size={18}/>
-        <div className='flex-1'><p className="text-[11px] font-bold text-slate-800 uppercase italic truncate">{extractText(viaje.cD || viaje.destino, "Destino")}</p><p className="text-[7px] font-black text-slate-400 uppercase">Llegada</p></div>
+        <div className='flex-1'><p className="text-[11px] font-bold text-[#1F2937] uppercase italic truncate">{extractText(viaje.cD || viaje.destino, "Destino")}</p><p className="text-[7px] font-black text-slate-400 uppercase">Llegada</p></div>
       </div>
 
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 grid grid-cols-2 gap-4">
-        <div className="flex items-center gap-2.5"><Calendar size={16} className="text-blue-500"/><p className="text-xs font-bold text-slate-700 capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p></div>
-        <div className="flex items-center gap-2.5"><Clock size={16} className="text-blue-500"/><p className="text-xs font-bold text-slate-700">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p></div>
-        <div className="flex items-center gap-2.5 col-span-2"><Users size={16} className="text-blue-500"/><p className="text-xs font-bold text-slate-700">{totalPasajeros} / {viaje.asientos || viaje.puestos || 1} Confirmados</p></div>
+        <div className="flex items-center gap-2.5"><Calendar size={16} className="text-[#063971]"/><p className="text-xs font-bold text-[#1F2937] capitalize">{formatearFechaCorta(viaje.fechaSalida || viaje.fecha)}</p></div>
+        <div className="flex items-center gap-2.5"><Clock size={16} className="text-[#063971]"/><p className="text-xs font-bold text-[#1F2937]">{formatearHora12h(viaje.horaSalida || viaje.hora)}</p></div>
+        <div className="flex items-center gap-2.5 col-span-2"><Users size={16} className="text-[#063971]"/><p className="text-xs font-bold text-[#1F2937]">{totalPasajeros} / {viaje.asientos || viaje.puestos || 1} Confirmados</p></div>
       </div>
 
       <button disabled={esCancelado} onClick={() => onClickGestionar(viaje)}
         className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all shadow-lg ${
           esCancelado ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' : 
           botonNaranja ? 'bg-orange-500 text-white shadow-orange-500/40 animate-pulse active:scale-95' :
-          esActivo ? 'bg-blue-600 text-white shadow-blue-500/30 active:scale-95' : 
-          'bg-slate-800 text-white shadow-slate-900/30 active:scale-95'
+          esActivo ? 'bg-[#063971] text-white shadow-[#063971]/30 active:scale-95' : 
+          'bg-[#1F2937] text-white shadow-[#1F2937]/30 active:scale-95'
         }`}>
         {esCancelado ? <><Archive size={16} /> Viaje Cancelado</> 
         : (solicitudes > 0 && esActivo) ? <><Info size={18} /> ¡Tienes {solicitudes} solicitud{solicitudes > 1 ? 'es' : ''}!</>
@@ -159,13 +170,13 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   }
 
   return (
-    <div className={`bg-white p-5 rounded-3xl shadow-sm border mb-4 relative ${esConfirmado && esActivo ? 'border-blue-300' : 'border-slate-100'}`}>
+    <div className={`bg-white p-5 rounded-3xl shadow-sm border mb-4 relative ${esConfirmado && esActivo ? 'border-[#063971]/30 hover:border-[#063971]/50' : 'border-slate-100 hover:border-[#063971]/20'} transition-colors`}>
       
       <div className="flex justify-between items-center mb-4">
-         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${esActivo ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${esActivo ? 'bg-[#063971]/10 text-[#063971]' : 'bg-slate-100 text-slate-500'}`}>
             {esActivo ? 'ACTIVO' : esCancelado ? 'CANCELADO' : 'FINALIZADO'}
          </span>
-         <span className="text-2xl font-black italic text-blue-600">${precio}</span>
+         <span className="text-2xl font-black italic text-[#10B981]">${precio}</span>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -173,19 +184,19 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
            {typeof viaje.fotoPerfil === 'string' && viaje.fotoPerfil.startsWith('http') ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <Users size={20} className="text-slate-400" />}
          </div>
          <div className="flex-1 min-w-0">
-           <p className="font-black text-sm text-slate-800 uppercase truncate">{conductor}</p>
-           <p className="text-[9px] font-black text-blue-600 uppercase">Chofer Designado</p>
+           <p className="font-black text-sm text-[#1F2937] uppercase truncate">{conductor}</p>
+           <p className="text-[9px] font-black text-[#063971] uppercase">Chofer Designado</p>
          </div>
       </div>
 
       <div className="bg-slate-50 p-3 rounded-2xl flex items-center justify-between text-center gap-2 mb-4 border border-slate-100">
-         <div className="flex-1 min-w-0"><p className="text-[11px] font-bold text-slate-700 uppercase truncate">{origen}</p></div>
+         <div className="flex-1 min-w-0"><p className="text-[11px] font-bold text-[#1F2937] uppercase truncate">{origen}</p></div>
          <ArrowLeftRight size={14} className="text-slate-300 shrink-0" />
-         <div className="flex-1 min-w-0"><p className="text-[11px] font-bold text-slate-700 uppercase truncate">{destino}</p></div>
+         <div className="flex-1 min-w-0"><p className="text-[11px] font-bold text-[#1F2937] uppercase truncate">{destino}</p></div>
       </div>
 
       {esActivo ? (
-        <button onClick={() => onClickGestionar(viaje)} className={`w-full rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all ${esConfirmado ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-white text-slate-500 border border-slate-200'}`}>
+        <button onClick={() => onClickGestionar(viaje)} className={`w-full rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all ${esConfirmado ? 'bg-[#063971] text-white shadow-lg shadow-[#063971]/30 active:scale-95' : 'bg-white text-slate-500 border border-slate-200 hover:text-[#063971] hover:border-[#063971]/30'}`}>
             {esConfirmado ? <><Check size={16} /> Ver Detalles / PIN</> : <><Info size={16} /> Esperando Confirmación</>}
         </button>
       ) : esCancelado ? (
@@ -193,7 +204,7 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
             <Archive size={16} /> Viaje Cancelado
         </button>
       ) : (
-        <button onClick={() => onClickGestionar(viaje)} className={`w-full rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2 transition-all ${yaCalifico ? 'bg-slate-100 text-slate-400' : 'bg-amber-400 text-amber-950 shadow-lg shadow-amber-500/30'}`}>
+        <button onClick={() => onClickGestionar(viaje)} className={`w-full rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2 transition-all ${yaCalifico ? 'bg-slate-100 text-slate-400' : 'bg-amber-400 text-amber-950 shadow-lg shadow-amber-500/30 active:scale-95'}`}>
             {yaCalifico ? <><Check size={16} /> Ya Calificado</> : <><Star size={16} /> Calificar Chofer</>}
         </button>
       )}
@@ -298,11 +309,11 @@ export const VistaMisViajes = ({
 
       <div className="p-4 pt-8 bg-white border-b border-slate-100 sticky top-0 z-30">
         <div className="flex items-center gap-4 mb-6">
-          <button onClick={onRegresar} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 active:scale-90 transition-all border border-slate-100"><ArrowLeft size={20} /></button>
-          <h2 className="text-xl font-black italic text-slate-800 tracking-tight uppercase">Mis Rutas</h2>
+          <button onClick={onRegresar} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 hover:text-[#063971] hover:bg-[#063971]/5 active:scale-90 transition-all border border-slate-100"><ArrowLeft size={20} /></button>
+          <h2 className="text-xl font-black italic text-[#1F2937] tracking-tight uppercase">Mis Rutas</h2>
         </div>
         <div className="flex bg-slate-100 p-1.5 rounded-full relative shadow-inner">
-          <div className={`absolute top-1.5 bottom-1.5 bg-blue-600 rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-[calc(50%+3px)] w-[calc(50%-6px)]' : 'left-1.5 w-[calc(50%-6px)]'}`} />
+          <div className={`absolute top-1.5 bottom-1.5 bg-[#063971] rounded-full transition-all duration-300 shadow-sm ${activeTab === 'pasajero' ? 'left-[calc(50%+3px)] w-[calc(50%-6px)]' : 'left-1.5 w-[calc(50%-6px)]'}`} />
           <button onClick={() => setActiveTab('chofer')} className={`relative flex-1 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 ${activeTab === 'chofer' ? 'text-white' : 'text-slate-500 hover:text-slate-700'}`}>Como Chofer</button>
           <button onClick={() => setActiveTab('pasajero')} className={`relative flex-1 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 ${activeTab === 'pasajero' ? 'text-white' : 'text-slate-500 hover:text-slate-700'}`}>Como Pasajero</button>
         </div>
@@ -312,8 +323,8 @@ export const VistaMisViajes = ({
         {activeTab === 'chofer' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
-              <button onClick={() => setSubTabChofer('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
-              <button onClick={() => setSubTabChofer('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
+              <button onClick={() => setSubTabChofer('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'activos' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabChofer('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'historial' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
             {subTabChofer === 'activos' ? (
               cActivos.length > 0 ? cActivos.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => setEditingViaje(v)} onArchivar={() => {}} onClickGestionar={onVerDetalles} />)
@@ -328,8 +339,8 @@ export const VistaMisViajes = ({
         {activeTab === 'pasajero' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
-              <button onClick={() => setSubTabPasajero('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'activos' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
-              <button onClick={() => setSubTabPasajero('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'historial' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
+              <button onClick={() => setSubTabPasajero('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'activos' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabPasajero('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'historial' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
             {subTabPasajero === 'activos' ? (
               pActivos.length > 0 ? pActivos.map(v => <ViajeCardPasajero key={v.id} viaje={v} userData={userData} onClickGestionar={onVerDetalles} />)
