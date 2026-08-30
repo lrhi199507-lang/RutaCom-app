@@ -93,8 +93,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [pinesIngresados, setPinesIngresados] = useState({});
   const [modalFinalizar, setModalFinalizar] = useState(false);
 
-  // 🔥 NUEVO: ESTADO PARA EL TEMPORIZADOR DE ESPERA 🔥
-  const [tiempoEsperaAbordaje, setTiempoEsperaAbordaje] = useState(300); // 300 segundos = 5 minutos
+  const [tiempoEsperaAbordaje, setTiempoEsperaAbordaje] = useState(300);
 
   const [modalCalificacion, setModalCalificacion] = useState(false);
   const [stars, setStars] = useState(0);
@@ -112,11 +111,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [adultosExtra, setAdultosExtra] = useState(0);
   const [ninosExtra, setNinosExtra] = useState(0);
 
-  // 🔥 NUEVO: Estados para el "Modelo Aerolínea" (Ida y Vuelta)
   const [viajeRetorno, setViajeRetorno] = useState(null);
   const [reservarIdaYVuelta, setReservarIdaYVuelta] = useState(false);
 
-  // 🔥 NUEVO: Buscador automático directo por enlace gemelo
   useEffect(() => {
     const buscarRetorno = async () => {
       if (viaje?.conRetornoProgramado && viaje?.idEnlace) {
@@ -223,7 +220,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const yaSoyPasajero = !!miReserva;
   const yaSolicite = solicitudesPendientes.some(p => p && p.id === userData?.id);
 
-  // 🔥 NUEVO: EFFECT PARA EL TEMPORIZADOR DEL MODAL DE ABORDAJE 🔥
   useEffect(() => {
     let interval;
     if (modalAbordaje && tiempoEsperaAbordaje > 0) {
@@ -316,7 +312,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   }, [viaje?.estado, viaje?.pasajeros, userData?.id]);
   
   const puestosTotales = Number(viaje?.asientos) || Number(viaje?.puestos) || 1;
-  // Solo sumamos los asientos de los que no están marcados como 'ausente'
   const asientosOcupados = pasajerosConfirmados.reduce((total, p) => {
     return p.abordado === 'ausente' ? total : total + (Number(p?.puestosSolicitados) || 1);
   }, 0);
@@ -330,7 +325,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const notificarLlegadaYAbrirModal = async () => {
     setModalAbordaje(true); 
-    setTiempoEsperaAbordaje(300); // Reiniciamos el timer cada vez que abre el modal
+    setTiempoEsperaAbordaje(300); 
     const promesasNotificaciones = pasajerosConfirmados.map(p => {
       if (p && !p.abordado && p.abordado !== 'ausente' && (p.id || p.uid)) {
         return enviarNotificacion(
@@ -360,12 +355,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     setCargando(true);
     try {
       const miId = String(userData?.id || userData?.uid);
-      
-      // Aseguramos los IDs y Roles correctamente
       const idChofer = String(viaje.uidConductor || viaje.idCreador);
-      
-      // Si soy el chofer, el objetivo es el pasajero de la lista.
-      // Si soy pasajero, el objetivo DEBE ser el chofer del viaje.
       const idPas = soyConductor 
         ? String(usuarioObjetivo.id || usuarioObjetivo.uid) 
         : miId;
@@ -384,7 +374,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         onIniciarChat({ id: chatExistente.id, ...chatExistente.data() });
         setTimeout(() => onRegresar(), 150); 
       } else {
-        // BLINDAJE DE DATOS PARA EVITAR PANTALLAS BLANCAS
         const datosNuevoChat = {
           estadoViaje: estadoViaje || "disponible",
           idViaje: viaje.id || "ID_DESCONOCIDO",
@@ -398,7 +387,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           ultimoMensaje: "Chat iniciado",
           esSoporte: false,
           
-          // NOMBRES BLINDADOS
           nombreConductor: soyConductor 
             ? String(userData?.nombre || "Conductor") 
             : String(usuarioObjetivo?.nombre || viaje?.cN || viaje?.conductor || "Conductor"),
@@ -407,7 +395,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             ? String(usuarioObjetivo?.nombre || "Pasajero") 
             : String(userData?.nombre || "Pasajero"),
             
-          // FOTOS BLINDADAS
           fotoConductor: soyConductor 
             ? (userData?.fotoPerfil || null) 
             : (usuarioObjetivo?.fotoPerfil || viaje?.fotoPerfil || null),
@@ -416,7 +403,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
             ? (usuarioObjetivo?.fotoPerfil || null) 
             : (userData?.fotoPerfil || null),
             
-          // TELÉFONOS BLINDADOS
           telefonoConductor: soyConductor 
             ? (userData?.telefono || "") 
             : (usuarioObjetivo?.telefono || viaje?.telefono || ""),
@@ -452,7 +438,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         setTimeout(() => setToast(null), 3000);
       }
     } else {
-      // SI SOY PASAJERO: Mi objetivo de charla es el CONDUCTOR del viaje (No yo mismo)
       const objChofer = {
         id: viaje.uidConductor || viaje.idCreador,
         nombre: viaje.cN || viaje.conductor || "Conductor",
@@ -464,7 +449,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
 const solicitarCola = async () => {
-    // 1. Cálculos de costo correctos
     const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
     const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
     const costoTotalPeticion = costoViajeIda + costoViajeVuelta;
@@ -483,7 +467,6 @@ const solicitarCola = async () => {
       return;
     }
 
-    // 2. Validación estricta de cupos para el retorno
     if (reservarIdaYVuelta && viajeRetorno) {
       const psjsRetorno = Array.isArray(viajeRetorno.pasajeros) ? viajeRetorno.pasajeros : Object.values(viajeRetorno.pasajeros || {});
       const asientosVueltaOcupados = psjsRetorno.reduce((total, p) => total + (Number(p?.puestosSolicitados) || 1), 0);
@@ -526,10 +509,8 @@ const solicitarCola = async () => {
         abordado: false, 
       };
 
-      // 🔥 FUNCIÓN INTERNA BLINDADA: Ahora evalúa de forma independiente a cada viaje y personaliza las notificaciones
       const procesarReservaUnica = async (viajeObjetivo, esRetorno = false) => {
         const idConductorObj = viajeObjetivo.uidConductor || viajeObjetivo.idCreador;
-        // Evalúa si ESTE viaje en específico es de auto-aceptar
         const autoAceptaViaje = viajeObjetivo.autoAceptar === true; 
         
         await addDoc(collection(db, "Solicitudes"), {
@@ -542,7 +523,6 @@ const solicitarCola = async () => {
           fecha: serverTimestamp()
         });
 
-        // --- 🔥 LÓGICA DE TEXTOS DE NOTIFICACIÓN INTELIGENTE 🔥 ---
         const extraTexto = puestosQueQuiero > 1 ? ` con ${puestosQueQuiero - 1} acompañante(s)` : "";
         let tituloNoti = autoAceptaViaje ? "¡Nuevo Pasajero!" : "¡Nueva Solicitud!";
         let cuerpoNoti = `${nombreUsuario} ${autoAceptaViaje ? 'se unió a' : 'quiere unirse a'} tu viaje${extraTexto}.`;
@@ -579,15 +559,13 @@ const solicitarCola = async () => {
         }
       };
 
-      // 3. Procesamos la IDA asegurando que termine antes de continuar (le pasamos false porque NO es el retorno)
       await ejecutarConTimeout(procesarReservaUnica(viaje, false), 15000);
 
-      // 4. Si marcó "Ida y Vuelta", procesamos la VUELTA (le pasamos true porque SÍ es el retorno)
       if (reservarIdaYVuelta && viajeRetorno) {
         await ejecutarConTimeout(procesarReservaUnica(viajeRetorno, true), 15000);
       }
 
-      setToast({ texto: viaje.autoAceptar ? "¡Reserva de viaje(s) confirmada!" : "Solicitud doble enviada al chofer", tipo: "exito" });
+      setToast({ texto: viaje.autoAceptar ? "¡Reserva confirmada!" : "Solicitud enviada al chofer", tipo: "exito" });
       setModalAcompanantes(false); 
       setTimeout(() => setToast(null), 3000);
 
@@ -681,7 +659,6 @@ const solicitarCola = async () => {
     }
   };
   
-  // 🔥 NUEVO: FUNCIÓN PARA VALIDAR UN SOLO PASAJERO A LA VEZ 🔥
   const validarPinIndividual = async (pasajero) => {
     const idPasajero = pasajero.id || pasajero.uid;
     const pinIngresado = String(pinesIngresados[idPasajero] || "").trim();
@@ -712,7 +689,6 @@ const solicitarCola = async () => {
     }
   };
 
-  // 🔥 NUEVO: FUNCIÓN PARA MARCAR COMO AUSENTE 🔥
   const marcarPasajeroAusente = async (pasajero) => {
     setCargando(true);
     try {
@@ -733,7 +709,6 @@ const solicitarCola = async () => {
     }
   };
 
-  // 🔥 NUEVO: FUNCIÓN MAESTRA PARA INICIAR EL VIAJE DEFINITIVO 🔥
   const iniciarRutaDefinitiva = async () => {
     setCargando(true);
     try {
@@ -866,8 +841,8 @@ const solicitarCola = async () => {
       
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[120000] w-max max-w-[95vw] animate-in slide-in-from-top fade-in duration-300">
-          <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-slate-900' : 'bg-red-500'}`}>
-            {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-green-400 shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
+          <div className={`px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-[#1F2937]' : 'bg-red-500'}`}>
+            {toast.tipo === 'exito' ? <ShieldCheck size={18} className="text-[#10B981] shrink-0" /> : <AlertTriangle size={18} className="shrink-0" />}
             <span className="text-center leading-tight break-words">{toast.texto}</span>
           </div>
         </div>
@@ -875,11 +850,11 @@ const solicitarCola = async () => {
 
       <div className="flex-1 overflow-y-auto pb-32 relative">
         <div className="p-4 pt-6 flex justify-between items-center sticky top-0 z-[60] bg-slate-50/90 backdrop-blur-sm">
-          <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 active:scale-95 transition-all"> 
+          <button onClick={onRegresar} className="flex items-center gap-2 text-slate-400 hover:text-[#063971] active:scale-95 transition-all"> 
             <ArrowLeft size={16} strokeWidth={3} />  <span className="text-[9px] font-black uppercase tracking-[2px]">Volver</span>
           </button>
           {estadoViaje === 'en_curso' && (
-            <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
+            <div className="bg-[#10B981]/10 text-[#10B981] px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 animate-pulse border border-[#10B981]/30">
               <Navigation size={10} /> En Ruta
             </div>
           )}
@@ -892,21 +867,21 @@ const solicitarCola = async () => {
                <MapaView origen={viaje.coordsOrigen} destino={viaje.coordsDestino} posicionChofer={viaje.latChofer && viaje.lngChofer ? { lat: viaje.latChofer, lon: viaje.lngChofer } : null} pasajeros={pasajerosConfirmados} estadoViaje={estadoViaje} interactivo={false} />
                <div className="absolute top-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
                   <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-slate-200 flex items-center gap-2 shadow-lg">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-                    <p className="text-slate-800 text-[11px] font-black uppercase tracking-widest"> 
+                    <div className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
+                    <p className="text-[#1F2937] text-[11px] font-black uppercase tracking-widest"> 
                       {estadoViaje === 'buscando' ? (soyConductor ? "En ruta para recoger pasajeros" : "Chofer en camino a buscarte") : (viaje.latChofer ? `En ruta a ${viaje?.cD?.split(',')[0] || "Destino"}` : "Esperando Señal GPS...")}
                     </p>
                   </div>
                </div>
             </div>
 
-            <button onClick={compartirRuta} className="w-full bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
+            <button onClick={compartirRuta} className="w-full bg-[#063971]/5 border-2 border-[#063971]/20 text-[#063971] rounded-[30px] p-4 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
                <Share2 size={20} /> <span className="font-black uppercase text-xs tracking-wider">Compartir Ruta a Familiar</span>
             </button>
 
             {yaSoyPasajero && !soyConductor && (estadoViaje === 'buscando') && (
-              <div className="bg-slate-900 p-6 rounded-[35px] shadow-lg border border-slate-800 flex flex-col items-center justify-center text-center mb-6 animate-in zoom-in duration-300">
-                <div className="bg-blue-500/20 p-3 rounded-full mb-3"><Key size={24} className="text-blue-400" /></div>
+              <div className="bg-[#1F2937] p-6 rounded-[35px] shadow-lg border border-[#1F2937] flex flex-col items-center justify-center text-center mb-6 animate-in zoom-in duration-300">
+                <div className="bg-[#063971]/20 p-3 rounded-full mb-3"><Key size={24} className="text-[#063971]" /></div>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Tu PIN de abordaje</p>
                 <p className="text-5xl font-black italic text-white tracking-[5px] leading-none mb-4">{String(miReserva?.pin || "0000")}</p>
                 <div className="bg-slate-800 text-slate-300 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">Dáselo al chofer al subir</div>
@@ -929,18 +904,18 @@ const solicitarCola = async () => {
                           {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-400" />}
                        </div>
                        <div className="flex-1 min-w-0">
-                          <p className={`font-black text-xs uppercase truncate ${ausente ? 'text-red-700 line-through' : 'text-slate-700'}`}>{String(p.nombre || "Usuario")}</p>
-                          <p className={`text-[8px] font-black uppercase mt-0.5 ${aBordo ? 'text-green-500' : (ausente ? 'text-red-500' : 'text-amber-500')}`}>
+                          <p className={`font-black text-xs uppercase truncate ${ausente ? 'text-red-700 line-through' : 'text-[#1F2937]'}`}>{String(p.nombre || "Usuario")}</p>
+                          <p className={`text-[8px] font-black uppercase mt-0.5 ${aBordo ? 'text-[#10B981]' : (ausente ? 'text-red-500' : 'text-amber-500')}`}>
                             {aBordo ? 'A Bordo (Validado)' : (ausente ? 'No se presentó' : 'Falta Validar PIN')}
                           </p>
                        </div>
-                       <div className={`${aBordo ? 'bg-green-100' : (ausente ? 'bg-red-100' : 'bg-amber-100')} p-2 rounded-full shrink-0`}>
-                         {aBordo ? <ShieldCheck size={18} className="text-green-600" /> : (ausente ? <X size={18} className="text-red-600" /> : <Clock size={18} className="text-amber-600" />)}
+                       <div className={`${aBordo ? 'bg-[#10B981]/10' : (ausente ? 'bg-red-100' : 'bg-amber-100')} p-2 rounded-full shrink-0`}>
+                         {aBordo ? <ShieldCheck size={18} className="text-[#10B981]" /> : (ausente ? <X size={18} className="text-red-600" /> : <Clock size={18} className="text-amber-600" />)}
                        </div>
                        
                        {soyConductor && !ausente && (
                          <button disabled={cargando} onClick={(e) => {  e.stopPropagation();  iniciarChatPrivado(p); }} 
-                          className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-slate-900/30" >
+                          className="w-10 h-10 rounded-full bg-[#1F2937] text-white flex items-center justify-center active:scale-90 transition-all shrink-0 ml-1 shadow-md shadow-[#1F2937]/30" >
                           <MessageCircle size={16} />
                          </button>
                        )}
@@ -959,7 +934,7 @@ const solicitarCola = async () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo Total</p>
-                  <div className="flex items-start text-blue-600">
+                  <div className="flex items-start text-[#10B981]">
                     <span className="text-xl font-black italic mt-1">$</span>
                     <span className="text-5xl font-black italic leading-none">{String(viaje?.precio || "0")}</span>
                   </div>
@@ -968,14 +943,14 @@ const solicitarCola = async () => {
               
               <div className="flex items-center justify-between px-2">
                 <div className="flex flex-col items-center flex-1 text-center">
-                  <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-600"><div className="w-2.5 h-2.5 rounded-full bg-blue-600" /></div>
-                  <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{String(viaje?.cO || "N/A")}</p>
+                  <div className="w-9 h-9 rounded-full bg-[#063971]/5 flex items-center justify-center border-2 border-[#063971]"><div className="w-2.5 h-2.5 rounded-full bg-[#063971]" /></div>
+                  <p className="text-[11px] font-black text-[#1F2937] mt-2 uppercase italic leading-none">{String(viaje?.cO || "N/A")}</p>
                   <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje?.cO || "")}</p>
                 </div>
-                <div className="flex-1 px-2"><div className="w-full h-[2px] bg-blue-600 rounded-full" /></div>
+                <div className="flex-1 px-2"><div className="w-full h-[2px] bg-slate-200 rounded-full" /></div>
                 <div className="flex flex-col items-center flex-1 text-center">
-                  <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center border-2 border-slate-200"><MapPin size={16} className="text-slate-300" /></div>
-                  <p className="text-[11px] font-black text-slate-800 mt-2 uppercase italic leading-none">{String(viaje?.cD || "N/A")}</p>
+                  <div className="w-9 h-9 rounded-full bg-[#10B981]/5 flex items-center justify-center border-2 border-[#10B981]"><MapPin size={16} className="text-[#10B981]" /></div>
+                  <p className="text-[11px] font-black text-[#1F2937] mt-2 uppercase italic leading-none">{String(viaje?.cD || "N/A")}</p>
                   <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje?.cD || "")}</p>
                 </div>
               </div>
@@ -984,29 +959,29 @@ const solicitarCola = async () => {
             {viaje.referencia && viaje.referencia.trim() !== "" && (
               <div className="mt-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Punto de Encuentro</p>
-                <p className="text-base font-semibold text-[#0f172a]">{viaje.referencia}</p>
+                <p className="text-base font-semibold text-[#1F2937]">{viaje.referencia}</p>
               </div>
             )}
             
             {mostrarBannerRetorno && (
-              <div className="bg-emerald-50 p-5 rounded-[30px] border border-emerald-100 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center"><Repeat size={18} className="text-emerald-600" /></div>
+              <div className="bg-[#10B981]/10 p-5 rounded-[30px] border border-[#10B981]/30 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-[#10B981]/20 flex items-center justify-center"><Repeat size={18} className="text-[#10B981]" /></div>
                 <div>
-                  <p className="text-[10px] font-black text-emerald-800 uppercase tracking-wider">CON RETORNO PROGRAMADO</p>
-                  <p className="text-sm font-bold text-emerald-900 mt-1">Regresa el {formatearFechaHoraRetorno(viaje?.fechaRegreso || viaje?.fechaRetorno, viaje?.horaRegreso || viaje?.horaRetorno)}</p>
+                  <p className="text-[10px] font-black text-[#10B981] uppercase tracking-wider">CON RETORNO PROGRAMADO</p>
+                  <p className="text-sm font-bold text-[#1F2937] mt-1">Regresa el {formatearFechaHoraRetorno(viaje?.fechaRegreso || viaje?.fechaRetorno, viaje?.horaRegreso || viaje?.horaRetorno)}</p>
                 </div>
               </div>
             )}
 
-            <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm">
+            <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm cursor-pointer hover:border-[#063971]/30">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-[14px] bg-blue-600 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-[14px] bg-[#063971] overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                   {viaje?.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <span className="text-white font-black italic text-xl">D</span>}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <p className="text-base font-black italic text-slate-700 uppercase truncate">{String(viaje?.cN || viaje?.conductor || "Usuario")}</p>
-                    {viaje?.identidadVerificada && <BadgeCheck size={18} className="text-green-500 fill-green-100 shrink-0" strokeWidth={2.5} />}
+                    <p className="text-base font-black italic text-[#1F2937] uppercase truncate">{String(viaje?.cN || viaje?.conductor || "Usuario")}</p>
+                    {viaje?.identidadVerificada && <BadgeCheck size={18} className="text-[#10B981] fill-[#10B981]/20 shrink-0" strokeWidth={2.5} />}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-0.5">
@@ -1025,13 +1000,13 @@ const solicitarCola = async () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-slate-50 p-3.5 rounded-[20px] border border-slate-100">
                     <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Modelo</p>
-                    <p className="text-xs font-black italic text-slate-700 uppercase truncate">{viaje.vehiculo.marca} {viaje.vehiculo.modelo}</p>
+                    <p className="text-xs font-black italic text-[#1F2937] uppercase truncate">{viaje.vehiculo.marca} {viaje.vehiculo.modelo}</p>
                   </div>
                   <div className="bg-slate-50 p-3.5 rounded-[20px] border border-slate-100">
                     <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Color</p>
-                    <p className="text-xs font-black italic text-slate-700 uppercase truncate">{viaje.vehiculo.color}</p>
+                    <p className="text-xs font-black italic text-[#1F2937] uppercase truncate">{viaje.vehiculo.color}</p>
                   </div>
-                  <div className="col-span-2 bg-slate-900 p-4 rounded-[20px] flex items-center justify-between shadow-inner">
+                  <div className="col-span-2 bg-[#1F2937] p-4 rounded-[20px] flex items-center justify-between shadow-inner">
                     <p className="text-[9px] font-bold text-slate-400 uppercase">Placa / Patente</p>
                     <p className="text-base font-black italic text-white tracking-[3px] uppercase">{viaje.vehiculo.placa}</p>
                   </div>
@@ -1051,12 +1026,12 @@ const solicitarCola = async () => {
                          {solicitud.fotoPerfil ? <img src={solicitud.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-300" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black uppercase text-slate-800 truncate">{String(solicitud.nombre || "Usuario")}</p>
+                        <p className="text-[11px] font-black uppercase text-[#1F2937] truncate">{String(solicitud.nombre || "Usuario")}</p>
                         <p className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Pide <span className="text-orange-600 font-black">{puestosPedidos}</span> asiento(s)</p>
                       </div>
                       <div className="flex gap-2">
-                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'rechazar')} className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all"><X size={16} strokeWidth={3} /></button>
-                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'aceptar')} className="w-10 h-10 bg-green-500 text-white shadow-lg shadow-green-200 rounded-full flex items-center justify-center active:scale-90 transition-all"><Check size={16} strokeWidth={3} /></button>
+                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'rechazar')} className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all hover:bg-red-100 hover:text-red-500"><X size={16} strokeWidth={3} /></button>
+                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'aceptar')} className="w-10 h-10 bg-[#10B981] text-white shadow-lg shadow-[#10B981]/30 rounded-full flex items-center justify-center active:scale-90 transition-all"><Check size={16} strokeWidth={3} /></button>
                       </div>
                     </div>
                   );
@@ -1078,25 +1053,25 @@ const solicitarCola = async () => {
                   const aBordo = pasajero.abordado === true || pasajero.boardado === true;
 
                   return (
-                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className={`border-2 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm relative ${ausente ? 'border-red-100 bg-red-50/20 opacity-60' : 'border-blue-100 bg-blue-50/20 hover:border-blue-300'}`}>
-                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}   onClick={() => setIdUsuarioVer(pasajero.id || pasajero.uid)}  className={`border-2 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm relative ${ausente ? 'border-red-100 bg-red-50/20 opacity-60' : 'border-[#063971]/20 bg-[#063971]/5 hover:border-[#063971]/50'}`}>
+                        <div className="w-10 h-10 rounded-full bg-white overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
                            {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-bold uppercase truncate ${ausente ? 'text-red-700 line-through' : 'text-slate-700'}`}>{String(pasajero.nombre || "Pasajero")}</p>
+                          <p className={`text-xs font-bold uppercase truncate ${ausente ? 'text-red-700 line-through' : 'text-[#1F2937]'}`}>{String(pasajero.nombre || "Pasajero")}</p>
                           <div className="flex items-center gap-2 mt-0.5">
-                              {aBordo && <span className="text-[8px] font-black text-green-600 uppercase">Ya a bordo</span>}
+                              {aBordo && <span className="text-[8px] font-black text-[#10B981] uppercase">Ya a bordo</span>}
                               {ausente && <span className="text-[8px] font-black text-red-600 uppercase">No Presentó</span>}
-                              {puestosPedidos > 1 && !ausente && <span className="text-[8px] font-black text-blue-600 uppercase bg-blue-100 px-2 py-0.5 rounded-full">+{puestosPedidos - 1} Acompañante(s)</span>}
+                              {puestosPedidos > 1 && !ausente && <span className="text-[8px] font-black text-[#063971] uppercase bg-[#063971]/10 px-2 py-0.5 rounded-full">+{puestosPedidos - 1} Acompañante(s)</span>}
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2 shrink-0">
-                          {aBordo ? <ShieldCheck size={16} className="text-green-500" /> : (ausente ? <X size={14} className="text-red-300" /> : <Lock size={14} className="text-slate-300" />)}
+                          {aBordo ? <ShieldCheck size={16} className="text-[#10B981]" /> : (ausente ? <X size={14} className="text-red-300" /> : <Lock size={14} className="text-slate-300" />)}
                           
                           {soyConductor && !ausente && (
                             <button disabled={cargando} onClick={(e) => { e.stopPropagation(); iniciarChatPrivado(pasajero); }} 
-                              className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-90 transition-all shadow-md shadow-slate-900/30">
+                              className="w-10 h-10 rounded-full bg-[#1F2937] text-white flex items-center justify-center active:scale-90 transition-all shadow-md shadow-[#1F2937]/30">
                               <MessageCircle size={16} />
                             </button>
                           )}
@@ -1106,7 +1081,7 @@ const solicitarCola = async () => {
                 })}
                 
                 {[...Array(cuposRestantes)].map((_, index) => (
-                  <div key={`empty-${index}`} className="border border-slate-100 border-dashed p-4 rounded-[25px] flex items-center gap-4 bg-slate-50/50">
+                  <div key={`empty-${index}`} className="border border-slate-200 border-dashed p-4 rounded-[25px] flex items-center gap-4 bg-slate-50/50">
                     <div className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center"><User size={18} className="text-slate-300" /></div>
                     <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">ASIENTO DISPONIBLE</p>
                   </div>
@@ -1118,28 +1093,28 @@ const solicitarCola = async () => {
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PREFERENCIAS DEL VIAJE</p>
               <div className="grid grid-cols-2 gap-3">
                 {viaje?.preferencias?.ac && (
-                  <div className="bg-blue-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-blue-100/50">
-                    <Snowflake size={18} className="text-blue-500" />
-                    <p className="text-[9px] font-black text-blue-700 uppercase tracking-wide">Aire a.</p>
+                  <div className="bg-[#063971]/5 p-4 rounded-[20px] flex items-center gap-3 border border-[#063971]/20">
+                    <Snowflake size={18} className="text-[#063971]" />
+                    <p className="text-[9px] font-black text-[#063971] uppercase tracking-wide">Aire a.</p>
                   </div>
                 )}
                 {viaje?.preferencias?.noFumar && (
-                  <div className="bg-rose-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-rose-100/50">
-                    <CigaretteOff size={18} className="text-rose-500" />
-                    <p className="text-[9px] font-black text-rose-700 uppercase tracking-wide">Sin humo</p>
+                  <div className="bg-[#063971]/5 p-4 rounded-[20px] flex items-center gap-3 border border-[#063971]/20">
+                    <CigaretteOff size={18} className="text-[#063971]" />
+                    <p className="text-[9px] font-black text-[#063971] uppercase tracking-wide">Sin humo</p>
                   </div>
                 )}
                 {viaje?.preferencias?.mascotas && (
-                  <div className="bg-amber-50/70 p-4 rounded-[20px] flex items-center gap-3 border border-amber-100/50">
-                    <Dog size={18} className="text-amber-600" />
-                    <p className="text-[9px] font-black text-amber-800 uppercase tracking-wide">Mascotas</p>
+                  <div className="bg-[#063971]/5 p-4 rounded-[20px] flex items-center gap-3 border border-[#063971]/20">
+                    <Dog size={18} className="text-[#063971]" />
+                    <p className="text-[9px] font-black text-[#063971] uppercase tracking-wide">Mascotas</p>
                   </div>
                 )}
                 <div className="bg-slate-50 p-4 rounded-[20px] flex items-center gap-3 border border-slate-100 col-span-2">
                   <span className="text-xl">{obtenerIconoEquipaje(viaje?.tipoEquipaje)}</span>
                   <div>
                       <p className="text-[8px] font-bold text-slate-400 uppercase">Equipaje permitido</p>
-                      <p className="text-[10px] font-black text-slate-700 uppercase mt-0.5">{String(viaje?.tipoEquipaje || "Bolso Ligero")}</p>
+                      <p className="text-[10px] font-black text-[#1F2937] uppercase mt-0.5">{String(viaje?.tipoEquipaje || "Bolso Ligero")}</p>
                   </div>
                 </div>
               </div>
@@ -1154,7 +1129,7 @@ const solicitarCola = async () => {
           
           {soyConductor && estadoViaje === 'disponible' && viajeActivoBloqueante && (
             <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-max max-w-[95vw] animate-in slide-in-from-bottom duration-300">
-              <div className="bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-slate-700">
+              <div className="bg-[#1F2937] text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest border border-slate-700">
                 <AlertTriangle size={16} className="text-amber-500 shrink-0" />
                 <span>No puedes iniciar. Finaliza tu ruta actual.</span>
               </div>
@@ -1164,7 +1139,7 @@ const solicitarCola = async () => {
           <div className="flex gap-2 sm:gap-3 h-14 max-w-md mx-auto">
             
             {(estadoViaje === 'disponible' || estadoViaje === 'buscando' || estadoViaje === 'en_curso') && (
-              <button disabled={cargando} onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all">
+              <button disabled={cargando} onClick={manejarChatGlobal} className="w-14 sm:w-auto sm:px-6 shrink-0 bg-[#1F2937] text-white rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-90 transition-all hover:bg-slate-800">
                 <MessageCircle size={18} /> <span className="hidden sm:inline">Chat</span>
               </button>
             )}
@@ -1181,12 +1156,12 @@ const solicitarCola = async () => {
                   <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="w-14 sm:w-auto sm:px-4 shrink-0 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-1 active:scale-95 transition-all border border-red-200">
                     <X size={18} strokeWidth={3} />
                   </button>
-                  <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
+                  <button disabled={cargando} onClick={() => setModalFinalizar(true)} className="flex-1 bg-[#063971] text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-[#063971]/30 active:scale-95 transition-all hover:bg-blue-800">
                     Finalizar Viaje
                   </button>
                 </div>
               ) : (
-                <div className="flex-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                <div className="flex-1 bg-[#063971]/10 text-[#063971] border border-[#063971]/30 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
                   <Navigation size={16} /> En Ruta a Destino
                 </div>
               )
@@ -1196,7 +1171,7 @@ const solicitarCola = async () => {
                    <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'chofer' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200 flex items-center justify-center gap-1">
                      <X size={14} strokeWidth={3} /> Cancelar
                    </button>
-                   <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={notificarLlegadaYAbrirModal} className="flex-[2] bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none" >
+                   <button disabled={cargando || pasajerosConfirmados.length === 0} onClick={notificarLlegadaYAbrirModal} className="flex-[2] bg-[#063971] text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none hover:bg-blue-800" >
                      <MapPin size={16} /> {pasajerosConfirmados.length === 0 ? 'Sin Pasajeros' : 'Verificar Pasajeros'}
                    </button>
                  </div>
@@ -1213,7 +1188,7 @@ const solicitarCola = async () => {
                   </button>
 
                   {viajeActivoBloqueante ? (
-                    <button disabled className="flex-[2] bg-slate-800 text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 leading-tight border border-slate-700">
+                    <button disabled className="flex-[2] bg-[#1F2937] text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 leading-tight border border-slate-700">
                       <Lock size={16} className="text-amber-500" />
                       <div className="flex flex-col items-start text-left">
                         <span>Bloqueado</span>
@@ -1233,7 +1208,7 @@ const solicitarCola = async () => {
                     <button disabled={cargando} onClick={() => setModalCancelar({ visible: true, rol: 'pasajero' })} className="flex-1 bg-red-50 text-red-600 rounded-[22px] font-black uppercase text-[10px] active:scale-95 transition-all border border-red-200 flex items-center justify-center">
                       Cancelar
                     </button>
-                    <div className="flex-[2] bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                    <div className="flex-[2] bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
                       <Check size={16} /> Confirmado
                     </div>
                   </div>
@@ -1244,7 +1219,7 @@ const solicitarCola = async () => {
                     <RefreshCcw size={16} className="animate-spin" /> Verificando...
                   </button>
                 ) : reservaActivaBloqueante ? (
-                  <button disabled className="flex-1 bg-slate-800 text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 border border-slate-700">
+                  <button disabled className="flex-1 bg-[#1F2937] text-slate-400 rounded-[22px] font-black uppercase text-[10px] shadow-none flex items-center justify-center gap-2 border border-slate-700">
                     <Lock size={16} className="text-amber-500" />
                     <div className="flex flex-col items-start text-left">
                       <span>Bloqueado</span>
@@ -1252,15 +1227,15 @@ const solicitarCola = async () => {
                     </div>
                   </button>
                 ) : cuposRestantes > 0 ? (
-                    <button disabled={cargando} onClick={() => setModalTerminos(true)} className="flex-1 bg-blue-600 text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Pedir Cola</button>
+                    <button disabled={cargando} onClick={() => setModalTerminos(true)} className="flex-1 bg-[#063971] text-white rounded-[22px] font-black uppercase text-[10px] shadow-lg shadow-[#063971]/30 active:scale-95 transition-all hover:bg-blue-800">Pedir Cola</button>
                     ) : (
                   <button disabled className="flex-1 bg-slate-200 text-slate-400 rounded-[22px] font-black uppercase text-[10px]">Viaje Lleno</button>
                 )
               )
             ) : yaSoyPasajero && estadoViaje === 'finalizado' && (
                yaCalifico ? (
-                 <div className="w-full bg-green-50 text-green-600 border border-green-200 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
-                   <Star size={16} className="fill-green-600" /> Viaje Calificado
+                 <div className="w-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 rounded-[22px] font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                   <Star size={16} className="fill-[#10B981]" /> Viaje Calificado
                  </div>
                ) : (
                  <button onClick={() => setModalCalificacion(true)} className="w-full bg-amber-400 text-amber-950 rounded-[22px] h-14 font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-amber-400/30 active:scale-95 transition-all border border-amber-300">
@@ -1275,16 +1250,16 @@ const solicitarCola = async () => {
       {/* MODAL FINALIZAR VIAJE */}
       {modalFinalizar && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
-            <div className="bg-blue-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-blue-500/20">
-              <Check size={30} className="text-blue-500" />
+          <div className="bg-[#1F2937] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
+            <div className="bg-[#10B981]/20 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-[#10B981]/30">
+              <Check size={30} className="text-[#10B981]" />
             </div>
             <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">¿Finalizar Viaje?</h3>
-            <p className="text-xs font-bold text-slate-400 mb-8 leading-relaxed">Estás a punto de marcar esta ruta como terminada. {pasajerosConfirmados.length > 0 && "Podrás calificar a tus pasajeros a continuación."}</p>
+            <p className="text-xs font-bold text-slate-300 mb-8 leading-relaxed">Estás a punto de marcar esta ruta como terminada. {pasajerosConfirmados.length > 0 && "Podrás calificar a tus pasajeros a continuación."}</p>
             
             <div className="flex gap-3">
-              <button disabled={cargando} onClick={() => setModalFinalizar(false)} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">Cancelar</button>
-              <button disabled={cargando} onClick={iniciarFinalizacion} className="flex-1 bg-blue-600 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">Continuar</button>
+              <button disabled={cargando} onClick={() => setModalFinalizar(false)} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all hover:bg-slate-700">Cancelar</button>
+              <button disabled={cargando} onClick={iniciarFinalizacion} className="flex-1 bg-[#063971] text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg shadow-[#063971]/40 active:scale-95 transition-all hover:bg-blue-800">Continuar</button>
             </div>
           </div>
         </div>
@@ -1293,7 +1268,7 @@ const solicitarCola = async () => {
       {/* MODAL CHOFER CALIFICA PASAJEROS */}
       {modalCalificarPasajeros && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-md rounded-[35px] shadow-2xl p-6 relative border border-slate-800 flex flex-col max-h-[90vh]">
+          <div className="bg-[#1F2937] w-full max-w-md rounded-[35px] shadow-2xl p-6 relative border border-slate-800 flex flex-col max-h-[90vh]">
             <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2 text-center shrink-0">Califica a tus Pasajeros</h3>
             <p className="text-[10px] font-bold text-slate-400 mb-6 text-center uppercase tracking-widest shrink-0">¿Cómo se comportaron durante el viaje?</p>
 
@@ -1322,7 +1297,7 @@ const solicitarCola = async () => {
               })}
             </div>
 
-            <button onClick={enviarCalificacionesYFinalizar} disabled={cargando} className="w-full shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-blue-900/50 active:scale-95 transition-all">
+            <button onClick={enviarCalificacionesYFinalizar} disabled={cargando} className="w-full shrink-0 bg-[#063971] hover:bg-blue-800 text-white rounded-full p-4 font-black uppercase text-xs tracking-[2px] shadow-lg shadow-[#063971]/50 active:scale-95 transition-all">
               {cargando ? 'Guardando...' : 'Finalizar y Guardar'}
             </button>
           </div>
@@ -1332,9 +1307,9 @@ const solicitarCola = async () => {
       {/* MODAL PASAJERO CALIFICA CHOFER */}
       {modalCalificacion && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
+          <div className="bg-[#1F2937] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
             <button onClick={() => setModalCalificacion(false)} className="absolute top-5 right-5 text-slate-500 hover:text-white transition-colors"><X size={20} /></button>
-            <div className="w-16 h-16 rounded-[20px] bg-blue-600 mx-auto overflow-hidden mb-4 border-2 border-slate-700 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-[20px] bg-[#063971] mx-auto overflow-hidden mb-4 border-2 border-[#063971]/50 flex items-center justify-center shadow-lg shadow-[#063971]/30">
               {viaje?.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <span className="text-white font-black italic text-2xl">D</span>}
             </div>
             <h3 className="text-lg font-black text-white uppercase tracking-wider mb-1">Califica a {String(viaje?.cN || viaje?.conductor || "Usuario")}</h3>
@@ -1356,13 +1331,13 @@ const solicitarCola = async () => {
         </div>
       )}
 
-      {/* 🔥 MODAL DE ABORDAJE COMPLETAMENTE REESCRITO 🔥 */}
+      {/* 🔥 MODAL DE ABORDAJE 🔥 */}
       {modalAbordaje && (
         <div className="fixed inset-0 z-[110000] flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 pb-8">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[85vh]">
             <div className="flex justify-between items-center mb-6 shrink-0">
-              <h3 className="text-lg font-black italic uppercase text-slate-800">Verificar Abordaje</h3>
-              <button onClick={() => setModalAbordaje(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} /></button>
+              <h3 className="text-lg font-black italic uppercase text-[#1F2937]">Verificar Abordaje</h3>
+              <button onClick={() => setModalAbordaje(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X size={18} className="text-slate-500" /></button>
             </div>
             <p className="text-xs font-bold text-slate-500 mb-6 shrink-0">Valida los PIN por separado a medida que suben los pasajeros.</p>
             
@@ -1387,14 +1362,14 @@ const solicitarCola = async () => {
 
                 if (yaABordo) {
                   return (
-                    <div key={`pin-${idPasajero || index}`} className="p-4 rounded-3xl border-2 border-green-500 bg-green-50 flex items-center justify-between">
+                    <div key={`pin-${idPasajero || index}`} className="p-4 rounded-3xl border-2 border-[#10B981]/50 bg-[#10B981]/10 flex items-center justify-between">
                        <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center overflow-hidden">
-                           {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-green-600" />}
+                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#10B981]/30">
+                           {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-[#10B981]" />}
                          </div>
-                         <p className="text-xs font-black uppercase text-slate-700">{String(p.nombre || "Usuario")}</p>
+                         <p className="text-xs font-black uppercase text-[#1F2937]">{String(p.nombre || "Usuario")}</p>
                        </div>
-                       <ShieldCheck size={24} className="text-green-500" />
+                       <ShieldCheck size={24} className="text-[#10B981]" />
                     </div>
                   );
                 }
@@ -1405,15 +1380,15 @@ const solicitarCola = async () => {
                       <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
                          {p.fotoPerfil ? <img src={p.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-400" />}
                       </div>
-                      <p className="flex-1 text-xs font-black uppercase text-slate-700 truncate">{String(p.nombre || "Usuario")}</p>
+                      <p className="flex-1 text-xs font-black uppercase text-[#1F2937] truncate">{String(p.nombre || "Usuario")}</p>
                     </div>
                     
                 
                 <div className="flex flex-col gap-2 mt-2">
                  <input type="number" placeholder="PIN" value={pinesIngresados[idPasajero] || ''} onChange={(e) => setPinesIngresados({...pinesIngresados, [idPasajero]: e.target.value})} 
-                   className="w-full bg-white border border-slate-200 rounded-xl p-3 text-center text-2xl font-black tracking-[10px] outline-none focus:border-blue-500 shadow-inner" maxLength={4} />
+                   className="w-full bg-white border border-slate-200 rounded-xl p-3 text-center text-2xl font-black tracking-[10px] outline-none focus:border-[#063971] shadow-inner text-[#1F2937]" maxLength={4} />
                  <button 
-                disabled={cargando || (pinesIngresados[idPasajero] || '').length < 4} onClick={() => validarPinIndividual(p)} className="w-full py-3.5 bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:bg-slate-300" >
+                disabled={cargando || (pinesIngresados[idPasajero] || '').length < 4} onClick={() => validarPinIndividual(p)} className="w-full py-3.5 bg-[#1F2937] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:bg-slate-300" >
                Validar PIN
                  </button>
                 </div>
@@ -1426,14 +1401,13 @@ const solicitarCola = async () => {
             </div>
             
             {(() => {
-              // Validamos que TODOS los confirmados ya tengan status true o ausente
               const todosListos = pasajerosConfirmados.length > 0 && pasajerosConfirmados.every(p => p.abordado === true || p.boardado === true || p.abordado === 'ausente');
               const alMenosUnoABordo = pasajerosConfirmados.some(p => p.abordado === true || p.boardado === true);
               
               if (todosListos) {
                 if (alMenosUnoABordo) {
                   return (
-                    <button onClick={iniciarRutaDefinitiva} disabled={cargando} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all shrink-0">
+                    <button onClick={iniciarRutaDefinitiva} disabled={cargando} className="w-full bg-[#063971] text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-[#063971]/30 active:scale-95 transition-all shrink-0">
                       ¡Iniciar Viaje a Destino!
                     </button>
                   );
@@ -1457,22 +1431,23 @@ const solicitarCola = async () => {
         </div>
       )}
 
+      {/* MODAL TERMINOS */}
       {modalTerminos && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
-          <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative max-h-[85vh] overflow-y-auto border-[3px] border-amber-400">
+          <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative max-h-[85vh] overflow-y-auto border-[3px] border-[#063971]/20">
              
-             <div className="bg-amber-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border-2 border-amber-200">
-                <ShieldCheck size={30} className="text-amber-600" />
+             <div className="bg-[#063971]/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-[#063971]/20">
+                <ShieldCheck size={30} className="text-[#063971]" />
              </div>
              
-             <h3 className="text-lg font-black italic uppercase text-slate-800 text-center mb-4">Acuerdos de Viaje</h3>
+             <h3 className="text-lg font-black italic uppercase text-[#1F2937] text-center mb-4">Acuerdos de Viaje</h3>
              
              <div className="space-y-4 mb-6">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-3 shadow-sm">
-                   <Clock size={22} className="text-blue-500 shrink-0 mt-0.5" />
+                   <Clock size={22} className="text-[#063971] shrink-0 mt-0.5" />
                    <div>
-                      <p className="text-[10px] font-black uppercase text-slate-700">El tiempo es valioso</p>
-                      <p className="text-[10px] font-bold text-slate-500 mt-1 leading-relaxed">Si necesitas cancelar, hazlo <span className="text-slate-700 font-black">con anticipación</span>. Así no perderás tu dinero ni le harás perder tiempo al chofer.</p>
+                      <p className="text-[10px] font-black uppercase text-[#1F2937]">El tiempo es valioso</p>
+                      <p className="text-[10px] font-bold text-slate-500 mt-1 leading-relaxed">Si necesitas cancelar, hazlo <span className="text-[#1F2937] font-black">con anticipación</span>. Así no perderás tu dinero ni le harás perder tiempo al chofer.</p>
                    </div>
                 </div>
 
@@ -1495,7 +1470,7 @@ const solicitarCola = async () => {
 
              <button 
                 onClick={() => { setModalTerminos(false); setModalAcompanantes(true); }} 
-                className="w-full bg-amber-400 text-amber-950 rounded-[20px] p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-400/30 active:scale-95 transition-all">
+                className="w-full bg-[#063971] text-white rounded-[20px] p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-[#063971]/30 active:scale-95 transition-all hover:bg-blue-800">
                 Aceptar y Continuar
              </button>
              <button 
@@ -1512,7 +1487,7 @@ const solicitarCola = async () => {
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-end sm:items-center justify-center animate-in slide-in-from-bottom duration-200">
           <div className="bg-white w-full max-w-sm rounded-[35px] shadow-2xl p-6 relative max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black italic uppercase text-slate-800">¿Vas con alguien más?</h3>
+              <h3 className="text-lg font-black italic uppercase text-[#1F2937]">¿Vas con alguien más?</h3>
               <button onClick={() => setModalAcompanantes(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors"><X size={18} /></button>
             </div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Selecciona tus acompañantes</p>
@@ -1520,8 +1495,8 @@ const solicitarCola = async () => {
             <div className="space-y-4 mb-8">
               <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><User size={18} /></div>
-                  <span className="text-sm font-black text-slate-700 uppercase">Tú (Principal)</span>
+                  <div className="w-10 h-10 rounded-full bg-[#063971]/10 text-[#063971] flex items-center justify-center"><User size={18} /></div>
+                  <span className="text-sm font-black text-[#1F2937] uppercase">Tú (Principal)</span>
                 </div>
                 <span className="font-black text-lg text-slate-400">1</span>
               </div>
@@ -1529,38 +1504,38 @@ const solicitarCola = async () => {
               <div className="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-2xl">
                 <div className="flex items-center gap-3 pl-2">
                   <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"><Users size={18} /></div>
-                  <div><p className="text-sm font-black text-slate-700 uppercase leading-none">Adultos</p></div>
+                  <div><p className="text-sm font-black text-[#1F2937] uppercase leading-none">Adultos</p></div>
                 </div>
                 <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-1 border border-slate-100">
-                  <button onClick={() => setAdultosExtra(Math.max(0, adultosExtra - 1))} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-slate-600">-</button>
-                  <span className="font-black w-4 text-center">{adultosExtra}</span>
-                  <button onClick={() => setAdultosExtra(adultosExtra + 1)} disabled={puestosQueQuiero >= cuposRestantes} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-blue-600 disabled:opacity-50">+</button>
+                  <button onClick={() => setAdultosExtra(Math.max(0, adultosExtra - 1))} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-slate-600 hover:bg-slate-50">-</button>
+                  <span className="font-black w-4 text-center text-[#1F2937]">{adultosExtra}</span>
+                  <button onClick={() => setAdultosExtra(adultosExtra + 1)} disabled={puestosQueQuiero >= cuposRestantes} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-[#063971] disabled:opacity-50 disabled:text-slate-400 hover:bg-slate-50">+</button>
                 </div>
               </div>
 
               <div className="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-2xl">
                 <div className="flex items-center gap-3 pl-2">
                   <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"><Users size={16} /></div>
-                  <div><p className="text-sm font-black text-slate-700 uppercase leading-none">Niños</p></div>
+                  <div><p className="text-sm font-black text-[#1F2937] uppercase leading-none">Niños</p></div>
                 </div>
                <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-1 border border-slate-100">
-                  <button onClick={() => setNinosExtra(Math.max(0, ninosExtra - 1))} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-slate-600">-</button>
-                  <span className="font-black w-4 text-center">{ninosExtra}</span>
-                  <button onClick={() => setNinosExtra(ninosExtra + 1)} disabled={puestosQueQuiero >= cuposRestantes} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-blue-600 disabled:opacity-50">+</button>
+                  <button onClick={() => setNinosExtra(Math.max(0, ninosExtra - 1))} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-slate-600 hover:bg-slate-50">-</button>
+                  <span className="font-black w-4 text-center text-[#1F2937]">{ninosExtra}</span>
+                  <button onClick={() => setNinosExtra(ninosExtra + 1)} disabled={puestosQueQuiero >= cuposRestantes} className="w-8 h-8 rounded-lg bg-white shadow-sm font-black text-[#063971] disabled:opacity-50 disabled:text-slate-400 hover:bg-slate-50">+</button>
                 </div>
               </div>
 
-              {/* 🔥 NUEVO SWITCH: IDA Y VUELTA 🔥 */}
+              {/* SWITCH: IDA Y VUELTA */}
               {viajeRetorno && (
-                <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-2xl mt-4 animate-in slide-in-from-bottom">
+                <div className="flex items-center justify-between p-4 bg-[#10B981]/10 border border-[#10B981]/30 rounded-2xl mt-4 animate-in slide-in-from-bottom">
                    <div className="flex items-center gap-3">
-                      <Repeat size={20} className="text-emerald-500 shrink-0" />
+                      <Repeat size={20} className="text-[#10B981] shrink-0" />
                       <div>
-                         <p className="text-[10px] font-black uppercase text-emerald-700 tracking-wider">Asegurar Regreso</p>
-                         <p className="text-[9px] font-bold text-emerald-600/80 mt-0.5">El {formatearFechaHoraRetorno(viajeRetorno.fecha, viajeRetorno.hora)}</p>
+                         <p className="text-[10px] font-black uppercase text-[#10B981] tracking-wider">Asegurar Regreso</p>
+                         <p className="text-[9px] font-bold text-emerald-700/80 mt-0.5">El {formatearFechaHoraRetorno(viajeRetorno.fecha, viajeRetorno.hora)}</p>
                       </div>
                    </div>
-                   <button onClick={() => setReservarIdaYVuelta(!reservarIdaYVuelta)} className={`w-12 h-6 rounded-full relative transition-colors ${reservarIdaYVuelta ? 'bg-emerald-500 shadow-md shadow-emerald-500/30' : 'bg-slate-300'}`}>
+                   <button onClick={() => setReservarIdaYVuelta(!reservarIdaYVuelta)} className={`w-12 h-6 rounded-full relative transition-colors ${reservarIdaYVuelta ? 'bg-[#10B981] shadow-md shadow-[#10B981]/30' : 'bg-slate-300'}`}>
                       <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${reservarIdaYVuelta ? 'left-7' : 'left-1'}`} />
                    </button>
                 </div>
@@ -1568,21 +1543,21 @@ const solicitarCola = async () => {
 
             </div>
 
-            {/* 🔥 ACTUALIZADO: PRECIO DINÁMICO 🔥 */}
-            <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl mb-6">
+            {/* PRECIO DINÁMICO */}
+            <div className="flex items-center justify-between p-4 bg-[#063971]/5 border border-[#063971]/20 rounded-2xl mb-6">
                <div>
-                  <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider block">Asientos a ocupar</span>
-                  {reservarIdaYVuelta && <span className="text-[9px] font-bold text-emerald-600 uppercase block mt-1">+ Retorno Incluido</span>}
+                  <span className="text-[10px] font-black uppercase text-[#063971] tracking-wider block">Asientos a ocupar</span>
+                  {reservarIdaYVuelta && <span className="text-[9px] font-bold text-[#10B981] uppercase block mt-1">+ Retorno Incluido</span>}
                </div>
                <div className="text-right">
                   <span className="text-[10px] font-bold text-slate-400 block mb-1">{puestosQueQuiero} / {cuposRestantes} Disponibles</span>
-                  <span className="text-xl font-black italic text-blue-600">
+                  <span className="text-xl font-black italic text-[#10B981]">
                     ${(Number(viaje?.precio || 0) * puestosQueQuiero) + (reservarIdaYVuelta && viajeRetorno ? Number(viajeRetorno.precio || 0) * puestosQueQuiero : 0)}
                   </span>
                </div>
             </div>
 
-            <button disabled={cargando || puestosQueQuiero > cuposRestantes} onClick={solicitarCola} className="w-full bg-blue-600 text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all disabled:bg-slate-300 disabled:shadow-none">
+            <button disabled={cargando || puestosQueQuiero > cuposRestantes} onClick={solicitarCola} className="w-full bg-[#063971] text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-[#063971]/30 active:scale-95 transition-all disabled:bg-slate-300 disabled:shadow-none hover:bg-blue-800">
               {cargando ? 'Enviando...' : 'Confirmar Solicitud'}
             </button>
           </div>
@@ -1592,7 +1567,7 @@ const solicitarCola = async () => {
       {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-[#0f172a] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
+          <div className="bg-[#1F2937] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center max-h-[85vh] overflow-y-auto">
             
             <div className="bg-red-500/10 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-red-500/20">
               <AlertTriangle size={30} className="text-red-500" />
@@ -1618,7 +1593,7 @@ const solicitarCola = async () => {
                   ¡ATENCIÓN! Tienes pasajeros confirmados. Al cancelar, el dinero se les reembolsará a ellos inmediatamente y tú recibirás un "strike" en tu historial de chofer (Límite: 3).
                 </p>
               ) : (
-                <p className="text-[11px] font-bold text-emerald-400 mb-6 bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
+                <p className="text-[11px] font-bold text-[#10B981] mb-6 bg-[#10B981]/10 p-3 rounded-xl border border-[#10B981]/30">
                   Como el viaje no tiene pasajeros confirmados, puedes cancelarlo sin penalización para publicar uno nuevo.
                 </p>
               )
@@ -1628,7 +1603,7 @@ const solicitarCola = async () => {
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Motivo de cancelación:</p>
               <div className="space-y-2">
                 {[ "Emergencia personal / Salud", modalCancelar.rol === 'chofer' ? "Falla mecánica del auto" : "Conseguí otra alternativa", modalCancelar.rol === 'chofer' ? "No consiguió suficientes pasajeros" : "Se canceló mi compromiso", "Otro motivo" ].map(motivo => (
-                  <button key={motivo} onClick={() => setMotivoCancelacion(motivo)} className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${motivoCancelacion === motivo ? 'bg-red-950/50 border-red-500 text-red-200' : 'bg-slate-900 border-slate-800 text-slate-400'}`}>
+                  <button key={motivo} onClick={() => setMotivoCancelacion(motivo)} className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${motivoCancelacion === motivo ? 'bg-red-950/50 border-red-500 text-red-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
                     {motivo}
                   </button>
                 ))}
@@ -1636,8 +1611,8 @@ const solicitarCola = async () => {
             </div>
             
             <div className="flex gap-3">
-              <button disabled={cargando} onClick={() => {setModalCancelar({visible: false, rol: null}); setMotivoCancelacion("");}} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all">Volver</button>
-              <button disabled={cargando} onClick={ejecutarCancelacion} className={`flex-1 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg active:scale-95 transition-all ${(modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? 'bg-red-600 shadow-red-900/50' : 'bg-emerald-600 shadow-emerald-900/50'}`}>{cargando ? '...' : 'Confirmar'}</button>
+              <button disabled={cargando} onClick={() => {setModalCancelar({visible: false, rol: null}); setMotivoCancelacion("");}} className="flex-1 bg-slate-800 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] active:scale-95 transition-all hover:bg-slate-700">Volver</button>
+              <button disabled={cargando} onClick={ejecutarCancelacion} className={`flex-1 text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg active:scale-95 transition-all ${(modalCancelar.rol === 'pasajero' || (modalCancelar.rol === 'chofer' && pasajerosConfirmados.length > 0)) ? 'bg-red-600 shadow-red-900/50 hover:bg-red-500' : 'bg-[#10B981] shadow-[#10B981]/40 hover:bg-emerald-400'}`}>{cargando ? '...' : 'Confirmar'}</button>
             </div>
           </div>
         </div>
