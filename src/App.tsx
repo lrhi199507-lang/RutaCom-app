@@ -306,14 +306,15 @@ export default function App() {
           </p>
         </div>
 
-        {/* LOGO INFERIOR (Subido para mayor simetría) */}
+                {/* LOGO INFERIOR (Subido para mayor simetría y MUCHO más grande) */}
         <div className="mb-24 sm:mb-32 flex justify-center w-full px-8">
            <img 
-             src="/slogan.png" /* <-- Asegúrate de tener logo-completo.png en la carpeta public */
+             src="/logo-completo.png" 
              alt="Dame la Cola"
-             className="h-20 sm:h-24 object-contain animate-in fade-in duration-700" 
+             className="h-32 sm:h-40 w-auto object-contain animate-in fade-in duration-700" 
            />
         </div>
+        
 
         {/* Animación de la barra */}
         <style dangerouslySetInnerHTML={{__html: `
@@ -382,14 +383,15 @@ export default function App() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-8 text-center text-[#1F2937] font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-[#063971]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-      {/* --- NUEVO LOGO OFICIAL --- */}
-      <div className="mb-6 mt-8 flex justify-center w-full">
+            {/* --- NUEVO LOGO OFICIAL (Más grande y nítido) --- */}
+      <div className="mb-8 mt-12 flex justify-center w-full">
          <img 
-           src="/logo-completo.png" /* <-- Tu imagen oficial */
+           src="/logo-completo.png" 
            alt="Dame la Cola"
-           className="h-16 sm:h-20 object-contain animate-in zoom-in duration-500" 
+           className="h-28 sm:h-36 w-auto object-contain animate-in zoom-in duration-500" 
          />
       </div>
+      
       
       {!esRegistro && <p className="text-[#063971] font-bold tracking-[3px] text-[10px] mb-8 uppercase italic">LA FORMA MÁS SEGURA DE PEDIR LA COLA</p>}
       {esRegistro && <p className="text-slate-500 text-xs mb-8 font-bold">Crea tu cuenta en segundos</p>}
