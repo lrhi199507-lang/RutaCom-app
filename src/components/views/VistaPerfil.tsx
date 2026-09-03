@@ -41,8 +41,9 @@ const ModalComoFunciona = ({ isOpen, onClose }: any) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[500] bg-[#1F2937]/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto no-scrollbar">
+    // 🔥 Z-INDEX AL MÁXIMO (99999) PARA QUE NADA LO TAPE 🔥
+    <div className="fixed inset-0 z-[99999] bg-[#1F2937]/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto no-scrollbar shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-black italic uppercase text-[#1F2937] tracking-tighter">¿Cómo funciona?</h2>
           <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-[#063971] active:scale-95 transition-all">
@@ -55,7 +56,7 @@ const ModalComoFunciona = ({ isOpen, onClose }: any) => {
             <div className="mt-1"><Users className="text-[#063971]" size={24} /></div>
             <div>
               <h3 className="font-black uppercase text-[11px] text-[#063971] tracking-widest mb-1">No somos un taxi privado</h3>
-              <p className="text-xs text-[#1F2937] font-medium leading-relaxed">dame la cola conecta a personas que van hacia la misma ciudad. El chofer puede recoger a otros pasajeros en el camino para llenar los asientos vacíos.</p>
+              <p className="text-xs text-[#1F2937] font-medium leading-relaxed">Dame la cola conecta a personas que van hacia la misma ciudad. El chofer puede recoger a otros pasajeros en el camino para llenar los asientos vacíos.</p>
             </div>
           </div>
 
@@ -462,20 +463,21 @@ const verificarCuentaCorreo = async () => {
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
             
             <button 
-              onClick={() => setShowReglas(true)} 
-              className="w-full flex items-center justify-between p-5 bg-[#063971]/5 border border-[#063971]/20 rounded-[30px] active:scale-95 transition-all shadow-sm group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#063971] text-white flex items-center justify-center shadow-md">
-                  <BookOpen size={20} />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-black uppercase text-[12px] text-[#063971] tracking-widest mb-0.5">Guía de la App</h3>
-                  <p className="text-[10px] text-[#1F2937] font-bold">¿Cómo funciona dame la cola?</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-[#063971]/50 group-hover:text-[#063971]" />
-            </button>
+  type="button"
+  onClick={(e) => { e.preventDefault(); setShowReglas(true); }} 
+  className="w-full flex items-center justify-between p-5 bg-[#063971]/5 border border-[#063971]/20 rounded-[30px] active:scale-95 transition-all shadow-sm group"
+>
+  <div className="flex items-center gap-4">
+    <div className="w-12 h-12 rounded-full bg-[#063971] text-white flex items-center justify-center shadow-md">
+      <BookOpen size={20} />
+    </div>
+    <div className="text-left">
+      <h3 className="font-black uppercase text-[12px] text-[#063971] tracking-widest mb-0.5">Guía de la App</h3>
+      <p className="text-[10px] text-[#1F2937] font-bold">¿Cómo funciona dame la cola?</p>
+    </div>
+  </div>
+  <ChevronRight size={20} className="text-[#063971]/50 group-hover:text-[#063971]" />
+</button>
 
             {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
               <div className="mx-2 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6">
