@@ -383,13 +383,14 @@ export default function App() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-8 text-center text-[#1F2937] font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-[#063971]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-                              {/* --- NUEVO LOGO OFICIAL (Sin fondo blanco) --- */}
-      <div className="mb-4 mt-8 flex justify-center w-full px-4">
+                              
+            {/* --- NUEVO LOGO OFICIAL (Aún más grande y sin fondo blanco) --- */}
+      <div className="mb-2 mt-6 flex justify-center w-full px-4">
          <img 
            src="/logo-completo.png" 
            alt="Dame la Cola"
-           /* mix-blend-multiply elimina el cuadro blanco. Le quitamos el drop-shadow. */
-           className="h-40 sm:h-48 w-auto object-contain animate-in zoom-in duration-500 mix-blend-multiply" 
+           /* Aumentamos drásticamente el tamaño a h-56 manteniendo la transparencia */
+           className="h-56 sm:h-64 w-auto object-contain animate-in zoom-in duration-500 mix-blend-multiply" 
          />
       </div>
 
