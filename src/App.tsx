@@ -285,7 +285,7 @@ export default function App() {
   // PANTALLA DE CARGA (SPLASH SCREEN)
   if (usuario === undefined || verificandoVersion) {
     return (
-      <div className="flex flex-col justify-between items-center min-h-screen bg-white font-sans relative overflow-hidden pt-32 pb-12">
+      <div className="flex flex-col justify-between items-center min-h-screen bg-white font-sans relative overflow-hidden pt-32 pb-8">
         
         {/* TEXTO SUPERIOR */}
         <div className="flex flex-col items-center">
@@ -303,27 +303,13 @@ export default function App() {
           </p>
         </div>
 
-        {/* LOGO INFERIOR (AQUÍ VA TU IMAGEN PNG) */}
-        <div className="mt-auto">
-           {/* 👇 PON TU IMAGEN EN LA CARPETA 'public' Y CAMBIA EL SRC AQUÍ 👇 */}
+        {/* LOGO INFERIOR (TU IMAGEN OFICIAL) */}
+        <div className="mt-auto flex justify-center w-full px-8">
            <img 
-             src="/logo.png" /* <- Cambia 'logo.png' por el nombre real de tu archivo */
+             src="/slogan.png" /* <-- Asegúrate de que el archivo en public se llame así */
              alt="Dame la Cola"
-             className="h-16 object-contain"
-             onError={(e) => {
-               // Si no encuentra la imagen por error de ruta, mostrará un diseño de emergencia
-               e.currentTarget.style.display = 'none';
-               document.getElementById('logo-fallback').style.display = 'flex';
-             }}
+             className="h-10 sm:h-12 object-contain" 
            />
-           
-           {/* Fallback de emergencia por si la ruta de la imagen falla */}
-           <div id="logo-fallback" className="hidden items-center gap-2">
-              <div className="w-12 h-12 rounded-[14px] bg-[#063971] flex items-center justify-center">
-                 <span className="font-black text-white text-2xl italic">d</span>
-              </div>
-              <span className="text-3xl font-black italic text-[#063971] tracking-tighter">dame la cola</span>
-           </div>
         </div>
 
         {/* Animación de la barra */}
