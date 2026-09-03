@@ -306,12 +306,13 @@ export default function App() {
           </p>
         </div>
 
-                {/* LOGO INFERIOR (Subido para mayor simetría y MUCHO más grande) */}
+                        {/* LOGO INFERIOR (Tamaño reducido y sutil) */}
         <div className="mb-24 sm:mb-32 flex justify-center w-full px-8">
            <img 
-             src="/slogan.png" 
+             src="/logo-completo.png" 
              alt="Dame la Cola"
-             className="h-32 sm:h-40 w-auto object-contain animate-in fade-in duration-700" 
+             /* Reducido a h-10 para igualar la proporción de tus líneas verdes */
+             className="h-10 sm:h-12 w-auto object-contain animate-in fade-in duration-700 mix-blend-multiply" 
            />
         </div>
         
