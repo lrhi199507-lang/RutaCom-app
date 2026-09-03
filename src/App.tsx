@@ -282,14 +282,14 @@ export default function App() {
     );
   }
 
-  // PANTALLA DE CARGA (SPLASH SCREEN)
+ // PANTALLA DE CARGA (SPLASH SCREEN)
   if (usuario === undefined || verificandoVersion) {
     return (
-      <div className="flex flex-col justify-between items-center min-h-screen bg-white font-sans relative overflow-hidden pt-32 pb-8">
+      <div className="flex flex-col min-h-screen bg-white font-sans relative overflow-hidden">
         
-        {/* TEXTO SUPERIOR */}
-        <div className="flex flex-col items-center">
-          <h1 className="text-[34px] font-black leading-[1.1] text-center tracking-tight text-[#063971] mb-12">
+        {/* CONTENEDOR CENTRAL: Agrupa título, barra y estado en el medio exacto */}
+        <div className="flex-1 flex flex-col items-center justify-center -mt-12">
+          <h1 className="text-[34px] font-black leading-[1.1] text-center tracking-tight text-[#063971] mb-8">
             Tu cola,<br/>con confianza.
           </h1>
 
@@ -303,10 +303,10 @@ export default function App() {
           </p>
         </div>
 
-        {/* LOGO INFERIOR (TU IMAGEN OFICIAL) */}
-        <div className="mt-auto flex justify-center w-full px-8">
+        {/* LOGO INFERIOR (TU IMAGEN OFICIAL ANCLADA AL FONDO) */}
+        <div className="pb-12 flex justify-center w-full px-8">
            <img 
-             src="/slogan.png" /* <-- Asegúrate de que el archivo en public se llame así */
+             src="/logo-completo.png" /* <-- Asegúrate de que coincida con el nombre en tu carpeta public */
              alt="Dame la Cola"
              className="h-10 sm:h-12 object-contain" 
            />
@@ -382,7 +382,7 @@ export default function App() {
         <span className="text-5xl font-black italic text-white">D</span>
       </div>
       
-      <h1 className="text-4xl font-black italic mb-2 tracking-tighter">DameLaCola</h1>
+      <h1 className="text-4xl font-black italic mb-2 tracking-tighter">dame la cola</h1>
       
       {!esRegistro && <p className="text-[#063971] font-bold tracking-[3px] text-[10px] mb-8 uppercase italic">LA FORMA MÁS SEGURA DE PEDIR LA COLA</p>}
       {esRegistro && <p className="text-slate-500 text-xs mb-8 font-bold">Crea tu cuenta en segundos</p>}
