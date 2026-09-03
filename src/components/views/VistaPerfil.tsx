@@ -41,9 +41,9 @@ const ModalComoFunciona = ({ isOpen, onClose }: any) => {
   if (!isOpen) return null;
 
   return (
-    // 🔥 Z-INDEX AL MÁXIMO (99999) PARA QUE NADA LO TAPE 🔥
+    // 🔥 Z-INDEX ELEVADO AL MÁXIMO (99999) 🔥
     <div className="fixed inset-0 z-[99999] bg-[#1F2937]/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto no-scrollbar shadow-2xl">
+      <div className="bg-white w-full max-w-md rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto no-scrollbar shadow-2xl relative">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-black italic uppercase text-[#1F2937] tracking-tighter">¿Cómo funciona?</h2>
           <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-[#063971] active:scale-95 transition-all">
