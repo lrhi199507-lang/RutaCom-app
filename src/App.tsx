@@ -383,7 +383,7 @@ export default function App() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-8 text-center text-[#1F2937] font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-[#063971]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-                        {/* --- NUEVO LOGO OFICIAL (Sin fondo blanco) --- */}
+                              {/* --- NUEVO LOGO OFICIAL (Sin fondo blanco) --- */}
       <div className="mb-4 mt-8 flex justify-center w-full px-4">
          <img 
            src="/logo-completo.png" 
@@ -392,6 +392,7 @@ export default function App() {
            className="h-40 sm:h-48 w-auto object-contain animate-in zoom-in duration-500 mix-blend-multiply" 
          />
       </div>
+
       
       
       {!esRegistro && <p className="text-[#063971] font-bold tracking-[3px] text-[10px] mb-8 uppercase italic">LA FORMA MÁS SEGURA DE PEDIR LA COLA</p>}
