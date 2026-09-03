@@ -282,13 +282,16 @@ export default function App() {
     );
   }
 
- // PANTALLA DE CARGA (SPLASH SCREEN)
+// PANTALLA DE CARGA (SPLASH SCREEN)
   if (usuario === undefined || verificandoVersion) {
     return (
-      <div className="flex flex-col min-h-screen bg-white font-sans relative overflow-hidden">
+      <div className="flex flex-col items-center justify-between min-h-screen bg-white font-sans relative overflow-hidden">
         
-        {/* CONTENEDOR CENTRAL: Agrupa título, barra y estado en el medio exacto */}
-        <div className="flex-1 flex flex-col items-center justify-center -mt-12">
+        {/* Espaciador superior invisible para centrar el bloque medio perfectamente */}
+        <div className="w-full pt-20"></div>
+
+        {/* CONTENEDOR CENTRAL */}
+        <div className="flex flex-col items-center justify-center w-full">
           <h1 className="text-[34px] font-black leading-[1.1] text-center tracking-tight text-[#063971] mb-8">
             Tu cola,<br/>con confianza.
           </h1>
@@ -303,12 +306,12 @@ export default function App() {
           </p>
         </div>
 
-        {/* LOGO INFERIOR (TU IMAGEN OFICIAL ANCLADA AL FONDO) */}
-        <div className="pb-12 flex justify-center w-full px-8">
+        {/* LOGO INFERIOR (Subido para mayor simetría) */}
+        <div className="mb-24 sm:mb-32 flex justify-center w-full px-8">
            <img 
-             src="/logo-completo.png" /* <-- Asegúrate de que coincida con el nombre en tu carpeta public */
+             src="/slogan.png" /* <-- Asegúrate de tener logo-completo.png en la carpeta public */
              alt="Dame la Cola"
-             className="h-10 sm:h-12 object-contain" 
+             className="h-20 sm:h-24 object-contain animate-in fade-in duration-700" 
            />
         </div>
 
