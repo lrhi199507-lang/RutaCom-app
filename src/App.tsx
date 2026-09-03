@@ -373,16 +373,20 @@ export default function App() {
     return <NavegacionPrincipal user={usuario} />;
   }
 
-  // PANTALLA DE LOGIN / REGISTRO
+  
+    // PANTALLA DE LOGIN / REGISTRO
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-8 text-center text-[#1F2937] font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-[#063971]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-      <div className="bg-[#063971] w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-[#063971]/30 transform -skew-x-6 border-b-4 border-[#031E3F] mt-8">
-        <span className="text-5xl font-black italic text-white">D</span>
+      {/* --- NUEVO LOGO OFICIAL --- */}
+      <div className="mb-6 mt-8 flex justify-center w-full">
+         <img 
+           src="/logo-completo.png" /* <-- Tu imagen oficial */
+           alt="Dame la Cola"
+           className="h-16 sm:h-20 object-contain animate-in zoom-in duration-500" 
+         />
       </div>
-      
-      <h1 className="text-4xl font-black italic mb-2 tracking-tighter">dame la cola</h1>
       
       {!esRegistro && <p className="text-[#063971] font-bold tracking-[3px] text-[10px] mb-8 uppercase italic">LA FORMA MÁS SEGURA DE PEDIR LA COLA</p>}
       {esRegistro && <p className="text-slate-500 text-xs mb-8 font-bold">Crea tu cuenta en segundos</p>}
