@@ -463,21 +463,25 @@ const verificarCuentaCorreo = async () => {
           <div className="p-5 space-y-8 animate-in slide-in-from-right duration-500 pb-24">
             
             <button 
-  type="button"
-  onClick={(e) => { e.preventDefault(); setShowReglas(true); }} 
-  className="w-full flex items-center justify-between p-5 bg-[#063971]/5 border border-[#063971]/20 rounded-[30px] active:scale-95 transition-all shadow-sm group"
->
-  <div className="flex items-center gap-4">
-    <div className="w-12 h-12 rounded-full bg-[#063971] text-white flex items-center justify-center shadow-md">
-      <BookOpen size={20} />
-    </div>
-    <div className="text-left">
-      <h3 className="font-black uppercase text-[12px] text-[#063971] tracking-widest mb-0.5">Guía de la App</h3>
-      <p className="text-[10px] text-[#1F2937] font-bold">¿Cómo funciona dame la cola?</p>
-    </div>
-  </div>
-  <ChevronRight size={20} className="text-[#063971]/50 group-hover:text-[#063971]" />
-</button>
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowReglas(true);
+              }} 
+              className="w-full flex items-center justify-between p-5 bg-[#063971]/5 border border-[#063971]/20 rounded-[30px] active:scale-95 transition-all shadow-sm group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-[#063971] text-white flex items-center justify-center shadow-md">
+                  <BookOpen size={20} />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-black uppercase text-[12px] text-[#063971] tracking-widest mb-0.5">Guía de la App</h3>
+                  <p className="text-[10px] text-[#1F2937] font-bold">¿Cómo funciona dame la cola?</p>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-[#063971]/50 group-hover:text-[#063971]" />
+            </button>
 
             {userData.estadoRevision === 'rechazado' && !userData.kycFoto && (
               <div className="mx-2 bg-orange-50 border-2 border-orange-100 rounded-[30px] p-6">
