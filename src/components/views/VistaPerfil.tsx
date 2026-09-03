@@ -55,7 +55,7 @@ const ModalComoFunciona = ({ isOpen, onClose }: any) => {
             <div className="mt-1"><Users className="text-[#063971]" size={24} /></div>
             <div>
               <h3 className="font-black uppercase text-[11px] text-[#063971] tracking-widest mb-1">No somos un taxi privado</h3>
-              <p className="text-xs text-[#1F2937] font-medium leading-relaxed">Dame la cola conecta a personas que van hacia la misma ciudad. El chofer puede recoger a otros pasajeros en el camino para llenar los asientos vacíos.</p>
+              <p className="text-xs text-[#1F2937] font-medium leading-relaxed">dame la cola conecta a personas que van hacia la misma ciudad. El chofer puede recoger a otros pasajeros en el camino para llenar los asientos vacíos.</p>
             </div>
           </div>
 
