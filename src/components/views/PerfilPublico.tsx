@@ -30,6 +30,10 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     promedio: "0.0",
     totalOpiniones: 0
   });
+  
+  // 🔥 NUEVO ESTADO: Guarda los datos 100% actualizados desde la BD 🔥
+  const [datosActualizados, setDatosActualizados] = useState<any>(null);
+
   const [cargandoStats, setCargandoStats] = useState(true);
   const [listaResenas, setListaResenas] = useState([]);
   const [mostrarModalResenas, setMostrarModalResenas] = useState(false);
@@ -65,8 +69,9 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
       return;
     }
 
-    const cargarEstadisticas = async () => {
+    const cargarEstadisticasYPerfil = async () => {
       try {
+        // 🔥 AQUÍ OBTENEMOS EL PERFIL MAESTRO EN TIEMPO REAL 🔥
         const userSnap = await getDocs(query(collection(db, "usuarios"), where("__name__", "==", idUsuario)));
         let contadorViajes = 0;
 
@@ -75,6 +80,11 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           const viajesCond = uData.viajesRealizados || 0;
           const viajesPas = uData.viajesComoPasajero || 0;
           contadorViajes = viajesCond + viajesPas; 
+          
+          // Guardamos la info fresca (bio, edad, foto, etc)
+          if (!unmounted) {
+             setDatosActualizados(uData);
+          }
         }
 
         const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
@@ -104,18 +114,18 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           setCargandoStats(false);
         }
       } catch (error) {
-        console.error("Error cargando estadísticas:", error);
+        console.error("Error cargando estadísticas y perfil:", error);
         setCargandoStats(false);
       }
     };
 
-    cargarEstadisticas();
+    cargarEstadisticasYPerfil();
     return () => { unmounted = true; };
   }, [conductor]);
 
   const nivel = calcularRangoGlobal(estadisticas.viajesRealizados);
 
-    const manejarClickOpiniones = () => {
+  const manejarClickOpiniones = () => {
     if (estadisticas.totalOpiniones === 0) {
       setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
       setShowToast(true);
@@ -124,6 +134,14 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     }
   };
   
+  // 🔥 VARIABLES DINÁMICAS: Si el dato existe en BD, lo usa. Si no, usa el del viaje. 🔥
+  const bioMostrar = datosActualizados?.bio || conductor.bio || "Este usuario prefiere que lo conozcas durante el viaje.";
+  const edadMostrar = datosActualizados?.edad || conductor.edad;
+  const habladorMostrar = datosActualizados?.hablador ?? conductor.hablador;
+  const musicaMostrar = datosActualizados?.musica ?? conductor.musica;
+  const verificadoMostrar = datosActualizados?.kycVerificado ?? conductor.identidadVerificada;
+  const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil;
+  const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion;
 
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
@@ -159,8 +177,8 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
         <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col items-center mb-8 relative">
           
           <div className="w-28 h-28 bg-[#063971]/5 rounded-[35px] border-4 border-[#063971]/10 shadow-xl overflow-hidden mb-4 flex items-center justify-center relative">
-            {conductor.fotoPerfil ? (
-              <img src={conductor.fotoPerfil} className="w-full h-full object-cover" alt="" />
+            {fotoMostrar ? (
+              <img src={fotoMostrar} className="w-full h-full object-cover" alt="" />
             ) : (
               <User size={40} className="text-[#063971]/40" />
             )}
@@ -169,18 +187,18 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           
           <h2 className="text-2xl font-black text-[#1F2937] flex items-center justify-center gap-2 italic text-center w-full">
             <span className="truncate max-w-[80%]">{nombreMostrar}</span>
-            {conductor.identidadVerificada && (
+            {verificadoMostrar && (
               <BadgeCheck size={26} className="text-[#10B981] fill-[#10B981]/20 flex-shrink-0" strokeWidth={2.5} />
             )}
           </h2>
           
           {/* --- NUEVO: EDAD Y MIEMBRO DESDE EN PERFIL PÚBLICO --- */}
           <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[2px] mt-1 italic flex items-center justify-center gap-1">
-             {conductor.identidadVerificada ? 'Identidad Verificada' : 'Usuario Nuevo'}
-             {conductor.edad && <><span className="mx-1 text-slate-300">•</span>{conductor.edad} AÑOS</>}
+             {verificadoMostrar ? 'Identidad Verificada' : 'Usuario Nuevo'}
+             {edadMostrar && <><span className="mx-1 text-slate-300">•</span>{edadMostrar} AÑOS</>}
           </p>
           <p className="text-[9px] font-black text-[#063971] uppercase tracking-widest mt-2 flex items-center justify-center gap-1.5 bg-[#063971]/5 px-3 py-1.5 rounded-full border border-[#063971]/10">
-             <Calendar size={12} className="text-[#063971]" /> Miembro desde {formatearMesAño(conductor.fechaRegistro || conductor.fechaCreacion)}
+             <Calendar size={12} className="text-[#063971]" /> Miembro desde {formatearMesAño(fechaRegMostrar)}
           </p>
 
         </div>
@@ -190,7 +208,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           <p className="text-[9px] font-black text-[#063971] uppercase tracking-[3px] ml-4 mb-2 italic">Sobre Mí</p>
           <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm">
             <p className="text-[#1F2937] leading-relaxed font-bold italic text-[11px]">
-              "{conductor.bio || "Este usuario prefiere que lo conozcas durante el viaje."}"
+              "{bioMostrar}"
             </p>
           </div>
         </div>
@@ -199,13 +217,13 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
         <div className="mb-8">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-[3px] ml-4 mb-3 italic">Estilo de viaje</p>
           <div className="grid grid-cols-2 gap-3">
-            <div className={`p-5 rounded-[30px] bg-white border-2 flex flex-col items-center gap-2 ${conductor.hablador === 'hablador' ? 'border-[#063971] bg-[#063971]/5' : 'border-slate-50 opacity-60'}`}>
-              <MessageSquare size={20} className={conductor.hablador === 'hablador' ? 'text-[#063971]' : 'text-slate-300'} />
-              <p className={`text-[9px] font-black uppercase ${conductor.hablador === 'hablador' ? 'text-[#063971]' : 'text-[#1F2937]'}`}>{conductor.hablador === 'hablador' ? 'Conversador' : 'Tranquilo'}</p>
+            <div className={`p-5 rounded-[30px] bg-white border-2 flex flex-col items-center gap-2 ${habladorMostrar === 'hablador' || habladorMostrar === true ? 'border-[#063971] bg-[#063971]/5' : 'border-slate-50 opacity-60'}`}>
+              <MessageSquare size={20} className={habladorMostrar === 'hablador' || habladorMostrar === true ? 'text-[#063971]' : 'text-slate-300'} />
+              <p className={`text-[9px] font-black uppercase ${habladorMostrar === 'hablador' || habladorMostrar === true ? 'text-[#063971]' : 'text-[#1F2937]'}`}>{habladorMostrar === 'hablador' || habladorMostrar === true ? 'Conversador' : 'Tranquilo'}</p>
             </div>
-            <div className={`p-5 rounded-[30px] bg-white border-2 flex flex-col items-center gap-2 ${conductor.musica === 'con_musica' ? 'border-[#063971] bg-[#063971]/5' : 'border-slate-50 opacity-60'}`}>
-              <Music size={20} className={conductor.musica === 'con_musica' ? 'text-[#063971]' : 'text-slate-300'} />
-              <p className={`text-[9px] font-black uppercase ${conductor.musica === 'con_musica' ? 'text-[#063971]' : 'text-[#1F2937]'}`}>{conductor.musica === 'con_musica' ? 'Música' : 'Sin música'}</p>
+            <div className={`p-5 rounded-[30px] bg-white border-2 flex flex-col items-center gap-2 ${musicaMostrar === 'con_musica' || musicaMostrar === true ? 'border-[#063971] bg-[#063971]/5' : 'border-slate-50 opacity-60'}`}>
+              <Music size={20} className={musicaMostrar === 'con_musica' || musicaMostrar === true ? 'text-[#063971]' : 'text-slate-300'} />
+              <p className={`text-[9px] font-black uppercase ${musicaMostrar === 'con_musica' || musicaMostrar === true ? 'text-[#063971]' : 'text-[#1F2937]'}`}>{musicaMostrar === 'con_musica' || musicaMostrar === true ? 'Música' : 'Sin música'}</p>
             </div>
           </div>
         </div>
@@ -213,9 +231,9 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
         {/* ESTADÍSTICAS REALES */}
         <div className="grid grid-cols-2 gap-3 mb-8">
             <div className="bg-white p-4 rounded-[28px] border border-slate-100 flex items-center gap-3 shadow-sm">
-              <ShieldCheck size={18} className={conductor.identidadVerificada ? "text-[#063971]" : "text-slate-300"} />
+              <ShieldCheck size={18} className={verificadoMostrar ? "text-[#063971]" : "text-slate-300"} />
               <p className="text-[8px] font-black text-[#1F2937] uppercase leading-tight italic">
-                Identidad<br/>{conductor.identidadVerificada ? 'Verificada' : 'Pendiente'}
+                Identidad<br/>{verificadoMostrar ? 'Verificada' : 'Pendiente'}
               </p>
             </div>
             <div className="bg-white p-4 rounded-[28px] border border-slate-100 flex items-center gap-3 shadow-sm">
