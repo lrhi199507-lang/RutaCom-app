@@ -309,7 +309,7 @@ export default function App() {
                 {/* LOGO INFERIOR (Subido para mayor simetría y MUCHO más grande) */}
         <div className="mb-24 sm:mb-32 flex justify-center w-full px-8">
            <img 
-             src="/slogna.png" 
+             src="/slogan.png" 
              alt="Dame la Cola"
              className="h-32 sm:h-40 w-auto object-contain animate-in fade-in duration-700" 
            />
@@ -383,12 +383,13 @@ export default function App() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-8 text-center text-[#1F2937] font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-[#063971]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-            {/* --- NUEVO LOGO OFICIAL (Más grande y nítido) --- */}
-      <div className="mb-8 mt-12 flex justify-center w-full">
+                  {/* --- NUEVO LOGO OFICIAL (TAMAÑO MAXIMIZADO) --- */}
+      <div className="mb-6 mt-8 flex justify-center w-full px-4">
          <img 
            src="/logo-completo.png" 
            alt="Dame la Cola"
-           className="h-28 sm:h-36 w-auto object-contain animate-in zoom-in duration-500" 
+           /* Cambiamos a h-48 y h-56 para forzar un tamaño mucho más imponente */
+           className="h-48 sm:h-56 w-auto object-contain animate-in zoom-in duration-500 drop-shadow-sm" 
          />
       </div>
       
