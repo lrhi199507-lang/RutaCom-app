@@ -285,28 +285,48 @@ export default function App() {
   // PANTALLA DE CARGA (SPLASH SCREEN)
   if (usuario === undefined || verificandoVersion) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white text-[#1F2937] font-sans relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#063971]/5 rounded-full blur-[100px] animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-[#10B981]/5 rounded-full blur-[100px] animate-pulse delay-700"></div>
-
-        <div className="relative z-10 flex flex-col items-center animate-in zoom-in duration-700">
-          <div className="bg-[#063971] w-28 h-28 rounded-[35px] flex items-center justify-center shadow-[0_0_40px_rgba(6,57,113,0.3)] transform -skew-x-6 border-b-[6px] border-[#031E3F] animate-bounce">
-            <span className="text-6xl font-black italic text-white drop-shadow-md">D</span>
-          </div>
-          
-          <h1 className="text-3xl font-black italic mt-8 tracking-tighter text-[#063971]">
-            DameLaCola
+      <div className="flex flex-col justify-between items-center min-h-screen bg-white font-sans relative overflow-hidden pt-32 pb-12">
+        
+        {/* TEXTO SUPERIOR */}
+        <div className="flex flex-col items-center">
+          <h1 className="text-[34px] font-black leading-[1.1] text-center tracking-tight text-[#063971] mb-12">
+            Tu cola,<br/>con confianza.
           </h1>
 
-          <div className="w-48 h-1.5 bg-slate-100 rounded-full mt-10 overflow-hidden relative">
-            <div className="absolute top-0 left-0 h-full w-1/2 bg-gradient-to-r from-[#063971] to-[#10B981] rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
+          {/* BARRA DE CARGA Y TEXTO */}
+          <div className="w-48 h-1.5 bg-slate-200 rounded-full overflow-hidden relative mb-4">
+            <div className="absolute top-0 left-0 h-full w-1/2 bg-[#063971] rounded-full animate-[loading_1.5s_ease-in-out_infinite]" />
           </div>
 
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mt-4 animate-pulse">
+          <p className="text-[12px] font-black lowercase tracking-widest text-[#063971]">
             {mensajeCarga}
           </p>
         </div>
 
+        {/* LOGO INFERIOR (AQUÍ VA TU IMAGEN PNG) */}
+        <div className="mt-auto">
+           {/* 👇 PON TU IMAGEN EN LA CARPETA 'public' Y CAMBIA EL SRC AQUÍ 👇 */}
+           <img 
+             src="/logo.png" /* <- Cambia 'logo.png' por el nombre real de tu archivo */
+             alt="Dame la Cola"
+             className="h-16 object-contain"
+             onError={(e) => {
+               // Si no encuentra la imagen por error de ruta, mostrará un diseño de emergencia
+               e.currentTarget.style.display = 'none';
+               document.getElementById('logo-fallback').style.display = 'flex';
+             }}
+           />
+           
+           {/* Fallback de emergencia por si la ruta de la imagen falla */}
+           <div id="logo-fallback" className="hidden items-center gap-2">
+              <div className="w-12 h-12 rounded-[14px] bg-[#063971] flex items-center justify-center">
+                 <span className="font-black text-white text-2xl italic">d</span>
+              </div>
+              <span className="text-3xl font-black italic text-[#063971] tracking-tighter">dame la cola</span>
+           </div>
+        </div>
+
+        {/* Animación de la barra */}
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes loading {
             0% { transform: translateX(-100%); }
@@ -316,7 +336,7 @@ export default function App() {
       </div>
     );
   }
-
+  
   // PANTALLA DE ONBOARDING (INTRODUCCIÓN)
   if (usuario && mostrarOnboarding) {
     return (
