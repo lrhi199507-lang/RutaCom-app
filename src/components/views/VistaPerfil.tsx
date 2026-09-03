@@ -10,12 +10,31 @@ import {
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, AlertCircle, AlertTriangle, Car, Palette, 
   Hash, Gauge, LogOut, Camera, Image as ImageIcon,
-  BookOpen, Users, Clock, X 
+  BookOpen, Users, Clock, X, Calendar 
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const auth = getAuth();
+
+// --- HELPER: FORMATO MIEMBRO DESDE ---
+const formatearMesAño = (isoString) => {
+  if (!isoString) return 'Fecha Desconocida';
+  const date = new Date(isoString);
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  return `${meses[date.getMonth()]} ${date.getFullYear()}`;
+};
+
+// --- HELPER: CALCULAR EDAD AUTOMÁTICA ---
+const calcularEdad = (d, m, y) => {
+  if (!d || !m || !y) return 0;
+  const today = new Date();
+  const birthDate = new Date(y, m - 1, d);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const mDiff = today.getMonth() - birthDate.getMonth();
+  if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
+};
 
 // --- MODAL DE REGLAS ---
 const ModalComoFunciona = ({ isOpen, onClose }: any) => {
@@ -36,7 +55,7 @@ const ModalComoFunciona = ({ isOpen, onClose }: any) => {
             <div className="mt-1"><Users className="text-[#063971]" size={24} /></div>
             <div>
               <h3 className="font-black uppercase text-[11px] text-[#063971] tracking-widest mb-1">No somos un taxi privado</h3>
-              <p className="text-xs text-[#1F2937] font-medium leading-relaxed">Dame la Cola conecta a personas que van hacia la misma ciudad. El chofer puede recoger a otros pasajeros en el camino para llenar los asientos vacíos.</p>
+              <p className="text-xs text-[#1F2937] font-medium leading-relaxed">Dame la cola conecta a personas que van hacia la misma ciudad. El chofer puede recoger a otros pasajeros en el camino para llenar los asientos vacíos.</p>
             </div>
           </div>
 
@@ -82,6 +101,12 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   
   const [showReglas, setShowReglas] = useState(false);
 
+  // --- ESTADOS DEL CALENDARIO PERSONALIZADO ---
+  const [modalNacimiento, setModalNacimiento] = useState(false);
+  const [diaNac, setDiaNac] = useState('');
+  const [mesNac, setMesNac] = useState('');
+  const [anioNac, setAnioNac] = useState('');
+
   useEffect(() => {
     let listenerHandle: any = null;
     const configurarListener = async () => {
@@ -101,6 +126,14 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       if (listenerHandle) listenerHandle.remove();
     };
   }, []);
+
+  // Precargar fecha si el usuario ya la configuró
+  useEffect(() => {
+    if (modalNacimiento && userData?.fechaNacimiento) {
+      const [y, m, d] = userData.fechaNacimiento.split('-');
+      setAnioNac(y); setMesNac(m); setDiaNac(d);
+    }
+  }, [modalNacimiento, userData?.fechaNacimiento]);
   
   if (!userData) return <div className="p-20 text-center font-black italic text-slate-400 animate-pulse">CARGANDO...</div>;
   
@@ -188,6 +221,30 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       }
     } catch (e) { 
       setToast({ texto: "Error al guardar los cambios.", tipo: "error" });
+    } finally { 
+      setCargando(false); 
+    }
+  };
+
+  // --- FUNCIÓN PARA GUARDAR LA FECHA DE NACIMIENTO Y EDAD ---
+  const guardarNacimiento = async () => {
+    setCargando(true);
+    try {
+      const uid = auth.currentUser?.uid || userData.id;
+      const fechaFin = `${anioNac}-${mesNac}-${diaNac}`;
+      const edadCalculada = calcularEdad(diaNac, mesNac, anioNac);
+      
+      await updateDoc(doc(db, "usuarios", uid), { 
+        fechaNacimiento: fechaFin, 
+        edad: edadCalculada 
+      });
+      
+      setUserData({ ...userData, fechaNacimiento: fechaFin, edad: edadCalculada });
+      setModalNacimiento(false);
+      setToast({ texto: "Fecha y edad actualizadas", tipo: "exito" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e) {
+      setToast({ texto: "Error al guardar", tipo: "error" });
     } finally { 
       setCargando(false); 
     }
@@ -353,6 +410,12 @@ const verificarCuentaCorreo = async () => {
                 <button onClick={() => setPasoFoto(true)} className="absolute -bottom-1 -right-1 bg-[#063971] text-white p-2.5 rounded-full border-4 border-white shadow-lg"><Edit2 size={14} /></button>
               </div>
               <h2 className="text-2xl font-black italic text-[#1F2937] uppercase tracking-tighter">{userData.nombre || "Usuario"}</h2>
+              
+              {/* --- NUEVO: MIEMBRO DESDE --- */}
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center justify-center gap-1.5">
+                 <Calendar size={14} className="text-[#063971]" /> Miembro desde {formatearMesAño(userData.fechaRegistro || userData.fechaCreacion)}
+              </p>
+
               <div className="flex justify-center gap-6 mt-4 border-t border-slate-50 pt-4">
                 <div className="text-center"><p className="text-[8px] font-black text-slate-400 uppercase">Conductor</p><p className="font-black text-[#063971] italic leading-none">{viajesCond} VJS</p></div>
                 <div className="text-center"><p className="text-[8px] font-black text-slate-400 uppercase">Pasajero</p><p className="font-black text-orange-500 italic leading-none">{viajesPas} VJS</p></div>
@@ -408,7 +471,7 @@ const verificarCuentaCorreo = async () => {
                 </div>
                 <div className="text-left">
                   <h3 className="font-black uppercase text-[12px] text-[#063971] tracking-widest mb-0.5">Guía de la App</h3>
-                  <p className="text-[10px] text-[#1F2937] font-bold">¿Cómo funciona Dame la Cola?</p>
+                  <p className="text-[10px] text-[#1F2937] font-bold">¿Cómo funciona dame la cola?</p>
                 </div>
               </div>
               <ChevronRight size={20} className="text-[#063971]/50 group-hover:text-[#063971]" />
@@ -430,6 +493,15 @@ const verificarCuentaCorreo = async () => {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Básica</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
+                
+                {/* --- NUEVO: FECHA DE NACIMIENTO Y EDAD --- */}
+                <MenuButton 
+                  icon={Calendar} 
+                  label="Nacimiento y Edad" 
+                  value={userData.fechaNacimiento ? `${userData.fechaNacimiento} (${userData.edad} años)` : "Seleccionar"} 
+                  onClick={() => setModalNacimiento(true)} 
+                />
+
                 <MenuButton icon={Hash} label="Cédula (Número)" value={userData.cedulaNumero} onClick={() => { if (userData.kycVerificado) { setToast({ texto: "Por seguridad, no puedes cambiar la cédula vinculada.", tipo: "error" }); } else { setTipoEdicion({id:'cedulaNumero', label:'Cédula', valor:userData.cedulaNumero}); setNuevoValor(userData.cedulaNumero); setModalVisible(true); } }} />
                 <MenuButton icon={Phone} label="Teléfono" value={userData.telefono} onClick={() => { setTipoEdicion({id:'telefono', label:'Teléfono', valor:userData.telefono}); setNuevoValor(userData.telefono); setModalVisible(true); }} />
                 <MenuButton icon={UserCog} label="Sobre mí (Bio)" value={userData?.bio || "Escribe algo sobre ti..."} onClick={() => { setTipoEdicion({id: 'bio', label: 'Biografía', valor: userData?.bio}); setNuevoValor(userData?.bio || ""); setModalVisible(true); }} />
@@ -487,6 +559,53 @@ const verificarCuentaCorreo = async () => {
         )}
       </div>
 
+      {/* --- MODAL CALENDARIO CUSTOM DAME LA COLA --- */}
+      {modalNacimiento && (
+        <div className="fixed inset-0 z-[300] bg-[#1F2937]/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative border border-slate-100">
+            <button onClick={() => setModalNacimiento(false)} className="absolute top-6 right-6 text-slate-400 hover:text-[#063971] transition-colors"><X size={20}/></button>
+            <div className="w-16 h-16 bg-[#063971]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#063971]/20">
+               <Calendar size={30} className="text-[#063971]" />
+            </div>
+            <h3 className="text-xl font-black italic text-[#1F2937] uppercase text-center mb-6">Tu Nacimiento</h3>
+
+            <div className="grid grid-cols-3 gap-2 mb-6">
+               <div className="relative">
+                 <select value={diaNac} onChange={e=>setDiaNac(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] font-bold p-3.5 rounded-2xl outline-none focus:border-[#063971] appearance-none text-center">
+                    <option value="">Día</option>
+                    {[...Array(31)].map((_,i) => <option key={i} value={String(i+1).padStart(2,'0')}>{i+1}</option>)}
+                 </select>
+               </div>
+               <div className="relative">
+                 <select value={mesNac} onChange={e=>setMesNac(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] font-bold p-3.5 rounded-2xl outline-none focus:border-[#063971] appearance-none text-center">
+                    <option value="">Mes</option>
+                    {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m,i) => <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}
+                 </select>
+               </div>
+               <div className="relative">
+                 <select value={anioNac} onChange={e=>setAnioNac(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] font-bold p-3.5 rounded-2xl outline-none focus:border-[#063971] appearance-none text-center">
+                    <option value="">Año</option>
+                    {/* Años desde hace 18 hasta 80 años atrás */}
+                    {Array.from({length: 80}, (_,i) => new Date().getFullYear() - 18 - i).map(y => <option key={y} value={y}>{y}</option>)}
+                 </select>
+               </div>
+            </div>
+
+            {diaNac && mesNac && anioNac && (
+               <div className="bg-[#10B981]/10 border border-[#10B981]/30 p-4 rounded-2xl mb-6 text-center animate-in zoom-in">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#10B981] mb-1">Edad Calculada</p>
+                  <p className="text-3xl font-black italic text-[#1F2937]">{calcularEdad(diaNac, mesNac, anioNac)} Años</p>
+               </div>
+            )}
+
+            <button disabled={!diaNac || !mesNac || !anioNac || cargando} onClick={guardarNacimiento} className="w-full bg-[#063971] text-white p-4 rounded-full font-black uppercase text-xs tracking-widest shadow-lg shadow-[#063971]/30 active:scale-95 disabled:opacity-50 transition-all hover:bg-blue-800">
+              Confirmar Fecha
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- RESTO DE MODALES DE EDICIÓN --- */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-[#1F2937]/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
@@ -589,10 +708,6 @@ const verificarCuentaCorreo = async () => {
           )}
         </div>
       )}
-
-      {/* RENDER DEL MODAL DE REGLAS */}
-      <ModalComoFunciona isOpen={showReglas} onClose={() => setShowReglas(false)} />
-
     </div>
   );
 };
