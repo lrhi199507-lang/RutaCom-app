@@ -309,7 +309,7 @@ export default function App() {
                 {/* LOGO INFERIOR (Subido para mayor simetría y MUCHO más grande) */}
         <div className="mb-24 sm:mb-32 flex justify-center w-full px-8">
            <img 
-             src="/logo-completo.png" 
+             src="/slogna.png" 
              alt="Dame la Cola"
              className="h-32 sm:h-40 w-auto object-contain animate-in fade-in duration-700" 
            />
