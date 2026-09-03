@@ -5,6 +5,20 @@ import {
   Star, ShieldAlert, Award, Map, Wallet
 } from 'lucide-react';
 
+// --- HELPER: FORMATO MIEMBRO DESDE (CON ABRIL 2026 POR DEFECTO) ---
+const formatearMesAño = (isoString) => {
+  // Si no tiene fecha guardada, por defecto es Abril 2026
+  if (!isoString) return 'Abril 2026';
+  
+  const date = new Date(isoString);
+  
+  // Por si la fecha se guardó con un formato inválido
+  if (isNaN(date.getTime())) return 'Abril 2026';
+
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  return `${meses[date.getMonth()]} ${date.getFullYear()}`;
+};
+
 export const VistaPerfilCompleto = ({ userData, isOwnProfile = false, onRegresar }) => {
   if (!userData) return <div className="p-10 text-center font-black animate-pulse text-slate-400 italic">CARGANDO...</div>;
 
@@ -74,7 +88,7 @@ export const VistaPerfilCompleto = ({ userData, isOwnProfile = false, onRegresar
                {userData.nombre || 'USUARIO'}
             </h1>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-               {userData.edad || '29'} AÑOS
+               {userData.edad ? `${userData.edad} AÑOS` : 'EDAD N/D'}
             </p>
           </div>
 
@@ -103,7 +117,7 @@ export const VistaPerfilCompleto = ({ userData, isOwnProfile = false, onRegresar
              <ConfianzaItem icon={ShieldCheck} text="Perfil verificado con Cédula" verified={userData.kycVerificado} />
              <ConfianzaItem icon={Car} text="Publica viajes regularmente" verified={true} />
              <ConfianzaItem icon={Clock} text="Tiempo de respuesta rápido" verified={true} />
-             <ConfianzaItem icon={Calendar} text={`Usuario desde ${userData.fechaCreacion || 'Abril 2026'}`} verified={true} />
+             <ConfianzaItem icon={Calendar} text={`Miembro desde ${formatearMesAño(userData.fechaRegistro || userData.fechaCreacion)}`} verified={true} />
           </div>
         </div>
       </div>
