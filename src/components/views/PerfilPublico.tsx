@@ -4,9 +4,23 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { App } from '@capacitor/app';
 import { 
   ArrowLeft, MessageCircle, Phone, ShieldCheck, 
-  Star, Music, MessageSquare, User, Car, Trophy, Medal, MapPin, BadgeCheck
+  Star, Music, MessageSquare, User, Car, Trophy, Medal, MapPin, BadgeCheck, Calendar
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
+
+// --- HELPER: FORMATO MIEMBRO DESDE (CON ABRIL 2026 POR DEFECTO) ---
+const formatearMesAño = (isoString) => {
+  // Si no tiene fecha guardada, por defecto es Abril 2026
+  if (!isoString) return 'Abril 2026';
+  
+  const date = new Date(isoString);
+  
+  // Por si la fecha se guardó con un formato inválido
+  if (isNaN(date.getTime())) return 'Abril 2026';
+
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  return `${meses[date.getMonth()]} ${date.getFullYear()}`;
+};
 
 const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: any) => {
   if (!conductor) return null;
@@ -141,7 +155,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </button>
         </div>
         
-                {/* TARJETA DE PERFIL CENTRAL */}
+        {/* TARJETA DE PERFIL CENTRAL */}
         <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col items-center mb-8 relative">
           
           <div className="w-28 h-28 bg-[#063971]/5 rounded-[35px] border-4 border-[#063971]/10 shadow-xl overflow-hidden mb-4 flex items-center justify-center relative">
@@ -156,12 +170,19 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           <h2 className="text-2xl font-black text-[#1F2937] flex items-center justify-center gap-2 italic text-center w-full">
             <span className="truncate max-w-[80%]">{nombreMostrar}</span>
             {conductor.identidadVerificada && (
-              <BadgeCheck size={26} className="text-green-500 fill-green-100 flex-shrink-0" strokeWidth={2.5} />
+              <BadgeCheck size={26} className="text-[#10B981] fill-[#10B981]/20 flex-shrink-0" strokeWidth={2.5} />
             )}
           </h2>
-          <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[2px] mt-1 italic">
-            {conductor.identidadVerificada ? 'Identidad Verificada' : 'Usuario Nuevo'}
+          
+          {/* --- NUEVO: EDAD Y MIEMBRO DESDE EN PERFIL PÚBLICO --- */}
+          <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[2px] mt-1 italic flex items-center justify-center gap-1">
+             {conductor.identidadVerificada ? 'Identidad Verificada' : 'Usuario Nuevo'}
+             {conductor.edad && <><span className="mx-1 text-slate-300">•</span>{conductor.edad} AÑOS</>}
           </p>
+          <p className="text-[9px] font-black text-[#063971] uppercase tracking-widest mt-2 flex items-center justify-center gap-1.5 bg-[#063971]/5 px-3 py-1.5 rounded-full border border-[#063971]/10">
+             <Calendar size={12} className="text-[#063971]" /> Miembro desde {formatearMesAño(conductor.fechaRegistro || conductor.fechaCreacion)}
+          </p>
+
         </div>
 
         {/* SOBRE EL USUARIO */}
@@ -208,11 +229,11 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             </div>
         </div>
 
-                {/* OPINIONES DINÁMICAS */}
+        {/* OPINIONES DINÁMICAS */}
         <div className="mb-32">
           <button 
             onClick={manejarClickOpiniones}
-            className="w-full bg-white border border-slate-100 p-5 rounded-[35px] flex items-center justify-between shadow-sm active:scale-95 hover:bg-[#063971]/5 transition-all group"
+            className="w-full bg-white border border-slate-100 p-5 rounded-[35px] flex items-center justify-between shadow-sm active:scale-95 hover:bg-[#063971]/5 hover:border-[#063971]/30 transition-all group"
           >
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-2xl ${estadisticas.totalOpiniones > 0 ? 'bg-amber-100' : 'bg-slate-100'}`}>
@@ -235,41 +256,43 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
 
       {/* --- MODAL DE LISTA DE RESEÑAS --- */}
       {mostrarModalResenas && (
-        <div className="fixed inset-0 z-[600] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
-          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10 shadow-sm">
-            <h3 className="font-black italic uppercase text-[#1F2937] text-lg">Opiniones ({estadisticas.totalOpiniones})</h3>
-            <button onClick={() => setMostrarModalResenas(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-[#063971] active:scale-90 transition-all">
-              <ArrowLeft size={20} className="rotate-180" />
-            </button>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
-            {listaResenas.map((resena) => (
-              <div key={resena.id} className="bg-white p-5 rounded-[25px] border border-slate-100 shadow-sm">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#063971]/10 rounded-full flex items-center justify-center">
-                      <User size={16} className="text-[#063971]" />
+        <div className="fixed inset-0 z-[600] bg-[#1F2937]/70 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
+          <div className="flex-1 overflow-y-auto mt-20 bg-slate-50 rounded-t-[40px] shadow-2xl animate-in slide-in-from-bottom">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-10 rounded-t-[40px]">
+              <h3 className="font-black italic uppercase text-[#1F2937] text-lg">Opiniones ({estadisticas.totalOpiniones})</h3>
+              <button onClick={() => setMostrarModalResenas(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 hover:text-[#063971] active:scale-90 transition-all">
+                <ArrowLeft size={20} className="rotate-180" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {listaResenas.map((resena) => (
+                <div key={resena.id} className="bg-white p-5 rounded-[25px] border border-slate-100 shadow-sm hover:border-[#063971]/20 transition-colors">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#063971]/10 rounded-full flex items-center justify-center border border-[#063971]/20">
+                        <User size={16} className="text-[#063971]" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase text-[#1F2937]">{resena.nombrePasajero || "Pasajero"}</p>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                          {new Date(resena.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-black uppercase text-[#1F2937]">{resena.nombrePasajero || "Pasajero"}</p>
-                      <p className="text-[8px] font-bold text-slate-400 uppercase">
-                        {new Date(resena.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
+                    <div className="flex bg-amber-50 px-2 py-1.5 rounded-xl items-center gap-1 border border-amber-100">
+                      <Star size={12} className="text-amber-500 fill-amber-500" />
+                      <span className="text-[10px] font-black text-amber-700">{resena.estrellas}.0</span>
                     </div>
                   </div>
-                  <div className="flex bg-amber-50 px-2 py-1 rounded-lg items-center gap-1 border border-amber-100">
-                    <Star size={12} className="text-amber-500 fill-amber-500" />
-                    <span className="text-[10px] font-black text-amber-600">{resena.estrellas}.0</span>
-                  </div>
+                  {resena.comentario && (
+                    <p className="text-[11px] font-bold text-[#1F2937] italic bg-slate-50 p-4 rounded-2xl mt-2 border border-slate-100">
+                      "{resena.comentario}"
+                    </p>
+                  )}
                 </div>
-                {resena.comentario && (
-                  <p className="text-[11px] font-bold text-[#1F2937] italic bg-slate-50 p-3 rounded-2xl">
-                    "{resena.comentario}"
-                  </p>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
