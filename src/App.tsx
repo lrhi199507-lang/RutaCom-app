@@ -309,7 +309,7 @@ export default function App() {
         {/* LOGO INFERIOR (Tamaño ajustado a la guía verde) */}
         <div className="mb-24 sm:mb-32 flex justify-center w-full px-8">
            <img 
-             src="/logo-completo.png" 
+             src="/slogan.png" 
              alt="Dame la Cola"
              /* Cambiamos a h-20 para que el ancho encaje perfecto con tu recuadro verde */
              className="h-20 sm:h-24 w-auto object-contain animate-in fade-in duration-700 mix-blend-multiply" 
