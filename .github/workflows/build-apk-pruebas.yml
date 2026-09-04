@@ -54,7 +54,8 @@ jobs:
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest --legacy-peer-deps
           
           # 2. Creamos el archivo de configuración en formato JSON
-          echo '{"appId": "com.damelacola.app", "appName": "Dame la cola", "webDir": "dist", "server": {"androidScheme": "https"}}' > capacitor.config.json
+          # 🔥 Agregué la configuración para que el Splash Screen dure 2 segundos y se desvanezca suavemente 🔥
+          echo '{"appId": "com.damelacola.app", "appName": "Dame la cola", "webDir": "dist", "server": {"androidScheme": "https"}, "plugins": {"SplashScreen": {"launchShowDuration": 2000, "launchAutoHide": true, "backgroundColor": "#ffffff", "androidSplashResourceName": "splash", "androidScaleType": "CENTER_CROP", "showSpinner": false}}}' > capacitor.config.json
           rm -f capacitor.config.ts || true
           
           # 3. Agregamos la plataforma Android
@@ -69,15 +70,22 @@ jobs:
           
           # 6. Sincronizamos
           npx cap sync android
-          # 🔥 INYECCIÓN DE VERSIÓN (SE DEBE HACER AQUÍ)
+          
+          # 🔥 INYECCIÓN DE VERSIÓN 
           sed -i 's/versionCode [0-9]*/versionCode 999/' android/app/build.gradle
           sed -i 's/versionName "[0-9.]*"/versionName "99"/' android/app/build.gradle
 
-          # 7. INYECTAR TU LOGO (LA SOLUCIÓN)
+          # 7. INYECTAR TU LOGO EN HD (LA SOLUCIÓN A LO BORROSO) 🔥🔥🔥
+          # Instalamos la herramienta oficial de assets
+          npm install -g @capacitor/assets
+          
+          # Verificamos que las imágenes existan antes de copiarlas a la carpeta assets
           mkdir -p assets
-          cp icon.png assets/icon.png || true
-          npm install @capacitor/assets@latest --legacy-peer-deps
-          npx capacitor-assets generate --android
+          if [ -f "icon.png" ]; then cp icon.png assets/icon.png; else echo "⚠️ No se encontró icon.png en la raíz"; fi
+          if [ -f "splash.png" ]; then cp splash.png assets/splash.png; else echo "⚠️ No se encontró splash.png en la raíz"; fi
+          
+          # Forzamos la generación de todos los tamaños para Android
+          npx @capacitor/assets generate --android
 
           # 8. INYECTAR PERMISOS
           sed -i '/<manifest/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
