@@ -53,8 +53,6 @@ jobs:
           # 1. Instalamos Capacitor y GPS
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/geolocation@latest --legacy-peer-deps
           
-          # 2. Creamos el archivo de configuración en formato JSON
-          # 🔥 Agregué la configuración para que el Splash Screen dure 2 segundos y se desvanezca suavemente 🔥
           # 2. Creamos el archivo de configuración en formato JSON (Velocidad Facebook: 500ms)
           echo '{"appId": "com.damelacola.app", "appName": "Dame la cola", "webDir": "dist", "server": {"androidScheme": "https"}, "plugins": {"SplashScreen": {"launchShowDuration": 500, "launchAutoHide": true, "backgroundColor": "#ffffff", "androidSplashResourceName": "splash", "androidScaleType": "CENTER_CROP", "showSpinner": false}}}' > capacitor.config.json
           rm -f capacitor.config.ts || true
@@ -72,23 +70,23 @@ jobs:
           # 6. Sincronizamos
           npx cap sync android
           
-          # 🔥 INYECCIÓN DE VERSIÓN 
+          # 7. INYECCIÓN DE VERSIÓN DE PRUEBAS
           sed -i 's/versionCode [0-9]*/versionCode 999/' android/app/build.gradle
           sed -i 's/versionName "[0-9.]*"/versionName "99"/' android/app/build.gradle
 
-          # 7. INYECTAR TU LOGO EN HD (LA SOLUCIÓN A LO BORROSO) 🔥🔥🔥
-          # Instalamos la herramienta oficial de assets
-          npm install -g @capacitor/assets
-          
-          # Verificamos que las imágenes existan antes de copiarlas a la carpeta assets
+          # 🔥 8. MAGIA: USAR UNA SOLA IMAGEN PARA TODO 🔥
           mkdir -p assets
-          if [ -f "icon.png" ]; then cp icon.png assets/icon.png; else echo "⚠️ No se encontró icon.png en la raíz"; fi
-          if [ -f "splash.png" ]; then cp splash.png assets/splash.png; else echo "⚠️ No se encontró splash.png en la raíz"; fi
+          # Toma tu único archivo icon.png y lo copia para el ícono de la app
+          cp icon.png assets/icon.png || echo "⚠️ No se encontró icon.png"
           
-          # Forzamos la generación de todos los tamaños para Android
+          # Duplica automáticamente tu icon.png para usarlo de pantalla de carga inicial
+          cp icon.png assets/splash.png || echo "⚠️ No se pudo duplicar icon.png"
+          
+          # Instala y ejecuta el generador automático de Capacitor
+          npm install -g @capacitor/assets
           npx @capacitor/assets generate --android
 
-          # 8. INYECTAR PERMISOS
+          # 9. INYECTAR PERMISOS
           sed -i '/<manifest/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="true" />' android/app/src/main/AndroidManifest.xml
           
       - name: Generar APK de Prueba
