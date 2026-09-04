@@ -714,7 +714,10 @@ const verificarCuentaCorreo = async () => {
           )}
         </div>
       )}
-    </div>
+            {/* --- MODAL GUÍA DE LA APP --- */}
+      <ModalComoFunciona isOpen={showReglas} onClose={() => setShowReglas(false)} />
+      
+    </div> // <-- Este es el último div que ya tienes en tu código
   );
 };
 
