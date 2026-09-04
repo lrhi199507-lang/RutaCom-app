@@ -55,7 +55,8 @@ jobs:
           
           # 2. Creamos el archivo de configuración en formato JSON
           # 🔥 Agregué la configuración para que el Splash Screen dure 2 segundos y se desvanezca suavemente 🔥
-          echo '{"appId": "com.damelacola.app", "appName": "Dame la cola", "webDir": "dist", "server": {"androidScheme": "https"}, "plugins": {"SplashScreen": {"launchShowDuration": 2000, "launchAutoHide": true, "backgroundColor": "#ffffff", "androidSplashResourceName": "splash", "androidScaleType": "CENTER_CROP", "showSpinner": false}}}' > capacitor.config.json
+          # 2. Creamos el archivo de configuración en formato JSON (Velocidad Facebook: 500ms)
+          echo '{"appId": "com.damelacola.app", "appName": "Dame la cola", "webDir": "dist", "server": {"androidScheme": "https"}, "plugins": {"SplashScreen": {"launchShowDuration": 500, "launchAutoHide": true, "backgroundColor": "#ffffff", "androidSplashResourceName": "splash", "androidScaleType": "CENTER_CROP", "showSpinner": false}}}' > capacitor.config.json
           rm -f capacitor.config.ts || true
           
           # 3. Agregamos la plataforma Android
