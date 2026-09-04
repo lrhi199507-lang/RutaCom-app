@@ -408,7 +408,7 @@ const confirmarUbicacionMapa = async () => {
                  <span>${precioTotalGlobal.toFixed(2)}</span>
                </div>
                <div className="flex justify-between items-center text-[11px] font-bold text-red-500">
-                 <span>Tarifa de servicio (10%):</span>
+                 <span>Tarifa de servicio (15%):</span>
                  <span>-${comisionTotal.toFixed(2)}</span>
                </div>
                <div className="flex justify-between items-center text-sm font-black text-[#10B981] mt-2 pt-2 border-t border-slate-50">
