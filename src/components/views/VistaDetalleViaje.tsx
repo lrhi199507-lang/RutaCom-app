@@ -1442,12 +1442,12 @@ const solicitarCola = async () => {
              
              <h3 className="text-lg font-black italic uppercase text-[#1F2937] text-center mb-4">Acuerdos de Viaje</h3>
              
-             <div className="space-y-4 mb-6">
+                          <div className="space-y-4 mb-6">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-3 shadow-sm">
                    <Clock size={22} className="text-[#063971] shrink-0 mt-0.5" />
                    <div>
-                      <p className="text-[10px] font-black uppercase text-[#1F2937]">El tiempo es valioso</p>
-                      <p className="text-[10px] font-bold text-slate-500 mt-1 leading-relaxed">Si necesitas cancelar, hazlo <span className="text-[#1F2937] font-black">con anticipación</span>. Así no perderás tu dinero ni le harás perder tiempo al chofer.</p>
+                      <p className="text-[10px] font-black uppercase text-[#1F2937]">Política de 12 horas</p>
+                      <p className="text-[10px] font-bold text-slate-500 mt-1 leading-relaxed">Cancela gratis hasta 12 horas antes. Si cancelas con <span className="text-[#1F2937] font-black">menos de 12 horas</span> de anticipación, se retendrá el <span className="text-orange-600 font-black">50% del pasaje</span> para compensar al chofer.</p>
                    </div>
                 </div>
 
@@ -1455,7 +1455,7 @@ const solicitarCola = async () => {
                    <Navigation size={22} className="text-orange-500 shrink-0 mt-0.5" />
                    <div>
                       <p className="text-[10px] font-black uppercase text-orange-700">Chofer en Camino</p>
-                      <p className="text-[10px] font-bold text-orange-800 mt-1 leading-relaxed">Si cancelas en el momento que el chofer ya marcó que salió a buscarte, <span className="font-black text-red-600">NO habrá reembolso</span>. El pago irá completo al chofer por su gasolina.</p>
+                      <p className="text-[10px] font-bold text-orange-800 mt-1 leading-relaxed">Si cancelas en el momento que el chofer ya marcó que salió a buscarte, <span className="font-black text-red-600">NO habrá reembolso</span>. El pago irá 100% al chofer por su tiempo y gasolina.</p>
                    </div>
                 </div>
 
@@ -1467,6 +1467,7 @@ const solicitarCola = async () => {
                    </div>
                 </div>
              </div>
+            
 
              <button 
                 onClick={() => { setModalTerminos(false); setModalAcompanantes(true); }} 
@@ -1577,20 +1578,43 @@ const solicitarCola = async () => {
               ¿Cancelar {modalCancelar.rol === 'chofer' ? 'el Viaje' : 'tu Asiento'}?
             </h3>
             
-            {modalCancelar.rol === 'pasajero' ? (
-              estadoViaje === 'buscando' ? (
-                <p className="text-[11px] font-bold text-orange-400 mb-6 bg-orange-950/30 p-3 rounded-xl border border-orange-900/50">
-                  ¡ATENCIÓN! El chofer ya va en camino a buscarte. Si cancelas ahora, indemnizaremos al conductor con tu pago y no habrá reembolso.
-                </p>
-              ) : (
-                <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
-                  Cancelar sumará un "strike" a tu historial (Límite: 3). El monto pagado será reembolsado a tu saldo disponible inmediatamente.
-                </p>
-              )
-            ) : modalCancelar.rol === 'chofer' ? (
+                        {modalCancelar.rol === 'pasajero' ? (() => {
+              // 1. Calculamos matemáticamente las horas restantes
+              const fechaV = viaje?.tipoRuta === 'vuelta_de_ruta' ? (viaje?.fechaSalida || viaje?.fecha) : (viaje?.fecha || viaje?.fechaSalida);
+              const horaV = viaje?.tipoRuta === 'vuelta_de_ruta' ? (viaje?.horaSalida || viaje?.hora) : (viaje?.hora || viaje?.horaSalida);
+              let horasRestantes = 999;
+              
+              if (fechaV && horaV) {
+                 const [y, m, d] = fechaV.split('-');
+                 const [h, min] = horaV.split(':');
+                 const fechaExacta = new Date(y, m - 1, d, h, min);
+                 horasRestantes = (fechaExacta - new Date()) / (1000 * 60 * 60);
+              }
+
+              // 2. Lanzamos la advertencia correcta según la hora
+              if (estadoViaje === 'buscando') {
+                return (
+                  <p className="text-[11px] font-bold text-orange-400 mb-6 bg-orange-950/30 p-3 rounded-xl border border-orange-900/50">
+                    ¡ATENCIÓN! El chofer ya va en camino a buscarte. Si cancelas ahora se aplicará el <span className="font-black text-white">100% de penalidad</span>. El pago irá al chofer por su tiempo y no habrá reembolso.
+                  </p>
+                );
+              } else if (horasRestantes <= 12) {
+                 return (
+                  <p className="text-[11px] font-bold text-amber-400 mb-6 bg-amber-950/30 p-3 rounded-xl border border-amber-900/50">
+                    ¡ATENCIÓN! Faltan menos de 12 horas para el viaje. Si cancelas ahora, se retendrá el <span className="font-black text-white">50% de tu pasaje</span> para compensar al conductor.
+                  </p>
+                );
+              } else {
+                 return (
+                  <p className="text-[11px] font-bold text-[#10B981] mb-6 bg-[#10B981]/10 p-3 rounded-xl border border-[#10B981]/30">
+                    Estás cancelando con más de 12 horas de anticipación. El monto pagado será reembolsado a tu saldo al <span className="font-black">100% sin penalizaciones</span>.
+                  </p>
+                 );
+              }
+            })() : modalCancelar.rol === 'chofer' ? (
               pasajerosConfirmados.length > 0 ? (
                 <p className="text-[11px] font-bold text-red-400 mb-6 bg-red-950/30 p-3 rounded-xl border border-red-900/50">
-                  ¡ATENCIÓN! Tienes pasajeros confirmados. Al cancelar, el dinero se les reembolsará a ellos inmediatamente y tú recibirás un "strike" en tu historial de chofer (Límite: 3).
+                  ¡ATENCIÓN! Tienes pasajeros confirmados. Al cancelar, el dinero se les reembolsará a ellos y tú recibirás un "strike" en tu historial (Límite: 3).
                 </p>
               ) : (
                 <p className="text-[11px] font-bold text-[#10B981] mb-6 bg-[#10B981]/10 p-3 rounded-xl border border-[#10B981]/30">
@@ -1598,6 +1622,7 @@ const solicitarCola = async () => {
                 </p>
               )
             ) : null}
+            
 
             <div className="text-left mb-6">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Motivo de cancelación:</p>
