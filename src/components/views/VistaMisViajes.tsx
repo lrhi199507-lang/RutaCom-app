@@ -51,7 +51,6 @@ const esViajeFantasma = (viaje) => {
   }
 };
 
-
 // --- 2. MODAL DE EDICIÓN ---
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   if (!isOpen || !viaje) return null;
@@ -98,11 +97,9 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
 const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
   if (!viaje) return null;
   
-  // Detectamos si el viaje expiró vacío
   const expiradoVacio = esViajeFantasma(viaje);
   let estado = String(viaje.estado || 'disponible');
   
-  // Si ya expiró, forzamos visualmente a que esté cancelado/agotado
   if (expiradoVacio && estado === 'disponible') estado = 'expirado';
 
   const esActivo = estado !== 'finalizado' && estado !== 'cancelado' && estado !== 'expirado';
@@ -118,8 +115,6 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 
   return (
     <div className={`bg-white p-6 rounded-[30px] border shadow-sm relative space-y-4 transition-colors ${esActivo ? 'border-slate-100 hover:border-[#063971]/20' : 'border-slate-200 opacity-80'}`}>
-      
-      {/* ETIQUETA DINÁMICA CON EL ESTADO REAL */}
       <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' : estado === 'expirado' ? 'bg-red-50 border-red-200 text-red-500' : esCancelado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-[#063971]/10 border-[#063971]/20 text-[#063971]'}`}>
           {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : estado === 'expirado' ? 'TIEMPO AGOTADO' : esCancelado ? 'CANCELADO' : 'DISPONIBLE'}
       </div>
@@ -151,7 +146,6 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
         <div className="flex items-center gap-2.5 col-span-2"><Users size={16} className="text-[#063971]"/><p className="text-xs font-bold text-[#1F2937]">{totalPasajeros} / {viaje.asientos || viaje.puestos || 1} Confirmados</p></div>
       </div>
 
-      {/* BOTÓN DINÁMICO */}
       <button disabled={esCancelado || esFinalizado} onClick={() => onClickGestionar(viaje)}
         className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all shadow-lg ${
           (esCancelado || esFinalizado) ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' : 
@@ -171,31 +165,13 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
   );
 };
 
-
 // --- 4. TARJETA PASAJERO ---
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   if (!viaje) return null;
 
-  // 🔥 1. Aplicamos la misma lógica para saber si el tiempo se agotó
   const expiradoVacio = esViajeFantasma(viaje);
   let estado = String(viaje.estado || 'disponible');
   
-  // Si expiró, forzamos visualmente a que diga agotado
-  if (expiradoVacio && estado === 'disponible') estado = 'expirado';
-
-  const esActivo = estado !== 'finalizado' && estado !== 'cancelado' && estado !== 'expirado';
-  const esCancelado = estado === 'cancelado' || estado === 'expirado';
-  const esFinalizado = estado === 'finalizado';
-  
-// --- 4. TARJETA PASAJERO ---
-const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
-  if (!viaje) return null;
-
-  // 🔥 1. Aplicamos la misma lógica para saber si el tiempo se agotó
-  const expiradoVacio = esViajeFantasma(viaje);
-  let estado = String(viaje.estado || 'disponible');
-  
-  // Si expiró, forzamos visualmente a que diga agotado
   if (expiradoVacio && estado === 'disponible') estado = 'expirado';
 
   const esActivo = estado !== 'finalizado' && estado !== 'cancelado' && estado !== 'expirado';
@@ -267,8 +243,6 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   );
 };
 
-
-
 // --- 5. COMPONENTE PRINCIPAL ---
 export const VistaMisViajes = ({ 
   viajesChofer = [], viajesPasajeroActivos = [], viajesPasajeroHistorial = [], 
@@ -280,7 +254,6 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-
   let cActivos = []; let cHistorial = [];
   let pActivos = []; let pHistorial = [];
 
@@ -291,7 +264,6 @@ export const VistaMisViajes = ({
         const est = String(v.estado || 'disponible');
         const expiradoVacio = esViajeFantasma(v);
         
-        // Si finalizó, canceló, o es un "fantasma", va al historial
         if (est === 'finalizado' || est === 'cancelado' || expiradoVacio) {
           cHistorial.push(v);
         } else {
@@ -311,8 +283,8 @@ export const VistaMisViajes = ({
 
     Object.values(unicos).forEach(v => {
       const est = String(v.estado || 'disponible');
-      // Para el pasajero la regla es igual
-      if (est === 'finalizado' || est === 'cancelado') {
+      const expiradoVacio = esViajeFantasma(v);
+      if (est === 'finalizado' || est === 'cancelado' || expiradoVacio) {
         pHistorial.push(v);
       } else {
         pActivos.push(v);
@@ -353,36 +325,42 @@ export const VistaMisViajes = ({
       <div className="flex-1 p-4 pb-24 overflow-y-auto">
         {activeTab === 'chofer' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
-              <button onClick={() => setSubTabChofer('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'activos' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
-              <button onClick={() => setSubTabChofer('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabChofer === 'historial' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
+            <div className="flex bg-white p-1.5 rounded-full mb-6 border border-slate-100 shadow-sm relative">
+              <div className={`absolute top-1.5 bottom-1.5 bg-[#1F2937] rounded-full transition-all duration-300 ${subTabChofer === 'activos' ? 'left-1.5 w-[calc(50%-6px)]' : 'left-[calc(50%+3px)] w-[calc(50%-6px)]'}`} />
+              <button onClick={() => setSubTabChofer('activos')} className={`relative flex-1 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 ${subTabChofer === 'activos' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabChofer('historial')} className={`relative flex-1 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 ${subTabChofer === 'historial' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
-            {subTabChofer === 'activos' ? (
-              cActivos.length > 0 ? cActivos.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => setEditingViaje(v)} onArchivar={() => {}} onClickGestionar={onVerDetalles} />)
-              : <div className="text-center py-20 opacity-60"><Navigation size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin rutas activas</p></div>
-            ) : (
-              cHistorial.length > 0 ? cHistorial.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => {}} onArchivar={() => {}} onClickGestionar={onVerDetalles} />)
-              : <div className="text-center py-20 opacity-60"><Archive size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Historial Vacío</p></div>
-            )}
+
+            <div className="space-y-4">
+              {subTabChofer === 'activos' ? (
+                 cActivos.length > 0 ? cActivos.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => setEditingViaje(v)} onClickGestionar={onVerDetalles} />) : <p className="text-center text-slate-400 text-xs py-10 font-bold uppercase tracking-widest">No tienes viajes activos</p>
+              ) : (
+                 cHistorial.length > 0 ? cHistorial.map(v => <ViajeCardChofer key={v.id} viaje={v} onEdit={() => setEditingViaje(v)} onClickGestionar={onVerDetalles} />) : <p className="text-center text-slate-400 text-xs py-10 font-bold uppercase tracking-widest">No hay viajes en historial</p>
+              )}
+            </div>
           </div>
         )}
 
         {activeTab === 'pasajero' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="flex bg-white p-1 rounded-full mb-6 max-w-[220px] mx-auto border border-slate-200 shadow-sm">
-              <button onClick={() => setSubTabPasajero('activos')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'activos' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
-              <button onClick={() => setSubTabPasajero('historial')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${subTabPasajero === 'historial' ? 'bg-[#1F2937] text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
+            <div className="flex bg-white p-1.5 rounded-full mb-6 border border-slate-100 shadow-sm relative">
+              <div className={`absolute top-1.5 bottom-1.5 bg-[#1F2937] rounded-full transition-all duration-300 ${subTabPasajero === 'activos' ? 'left-1.5 w-[calc(50%-6px)]' : 'left-[calc(50%+3px)] w-[calc(50%-6px)]'}`} />
+              <button onClick={() => setSubTabPasajero('activos')} className={`relative flex-1 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 ${subTabPasajero === 'activos' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}>Activos</button>
+              <button onClick={() => setSubTabPasajero('historial')} className={`relative flex-1 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all z-10 ${subTabPasajero === 'historial' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}>Historial</button>
             </div>
-            {subTabPasajero === 'activos' ? (
-              pActivos.length > 0 ? pActivos.map(v => <ViajeCardPasajero key={v.id} viaje={v} userData={userData} onClickGestionar={onVerDetalles} />)
-              : <div className="text-center py-20 opacity-60"><Users size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin reservas activas</p></div>
-            ) : (
-              pHistorial.length > 0 ? pHistorial.map(v => <ViajeCardPasajero key={v.id} viaje={v} userData={userData} onClickGestionar={onVerDetalles} />)
-              : <div className="text-center py-20 opacity-60"><Archive size={40} className="mx-auto text-slate-300 mb-4" /><p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sin historial de viajes</p></div>
-            )}
+
+            <div className="space-y-4">
+              {subTabPasajero === 'activos' ? (
+                 pActivos.length > 0 ? pActivos.map(v => <ViajeCardPasajero key={v.id} viaje={v} onClickGestionar={onVerDetalles} userData={userData} />) : <p className="text-center text-slate-400 text-xs py-10 font-bold uppercase tracking-widest">No tienes viajes activos</p>
+              ) : (
+                 pHistorial.length > 0 ? pHistorial.map(v => <ViajeCardPasajero key={v.id} viaje={v} onClickGestionar={onVerDetalles} userData={userData} />) : <p className="text-center text-slate-400 text-xs py-10 font-bold uppercase tracking-widest">No hay viajes en historial</p>
+              )}
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 };
+
+export default VistaMisViajes;
