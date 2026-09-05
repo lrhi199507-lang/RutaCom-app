@@ -11,7 +11,7 @@ import { App } from '@capacitor/app';
 
 import { 
   ArrowLeft, MapPin, User, Users, ShieldCheck, 
-  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock, RefreshCcw
+  MessageCircle, Repeat, ChevronRight, Snowflake, CigaretteOff, Dog, Check, X, Map, Key, Lock, Unlock, AlertTriangle, Navigation, Share2, Star, BadgeCheck, Clock, RefreshCcw, Calendar
 } from 'lucide-react';
 import { UBICACIONES } from "../../constants/ubicaciones";
 
@@ -74,6 +74,26 @@ const obtenerArraySeguro = (dato) => {
   if (typeof dato === 'object') return Object.values(dato);
   return [];
 };
+
+const formatearFechaLarga = (fechaStr) => {
+  try {
+    if (!fechaStr || typeof fechaStr !== 'string') return "Sin fecha";
+    const p = fechaStr.split('-');
+    if (p.length !== 3) return fechaStr;
+    return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', '');
+  } catch (e) { return "Sin fecha"; }
+};
+
+const formatearHora12h = (horaStr) => {
+  try {
+    if (!horaStr || typeof horaStr !== 'string') return "Sin hora";
+    const [h, m] = horaStr.split(':');
+    const horas = parseInt(h, 10);
+    if (isNaN(horas)) return horaStr;
+    return `${horas % 12 || 12}:${m} ${horas >= 12 ? 'PM' : 'AM'}`;
+  } catch (e) { return "Sin hora"; }
+};
+
 
 export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, onIniciarChat }) => {
   if (!viajeInicial) return null;
@@ -930,7 +950,9 @@ const solicitarCola = async () => {
         ) : (
 
           <div className="px-5 space-y-4">
-            <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-8">
+                        {/* BLOQUE DE TICKET: COSTO, RUTA, FECHA Y HORA */}
+            <div className="bg-white p-6 rounded-[35px] shadow-sm border border-slate-100 space-y-6">
+              
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo Total</p>
@@ -954,7 +976,32 @@ const solicitarCola = async () => {
                   <p className="text-[7px] font-bold text-slate-400 uppercase mt-1">{obtenerEstado(viaje?.cD || "")}</p>
                 </div>
               </div>
+
+              {/* NUEVO: SECCIÓN DE FECHA Y HORA DENTRO DEL TICKET */}
+              <div className="pt-5 border-t border-slate-100 grid grid-cols-2 gap-2">
+                 <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+                       <Calendar size={18} className="text-[#063971]" />
+                    </div>
+                    <div className="min-w-0">
+                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Salida</p>
+                       <p className="text-xs font-black text-[#1F2937] capitalize leading-none truncate">{formatearFechaLarga(viaje?.tipoRuta === 'vuelta_de_ruta' ? (viaje?.fechaSalida || viaje?.fecha) : (viaje?.fecha || viaje?.fechaSalida))}</p>
+                    </div>
+                 </div>
+                 
+                 <div className="flex items-center gap-3 border-l border-slate-100 pl-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+                       <Clock size={18} className="text-[#063971]" />
+                    </div>
+                    <div className="min-w-0">
+                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Hora</p>
+                       <p className="text-xs font-black text-[#1F2937] uppercase leading-none truncate">{formatearHora12h(viaje?.tipoRuta === 'vuelta_de_ruta' ? (viaje?.horaSalida || viaje?.hora) : (viaje?.hora || viaje?.horaSalida))}</p>
+                    </div>
+                 </div>
+              </div>
+
             </div>
+            
 
             {viaje.referencia && viaje.referencia.trim() !== "" && (
               <div className="mt-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
