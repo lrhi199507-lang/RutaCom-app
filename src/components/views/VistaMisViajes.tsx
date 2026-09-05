@@ -187,6 +187,21 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   const esCancelado = estado === 'cancelado' || estado === 'expirado';
   const esFinalizado = estado === 'finalizado';
   
+// --- 4. TARJETA PASAJERO ---
+const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
+  if (!viaje) return null;
+
+  // 🔥 1. Aplicamos la misma lógica para saber si el tiempo se agotó
+  const expiradoVacio = esViajeFantasma(viaje);
+  let estado = String(viaje.estado || 'disponible');
+  
+  // Si expiró, forzamos visualmente a que diga agotado
+  if (expiradoVacio && estado === 'disponible') estado = 'expirado';
+
+  const esActivo = estado !== 'finalizado' && estado !== 'cancelado' && estado !== 'expirado';
+  const esCancelado = estado === 'cancelado' || estado === 'expirado';
+  const esFinalizado = estado === 'finalizado';
+  
   const origen = extractText(viaje.cO || viaje.origen, "Origen");
   const destino = extractText(viaje.cD || viaje.destino, "Destino");
   const conductor = extractText(viaje.cN || viaje.conductor, "Conductor");
@@ -251,6 +266,7 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
     </div>
   );
 };
+
 
 
 // --- 5. COMPONENTE PRINCIPAL ---
