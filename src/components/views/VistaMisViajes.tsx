@@ -30,6 +30,28 @@ const formatearHora12h = (horaStr) => {
   } catch (e) { return "Sin hora"; }
 };
 
+// --- HELPER: DETECTAR VIAJE EXPIRADO/FANTASMA ---
+const esViajeFantasma = (viaje) => {
+  try {
+    const estado = String(viaje.estado || 'disponible');
+    if (estado === 'en_curso' || estado === 'buscando' || estado === 'finalizado' || estado === 'cancelado') return false;
+    if (Array.isArray(viaje.pasajeros) && viaje.pasajeros.length > 0) return false;
+
+    const fecha = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
+    const hora = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
+    if (!fecha || !hora) return false;
+
+    const [year, month, day] = fecha.split('-');
+    const [hour, minute] = hora.split(':');
+    const fechaViaje = new Date(year, month - 1, day, hour, minute);
+    
+    return new Date() > fechaViaje; 
+  } catch (e) {
+    return false;
+  }
+};
+
+
 // --- 2. MODAL DE EDICIÓN ---
 const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
   if (!isOpen || !viaje) return null;
@@ -75,27 +97,31 @@ const ModalEditarViaje = ({ viaje, isOpen, onClose, onSave }) => {
 // --- 3. TARJETA CHOFER ---
 const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
   if (!viaje) return null;
-  const estado = String(viaje.estado || 'disponible');
-  const esActivo = estado !== 'finalizado' && estado !== 'cancelado';
-  const esCancelado = estado === 'cancelado';
+  
+  // Detectamos si el viaje expiró vacío
+  const expiradoVacio = esViajeFantasma(viaje);
+  let estado = String(viaje.estado || 'disponible');
+  
+  // Si ya expiró, forzamos visualmente a que esté cancelado/agotado
+  if (expiradoVacio && estado === 'disponible') estado = 'expirado';
+
+  const esActivo = estado !== 'finalizado' && estado !== 'cancelado' && estado !== 'expirado';
+  const esCancelado = estado === 'cancelado' || estado === 'expirado';
   const esFinalizado = estado === 'finalizado';
   const estaEnCurso = estado === 'en_curso' || estado === 'buscando';
   const esRetorno = viaje.tipoRuta === 'vuelta_de_ruta';
   
   let totalPasajeros = 0;
   if (Array.isArray(viaje.pasajeros)) totalPasajeros = viaje.pasajeros.length;
-
   const solicitudes = Array.isArray(viaje.reservasPendientes) ? viaje.reservasPendientes.length : 0;
-
   const botonNaranja = esActivo && (solicitudes > 0 || estaEnCurso || totalPasajeros > 0);
 
-  const origenText = viaje.cO || String(viaje.origen || "").split(',')[0] || "Origen";
-  const destinoText = viaje.cD || String(viaje.destino || "").split(',')[0] || "Destino";
-
   return (
-    <div className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm relative space-y-4 hover:border-[#063971]/20 transition-colors">
-      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' : esCancelado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-[#063971]/10 border-[#063971]/20 text-[#063971]'}`}>
-          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : esCancelado ? 'CANCELADO' : 'DISPONIBLE'}
+    <div className={`bg-white p-6 rounded-[30px] border shadow-sm relative space-y-4 transition-colors ${esActivo ? 'border-slate-100 hover:border-[#063971]/20' : 'border-slate-200 opacity-80'}`}>
+      
+      {/* ETIQUETA DINÁMICA CON EL ESTADO REAL */}
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest z-20 ${estaEnCurso ? 'bg-orange-50 border-orange-200 text-orange-600 animate-pulse' : esFinalizado ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' : estado === 'expirado' ? 'bg-red-50 border-red-200 text-red-500' : esCancelado ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-[#063971]/10 border-[#063971]/20 text-[#063971]'}`}>
+          {estaEnCurso ? 'EN CURSO' : esFinalizado ? 'FINALIZADO' : estado === 'expirado' ? 'TIEMPO AGOTADO' : esCancelado ? 'CANCELADO' : 'DISPONIBLE'}
       </div>
 
       {esRetorno && <div className="absolute top-6 left-6 text-[#10B981] flex items-center gap-1.5 z-20"><Repeat size={14} className='-rotate-90'/><span className="text-[9px] font-black uppercase tracking-widest">RETORNO</span></div>}
@@ -125,23 +151,26 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
         <div className="flex items-center gap-2.5 col-span-2"><Users size={16} className="text-[#063971]"/><p className="text-xs font-bold text-[#1F2937]">{totalPasajeros} / {viaje.asientos || viaje.puestos || 1} Confirmados</p></div>
       </div>
 
-      <button disabled={esCancelado} onClick={() => onClickGestionar(viaje)}
+      {/* BOTÓN DINÁMICO */}
+      <button disabled={esCancelado || esFinalizado} onClick={() => onClickGestionar(viaje)}
         className={`w-full mt-4 rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all shadow-lg ${
-          esCancelado ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' : 
+          (esCancelado || esFinalizado) ? 'bg-slate-100 text-slate-400 border border-slate-200 shadow-none' : 
           botonNaranja ? 'bg-orange-500 text-white shadow-orange-500/40 animate-pulse active:scale-95' :
           esActivo ? 'bg-[#063971] text-white shadow-[#063971]/30 active:scale-95' : 
           'bg-[#1F2937] text-white shadow-[#1F2937]/30 active:scale-95'
         }`}>
-        {esCancelado ? <><Archive size={16} /> Viaje Cancelado</> 
+        {estado === 'expirado' ? <><Archive size={16} /> Tiempo Agotado</> 
+        : esCancelado ? <><Archive size={16} /> Viaje Cancelado</> 
+        : esFinalizado ? <><Check size={16} /> Viaje Finalizado</>
         : (solicitudes > 0 && esActivo) ? <><Info size={18} /> ¡Tienes {solicitudes} solicitud{solicitudes > 1 ? 'es' : ''}!</>
         : estaEnCurso ? <><Navigation size={16} /> VIAJE ACTIVO - GESTIONAR</>
         : (totalPasajeros > 0 && esActivo) ? <><Users size={16} /> Pasajeros Confirmados</>
-        : esActivo ? <><Settings size={16} /> Gestionar Viaje</> 
-        : <><Star size={16} /> Ver Resumen</>}
+        : <><Settings size={16} /> Gestionar Viaje</>}
       </button>
     </div>
   );
 };
+
 
 // --- 4. TARJETA PASAJERO ---
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
@@ -223,32 +252,6 @@ export const VistaMisViajes = ({
   const [editingViaje, setEditingViaje] = useState(null);
   const [toastData, setToastData] = useState({ show: false, message: '' });
 
-// 🔥 NUEVA FUNCIÓN INTELIGENTE: Detecta si un viaje expiró vacío
-  const esViajeFantasma = (viaje) => {
-    try {
-      const estado = String(viaje.estado || 'disponible');
-      
-      // Si el viaje ya inició o está buscando, NO es fantasma (aunque vaya tarde)
-      if (estado === 'en_curso' || estado === 'buscando') return false;
-      
-      // Si el viaje tiene pasajeros confirmados, NO es fantasma (los pasajeros lo están esperando)
-      if (Array.isArray(viaje.pasajeros) && viaje.pasajeros.length > 0) return false;
-
-      // Evaluamos la fecha y hora
-      const fecha = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.fechaSalida || viaje.fecha) : (viaje.fecha || viaje.fechaSalida);
-      const hora = viaje.tipoRuta === 'vuelta_de_ruta' ? (viaje.horaSalida || viaje.hora) : (viaje.hora || viaje.horaSalida);
-      
-      if (!fecha || !hora) return false;
-
-      const [year, month, day] = fecha.split('-');
-      const [hour, minute] = hora.split(':');
-      const fechaViaje = new Date(year, month - 1, day, hour, minute);
-      
-      return new Date() > fechaViaje; // Retorna true solo si la hora ya pasó Y está vacío
-    } catch (e) {
-      return false;
-    }
-  };
 
   let cActivos = []; let cHistorial = [];
   let pActivos = []; let pHistorial = [];
