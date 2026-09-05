@@ -176,9 +176,16 @@ const ViajeCardChofer = ({ viaje, onEdit, onArchivar, onClickGestionar }) => {
 const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   if (!viaje) return null;
 
-  const estado = String(viaje.estado || 'disponible');
-  const esActivo = estado !== 'finalizado' && estado !== 'cancelado';
-  const esCancelado = estado === 'cancelado';
+  // 🔥 1. Aplicamos la misma lógica para saber si el tiempo se agotó
+  const expiradoVacio = esViajeFantasma(viaje);
+  let estado = String(viaje.estado || 'disponible');
+  
+  // Si expiró, forzamos visualmente a que diga agotado
+  if (expiradoVacio && estado === 'disponible') estado = 'expirado';
+
+  const esActivo = estado !== 'finalizado' && estado !== 'cancelado' && estado !== 'expirado';
+  const esCancelado = estado === 'cancelado' || estado === 'expirado';
+  const esFinalizado = estado === 'finalizado';
   
   const origen = extractText(viaje.cO || viaje.origen, "Origen");
   const destino = extractText(viaje.cD || viaje.destino, "Destino");
@@ -199,13 +206,13 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
   }
 
   return (
-    <div className={`bg-white p-5 rounded-3xl shadow-sm border mb-4 relative ${esConfirmado && esActivo ? 'border-[#063971]/30 hover:border-[#063971]/50' : 'border-slate-100 hover:border-[#063971]/20'} transition-colors`}>
+    <div className={`bg-white p-5 rounded-3xl shadow-sm border mb-4 relative transition-colors ${esConfirmado && esActivo ? 'border-[#063971]/30 hover:border-[#063971]/50' : esActivo ? 'border-slate-100 hover:border-[#063971]/20' : 'border-slate-200 opacity-80'}`}>
       
       <div className="flex justify-between items-center mb-4">
-         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${esActivo ? 'bg-[#063971]/10 text-[#063971]' : 'bg-slate-100 text-slate-500'}`}>
-            {esActivo ? 'ACTIVO' : esCancelado ? 'CANCELADO' : 'FINALIZADO'}
+         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${esActivo ? 'bg-[#063971]/10 text-[#063971]' : estado === 'expirado' ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'}`}>
+            {esActivo ? 'ACTIVO' : estado === 'expirado' ? 'TIEMPO AGOTADO' : esCancelado ? 'CANCELADO' : 'FINALIZADO'}
          </span>
-         <span className="text-2xl font-black italic text-[#10B981]">${precio}</span>
+         <span className={`text-2xl font-black italic ${esActivo || esFinalizado ? 'text-[#10B981]' : 'text-slate-400'}`}>${precio}</span>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -213,7 +220,7 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
            {typeof viaje.fotoPerfil === 'string' && viaje.fotoPerfil.startsWith('http') ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <Users size={20} className="text-slate-400" />}
          </div>
          <div className="flex-1 min-w-0">
-           <p className="font-black text-sm text-[#1F2937] uppercase truncate">{conductor}</p>
+           <p className={`font-black text-sm uppercase truncate ${esActivo || esFinalizado ? 'text-[#1F2937]' : 'text-slate-500'}`}>{conductor}</p>
            <p className="text-[9px] font-black text-[#063971] uppercase">Chofer Designado</p>
          </div>
       </div>
@@ -228,6 +235,10 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
         <button onClick={() => onClickGestionar(viaje)} className={`w-full rounded-full p-4 font-black uppercase text-xs tracking-[2px] flex items-center justify-center gap-2 transition-all ${esConfirmado ? 'bg-[#063971] text-white shadow-lg shadow-[#063971]/30 active:scale-95' : 'bg-white text-slate-500 border border-slate-200 hover:text-[#063971] hover:border-[#063971]/30'}`}>
             {esConfirmado ? <><Check size={16} /> Ver Detalles / PIN</> : <><Info size={16} /> Esperando Confirmación</>}
         </button>
+      ) : estado === 'expirado' ? (
+        <button disabled className="w-full bg-slate-100 text-slate-400 rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2">
+            <Archive size={16} /> Tiempo Agotado
+        </button>
       ) : esCancelado ? (
         <button disabled className="w-full bg-slate-100 text-slate-400 rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] flex items-center justify-center gap-2">
             <Archive size={16} /> Viaje Cancelado
@@ -240,6 +251,7 @@ const ViajeCardPasajero = ({ viaje, onClickGestionar, userData }) => {
     </div>
   );
 };
+
 
 // --- 5. COMPONENTE PRINCIPAL ---
 export const VistaMisViajes = ({ 
