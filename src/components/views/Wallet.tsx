@@ -569,25 +569,26 @@ export const Wallet = ({ userData, onRegresar }) => {
                    ) : (
                      <>
                         <div className="flex justify-between items-center text-[11px] font-bold text-slate-500">
-                          <span>Pago global pasajeros:</span>
-                          <span>${((Number(txSeleccionada.monto) || 0) / 0.9).toFixed(2)}</span>
+                          <span>Pago de pasajero(s):</span>
+                          <span>${((Number(txSeleccionada.monto) || 0) / 0.85).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center text-[11px] font-bold text-red-500">
-                          <span>Comisión app global (10%):</span>
-                          <span>-${(((Number(txSeleccionada.monto) || 0) / 0.9) * 0.1).toFixed(2)}</span>
+                          <span>Comisión app (15%):</span>
+                          {/* 🔥 Aquí cambiamos 0.9 por 0.85 y 0.1 por 0.15 🔥 */}
+                          <span>-${(((Number(txSeleccionada.monto) || 0) / 0.85) * 0.15).toFixed(2)}</span>
                         </div>
-                     </>
-                   )}
-                   
-                   <div className="h-px bg-slate-200 w-full my-3"></div>
-                   
-                   <div className="flex justify-between items-center text-base font-black text-[#10B981]">
-                     <span>Total Acreditado:</span>
-                     <span>${(Number(txSeleccionada.monto) || 0).toFixed(2)}</span>
-                   </div>
-                 </>
-               )}
-            </div>
+                      </>
+                    )}
+                    
+                    <div className="h-px bg-slate-200 w-full my-3"></div>
+                    
+                    <div className="flex justify-between items-center text-base font-black text-[#10B981]">
+                      <span>Total Acreditado:</span>
+                      <span>${(Number(txSeleccionada.monto) || 0).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+             </div>
 
             <button onClick={() => setTxSeleccionada(null)} className="w-full bg-[#063971] text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest mt-6 active:scale-95 transition-all shadow-lg shadow-[#063971]/30 hover:bg-blue-800">
               Entendido
