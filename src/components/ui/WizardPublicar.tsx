@@ -378,7 +378,7 @@ const confirmarUbicacionMapa = async () => {
     const asientosCount = Number(viajeForm.asientos) || 1; // Si está vacío o es 0, toma 1 por defecto
     
     const precioTotalGlobal = precioUnitario * asientosCount;
-    const comisionTotal = precioTotalGlobal * 0.10;
+    const comisionTotal = precioTotalGlobal * 0.15;
     const gananciaNetaTotal = precioTotalGlobal - comisionTotal;
     
   return (
