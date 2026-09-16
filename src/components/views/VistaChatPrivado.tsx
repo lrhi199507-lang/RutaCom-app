@@ -117,7 +117,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     };
   }, [chatIdReal]);
 
-    // ESCÁNER EN VIVO PARA LIMPIAR NOTIFICACIONES
+      // ESCÁNER EN VIVO PARA LIMPIAR NOTIFICACIONES
   useEffect(() => {
     if (!chatIdReal || mensajes.length === 0) return;
     
@@ -163,11 +163,11 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
         textoUsuario = "🚨 Me quedé varado / Ayuda";
         respuestaBot = "⚠️ Líneas de Emergencia Sugeridas:\n\n📞 Nacionales: 911\n📞 Vialidad: 0800-VIALIDAD\n\n(Pronto directorio de Grúas y Mecánicos).";
         break;
-            case 'humano':
-        // 1. Mandamos el texto del usuario
+                  case 'humano':
+        // 1. Mensaje del usuario
         await enviar(null, "Hola, necesito hablar con un asesor humano para resolver un problema complejo.");
         
-        // 2. Guardamos la respuesta del bot en la colección de mensajes
+        // 2. Respuesta del bot
         const humanoRef = doc(collection(db, `Chats/${chatIdReal}/Mensajes`));
         await setDoc(humanoRef, {
           texto: "⏳ ¡Entendido! Un asesor humano ha sido notificado y leerá tu caso pronto. Mientras tanto, por favor escribe aquí abajo todos los detalles de tu problema para agilizar la atención.",
@@ -176,19 +176,20 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
           participantes: arregloParticipantes
         });
 
-        // 3. 🔥 EL FIX: Actualizamos el Chat Principal para alertar al Búnker 🔥
+        // 3. Forzamos la alerta al búnker (Ahora el escáner no la borrará)
         await setDoc(doc(db, "Chats", chatIdReal), {
             ultimoMensaje: "⏳ ¡Entendido! Un asesor humano ha sido notificado...",
             ultimaHora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            mensajesSinLeer: 1, // 🔥 AHORA SÍ: Lo dejamos en 1 para que el Búnker lo vea rojo
-            remitenteUltimoMensaje: miId, // 🔥 Lo dejamos a nombre del usuario, no del admin
-            requiereAtencion: true, // 🔥 Agregamos esta bandera extra por si acaso
+            mensajesSinLeer: 1, 
+            remitenteUltimoMensaje: miId, // 🔥 Esto es vital para el Búnker
+            requiereAtencion: true,
             timestamp: Date.now(),
             participantes: arregloParticipantes,
             ...(isSoporte && !esAdmin ? { esSoporte: true, uidPasajero: miId, nombrePasajero: userData?.nombre || 'Usuario', ruta: "Soporte Técnico" } : {})
         }, { merge: true });
         
         return; 
+
     }
 
     try {
