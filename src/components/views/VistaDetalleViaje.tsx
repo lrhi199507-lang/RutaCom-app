@@ -800,61 +800,76 @@ const solicitarCola = async () => {
     } finally { setCargando(false); }
   };
   
-    const enviarCalificacion = async () => {
+      const enviarCalificacion = async () => {
     if (stars === 0) {
       setToast({ texto: "Selecciona al menos 1 estrella", tipo: "error" });
-      setTimeout(() => setToast(null), 3000); return;
+      setTimeout(() => setToast(null), 3000); 
+      return;
     }
     setCargando(true);
+
     try {
+      // Nos aseguramos de capturar el ID correcto del pasajero
       const idChofer = viaje.uidConductor || viaje.idCreador || "SinID";
-      
-      // 1. Crear documento de la reseña
-      await ejecutarConTimeout(addDoc(collection(db, "Resenas"), {
-        idViaje: viaje.id, 
+      const idDelPasajero = userData?.uid || userData?.id || "SinID";
+
+      // 1. Guardar la reseña en la colección 'Resenas' (Sin el timeout)
+      await addDoc(collection(db, "Resenas"), {
+        idViaje: viaje.id || "SinID", 
         idConductor: idChofer, 
-        idPasajero: userData?.id || "SinID",
+        idPasajero: idDelPasajero,
         nombrePasajero: userData?.nombre || "Usuario", 
         estrellas: Number(stars), 
         comentario: String(comentarioResena || ""), 
         fecha: new Date().toISOString()
-      }));
+      });
 
-      // 2. ACTUALIZAR EL PERFIL PÚBLICO DEL CHOFER (Suma de estrellas y promedio)
+      // 2. Intentar actualizar el perfil del chofer (Aislado para que no tranque si falla)
       if (idChofer !== "SinID") {
-        const userRef = doc(db, "usuarios", idChofer);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          const sumaActual = Number(data.sumaEstrellas || 0) + Number(stars);
-          const totalResenas = Number(data.totalResenas || 0) + 1;
-          const nuevoRating = (sumaActual / totalResenas).toFixed(1);
+        try {
+          const userRef = doc(db, "usuarios", idChofer);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            const sumaActual = Number(data.sumaEstrellas || 0) + Number(stars);
+            const totalResenas = Number(data.totalResenas || 0) + 1;
+            const nuevoRating = (sumaActual / totalResenas).toFixed(1);
 
-          await updateDoc(userRef, {
-            sumaEstrellas: sumaActual,
-            totalResenas: totalResenas,
-            rating: nuevoRating
-          });
+            await updateDoc(userRef, {
+              sumaEstrellas: sumaActual,
+              totalResenas: totalResenas,
+              rating: nuevoRating
+            });
+          }
+        } catch (permError) {
+          console.warn("Permiso denegado para editar perfil, pero la reseña se guardó.");
         }
       }
 
-      // 3. Marcar como calificado en la lista del Viaje
-      const pasajerosActualizados = pasajerosConfirmados.map(p => {
+      // 3. Marcar el viaje como calificado (Protegido por si el array viene vacío)
+      const arrayPasajeros = pasajerosConfirmados || [];
+      const pasajerosActualizados = arrayPasajeros.map(p => {
         if (!p) return null;
-        return (p.id === userData?.id || p.uid === userData?.id) ? { ...p, calificado: true } : p;
+        return (p.id === idDelPasajero || p.uid === idDelPasajero) ? { ...p, calificado: true } : p;
       }).filter(Boolean);
 
-      await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados }));
-      
+      await updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados });
+
       setModalCalificacion(false);
       setToast({ texto: "¡Gracias por calificar!", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
+
     } catch (e) { 
-      setToast({ texto: "Error al guardar reseña", tipo: "error" });
-      setTimeout(() => setToast(null), 3000);
-    } finally { setCargando(false); }
+      console.error("Error principal al calificar:", e);
+      // 🔥 AHORA EL CARTEL ROJO TE DIRÁ EXACTAMENTE QUÉ ESTÁ FALLANDO 🔥
+      setToast({ texto: "Error: " + (e.message || "Desconocido").substring(0, 35), tipo: "error" });
+      setTimeout(() => setToast(null), 5000);
+    } finally { 
+      setCargando(false); 
+    }
   };
+  
 
 
   const compartirRuta = () => {
