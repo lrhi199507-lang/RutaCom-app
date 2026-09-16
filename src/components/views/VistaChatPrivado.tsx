@@ -117,11 +117,17 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
     };
   }, [chatIdReal]);
 
-  // ESCÁNER EN VIVO PARA LIMPIAR NOTIFICACIONES
+    // ESCÁNER EN VIVO PARA LIMPIAR NOTIFICACIONES
   useEffect(() => {
     if (!chatIdReal || mensajes.length === 0) return;
     
     const ultimoMsg = mensajes[mensajes.length - 1];
+    
+    // 🔥 LA SOLUCIÓN: Si el bot está pidiendo un humano, detenemos el escáner
+    // para que NO borre el contador y el Búnker pueda verlo.
+    if (ultimoMsg.uidRemitente === 'admin' && ultimoMsg.texto.includes("Un asesor humano ha sido notificado")) {
+      return; 
+    }
     
     if (ultimoMsg.uidRemitente !== miId) {
       setDoc(doc(db, "Chats", chatIdReal), { 
@@ -130,6 +136,7 @@ export const VistaChatPrivado = ({ chat, userData, onRegresar, onVerViaje }) => 
       }, { merge: true }).catch(err => console.log(err));
     }
   }, [mensajes, chatIdReal, miId]);
+  
 
   const ejecutarComandoBot = async (tipo) => {
     let respuestaBot = "";
