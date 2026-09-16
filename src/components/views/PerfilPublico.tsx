@@ -283,7 +283,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 pb-36">
               {listaResenas.map((resena) => (
                 <div key={resena.id} className="bg-white p-5 rounded-[25px] border border-slate-100 shadow-sm hover:border-[#063971]/20 transition-colors">
                   <div className="flex justify-between items-start mb-3">
