@@ -800,7 +800,7 @@ const solicitarCola = async () => {
     } finally { setCargando(false); }
   };
   
-  const enviarCalificacion = async () => {
+    const enviarCalificacion = async () => {
     if (stars === 0) {
       setToast({ texto: "Selecciona al menos 1 estrella", tipo: "error" });
       setTimeout(() => setToast(null), 3000); return;
@@ -808,16 +808,45 @@ const solicitarCola = async () => {
     setCargando(true);
     try {
       const idChofer = viaje.uidConductor || viaje.idCreador || "SinID";
+      
+      // 1. Crear documento de la reseña
       await ejecutarConTimeout(addDoc(collection(db, "Resenas"), {
-        idViaje: viaje.id, idConductor: idChofer, idPasajero: userData?.id || "SinID",
-        nombrePasajero: userData?.nombre || "Usuario", estrellas: stars, comentario: String(comentarioResena || ""), fecha: new Date().toISOString()
+        idViaje: viaje.id, 
+        idConductor: idChofer, 
+        idPasajero: userData?.id || "SinID",
+        nombrePasajero: userData?.nombre || "Usuario", 
+        estrellas: Number(stars), 
+        comentario: String(comentarioResena || ""), 
+        fecha: new Date().toISOString()
       }));
+
+      // 2. ACTUALIZAR EL PERFIL PÚBLICO DEL CHOFER (Suma de estrellas y promedio)
+      if (idChofer !== "SinID") {
+        const userRef = doc(db, "usuarios", idChofer);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          const sumaActual = Number(data.sumaEstrellas || 0) + Number(stars);
+          const totalResenas = Number(data.totalResenas || 0) + 1;
+          const nuevoRating = (sumaActual / totalResenas).toFixed(1);
+
+          await updateDoc(userRef, {
+            sumaEstrellas: sumaActual,
+            totalResenas: totalResenas,
+            rating: nuevoRating
+          });
+        }
+      }
+
+      // 3. Marcar como calificado en la lista del Viaje
       const pasajerosActualizados = pasajerosConfirmados.map(p => {
         if (!p) return null;
         return (p.id === userData?.id || p.uid === userData?.id) ? { ...p, calificado: true } : p;
       }).filter(Boolean);
 
       await ejecutarConTimeout(updateDoc(doc(db, "Viajes", viaje.id), { pasajeros: pasajerosActualizados }));
+      
       setModalCalificacion(false);
       setToast({ texto: "¡Gracias por calificar!", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
@@ -826,6 +855,7 @@ const solicitarCola = async () => {
       setTimeout(() => setToast(null), 3000);
     } finally { setCargando(false); }
   };
+
 
   const compartirRuta = () => {
     const cD_seguro = obtenerEstado(viaje.cD || "");
@@ -1001,7 +1031,33 @@ const solicitarCola = async () => {
               </div>
 
             </div>
-            
+
+                        {/* BANNER NARANJA: AVISO DE CALIFICACIÓN PENDIENTE O REALIZADA */}
+            {estadoViaje === 'finalizado' && (
+              <div className="bg-amber-50 p-5 rounded-[30px] border-2 border-amber-300 shadow-sm space-y-3 animate-in zoom-in duration-300">
+                {yaSoyPasajero && !soyConductor && (
+                  !yaCalifico ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[#1F2937] text-xs font-black uppercase italic">¡Viaje Finalizado! 🏁</p>
+                        <p className="text-amber-800 text-[10px] font-bold">Aún no has calificado a tu conductor.</p>
+                      </div>
+                      <button 
+                        onClick={() => setModalCalificacion(true)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] px-4 py-3 rounded-2xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+                      >
+                        <Star size={14} className="fill-white" /> Calificar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 p-3 rounded-2xl border border-emerald-200">
+                      <Check size={16} />
+                      <span className="text-[10px] font-black uppercase">¡Ya calificaste a este conductor! Gracias.</span>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
 
             {viaje.referencia && viaje.referencia.trim() !== "" && (
               <div className="mt-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
