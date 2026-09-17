@@ -311,16 +311,33 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
+    // 🔥 CARGA REAL Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
   useEffect(() => {
-    const idChofer = viajeInicial?.uidConductor || viajeInicial?.idCreador;
+    const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.idConductor;
     if (!idChofer) return;
-    const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
-    getDocs(qResenas).then(snap => {
-      let suma = 0; let total = 0;
-      snap.forEach(d => { suma += d.data().estrellas || 0; total++; });
-      setRatingConductor({ promedio: total > 0 ? (suma / total).toFixed(1) : "0.0", total: total });
-    }).catch(e => console.error(e));
-  }, [viajeInicial.uidConductor, viajeInicial.idCreador]);
+
+    const cargarRatingChofer = async () => {
+      try {
+        const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+        const snap = await getDocs(qResenas);
+        let suma = 0;
+        let total = 0;
+        snap.forEach(d => {
+          suma += Number(d.data().estrellas || 0);
+          total++;
+        });
+        setRatingConductor({
+          promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
+          total: total
+        });
+      } catch (e) {
+        console.error("Error obteniendo rating del conductor:", e);
+      }
+    };
+
+    cargarRatingChofer();
+  }, [viaje?.uidConductor, viaje?.idCreador, viaje?.idConductor]);
+  
 
   useEffect(() => {
     const esConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
@@ -800,7 +817,7 @@ const solicitarCola = async () => {
     } finally { setCargando(false); }
   };
   
-      const enviarCalificacion = async () => {
+        const enviarCalificacion = async () => {
     if (stars === 0) {
       setToast({ texto: "Selecciona al menos 1 estrella", tipo: "error" });
       setTimeout(() => setToast(null), 3000); 
@@ -809,22 +826,28 @@ const solicitarCola = async () => {
     setCargando(true);
 
     try {
-      // Nos aseguramos de capturar el ID correcto del pasajero
-      const idChofer = viaje.uidConductor || viaje.idCreador || "SinID";
+      const idChofer = viaje.uidConductor || viaje.idCreador || viaje.idConductor || "SinID";
       const idDelPasajero = userData?.uid || userData?.id || "SinID";
+      const nombreChoferReal = viaje.cN || viaje.conductor || "Conductor";
+      const nombrePasajeroReal = userData?.nombre || "Pasajero";
 
-      // 1. Guardar la reseña en la colección 'Resenas' (Sin el timeout)
+      // 1. Guardar la reseña guardando ambos nombres y roles explícitos
       await addDoc(collection(db, "Resenas"), {
         idViaje: viaje.id || "SinID", 
         idConductor: idChofer, 
+        nombreConductor: nombreChoferReal,
         idPasajero: idDelPasajero,
-        nombrePasajero: userData?.nombre || "Usuario", 
+        nombrePasajero: nombrePasajeroReal, 
+        idEvaluado: idChofer,
+        nombreEvaluado: nombreChoferReal,
+        idEvaluador: idDelPasajero,
+        nombreEvaluador: nombrePasajeroReal,
         estrellas: Number(stars), 
         comentario: String(comentarioResena || ""), 
         fecha: new Date().toISOString()
       });
 
-      // 2. Intentar actualizar el perfil del chofer (Aislado para que no tranque si falla)
+      // 2. Actualizar el perfil del chofer en la colección 'usuarios'
       if (idChofer !== "SinID") {
         try {
           const userRef = doc(db, "usuarios", idChofer);
@@ -847,7 +870,7 @@ const solicitarCola = async () => {
         }
       }
 
-      // 3. Marcar el viaje como calificado (Protegido por si el array viene vacío)
+      // 3. Marcar el viaje como calificado
       const arrayPasajeros = pasajerosConfirmados || [];
       const pasajerosActualizados = arrayPasajeros.map(p => {
         if (!p) return null;
@@ -862,14 +885,12 @@ const solicitarCola = async () => {
 
     } catch (e) { 
       console.error("Error principal al calificar:", e);
-      // 🔥 AHORA EL CARTEL ROJO TE DIRÁ EXACTAMENTE QUÉ ESTÁ FALLANDO 🔥
       setToast({ texto: "Error: " + (e.message || "Desconocido").substring(0, 35), tipo: "error" });
       setTimeout(() => setToast(null), 5000);
     } finally { 
       setCargando(false); 
     }
   };
-  
 
 
   const compartirRuta = () => {
