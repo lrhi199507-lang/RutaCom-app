@@ -8,14 +8,10 @@ import {
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
-// --- HELPER: FORMATO MIEMBRO DESDE (CON ABRIL 2026 POR DEFECTO) ---
+// --- HELPER: FORMATO MIEMBRO DESDE ---
 const formatearMesAño = (isoString) => {
-  // Si no tiene fecha guardada, por defecto es Abril 2026
   if (!isoString) return 'Abril 2026';
-  
   const date = new Date(isoString);
-  
-  // Por si la fecha se guardó con un formato inválido
   if (isNaN(date.getTime())) return 'Abril 2026';
 
   const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -31,27 +27,17 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
     totalOpiniones: 0
   });
   
-  // 🔥 NUEVO ESTADO: Guarda los datos 100% actualizados desde la BD 🔥
   const [datosActualizados, setDatosActualizados] = useState<any>(null);
-
   const [cargandoStats, setCargandoStats] = useState(true);
   const [listaResenas, setListaResenas] = useState([]);
   const [mostrarModalResenas, setMostrarModalResenas] = useState(false);
-  
 
-  // 1. MEJORA: Atrapar el nombre correcto sin importar de dónde venga
   const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
   const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
 
-      // 🔥 ESCUCHADOR DEL CEREBRO MAESTRO 🔥
   useEffect(() => {
     window.perfilPublicoAbierto = true; 
-    
-    const handleCierre = () => {
-      onClose(); // Ejecuta el cierre visual
-    };
-
-    // Escucha la orden que le manda NavegacionPrincipal
+    const handleCierre = () => onClose();
     window.addEventListener('cerrarPerfilGlobal', handleCierre);
     
     return () => { 
@@ -71,7 +57,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
 
     const cargarEstadisticasYPerfil = async () => {
       try {
-        // 🔥 AQUÍ OBTENEMOS EL PERFIL MAESTRO EN TIEMPO REAL 🔥
+        // 1. Obtener perfil del usuario
         const userSnap = await getDocs(query(collection(db, "usuarios"), where("__name__", "==", idUsuario)));
         let contadorViajes = 0;
 
@@ -81,27 +67,48 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           const viajesPas = uData.viajesComoPasajero || 0;
           contadorViajes = viajesCond + viajesPas; 
           
-          // Guardamos la info fresca (bio, edad, foto, etc)
-          if (!unmounted) {
-             setDatosActualizados(uData);
-          }
+          if (!unmounted) setDatosActualizados(uData);
         }
 
-        const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
-        const snapshotResenas = await getDocs(qResenas);
-        
+        // 2. BUSCAR RESEÑAS TANTO COMO CHOFER COMO PASAJERO
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
+        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idUsuario));
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idUsuario));
+
+        const [snapCond, snapPas, snapEval] = await Promise.all([
+          getDocs(qCond).catch(() => null),
+          getDocs(qPas).catch(() => null),
+          getDocs(qEval).catch(() => null)
+        ]);
+
+        const resenasMap = new Map();
+
+        const procesarSnapshot = (snap) => {
+          if (!snap) return;
+          snap.forEach(docSnap => {
+            const data = docSnap.data();
+            // Evitar duplicados por ID de documento
+            if (!resenasMap.has(docSnap.id)) {
+              resenasMap.set(docSnap.id, { id: docSnap.id, ...data });
+            }
+          });
+        };
+
+        procesarSnapshot(snapCond);
+        procesarSnapshot(snapPas);
+        procesarSnapshot(snapEval);
+
         let sumaEstrellas = 0;
         let totalResenas = 0;
         let resenasObtenidas = [];
 
-        snapshotResenas.forEach((docSnap) => {
-          const data = docSnap.data();
-          sumaEstrellas += data.estrellas || 0;
+        resenasMap.forEach((data) => {
+          sumaEstrellas += Number(data.estrellas || 0);
           totalResenas++;
-          resenasObtenidas.push({ id: docSnap.id, ...data });
+          resenasObtenidas.push(data);
         });
 
-        resenasObtenidas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        resenasObtenidas.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
         const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "0.0";
 
         if (!unmounted) {
@@ -130,11 +137,10 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
       setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
       setShowToast(true);
     } else {
-      setMostrarModalResenas(true); // Abre el nuevo modal
+      setMostrarModalResenas(true);
     }
   };
   
-  // 🔥 VARIABLES DINÁMICAS: Si el dato existe en BD, lo usa. Si no, usa el del viaje. 🔥
   const bioMostrar = datosActualizados?.bio || conductor.bio || "Este usuario prefiere que lo conozcas durante el viaje.";
   const edadMostrar = datosActualizados?.edad || conductor.edad;
   const habladorMostrar = datosActualizados?.hablador ?? conductor.hablador;
@@ -142,6 +148,8 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const verificadoMostrar = datosActualizados?.kycVerificado ?? conductor.identidadVerificada;
   const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil;
   const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion;
+
+  const idPerfil = conductor.uidConductor || conductor.idCreador || conductor.id;
 
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
@@ -158,10 +166,10 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           </div>
         </div>
 
-        {/* ETIQUETA DINÁMICA DE NIVEL */}
-        <div className={`${nivel.bgBadge} ${nivel.colorText} px-3.5 py-2 rounded-[18px] flex items-center gap-2 shadow-sm border border-white`}> {nivel.icon}
-         <span className="text-[9px] font-black italic uppercase tracking-widest">{nivel.titulo}</span>
-       </div>
+        <div className={`${nivel.bgBadge} ${nivel.colorText} px-3.5 py-2 rounded-[18px] flex items-center gap-2 shadow-sm border border-white`}> 
+          {nivel.icon}
+          <span className="text-[9px] font-black italic uppercase tracking-widest">{nivel.titulo}</span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-slate-50 px-6">
@@ -175,7 +183,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
         
         {/* TARJETA DE PERFIL CENTRAL */}
         <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col items-center mb-8 relative">
-          
           <div className="w-28 h-28 bg-[#063971]/5 rounded-[35px] border-4 border-[#063971]/10 shadow-xl overflow-hidden mb-4 flex items-center justify-center relative">
             {fotoMostrar ? (
               <img src={fotoMostrar} className="w-full h-full object-cover" alt="" />
@@ -183,7 +190,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
               <User size={40} className="text-[#063971]/40" />
             )}
           </div>
-            
           
           <h2 className="text-2xl font-black text-[#1F2937] flex items-center justify-center gap-2 italic text-center w-full">
             <span className="truncate max-w-[80%]">{nombreMostrar}</span>
@@ -192,7 +198,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             )}
           </h2>
           
-          {/* --- NUEVO: EDAD Y MIEMBRO DESDE EN PERFIL PÚBLICO --- */}
           <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[2px] mt-1 italic flex items-center justify-center gap-1">
              {verificadoMostrar ? 'Identidad Verificada' : 'Usuario Nuevo'}
              {edadMostrar && <><span className="mx-1 text-slate-300">•</span>{edadMostrar} AÑOS</>}
@@ -200,7 +205,6 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           <p className="text-[9px] font-black text-[#063971] uppercase tracking-widest mt-2 flex items-center justify-center gap-1.5 bg-[#063971]/5 px-3 py-1.5 rounded-full border border-[#063971]/10">
              <Calendar size={12} className="text-[#063971]" /> Miembro desde {formatearMesAño(fechaRegMostrar)}
           </p>
-
         </div>
 
         {/* SOBRE EL USUARIO */}
@@ -272,7 +276,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
         </div>
       </div>
 
-      {/* --- MODAL DE LISTA DE RESEÑAS --- */}
+      {/* MODAL DE LISTA DE RESEÑAS */}
       {mostrarModalResenas && (
         <div className="fixed inset-0 z-[600] bg-[#1F2937]/70 backdrop-blur-md flex flex-col animate-in fade-in duration-300">
           <div className="flex-1 overflow-y-auto mt-20 bg-slate-50 rounded-t-[40px] shadow-2xl animate-in slide-in-from-bottom">
@@ -284,32 +288,39 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
             </div>
             
             <div className="p-6 space-y-4 pb-36">
-              {listaResenas.map((resena) => (
-                <div key={resena.id} className="bg-white p-5 rounded-[25px] border border-slate-100 shadow-sm hover:border-[#063971]/20 transition-colors">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#063971]/10 rounded-full flex items-center justify-center border border-[#063971]/20">
-                        <User size={16} className="text-[#063971]" />
+              {listaResenas.map((resena) => {
+                // Nombre dinámico del autor de la reseña
+                const autor = resena.idConductor === idPerfil 
+                  ? (resena.nombrePasajero || resena.nombreEvaluador || "Pasajero")
+                  : (resena.nombreConductor || resena.nombreEvaluador || "Conductor");
+
+                return (
+                  <div key={resena.id} className="bg-white p-5 rounded-[25px] border border-slate-100 shadow-sm hover:border-[#063971]/20 transition-colors">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#063971]/10 rounded-full flex items-center justify-center border border-[#063971]/20">
+                          <User size={16} className="text-[#063971]" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase text-[#1F2937]">{autor}</p>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                            {new Date(resena.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-black uppercase text-[#1F2937]">{resena.nombrePasajero || "Pasajero"}</p>
-                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                          {new Date(resena.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
+                      <div className="flex bg-amber-50 px-2 py-1.5 rounded-xl items-center gap-1 border border-amber-100">
+                        <Star size={12} className="text-amber-500 fill-amber-500" />
+                        <span className="text-[10px] font-black text-amber-700">{Number(resena.estrellas).toFixed(1)}</span>
                       </div>
                     </div>
-                    <div className="flex bg-amber-50 px-2 py-1.5 rounded-xl items-center gap-1 border border-amber-100">
-                      <Star size={12} className="text-amber-500 fill-amber-500" />
-                      <span className="text-[10px] font-black text-amber-700">{resena.estrellas}.0</span>
-                    </div>
+                    {resena.comentario && (
+                      <p className="text-[11px] font-bold text-[#1F2937] italic bg-slate-50 p-4 rounded-2xl mt-2 border border-slate-100">
+                        "{resena.comentario}"
+                      </p>
+                    )}
                   </div>
-                  {resena.comentario && (
-                    <p className="text-[11px] font-bold text-[#1F2937] italic bg-slate-50 p-4 rounded-2xl mt-2 border border-slate-100">
-                      "{resena.comentario}"
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
