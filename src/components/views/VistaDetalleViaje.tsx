@@ -311,31 +311,47 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-    // 🔥 CARGA REAL Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
+      // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
   useEffect(() => {
     const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.idConductor;
     if (!idChofer) return;
 
+    let unmounted = false;
+
     const cargarRatingChofer = async () => {
       try {
-        const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
-        const snap = await getDocs(qResenas);
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
+
+        const [snapCond, snapEval] = await Promise.all([
+          getDocs(qCond).catch(() => null),
+          getDocs(qEval).catch(() => null)
+        ]);
+
+        const resenasMap = new Map();
+        if (snapCond) snapCond.forEach(d => resenasMap.set(d.id, d.data()));
+        if (snapEval) snapEval.forEach(d => resenasMap.set(d.id, d.data()));
+
         let suma = 0;
         let total = 0;
-        snap.forEach(d => {
-          suma += Number(d.data().estrellas || 0);
+        resenasMap.forEach(data => {
+          suma += Number(data.estrellas || 0);
           total++;
         });
-        setRatingConductor({
-          promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
-          total: total
-        });
+
+        if (!unmounted) {
+          setRatingConductor({
+            promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
+            total: total
+          });
+        }
       } catch (e) {
         console.error("Error obteniendo rating del conductor:", e);
       }
     };
 
     cargarRatingChofer();
+    return () => { unmounted = true; };
   }, [viaje?.uidConductor, viaje?.idCreador, viaje?.idConductor]);
   
 
@@ -623,7 +639,7 @@ const solicitarCola = async () => {
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-  const ejecutarCancelacion = async () => {
+    const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToast({ texto: "Debes seleccionar un motivo", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
@@ -640,19 +656,24 @@ const solicitarCola = async () => {
       }), 15000);
 
       setModalCancelar({ visible: false, rol: null });
-      setToast({ texto: "Cancelación procesada y reembolsada", tipo: "exito" });
+      setToast({ texto: "Cancelación procesada con éxito", tipo: "exito" });
       setTimeout(() => setToast(null), 4000);
       
       if (modalCancelar.rol === 'chofer') onRegresar(); 
       
     } catch (error) {
-      const mensajeReal = error.message === "TIMEOUT_RED" ? "Red inestable. Procesando..." : `Fallo: ${error.message}`;
-      setToast({ texto: mensajeReal, tipo: "error" });
+      console.error("Error al cancelar viaje:", error);
+      let mensajeAmigable = "No se pudo procesar la cancelación. Inténtalo de nuevo.";
+      if (error.message === "TIMEOUT_RED") {
+        mensajeAmigable = "Red inestable. Validando transacción...";
+      }
+      setToast({ texto: mensajeAmigable, tipo: "error" });
       setTimeout(() => setToast(null), 5000);
     } finally {
       setCargando(false); 
     }
   };
+  
   
   const gestionarSolicitud = async (solicitud, accion) => {
     setCargando(true);
