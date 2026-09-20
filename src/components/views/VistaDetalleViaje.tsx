@@ -311,17 +311,19 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-        // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
+  // 🔥 BUSCADOR DE ESTRELLAS MEJORADO 🔥
   useEffect(() => {
-    const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.idConductor;
+    // Atrapamos el ID venga como venga (uidConductor, idCreador, idConductor, etc)
+    const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.idConductor || viaje?.conductor?.id || viajeInicial?.uidConductor || viajeInicial?.idCreador;
+    
     if (!idChofer) return;
 
     let unmounted = false;
 
     const cargarRatingChofer = async () => {
       try {
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", String(idChofer)));
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", String(idChofer)));
 
         const [snapCond, snapEval] = await Promise.all([
           getDocs(qCond).catch(() => null),
@@ -346,13 +348,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           });
         }
       } catch (e) {
-        console.error("Error obteniendo rating del conductor:", e);
+        console.error("Error obteniendo rating:", e);
       }
     };
 
     cargarRatingChofer();
     return () => { unmounted = true; };
-  }, [viaje?.uidConductor, viaje?.idCreador, viaje?.idConductor]);
+  }, [viaje, viajeInicial]); 
+  
   
 
   useEffect(() => {
