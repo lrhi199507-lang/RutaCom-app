@@ -311,7 +311,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-      // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
+        // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
   useEffect(() => {
     const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.idConductor;
     if (!idChofer) return;
@@ -639,7 +639,7 @@ const solicitarCola = async () => {
     } catch (e) { console.error(e); } finally { setCargando(false); }
   };
 
-    const ejecutarCancelacion = async () => {
+      const ejecutarCancelacion = async () => {
     if (!motivoCancelacion) {
       setToast({ texto: "Debes seleccionar un motivo", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
