@@ -151,7 +151,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     buscarRetorno();
   }, [viaje?.conRetornoProgramado, viaje?.idEnlace]);
   
-  const [ratingConductor, setRatingConductor] = useState({ promedio: "0.0", total: 0 });
+  const [ratingReal, setRatingReal] = useState({ promedio: viajeInicial?.datosConductor?.rating || "0.0", total: 0 });
+  
   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
   
   const [reservaActivaBloqueante, setReservaActivaBloqueante] = useState(false);
@@ -311,9 +312,9 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-  // 🔥 BUSCADOR DE ESTRELLAS MEJORADO 🔥
+  // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
   useEffect(() => {
-    // Atrapamos el ID venga como venga (uidConductor, idCreador, idConductor, etc)
+    // Buscamos el ID del chofer en todas las rutas posibles del objeto
     const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.idConductor || viaje?.conductor?.id || viajeInicial?.uidConductor || viajeInicial?.idCreador;
     
     if (!idChofer) return;
@@ -341,14 +342,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           total++;
         });
 
-        if (!unmounted) {
-          setRatingConductor({
-            promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
+        if (!unmounted && total > 0) {
+          // Guardamos en el NUEVO estado para garantizar la actualización
+          setRatingReal({
+            promedio: (suma / total).toFixed(1),
             total: total
           });
         }
       } catch (e) {
-        console.error("Error obteniendo rating:", e);
+        console.error("Error obteniendo rating en detalle:", e);
       }
     };
 
@@ -1136,7 +1138,7 @@ const solicitarCola = async () => {
               </div>
             )}
 
-            <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm cursor-pointer hover:border-[#063971]/30">
+                        <div onClick={() => setVerPerfil(true)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm cursor-pointer hover:border-[#063971]/30">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-[14px] bg-[#063971] overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                   {viaje?.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <span className="text-white font-black italic text-xl">D</span>}
@@ -1148,14 +1150,17 @@ const solicitarCola = async () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map(star => <Star key={`star-${star}`} size={12} className={star <= parseFloat(ratingConductor.promedio) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} />)}
+                      {/* Aquí usamos ratingReal */}
+                      {[1, 2, 3, 4, 5].map(star => <Star key={`star-${star}`} size={12} className={star <= parseFloat(ratingReal.promedio) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} />)}
                     </div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase italic">{ratingConductor.promedio} ({ratingConductor.total} opiniones)</span>
+                    {/* Y aquí también usamos ratingReal */}
+                    <span className="text-[9px] font-black text-slate-400 uppercase italic">{ratingReal.promedio} ({ratingReal.total} opiniones)</span>
                   </div>
                 </div>
                 <ChevronRight size={20} className="text-slate-300 shrink-0" />
               </div>
             </div>
+            
 
             {viaje?.vehiculo && (
               <div className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm flex flex-col gap-3">
