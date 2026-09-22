@@ -323,17 +323,36 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     const cargarRatingChofer = async () => {
       try {
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", String(idChofer)));
+        // Consultamos todas las posibilidades (dando prioridad a idEvaluado)
         const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", String(idChofer)));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", String(idChofer)));
+        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", String(idChofer)));
 
-        const [snapCond, snapEval] = await Promise.all([
+        const [snapEval, snapCond, snapPas] = await Promise.all([
+          getDocs(qEval).catch(() => null),
           getDocs(qCond).catch(() => null),
-          getDocs(qEval).catch(() => null)
+          getDocs(qPas).catch(() => null)
         ]);
 
         const resenasMap = new Map();
-        if (snapCond) snapCond.forEach(d => resenasMap.set(d.id, d.data()));
-        if (snapEval) snapEval.forEach(d => resenasMap.set(d.id, d.data()));
+
+        const procesarSnapshot = (snap) => {
+          if (!snap) return;
+          snap.forEach(docSnap => {
+            const data = docSnap.data();
+            
+            // FILTRO VITAL: No contar reseñas donde este usuario fue quien calificó a otro
+            if (data.idEvaluador === String(idChofer)) return;
+            
+            if (!resenasMap.has(docSnap.id)) {
+              resenasMap.set(docSnap.id, data);
+            }
+          });
+        };
+
+        procesarSnapshot(snapEval);
+        procesarSnapshot(snapCond);
+        procesarSnapshot(snapPas);
 
         let suma = 0;
         let total = 0;
@@ -342,10 +361,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           total++;
         });
 
-        if (!unmounted && total > 0) {
-          // Guardamos en el NUEVO estado para garantizar la actualización
+        // Quitamos la condición "total > 0" para que SIEMPRE actualice el número real, 
+        // incluso si alguien realmente tiene 0 reseñas.
+        if (!unmounted) {
           setRatingReal({
-            promedio: (suma / total).toFixed(1),
+            promedio: total > 0 ? (suma / total).toFixed(1) : "0.0",
             total: total
           });
         }
@@ -356,7 +376,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     cargarRatingChofer();
     return () => { unmounted = true; };
-  }, [viaje, viajeInicial]); 
+  }, [viaje, viajeInicial]);
   
   
 
