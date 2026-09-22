@@ -48,7 +48,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   
   useEffect(() => {
     let unmounted = false;
-    const idUsuario = conductor.uidConductor || conductor.idCreador || conductor.id;
+    const idUsuario = conductor.uidConductor || conductor.idCreador || conductor.id || conductor.idPasajero || conductor.uidPasajero;
 
     if (!idUsuario) {
       setCargandoStats(false);
@@ -162,7 +162,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil;
   const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion;
 
-  const idPerfil = conductor.uidConductor || conductor.idCreador || conductor.id;
+  const idPerfil = conductor.uidConductor || conductor.idCreador || conductor.id || conductor.idPasajero || conductor.uidPasajero;
 
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
