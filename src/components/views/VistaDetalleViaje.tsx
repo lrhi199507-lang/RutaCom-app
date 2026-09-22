@@ -705,8 +705,10 @@ const solicitarCola = async () => {
           datosPasajero: solicitud
         }), 15000);
         
-        await enviarNotificacion(idPasajero, "¡Cola Aceptada!", `${userData?.nombre} te confirmó. ¡Revisa tu PIN!`, "exito");
+                await enviarNotificacion(idPasajero, "¡Cola Aceptada!", `${userData?.nombre} te confirmó. ¡Revisa tu PIN!`, "exito");
         setToast({ texto: "Pasajero aceptado y saldo retenido", tipo: "exito" });
+        setTimeout(() => setToast(null), 3000); // 🔥 ESTA ES LA LÍNEA QUE FALTA PARA QUE DESAPAREZCA
+        
 
       } else {
         await ejecutarConTimeout(updateDoc(viajeRef, { reservasPendientes: arrayRemove(solicitud) }));
@@ -1154,7 +1156,7 @@ const solicitarCola = async () => {
                       {[1, 2, 3, 4, 5].map(star => <Star key={`star-${star}`} size={12} className={star <= parseFloat(ratingReal.promedio) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} />)}
                     </div>
                     {/* Y aquí también usamos ratingReal */}
-                    <span className="text-[9px] font-black text-slate-400 uppercase italic">{ratingReal.promedio} ({ratingReal.total} opiniones)</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase italic">{ratingReal.promedio} ({ratingReal.total} reseñas)</span>
                   </div>
                 </div>
                 <ChevronRight size={20} className="text-slate-300 shrink-0" />
