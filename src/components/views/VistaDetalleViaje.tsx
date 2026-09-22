@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, increment, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import PerfilPublico from './PerfilPublico';
-import { PerfilUsuarioDetalle } from './PerfilUsuarioDetalle';
 import { Geolocation } from '@capacitor/geolocation';
 import MapaView from '../Map/MapaView';
 import { functions } from '../../firebaseConfig'; 
@@ -99,7 +98,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   if (!viajeInicial) return null;
   
   const [viaje, setViaje] = useState(viajeInicial);
-  const [verPerfil, setVerPerfil] = useState(false);
   const [cargando, setCargando] = useState(false);
   
   const [toast, setToast] = useState(null);
@@ -121,7 +119,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const [modalCalificarPasajeros, setModalCalificarPasajeros] = useState(false);
   const [ratingsChofer, setRatingsChofer] = useState({});
-  const [idUsuarioVer, setIdUsuarioVer] = useState(null);
+  const [idPerfilVer, setIdPerfilVer] = useState(null);
 
   const [modalCancelar, setModalCancelar] = useState({ visible: false, rol: null });
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
