@@ -70,7 +70,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           if (!unmounted) setDatosActualizados(uData);
         }
 
-        // 2. BUSCAR RESEÑAS TANTO COMO CHOFER COMO PASAJERO
+                // 2. BUSCAR RESEÑAS DONDE EL USUARIO FUE EL EVALUADO
         const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
         const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idUsuario));
         const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idUsuario));
@@ -87,16 +87,23 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           if (!snap) return;
           snap.forEach(docSnap => {
             const data = docSnap.data();
-            // Evitar duplicados por ID de documento
+            
+            // FILTRO CRÍTICO: No sumar las reseñas que este usuario le escribió a otros
+            if (data.idEvaluador === idUsuario || data.idAutor === idUsuario) {
+              return; 
+            }
+
+            // Evitar duplicados
             if (!resenasMap.has(docSnap.id)) {
               resenasMap.set(docSnap.id, { id: docSnap.id, ...data });
             }
           });
         };
 
+        // Procesar primero idEvaluado (es la forma correcta y moderna de tu base de datos)
+        procesarSnapshot(snapEval);
         procesarSnapshot(snapCond);
         procesarSnapshot(snapPas);
-        procesarSnapshot(snapEval);
 
         let sumaEstrellas = 0;
         let totalResenas = 0;
