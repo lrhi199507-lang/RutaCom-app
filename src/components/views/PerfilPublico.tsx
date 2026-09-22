@@ -70,15 +70,18 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           if (!unmounted) setDatosActualizados(uData);
         }
 
-                // 2. BUSCAR RESEÑAS DONDE EL USUARIO FUE EL EVALUADO
+                        // 2. BUSCAR RESEÑAS DONDE EL USUARIO RECIBIÓ LA CALIFICACIÓN
+        // Buscamos principalmente por tu campo idEvaluado
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idUsuario));
+        
+        // Mantenemos estas dos por si hay reseñas viejas guardadas antes de que crearas idEvaluado
         const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
         const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idUsuario));
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idUsuario));
 
-        const [snapCond, snapPas, snapEval] = await Promise.all([
+        const [snapEval, snapCond, snapPas] = await Promise.all([
+          getDocs(qEval).catch(() => null),
           getDocs(qCond).catch(() => null),
-          getDocs(qPas).catch(() => null),
-          getDocs(qEval).catch(() => null)
+          getDocs(qPas).catch(() => null)
         ]);
 
         const resenasMap = new Map();
@@ -88,22 +91,25 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           snap.forEach(docSnap => {
             const data = docSnap.data();
             
-            // FILTRO CRÍTICO: No sumar las reseñas que este usuario le escribió a otros
-            if (data.idEvaluador === idUsuario || data.idAutor === idUsuario) {
+            // 🔥 LA CLAVE DEL ÉXITO ESTÁ AQUÍ 🔥
+            // Usamos el campo idEvaluador que vi en tu Firebase para filtrar.
+            // Si el perfil que estamos viendo fue el que ESCRIBIÓ la reseña, la ignoramos.
+            if (data.idEvaluador === idUsuario) {
               return; 
             }
 
-            // Evitar duplicados
+            // Si pasa el filtro, la guardamos (evitando duplicados)
             if (!resenasMap.has(docSnap.id)) {
               resenasMap.set(docSnap.id, { id: docSnap.id, ...data });
             }
           });
         };
 
-        // Procesar primero idEvaluado (es la forma correcta y moderna de tu base de datos)
+        // Procesamos primero el qEval porque es la forma más directa y correcta
         procesarSnapshot(snapEval);
         procesarSnapshot(snapCond);
         procesarSnapshot(snapPas);
+    
 
         let sumaEstrellas = 0;
         let totalResenas = 0;
