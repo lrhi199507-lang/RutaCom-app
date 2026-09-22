@@ -1832,8 +1832,15 @@ const solicitarCola = async () => {
         </div>
       )}
       
-      {idUsuarioVer && <PerfilUsuarioDetalle uid={idUsuarioVer} onClose={() => setIdUsuarioVer(null)} />}
-      {verPerfil && <PerfilPublico conductor={{ ...viaje, identidadVerificada: true }} onClose={() => setVerPerfil(false)} setToastMessage={setToastMessage} setShowToast={(bool) => { if(!bool) setToast(null); }} />}
+      {/* ✅ CÓDIGO NUEVO (Sustituye a PerfilUsuarioDetalle y al PerfilPublico viejo): */}
+{idPerfilVer && (
+  <PerfilPublico 
+    idUsuario={idPerfilVer} 
+    onClose={() => setIdPerfilVer(null)} 
+    setToastMessage={setToastMessage} 
+    setShowToast={(bool) => { if(!bool) setToast(null); }} 
+  />
+)}
     </div>
   );
 };
