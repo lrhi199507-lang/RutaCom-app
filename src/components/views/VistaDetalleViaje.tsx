@@ -1242,7 +1242,7 @@ const solicitarCola = async () => {
                   const aBordo = pasajero.abordado === true || pasajero.boardado === true;
 
                   return (
-                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}    onClick={() => setIdPerfilVer(pasajero.id || pasajero.uid)} className={`border-2 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm relative ${ausente ? 'border-red-100 bg-red-50/20 opacity-60' : 'border-[#063971]/20 bg-[#063971]/5 hover:border-[#063971]/50'}`}>
+                    <div  key={`pasajero-${pasajero.id || pasajero.uid || index}`}  onClick={() => setPerfilSeleccionado(pasajero)}  className={`border-2 p-4 rounded-[25px] flex items-center gap-4 cursor-pointer active:scale-95 transition-all shadow-sm relative ${ausente ? 'border-red-100 bg-red-50/20 opacity-60' : 'border-[#063971]/20 bg-[#063971]/5 hover:border-[#063971]/50'}`}>
                         <div className="w-10 h-10 rounded-full bg-white overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
                            {pasajero.fotoPerfil ? <img src={pasajero.fotoPerfil} className="w-full h-full object-cover"/> : <User size={18} className="text-slate-300" />}
                         </div>
