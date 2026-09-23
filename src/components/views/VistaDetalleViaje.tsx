@@ -1832,15 +1832,15 @@ const solicitarCola = async () => {
         </div>
       )}
       
-      {/* ✅ CÓDIGO NUEVO (Sustituye a PerfilUsuarioDetalle y al PerfilPublico viejo): */}
-{idPerfilVer && (
-  <PerfilPublico 
-    idUsuario={idPerfilVer} 
-    onClose={() => setIdPerfilVer(null)} 
-    setToastMessage={setToastMessage} 
-    setShowToast={(bool) => { if(!bool) setToast(null); }} 
-  />
-)}
+            {/* MODAL PERFIL PÚBLICO */}
+      {idPerfilVer && (
+        <PerfilPublico 
+          userId={idPerfilVer} 
+          onClose={() => setIdPerfilVer(null)} 
+        />
+      )}
+
     </div>
   );
 };
+
