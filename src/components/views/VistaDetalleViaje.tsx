@@ -1831,15 +1831,16 @@ const solicitarCola = async () => {
           </div>
         </div>
       )}
-      
             {/* MODAL PERFIL PÚBLICO */}
-      {idPerfilVer && (
+      {perfilSeleccionado && (
         <PerfilPublico 
-          userId={idPerfilVer} 
-          onClose={() => setIdPerfilVer(null)} 
+          conductor={perfilSeleccionado} 
+          onClose={() => setPerfilSeleccionado(null)} 
+          setToastMessage={setToastMessage}
+          setShowToast={setShowToast}
         />
       )}
-
+      
     </div>
   );
 };
