@@ -119,7 +119,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const [modalCalificarPasajeros, setModalCalificarPasajeros] = useState(false);
   const [ratingsChofer, setRatingsChofer] = useState({});
-  const [idPerfilVer, setIdPerfilVer] = useState(null);
+  const [perfilSeleccionado, setPerfilSeleccionado] = useState(null);
 
   const [modalCancelar, setModalCancelar] = useState({ visible: false, rol: null });
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
@@ -159,7 +159,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(idPerfilVer);
+  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
 
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
     return Promise.race([
