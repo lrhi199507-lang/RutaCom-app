@@ -159,7 +159,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos;
+  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(idPerfilVer);
 
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
     return Promise.race([
