@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { App } from '@capacitor/app';
 import { 
-  ArrowLeft, MessageCircle, Phone, ShieldCheck, 
-  Star, Music, MessageSquare, User, Car, Trophy, Medal, MapPin, BadgeCheck, Calendar
+  ArrowLeft, ShieldCheck, 
+  Star, Music, MessageSquare, User, Car, BadgeCheck, Calendar
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
@@ -184,7 +183,7 @@ const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil || con
 const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion || conductor.datosConductor?.fechaRegistro;
   
   const idPerfil = conductor.uidConductor || conductor.idCreador || conductor.id || conductor.idPasajero || conductor.uidPasajero;
-
+  
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
       
@@ -337,9 +336,8 @@ const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.f
                         </div>
                         <div>
                           <p className="text-xs font-black uppercase text-[#1F2937]">{autor}</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                         {parsearFecha(resena.fecha)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) || 'Reciente'} </p>
-                        </div>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5"> {parsearFecha(resena.fecha)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) || 'Reciente'}
+                          </p>
                       </div>
                       <div className="flex bg-amber-50 px-2 py-1.5 rounded-xl items-center gap-1 border border-amber-100">
                         <Star size={12} className="text-amber-500 fill-amber-500" />
