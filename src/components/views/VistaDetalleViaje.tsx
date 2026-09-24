@@ -131,6 +131,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const [viajeRetorno, setViajeRetorno] = useState(null);
   const [reservarIdaYVuelta, setReservarIdaYVuelta] = useState(false);
+  const [usuarioPerfil, setUsuarioPerfil] = useState<any>(null);
+  
 
   useEffect(() => {
     const buscarRetorno = async () => {
