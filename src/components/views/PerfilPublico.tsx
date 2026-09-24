@@ -351,7 +351,7 @@ const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.f
                     )}
                   </div>
                 );
-              })}
+              )}
             </div>
           </div>
         </div>
