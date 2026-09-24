@@ -8,15 +8,23 @@ import {
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
-// --- HELPER: FORMATO MIEMBRO DESDE ---
-const formatearMesAño = (isoString) => {
-  if (!isoString) return 'Abril 2026';
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return 'Abril 2026';
+// Helper seguro para cualquier formato de fecha de Firebase
+const parsearFecha = (fechaRaw: any): Date | null => {
+  if (!fechaRaw) return null;
+  if (fechaRaw?.toDate) return fechaRaw.toDate(); // Timestamp de Firestore
+  if (fechaRaw?.seconds) return new Date(fechaRaw.seconds * 1000);
+  const d = new Date(fechaRaw);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const formatearMesAño = (fechaRaw: any) => {
+  const date = parsearFecha(fechaRaw);
+  if (!date) return 'Abril 2026';
 
   const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   return `${meses[date.getMonth()]} ${date.getFullYear()}`;
 };
+
 
 const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: any) => {
   if (!conductor) return null;
@@ -32,9 +40,15 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const [listaResenas, setListaResenas] = useState([]);
   const [mostrarModalResenas, setMostrarModalResenas] = useState(false);
 
-  const nombreMostrar = conductor.nombre || conductor.cN || conductor.conductor || 'Usuario';
-  const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
+  const nombreMostrar = 
+  conductor.nombre || 
+  conductor.cN || 
+  conductor.conductor || 
+  conductor.datosConductor?.nombre || 
+  'Usuario';
 
+const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
+  
   useEffect(() => {
     window.perfilPublicoAbierto = true; 
     const handleCierre = () => onClose();
@@ -121,7 +135,12 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
           resenasObtenidas.push(data);
         });
 
-        resenasObtenidas.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+        resenasObtenidas.sort((a, b) => {
+  const fechaA = parsearFecha(a.fecha)?.getTime() || 0;
+  const fechaB = parsearFecha(b.fecha)?.getTime() || 0;
+  return fechaB - fechaA;
+});
+  
         const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "0.0";
 
         if (!unmounted) {
@@ -146,22 +165,24 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const nivel = calcularRangoGlobal(estadisticas.viajesRealizados);
 
   const manejarClickOpiniones = () => {
-    if (estadisticas.totalOpiniones === 0) {
+  if (estadisticas.totalOpiniones === 0) {
+    if (setToastMessage && setShowToast) {
       setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
       setShowToast(true);
-    } else {
-      setMostrarModalResenas(true);
     }
-  };
+  } else {
+    setMostrarModalResenas(true);
+  }
+};
   
-  const bioMostrar = datosActualizados?.bio || conductor.bio || "Este usuario prefiere que lo conozcas durante el viaje.";
-  const edadMostrar = datosActualizados?.edad || conductor.edad;
-  const habladorMostrar = datosActualizados?.hablador ?? conductor.hablador;
-  const musicaMostrar = datosActualizados?.musica ?? conductor.musica;
-  const verificadoMostrar = datosActualizados?.kycVerificado ?? conductor.identidadVerificada;
-  const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil;
-  const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion;
-
+  const bioMostrar = datosActualizados?.bio || conductor.bio || conductor.datosConductor?.bio || "Este usuario prefiere que lo conozcas durante el viaje.";
+const edadMostrar = datosActualizados?.edad || conductor.edad || conductor.datosConductor?.edad;
+const habladorMostrar = datosActualizados?.hablador ?? conductor.hablador ?? conductor.datosConductor?.hablador;
+const musicaMostrar = datosActualizados?.musica ?? conductor.musica ?? conductor.datosConductor?.musica;
+const verificadoMostrar = datosActualizados?.kycVerificado ?? conductor.identidadVerificada ?? conductor.datosConductor?.identidadVerificada;
+const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil || conductor.datosConductor?.foto || conductor.datosConductor?.fotoPerfil;
+const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion || conductor.datosConductor?.fechaRegistro;
+  
   const idPerfil = conductor.uidConductor || conductor.idCreador || conductor.id || conductor.idPasajero || conductor.uidPasajero;
 
   return (
@@ -317,8 +338,7 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
                         <div>
                           <p className="text-xs font-black uppercase text-[#1F2937]">{autor}</p>
                           <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                            {new Date(resena.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </p>
+                         {parsearFecha(resena.fecha)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) || 'Reciente'} </p>
                         </div>
                       </div>
                       <div className="flex bg-amber-50 px-2 py-1.5 rounded-xl items-center gap-1 border border-amber-100">
