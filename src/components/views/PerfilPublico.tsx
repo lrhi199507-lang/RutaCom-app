@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { 
-  ArrowLeft, ShieldCheck, 
-  Star, Music, MessageSquare, User, Car, BadgeCheck, Calendar
+  ArrowLeft, ShieldCheck, Star, Music, MessageSquare, 
+  User, Car, BadgeCheck, Calendar
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
 // Helper seguro para cualquier formato de fecha de Firebase
 const parsearFecha = (fechaRaw: any): Date | null => {
   if (!fechaRaw) return null;
-  if (fechaRaw?.toDate) return fechaRaw.toDate(); // Timestamp de Firestore
+  if (fechaRaw?.toDate) return fechaRaw.toDate();
   if (fechaRaw?.seconds) return new Date(fechaRaw.seconds * 1000);
   const d = new Date(fechaRaw);
   return isNaN(d.getTime()) ? null : d;
@@ -24,9 +24,10 @@ const formatearMesAño = (fechaRaw: any) => {
   return `${meses[date.getMonth()]} ${date.getFullYear()}`;
 };
 
-
 const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: any) => {
   if (!conductor) return null;
+
+  const idPerfil = conductor.uidConductor || conductor.idCreador || conductor.id || conductor.idPasajero || conductor.uidPasajero;
 
   const [estadisticas, setEstadisticas] = useState({
     viajesRealizados: 0,
@@ -36,18 +37,18 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   
   const [datosActualizados, setDatosActualizados] = useState<any>(null);
   const [cargandoStats, setCargandoStats] = useState(true);
-  const [listaResenas, setListaResenas] = useState([]);
+  const [listaResenas, setListaResenas] = useState<any[]>([]);
   const [mostrarModalResenas, setMostrarModalResenas] = useState(false);
 
   const nombreMostrar = 
-  conductor.nombre || 
-  conductor.cN || 
-  conductor.conductor || 
-  conductor.datosConductor?.nombre || 
-  'Usuario';
+    conductor.nombre || 
+    conductor.cN || 
+    conductor.conductor || 
+    conductor.datosConductor?.nombre || 
+    'Usuario';
 
-const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
-  
+  const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
+
   useEffect(() => {
     window.perfilPublicoAbierto = true; 
     const handleCierre = () => onClose();
@@ -61,17 +62,15 @@ const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
   
   useEffect(() => {
     let unmounted = false;
-    const idUsuario = conductor.uidConductor || conductor.idCreador || conductor.id || conductor.idPasajero || conductor.uidPasajero;
 
-    if (!idUsuario) {
+    if (!idPerfil) {
       setCargandoStats(false);
       return;
     }
 
     const cargarEstadisticasYPerfil = async () => {
       try {
-        // 1. Obtener perfil del usuario
-        const userSnap = await getDocs(query(collection(db, "usuarios"), where("__name__", "==", idUsuario)));
+        const userSnap = await getDocs(query(collection(db, "usuarios"), where("__name__", "==", idPerfil)));
         let contadorViajes = 0;
 
         if (!userSnap.empty) {
@@ -83,13 +82,9 @@ const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
           if (!unmounted) setDatosActualizados(uData);
         }
 
-                        // 2. BUSCAR RESEÑAS DONDE EL USUARIO RECIBIÓ LA CALIFICACIÓN
-        // Buscamos principalmente por tu campo idEvaluado
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idUsuario));
-        
-        // Mantenemos estas dos por si hay reseñas viejas guardadas antes de que crearas idEvaluado
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idUsuario));
-        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idUsuario));
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idPerfil));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idPerfil));
+        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idPerfil));
 
         const [snapEval, snapCond, snapPas] = await Promise.all([
           getDocs(qEval).catch(() => null),
@@ -99,34 +94,25 @@ const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
 
         const resenasMap = new Map();
 
-        const procesarSnapshot = (snap) => {
+        const procesarSnapshot = (snap: any) => {
           if (!snap) return;
-          snap.forEach(docSnap => {
+          snap.forEach((docSnap: any) => {
             const data = docSnap.data();
-            
-            // 🔥 LA CLAVE DEL ÉXITO ESTÁ AQUÍ 🔥
-            // Usamos el campo idEvaluador que vi en tu Firebase para filtrar.
-            // Si el perfil que estamos viendo fue el que ESCRIBIÓ la reseña, la ignoramos.
-            if (data.idEvaluador === idUsuario) {
-              return; 
-            }
+            if (data.idEvaluador === idPerfil) return; 
 
-            // Si pasa el filtro, la guardamos (evitando duplicados)
             if (!resenasMap.has(docSnap.id)) {
               resenasMap.set(docSnap.id, { id: docSnap.id, ...data });
             }
           });
         };
 
-        // Procesamos primero el qEval porque es la forma más directa y correcta
         procesarSnapshot(snapEval);
         procesarSnapshot(snapCond);
         procesarSnapshot(snapPas);
-    
 
         let sumaEstrellas = 0;
         let totalResenas = 0;
-        let resenasObtenidas = [];
+        let resenasObtenidas: any[] = [];
 
         resenasMap.forEach((data) => {
           sumaEstrellas += Number(data.estrellas || 0);
@@ -135,11 +121,11 @@ const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
         });
 
         resenasObtenidas.sort((a, b) => {
-  const fechaA = parsearFecha(a.fecha)?.getTime() || 0;
-  const fechaB = parsearFecha(b.fecha)?.getTime() || 0;
-  return fechaB - fechaA;
-});
-  
+          const fechaA = parsearFecha(a.fecha)?.getTime() || 0;
+          const fechaB = parsearFecha(b.fecha)?.getTime() || 0;
+          return fechaB - fechaA;
+        });
+
         const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : "0.0";
 
         if (!unmounted) {
@@ -159,31 +145,29 @@ const inicialMostrar = nombreMostrar.charAt(0).toUpperCase();
 
     cargarEstadisticasYPerfil();
     return () => { unmounted = true; };
-  }, [conductor]);
+  }, [conductor, idPerfil]);
 
   const nivel = calcularRangoGlobal(estadisticas.viajesRealizados);
 
   const manejarClickOpiniones = () => {
-  if (estadisticas.totalOpiniones === 0) {
-    if (setToastMessage && setShowToast) {
-      setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
-      setShowToast(true);
+    if (estadisticas.totalOpiniones === 0) {
+      if (setToastMessage && setShowToast) {
+        setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
+        setShowToast(true);
+      }
+    } else {
+      setMostrarModalResenas(true);
     }
-  } else {
-    setMostrarModalResenas(true);
-  }
-};
+  };
   
   const bioMostrar = datosActualizados?.bio || conductor.bio || conductor.datosConductor?.bio || "Este usuario prefiere que lo conozcas durante el viaje.";
-const edadMostrar = datosActualizados?.edad || conductor.edad || conductor.datosConductor?.edad;
-const habladorMostrar = datosActualizados?.hablador ?? conductor.hablador ?? conductor.datosConductor?.hablador;
-const musicaMostrar = datosActualizados?.musica ?? conductor.musica ?? conductor.datosConductor?.musica;
-const verificadoMostrar = datosActualizados?.kycVerificado ?? conductor.identidadVerificada ?? conductor.datosConductor?.identidadVerificada;
-const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil || conductor.datosConductor?.foto || conductor.datosConductor?.fotoPerfil;
-const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion || conductor.datosConductor?.fechaRegistro;
-  
-  const idPerfil = conductor.uidConductor || conductor.idCreador || conductor.id || conductor.idPasajero || conductor.uidPasajero;
-  
+  const edadMostrar = datosActualizados?.edad || conductor.edad || conductor.datosConductor?.edad;
+  const habladorMostrar = datosActualizados?.hablador ?? conductor.hablador ?? conductor.datosConductor?.hablador;
+  const musicaMostrar = datosActualizados?.musica ?? conductor.musica ?? conductor.datosConductor?.musica;
+  const verificadoMostrar = datosActualizados?.kycVerificado ?? conductor.identidadVerificada ?? conductor.datosConductor?.identidadVerificada;
+  const fotoMostrar = datosActualizados?.fotoPerfil || conductor.fotoPerfil || conductor.datosConductor?.foto || conductor.datosConductor?.fotoPerfil;
+  const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.fechaCreacion || conductor.fechaRegistro || conductor.fechaCreacion || conductor.datosConductor?.fechaRegistro;
+
   return (
     <div className="fixed inset-0 z-[500] bg-white flex flex-col animate-in slide-in-from-right duration-300">
       
@@ -321,8 +305,7 @@ const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.f
             </div>
             
             <div className="p-6 space-y-4 pb-36">
-              {listaResenas.map((resena) => {
-                // Nombre dinámico del autor de la reseña
+              {listaResenas.map((resena: any) => {
                 const autor = resena.idConductor === idPerfil 
                   ? (resena.nombrePasajero || resena.nombreEvaluador || "Pasajero")
                   : (resena.nombreConductor || resena.nombreEvaluador || "Conductor");
@@ -336,8 +319,10 @@ const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.f
                         </div>
                         <div>
                           <p className="text-xs font-black uppercase text-[#1F2937]">{autor}</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5"> {parsearFecha(resena.fecha)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) || 'Reciente'}
+                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                            {parsearFecha(resena.fecha)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) || 'Reciente'}
                           </p>
+                        </div>
                       </div>
                       <div className="flex bg-amber-50 px-2 py-1.5 rounded-xl items-center gap-1 border border-amber-100">
                         <Star size={12} className="text-amber-500 fill-amber-500" />
@@ -351,7 +336,7 @@ const fechaRegMostrar = datosActualizados?.fechaRegistro || datosActualizados?.f
                     )}
                   </div>
                 );
-              )}
+              })}
             </div>
           </div>
         </div>
