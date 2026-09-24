@@ -1160,7 +1160,7 @@ const solicitarCola = async () => {
               </div>
             )}
 
-            <div onClick={() => setIdPerfilVer(viaje?.uidConductor || viaje?.idCreador)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm cursor-pointer hover:border-[#063971]/30">
+            <div onClick={() => setUsuarioPerfil(viaje)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm cursor-pointer hover:border-[#063971]/30">
               
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-[14px] bg-[#063971] overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
