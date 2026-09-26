@@ -160,6 +160,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
+  const ratingMostrado = viaje?.datosConductor?.rating || "5.0";
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
 
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
@@ -1115,19 +1116,19 @@ const solicitarCola = async () => {
       </div>
       
       <div className="flex items-center gap-2">
-        <div className="flex gap-0.5">
-          {[1, 2, 3, 4, 5].map(star => (
-            <Star 
-              key={`star-${star}`} 
-              size={12} 
-              className={star <= Math.round(Number(ratingReal.promedio)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
-            />
-          ))}
-        </div>
-        <span className="text-[11px] font-black text-slate-400">
-  {ratingReal.promedio}
-</span>
-      </div>
+  <div className="flex gap-0.5">
+    {[1, 2, 3, 4, 5].map(star => (
+      <Star 
+        key={`star-${star}`} 
+        size={12} 
+        className={star <= Math.round(Number(ratingMostrado)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
+      />
+    ))}
+  </div>
+  <span className="text-[11px] font-black text-slate-400">
+    {ratingMostrado}
+  </span>
+</div>
     </div>
 
     <ChevronRight size={20} className="text-slate-300 shrink-0" />
