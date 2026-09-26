@@ -319,67 +319,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     });
     return () => unsub();
   }, [viajeInicial.id]);
-
-    // 🔥 CARGA EXACTA DE RESEÑAS REPLICANDO PERFIL PÚBLICO 🔥
-  useEffect(() => {
-    let unmounted = false;
-
-    if (!idChofer) return;
-
-    const cargarRatingChofer = async () => {
-      try {
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
-        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
-
-        const [snapEval, snapCond, snapPas] = await Promise.all([
-          getDocs(qEval).catch(() => null),
-          getDocs(qCond).catch(() => null),
-          getDocs(qPas).catch(() => null)
-        ]);
-
-        const resenasMap = new Map();
-
-        const procesarSnapshot = (snap: any) => {
-          if (!snap) return;
-          snap.forEach((docSnap: any) => {
-            const data = docSnap.data();
-            if (data.idEvaluador === idChofer) return; 
-
-            if (!resenasMap.has(docSnap.id)) {
-              resenasMap.set(docSnap.id, { id: docSnap.id, ...data });
-            }
-          });
-        };
-
-        procesarSnapshot(snapEval);
-        procesarSnapshot(snapCond);
-        procesarSnapshot(snapPas);
-
-        let sumaEstrellas = 0;
-        let totalResenas = 0;
-
-        resenasMap.forEach((data) => {
-          sumaEstrellas += Number(data.estrellas || 0);
-          totalResenas++;
-        });
-
-        const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : (viaje?.datosConductor?.rating || "0.0");
-
-        if (!unmounted) {
-          setRatingReal({
-            promedio: promedioCalculado,
-            total: totalResenas
-          });
-        }
-      } catch (e) {
-        console.error("Error obteniendo rating en detalle:", e);
-      }
-    };
-
-    cargarRatingChofer();
-    return () => { unmounted = true; };
-  }, [idChofer, viaje]);
   
   
   
@@ -1194,9 +1133,9 @@ const solicitarCola = async () => {
             />
           ))}
         </div>
-        <span className="text-[9px] font-black text-slate-400 uppercase italic">
-          {ratingReal.promedio} ({ratingReal.total} {ratingReal.total === 1 ? 'reseña' : 'reseñas'})
-        </span>
+        <span className="text-[11px] font-black text-slate-400">
+  {ratingReal.promedio}
+</span>
       </div>
     </div>
 
