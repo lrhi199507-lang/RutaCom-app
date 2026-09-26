@@ -312,27 +312,27 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-    // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
+  // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR (Idéntico a PerfilPublico) 🔥
   useEffect(() => {
     let unmounted = false;
 
-    // 1. Extraemos el ID EXACTAMENTE con la misma cadena de fallbacks que PerfilPublico
-    const idChofer = String(
-      viaje?.uidConductor || 
-      viaje?.idCreador || 
-      viaje?.id || 
-      viaje?.idPasajero || 
-      viaje?.uidPasajero || 
-      viajeInicial?.uidConductor || 
-      viajeInicial?.idCreador || 
-      viajeInicial?.id || 
-      ""
-    ).trim();
+    // 1. Extraemos el ID exactamente con el mismo orden de prioridades que PerfilPublico
+    const fuenteDatos = viaje || viajeInicial || {};
+    const idChofer = 
+      fuenteDatos.uidConductor || 
+      fuenteDatos.idCreador || 
+      fuenteDatos.id || 
+      fuenteDatos.idPasajero || 
+      fuenteDatos.uidPasajero || 
+      fuenteDatos.datosConductor?.uid || 
+      fuenteDatos.datosConductor?.id;
 
-    if (!idChofer || idChofer === "undefined") return;
+    // Si no hay ID, no hacemos la consulta
+    if (!idChofer) return;
 
     const cargarRatingChofer = async () => {
       try {
+        // 2. Las 3 consultas exactas que hace PerfilPublico a la colección "Resenas"
         const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
         const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
         const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
@@ -345,13 +345,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
         const resenasMap = new Map();
 
+        // 3. El mismo procesador de snapshots para evitar duplicados
         const procesarSnapshot = (snap: any) => {
           if (!snap) return;
           snap.forEach((docSnap: any) => {
             const data = docSnap.data();
-            // Filtro vital: omitir si este usuario fue quien escribió la reseña
-            if (data.idEvaluador === idChofer) return;
             
+            // Omitir si la reseña la escribió esta misma persona (idéntico a PerfilPublico)
+            if (data.idEvaluador === idChofer) return; 
+
             if (!resenasMap.has(docSnap.id)) {
               resenasMap.set(docSnap.id, data);
             }
@@ -362,17 +364,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         procesarSnapshot(snapCond);
         procesarSnapshot(snapPas);
 
-        let suma = 0;
-        let total = 0;
+        // 4. Sumatoria y cálculo
+        let sumaEstrellas = 0;
+        let totalResenas = 0;
+
         resenasMap.forEach(data => {
-          suma += Number(data.estrellas || 0);
-          total++;
+          sumaEstrellas += Number(data.estrellas || 0);
+          totalResenas++;
         });
 
+        const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : (fuenteDatos.datosConductor?.rating || "0.0");
+
         if (!unmounted) {
+          // Actualizamos el estado que uses en VistaDetalleViaje (probablemente ratingReal)
           setRatingReal({
-            promedio: total > 0 ? (suma / total).toFixed(1) : (viaje?.datosConductor?.rating || "0.0"),
-            total: total
+            promedio: promedioCalculado,
+            total: totalResenas
           });
         }
       } catch (e) {
@@ -383,7 +390,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     cargarRatingChofer();
     return () => { unmounted = true; };
   }, [viaje, viajeInicial]);
-  
   
   
 
