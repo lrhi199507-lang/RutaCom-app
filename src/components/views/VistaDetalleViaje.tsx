@@ -151,7 +151,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     buscarRetorno();
   }, [viaje?.conRetornoProgramado, viaje?.idEnlace]);
   
-  const [ratingReal, setRatingReal] = useState({ promedio: viajeInicial?.datosConductor?.rating || "0.0", total: 0 });
+    // 1. Extraemos el idChofer igual que en PerfilPublico
+  const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.id || viaje?.idPasajero || viaje?.uidPasajero;
+
+  // 2. Estado para almacenar el rating dinámico
+  const [ratingReal, setRatingReal] = useState({ 
+    promedio: viajeInicial?.datosConductor?.rating || "0.0", 
+    total: 0 
+  });
+  
   
   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
   
@@ -312,29 +320,14 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-  // 🔥 CARGA COMPLETA Y BLINDADA DE RESEÑAS DEL CONDUCTOR 🔥
+    // 🔥 CARGA EXACTA DE RESEÑAS REPLICANDO PERFIL PÚBLICO 🔥
   useEffect(() => {
     let unmounted = false;
 
-    // Extraer el ID probando todas las estructuras posibles del viaje
-    const fuente = viaje || viajeInicial || {};
-    const idChofer = String(
-      fuente.uidConductor || 
-      fuente.idCreador || 
-      fuente.idConductor || 
-      fuente.datosConductor?.uid || 
-      fuente.datosConductor?.id || 
-      fuente.datosConductor?.idUsuario || 
-      fuente.conductor?.id ||
-      fuente.id || 
-      ''
-    ).trim();
-
-    if (!idChofer || idChofer === 'undefined') return;
+    if (!idChofer) return;
 
     const cargarRatingChofer = async () => {
       try {
-        // A. Consultar colección "Resenas"
         const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
         const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
         const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
@@ -351,11 +344,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           if (!snap) return;
           snap.forEach((docSnap: any) => {
             const data = docSnap.data();
-            // Ignorar autoevaluaciones
-            if (String(data.idEvaluador) === idChofer) return;
+            if (data.idEvaluador === idChofer) return; 
 
             if (!resenasMap.has(docSnap.id)) {
-              resenasMap.set(docSnap.id, data);
+              resenasMap.set(docSnap.id, { id: docSnap.id, ...data });
             }
           });
         };
@@ -367,46 +359,19 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
         let sumaEstrellas = 0;
         let totalResenas = 0;
 
-        resenasMap.forEach(data => {
+        resenasMap.forEach((data) => {
           sumaEstrellas += Number(data.estrellas || 0);
           totalResenas++;
         });
 
-        // B. Si la colección "Resenas" trajo datos, los mostramos
-        if (totalResenas > 0) {
-          if (!unmounted) {
-            setRatingReal({
-              promedio: (sumaEstrellas / totalResenas).toFixed(1),
-              total: totalResenas
-            });
-          }
-          return;
-        }
+        const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : (viaje?.datosConductor?.rating || "0.0");
 
-        // C. FALLBACK: Si "Resenas" trajo 0, consultamos el documento del usuario directo en "usuarios"
-        const userSnap = await getDocs(query(collection(db, "usuarios"), where("__name__", "==", idChofer)));
-        if (!userSnap.empty) {
-          const uData = userSnap.docs[0].data();
-          const totalUser = Number(uData.totalResenas || uData.totalOpiniones || 0);
-          const promUser = String(uData.rating || uData.promedio || "0.0");
-
-          if (!unmounted && totalUser > 0) {
-            setRatingReal({
-              promedio: Number(promUser).toFixed(1),
-              total: totalUser
-            });
-            return;
-          }
-        }
-
-        // D. Si no hay registros en ninguna parte, mostramos el valor por defecto
         if (!unmounted) {
           setRatingReal({
-            promedio: fuente.datosConductor?.rating || "0.0",
-            total: 0
+            promedio: promedioCalculado,
+            total: totalResenas
           });
         }
-
       } catch (e) {
         console.error("Error obteniendo rating en detalle:", e);
       }
@@ -414,7 +379,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     cargarRatingChofer();
     return () => { unmounted = true; };
-  }, [viaje, viajeInicial]);
+  }, [idChofer, viaje]);
+  
   
   
 
