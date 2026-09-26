@@ -150,15 +150,15 @@ const PerfilPublico = ({ conductor, onClose, setToastMessage, setShowToast }: an
   const nivel = calcularRangoGlobal(estadisticas.viajesRealizados);
 
   const manejarClickOpiniones = () => {
-    if (estadisticas.totalOpiniones === 0) {
-      if (setToastMessage && setShowToast) {
-        setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
-        setShowToast(true);
-      }
-    } else {
-      setMostrarModalResenas(true);
+  if (estadisticas.totalOpiniones === 0) {
+    if (setToastMessage) {
+      setToastMessage("Aún no tiene reseñas. ¡Sé el primero en calificar!");
     }
-  };
+  } else {
+    setMostrarModalResenas(true);
+  }
+};
+  
   
   const bioMostrar = datosActualizados?.bio || conductor.bio || conductor.datosConductor?.bio || "Este usuario prefiere que lo conozcas durante el viaje.";
   const edadMostrar = datosActualizados?.edad || conductor.edad || conductor.datosConductor?.edad;
