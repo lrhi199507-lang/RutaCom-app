@@ -1163,19 +1163,32 @@ const solicitarCola = async () => {
                   if (!solicitud) return null;
                   const puestosPedidos = Number(solicitud.puestosSolicitados) || 1;
                   return (
-                    <div key={`sol-${index}`} className="bg-white p-4 rounded-[25px] flex items-center gap-3 border border-orange-100 shadow-sm">
-                      <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
-                         {solicitud.fotoPerfil ? <img src={solicitud.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-300" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black uppercase text-[#1F2937] truncate">{String(solicitud.nombre || "Usuario")}</p>
-                        <p className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Pide <span className="text-orange-600 font-black">{puestosPedidos}</span> asiento(s)</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'rechazar')} className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all hover:bg-red-100 hover:text-red-500"><X size={16} strokeWidth={3} /></button>
-                        <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'aceptar')} className="w-10 h-10 bg-[#10B981] text-white shadow-lg shadow-[#10B981]/30 rounded-full flex items-center justify-center active:scale-90 transition-all"><Check size={16} strokeWidth={3} /></button>
-                      </div>
-                    </div>
+                    <div key={`sol-${index}`} className="bg-white p-4 rounded-[25px] flex items-center justify-between border border-orange-100 shadow-sm gap-3">
+  
+  {/* 🟢 ZONA CLICKEABLE: Foto y nombre abren el perfil */}
+  <div 
+    onClick={() => setUsuarioPerfil(solicitud)} 
+    className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer active:scale-95 transition-all group"
+  >
+    <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center border-2 border-transparent group-hover:border-orange-300">
+       {solicitud.fotoPerfil ? <img src={solicitud.fotoPerfil} className="w-full h-full object-cover"/> : <User size={20} className="text-slate-300" />}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[11px] font-black uppercase text-[#1F2937] truncate group-hover:text-orange-600 transition-colors">{String(solicitud.nombre || "Usuario")}</p>
+      <p className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Pide <span className="text-orange-600 font-black">{puestosPedidos}</span> asiento(s)</p>
+    </div>
+  </div>
+
+  {/* BOTONES DE ACCIÓN: Quedan independientes */}
+  <div className="flex gap-2 shrink-0">
+    <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'rechazar')} className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all hover:bg-red-100 hover:text-red-500">
+      <X size={16} strokeWidth={3} />
+    </button>
+    <button disabled={cargando} onClick={() => gestionarSolicitud(solicitud, 'aceptar')} className="w-10 h-10 bg-[#10B981] text-white shadow-lg shadow-[#10B981]/30 rounded-full flex items-center justify-center active:scale-90 transition-all">
+      <Check size={16} strokeWidth={3} />
+    </button>
+  </div>
+</div>
                   );
                 })}
               </div>
