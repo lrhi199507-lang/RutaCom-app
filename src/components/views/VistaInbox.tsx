@@ -1,6 +1,6 @@
-import React from 'react';
-import { MessageCircle, ChevronRight, User, Search, Car, MapPin, ShieldCheck } from 'lucide-react';
 import React, { useState } from 'react';
+import { MessageCircle, ChevronRight, User, Search, Car, MapPin, ShieldCheck } from 'lucide-react';
+
 
 const ChatCard = ({ chat, currentUserId, onClick }) => {
   const isUnread = chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== currentUserId;
