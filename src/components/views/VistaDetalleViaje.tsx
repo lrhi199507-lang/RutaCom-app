@@ -312,80 +312,78 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-  // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
-useEffect(() => {
-  // Buscamos el ID del chofer en TODAS las rutas posibles del objeto del viaje
-  const idChofer = 
-    viaje?.uidConductor || 
-    viaje?.idCreador || 
-    viaje?.idConductor || 
-    viaje?.datosConductor?.uid || 
-    viaje?.datosConductor?.id || 
-    viaje?.datosConductor?.idUsuario || 
-    viaje?.conductor?.id || 
-    viaje?.conductor?.uid || 
-    viajeInicial?.uidConductor || 
-    viajeInicial?.idCreador ||
-    viajeInicial?.datosConductor?.uid ||
-    viajeInicial?.datosConductor?.id;
+    // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR 🔥
+  useEffect(() => {
+    let unmounted = false;
 
-  if (!idChofer) return;
+    // 1. Extraemos el ID EXACTAMENTE con la misma cadena de fallbacks que PerfilPublico
+    const idChofer = String(
+      viaje?.uidConductor || 
+      viaje?.idCreador || 
+      viaje?.id || 
+      viaje?.idPasajero || 
+      viaje?.uidPasajero || 
+      viajeInicial?.uidConductor || 
+      viajeInicial?.idCreador || 
+      viajeInicial?.id || 
+      ""
+    ).trim();
 
-  let unmounted = false;
+    if (!idChofer || idChofer === "undefined") return;
 
-  const cargarRatingChofer = async () => {
-    try {
-      const idStr = String(idChofer);
+    const cargarRatingChofer = async () => {
+      try {
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
 
-      const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idStr));
-      const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idStr));
-      const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idStr));
+        const [snapEval, snapCond, snapPas] = await Promise.all([
+          getDocs(qEval).catch(() => null),
+          getDocs(qCond).catch(() => null),
+          getDocs(qPas).catch(() => null)
+        ]);
 
-      const [snapEval, snapCond, snapPas] = await Promise.all([
-        getDocs(qEval).catch(() => null),
-        getDocs(qCond).catch(() => null),
-        getDocs(qPas).catch(() => null)
-      ]);
+        const resenasMap = new Map();
 
-      const resenasMap = new Map();
+        const procesarSnapshot = (snap: any) => {
+          if (!snap) return;
+          snap.forEach((docSnap: any) => {
+            const data = docSnap.data();
+            // Filtro vital: omitir si este usuario fue quien escribió la reseña
+            if (data.idEvaluador === idChofer) return;
+            
+            if (!resenasMap.has(docSnap.id)) {
+              resenasMap.set(docSnap.id, data);
+            }
+          });
+        };
 
-      const procesarSnapshot = (snap: any) => {
-        if (!snap) return;
-        snap.forEach(docSnap => {
-          const data = docSnap.data();
-          if (data.idEvaluador === idStr) return;
+        procesarSnapshot(snapEval);
+        procesarSnapshot(snapCond);
+        procesarSnapshot(snapPas);
 
-          if (!resenasMap.has(docSnap.id)) {
-            resenasMap.set(docSnap.id, data);
-          }
+        let suma = 0;
+        let total = 0;
+        resenasMap.forEach(data => {
+          suma += Number(data.estrellas || 0);
+          total++;
         });
-      };
 
-      procesarSnapshot(snapEval);
-      procesarSnapshot(snapCond);
-      procesarSnapshot(snapPas);
-
-      let suma = 0;
-      let total = 0;
-      resenasMap.forEach(data => {
-        suma += Number(data.estrellas || 0);
-        total++;
-      });
-
-      if (!unmounted) {
-        setRatingReal({
-          promedio: total > 0 ? (suma / total).toFixed(1) : (viaje?.datosConductor?.rating || "0.0"),
-          total: total
-        });
+        if (!unmounted) {
+          setRatingReal({
+            promedio: total > 0 ? (suma / total).toFixed(1) : (viaje?.datosConductor?.rating || "0.0"),
+            total: total
+          });
+        }
+      } catch (e) {
+        console.error("Error obteniendo rating en detalle:", e);
       }
-    } catch (e) {
-      console.error("Error obteniendo rating en detalle:", e);
-    }
-  };
+    };
 
-  cargarRatingChofer();
-  return () => { unmounted = true; };
-}, [viaje, viajeInicial]);
+    cargarRatingChofer();
+    return () => { unmounted = true; };
+  }, [viaje, viajeInicial]);
+  
   
   
 
