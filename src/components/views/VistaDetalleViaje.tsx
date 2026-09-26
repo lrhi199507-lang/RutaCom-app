@@ -151,15 +151,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     buscarRetorno();
   }, [viaje?.conRetornoProgramado, viaje?.idEnlace]);
   
-    // 1. Extraemos el idChofer igual que en PerfilPublico
-  const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.id || viaje?.idPasajero || viaje?.uidPasajero;
-
-  // 2. Estado para almacenar el rating dinámico
-  const [ratingReal, setRatingReal] = useState({ 
-    promedio: viajeInicial?.datosConductor?.rating || "0.0", 
-    total: 0 
-  });
-  
   
   const [viajeActivoBloqueante, setViajeActivoBloqueante] = useState(false);
   
