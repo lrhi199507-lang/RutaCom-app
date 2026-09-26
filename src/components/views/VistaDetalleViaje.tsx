@@ -1838,9 +1838,9 @@ const solicitarCola = async () => {
     conductor={usuarioPerfil} 
     onClose={() => setUsuarioPerfil(null)}
     setToastMessage={setToastMessage}
-    setShowToast={setShowToast}
   />
 )}
+      
       
     </div>
   );
