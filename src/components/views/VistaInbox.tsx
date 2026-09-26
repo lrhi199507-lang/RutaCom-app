@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageCircle, ChevronRight, User, Search, Car, MapPin, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
 
 const ChatCard = ({ chat, currentUserId, onClick }) => {
   const isUnread = chat.mensajesSinLeer > 0 && chat.remitenteUltimoMensaje !== currentUserId;
@@ -84,6 +85,8 @@ export const VistaInbox = ({
   userData, 
   onAbrirChat 
 }) => {
+  // 1. ESTADO PARA EL BUSCADOR
+  const [busqueda, setBusqueda] = useState('');
   
   if (!userData?.id) return (
     <div className="h-screen flex flex-col items-center justify-center font-black text-[#063971] italic uppercase bg-white">
@@ -95,22 +98,36 @@ export const VistaInbox = ({
   const safeChatsChofer = chatsChofer || [];
   const safeChatsPasajero = chatsPasajero || [];
   
-  // 🔥 LÓGICA DE FILTRADO Y ORDENADO MATEMÁTICO 🔥
+  // 2. LISTA ORIGINAL ORDENADA
   const todosLosChats = [...safeChatsChofer, ...safeChatsPasajero]
-    .filter(chat => !chat.esSoporte) // 🔒 EL CANDADO: Oculta el chat si tiene esSoporte en true
+    .filter(chat => !chat.esSoporte)
     .sort((a, b) => {
-      // Intentamos extraer el valor matemático (timestamp) de cada chat
       const tiempoA = a.timestamp || 0;
       const tiempoB = b.timestamp || 0;
-      
-      // Si ambos tienen timestamp, la resta los ordena perfectamente
-      if (tiempoA && tiempoB) {
-        return tiempoB - tiempoA;
-      }
-      
-      // Fallback: Si por error de la base de datos alguno no tiene timestamp, lo mandamos al final
+      if (tiempoA && tiempoB) return tiempoB - tiempoA;
       return 0;
     });
+
+  // 3. LÓGICA DE FILTRADO EN TIEMPO REAL
+  const chatsFiltrados = todosLosChats.filter(chat => {
+    if (!busqueda.trim()) return true; // Si el buscador está vacío, muestra todos
+
+    const termino = busqueda.toLowerCase();
+    
+    // Identificamos el nombre del contacto igual que en ChatCard
+    const soyConductor = chat.uidConductor === userData.id;
+    const nombreContacto = soyConductor ? chat.nombrePasajero : chat.nombreConductor;
+
+    // Extraemos los textos a comparar
+    const textoNombre = String(nombreContacto || '').toLowerCase();
+    const textoMensaje = String(chat.ultimoMensaje || '').toLowerCase();
+    const textoRuta = String(chat.ruta || '').toLowerCase();
+
+    // Filtra si el término coincide con nombre, mensaje o ruta
+    return textoNombre.includes(termino) || 
+           textoMensaje.includes(termino) || 
+           textoRuta.includes(termino);
+  });
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -125,6 +142,8 @@ export const VistaInbox = ({
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
             type="text" 
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)} // 4. ENLAZAR EL INPUT AL ESTADO
             placeholder="Buscar conversación o ruta..." 
             className="w-full bg-slate-50 border border-slate-100 rounded-[20px] py-3.5 pl-10 pr-4 text-xs font-bold text-[#1F2937] focus:outline-none focus:border-[#063971]/30 focus:ring-2 focus:ring-[#063971]/10 transition-all"
           />
@@ -132,6 +151,7 @@ export const VistaInbox = ({
 
         <div className="space-y-3 pt-2">
           
+          {/* EL CHAT DE SOPORTE SE MANTIENE SIEMPRE VISIBLE Y ARRIBA */}
           <div 
             onClick={() => onAbrirChat && onAbrirChat({
               id: `soporte_${userData.id}`,
@@ -145,15 +165,14 @@ export const VistaInbox = ({
             })}
             className="bg-[#1F2937] p-4 rounded-[25px] border border-slate-800 shadow-lg transition-all active:scale-95 flex items-center gap-4 cursor-pointer relative overflow-hidden"
           >
+            {/* ... (Contenido del soporte sin cambios) ... */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#063971]/40 rounded-full blur-2xl pointer-events-none" />
-            
             <div className="relative flex-shrink-0">
               <div className="w-12 h-12 rounded-full bg-[#063971] border-2 border-slate-700 shadow-sm flex items-center justify-center text-white">
                 <MessageCircle size={24} fill="currentColor" className="text-white/80" />
               </div>
               <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#10B981] border-2 border-[#1F2937] rounded-full" />
             </div>
-
             <div className="flex-1 min-w-0 z-10">
               <div className="flex justify-between items-start mb-1">
                 <h4 className="text-sm truncate pr-2 font-black text-white uppercase italic tracking-wide">
@@ -177,13 +196,16 @@ export const VistaInbox = ({
             <div className="h-[1px] flex-1 bg-slate-100"></div>
           </div>
 
-          {todosLosChats.length === 0 ? (
+          {/* 5. MAPEAMOS SOBRE chatsFiltrados EN LUGAR DE todosLosChats */}
+          {chatsFiltrados.length === 0 ? (
             <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50 mt-4'>
                 <MessageCircle size={32} className="mx-auto text-slate-300 mb-3" />
-                <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>No tienes mensajes activos</p>
+                <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>
+                  {busqueda ? 'No se encontraron resultados' : 'No tienes mensajes activos'}
+                </p>
             </div>
           ) : (
-            todosLosChats.map((chat, index) => (
+            chatsFiltrados.map((chat, index) => (
               <ChatCard 
                 key={chat.id || index} 
                 chat={chat} 
