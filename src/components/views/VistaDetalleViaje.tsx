@@ -1201,23 +1201,40 @@ const solicitarCola = async () => {
             <div onClick={() => setUsuarioPerfil(viaje)} className="bg-white p-5 rounded-[30px] border border-slate-100 flex flex-col gap-3 active:scale-95 transition-all shadow-sm cursor-pointer hover:border-[#063971]/30">
               
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-[14px] bg-[#063971] overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
-                  {viaje?.fotoPerfil ? <img src={viaje.fotoPerfil} className="w-full h-full object-cover" /> : <span className="text-white font-black italic text-xl">D</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <p className="text-base font-black italic text-[#1F2937] uppercase truncate">{String(viaje?.cN || viaje?.conductor || "Usuario")}</p>
-                    {viaje?.identidadVerificada && <BadgeCheck size={18} className="text-[#10B981] fill-[#10B981]/20 shrink-0" strokeWidth={2.5} />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-0.5">
-                      {/* Aquí usamos ratingReal */}
-                      {[1, 2, 3, 4, 5].map(star => <Star key={`star-${star}`} size={12} className={star <= parseFloat(ratingReal.promedio) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} />)}
-                    </div>
-                    {/* Y aquí también usamos ratingReal */}
-                    <span className="text-[9px] font-black text-slate-400 uppercase italic">{ratingReal.promedio} ({ratingReal.total} reseñas)</span>
-                  </div>
-                </div>
+  <div className="w-12 h-12 rounded-[14px] bg-[#063971] overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
+    {viaje?.fotoPerfil ? (
+      <img src={viaje.fotoPerfil} className="w-full h-full object-cover" alt="" />
+    ) : (
+      <span className="text-white font-black italic text-xl">D</span>
+    )}
+  </div>
+  
+  <div className="flex-1 min-w-0">
+    <div className="flex items-center gap-1.5 mb-1">
+      <p className="text-base font-black italic text-[#1F2937] uppercase truncate">
+        {String(viaje?.cN || viaje?.conductor || "Usuario")}
+      </p>
+      {viaje?.identidadVerificada && (
+        <BadgeCheck size={18} className="text-[#10B981] fill-[#10B981]/20 shrink-0" strokeWidth={2.5} />
+      )}
+    </div>
+    
+    <div className="flex items-center gap-2">
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map(star => (
+          <Star 
+            key={`star-${star}`} 
+            size={12} 
+            className={star <= Math.round(Number(ratingReal.promedio)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
+          />
+        ))}
+      </div>
+      <span className="text-[9px] font-black text-slate-400 uppercase italic">
+        {ratingReal.promedio} ({ratingReal.total} {ratingReal.total === 1 ? 'reseña' : 'reseñas'})
+      </span>
+    </div>
+  </div>
+</div>
                 <ChevronRight size={20} className="text-slate-300 shrink-0" />
               </div>
             </div>
