@@ -312,79 +312,110 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-// 🔥 CARGA REAL Y DINÁMICA DE RESEÑAS DEL CONDUCTOR 🔥
-useEffect(() => {
-  let unmounted = false;
+  // 🔥 CARGA COMPLETA Y BLINDADA DE RESEÑAS DEL CONDUCTOR 🔥
+  useEffect(() => {
+    let unmounted = false;
 
-  // Extraer el ID probando todas las propiedades posibles del documento
-  const fuente = viaje || viajeInicial || {};
-  const idChofer = String(
-    fuente.uidConductor || 
-    fuente.idCreador || 
-    fuente.idConductor || 
-    fuente.datosConductor?.uid || 
-    fuente.datosConductor?.id || 
-    fuente.datosConductor?.idUsuario || 
-    fuente.uid || 
-    fuente.id || 
-    ''
-  ).trim();
+    // Extraer el ID probando todas las estructuras posibles del viaje
+    const fuente = viaje || viajeInicial || {};
+    const idChofer = String(
+      fuente.uidConductor || 
+      fuente.idCreador || 
+      fuente.idConductor || 
+      fuente.datosConductor?.uid || 
+      fuente.datosConductor?.id || 
+      fuente.datosConductor?.idUsuario || 
+      fuente.conductor?.id ||
+      fuente.id || 
+      ''
+    ).trim();
 
-  if (!idChofer || idChofer === 'undefined') return;
+    if (!idChofer || idChofer === 'undefined') return;
 
-  const cargarRatingChofer = async () => {
-    try {
-      const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
-      const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
-      const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
+    const cargarRatingChofer = async () => {
+      try {
+        // A. Consultar colección "Resenas"
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
 
-      const [snapEval, snapCond, snapPas] = await Promise.all([
-        getDocs(qEval).catch(() => null),
-        getDocs(qCond).catch(() => null),
-        getDocs(qPas).catch(() => null)
-      ]);
+        const [snapEval, snapCond, snapPas] = await Promise.all([
+          getDocs(qEval).catch(() => null),
+          getDocs(qCond).catch(() => null),
+          getDocs(qPas).catch(() => null)
+        ]);
 
-      const resenasMap = new Map();
+        const resenasMap = new Map();
 
-      const procesarSnapshot = (snap: any) => {
-        if (!snap) return;
-        snap.forEach((docSnap: any) => {
-          const data = docSnap.data();
-          // Omitir reseñas escritas por este mismo usuario
-          if (String(data.idEvaluador) === idChofer) return;
+        const procesarSnapshot = (snap: any) => {
+          if (!snap) return;
+          snap.forEach((docSnap: any) => {
+            const data = docSnap.data();
+            // Ignorar autoevaluaciones
+            if (String(data.idEvaluador) === idChofer) return;
 
-          if (!resenasMap.has(docSnap.id)) {
-            resenasMap.set(docSnap.id, data);
+            if (!resenasMap.has(docSnap.id)) {
+              resenasMap.set(docSnap.id, data);
+            }
+          });
+        };
+
+        procesarSnapshot(snapEval);
+        procesarSnapshot(snapCond);
+        procesarSnapshot(snapPas);
+
+        let sumaEstrellas = 0;
+        let totalResenas = 0;
+
+        resenasMap.forEach(data => {
+          sumaEstrellas += Number(data.estrellas || 0);
+          totalResenas++;
+        });
+
+        // B. Si la colección "Resenas" trajo datos, los mostramos
+        if (totalResenas > 0) {
+          if (!unmounted) {
+            setRatingReal({
+              promedio: (sumaEstrellas / totalResenas).toFixed(1),
+              total: totalResenas
+            });
           }
-        });
-      };
+          return;
+        }
 
-      procesarSnapshot(snapEval);
-      procesarSnapshot(snapCond);
-      procesarSnapshot(snapPas);
+        // C. FALLBACK: Si "Resenas" trajo 0, consultamos el documento del usuario directo en "usuarios"
+        const userSnap = await getDocs(query(collection(db, "usuarios"), where("__name__", "==", idChofer)));
+        if (!userSnap.empty) {
+          const uData = userSnap.docs[0].data();
+          const totalUser = Number(uData.totalResenas || uData.totalOpiniones || 0);
+          const promUser = String(uData.rating || uData.promedio || "0.0");
 
-      let sumaEstrellas = 0;
-      let totalResenas = 0;
+          if (!unmounted && totalUser > 0) {
+            setRatingReal({
+              promedio: Number(promUser).toFixed(1),
+              total: totalUser
+            });
+            return;
+          }
+        }
 
-      resenasMap.forEach(data => {
-        sumaEstrellas += Number(data.estrellas || 0);
-        totalResenas++;
-      });
+        // D. Si no hay registros en ninguna parte, mostramos el valor por defecto
+        if (!unmounted) {
+          setRatingReal({
+            promedio: fuente.datosConductor?.rating || "0.0",
+            total: 0
+          });
+        }
 
-      if (!unmounted) {
-        setRatingReal({
-          promedio: totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : (fuente.datosConductor?.rating || "0.0"),
-          total: totalResenas
-        });
+      } catch (e) {
+        console.error("Error obteniendo rating en detalle:", e);
       }
-    } catch (e) {
-      console.error("Error obteniendo rating en detalle:", e);
-    }
-  };
+    };
 
-  cargarRatingChofer();
-  return () => { unmounted = true; };
-}, [viaje, viajeInicial]);
+    cargarRatingChofer();
+    return () => { unmounted = true; };
+  }, [viaje, viajeInicial]);
+  
   
 
   useEffect(() => {
