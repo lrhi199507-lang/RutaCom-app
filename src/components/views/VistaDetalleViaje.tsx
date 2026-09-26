@@ -312,85 +312,79 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
     return () => unsub();
   }, [viajeInicial.id]);
 
-  // 🔥 CARGA COMPLETA Y DINÁMICA DE ESTRELLAS DEL CONDUCTOR (Idéntico a PerfilPublico) 🔥
-  useEffect(() => {
-    let unmounted = false;
+// 🔥 CARGA REAL Y DINÁMICA DE RESEÑAS DEL CONDUCTOR 🔥
+useEffect(() => {
+  let unmounted = false;
 
-    // 1. Extraemos el ID exactamente con el mismo orden de prioridades que PerfilPublico
-    const fuenteDatos = viaje || viajeInicial || {};
-    const idChofer = 
-      fuenteDatos.uidConductor || 
-      fuenteDatos.idCreador || 
-      fuenteDatos.id || 
-      fuenteDatos.idPasajero || 
-      fuenteDatos.uidPasajero || 
-      fuenteDatos.datosConductor?.uid || 
-      fuenteDatos.datosConductor?.id;
+  // Extraer el ID probando todas las propiedades posibles del documento
+  const fuente = viaje || viajeInicial || {};
+  const idChofer = String(
+    fuente.uidConductor || 
+    fuente.idCreador || 
+    fuente.idConductor || 
+    fuente.datosConductor?.uid || 
+    fuente.datosConductor?.id || 
+    fuente.datosConductor?.idUsuario || 
+    fuente.uid || 
+    fuente.id || 
+    ''
+  ).trim();
 
-    // Si no hay ID, no hacemos la consulta
-    if (!idChofer) return;
+  if (!idChofer || idChofer === 'undefined') return;
 
-    const cargarRatingChofer = async () => {
-      try {
-        // 2. Las 3 consultas exactas que hace PerfilPublico a la colección "Resenas"
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
-        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
+  const cargarRatingChofer = async () => {
+    try {
+      const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
+      const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+      const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
 
-        const [snapEval, snapCond, snapPas] = await Promise.all([
-          getDocs(qEval).catch(() => null),
-          getDocs(qCond).catch(() => null),
-          getDocs(qPas).catch(() => null)
-        ]);
+      const [snapEval, snapCond, snapPas] = await Promise.all([
+        getDocs(qEval).catch(() => null),
+        getDocs(qCond).catch(() => null),
+        getDocs(qPas).catch(() => null)
+      ]);
 
-        const resenasMap = new Map();
+      const resenasMap = new Map();
 
-        // 3. El mismo procesador de snapshots para evitar duplicados
-        const procesarSnapshot = (snap: any) => {
-          if (!snap) return;
-          snap.forEach((docSnap: any) => {
-            const data = docSnap.data();
-            
-            // Omitir si la reseña la escribió esta misma persona (idéntico a PerfilPublico)
-            if (data.idEvaluador === idChofer) return; 
+      const procesarSnapshot = (snap: any) => {
+        if (!snap) return;
+        snap.forEach((docSnap: any) => {
+          const data = docSnap.data();
+          // Omitir reseñas escritas por este mismo usuario
+          if (String(data.idEvaluador) === idChofer) return;
 
-            if (!resenasMap.has(docSnap.id)) {
-              resenasMap.set(docSnap.id, data);
-            }
-          });
-        };
-
-        procesarSnapshot(snapEval);
-        procesarSnapshot(snapCond);
-        procesarSnapshot(snapPas);
-
-        // 4. Sumatoria y cálculo
-        let sumaEstrellas = 0;
-        let totalResenas = 0;
-
-        resenasMap.forEach(data => {
-          sumaEstrellas += Number(data.estrellas || 0);
-          totalResenas++;
+          if (!resenasMap.has(docSnap.id)) {
+            resenasMap.set(docSnap.id, data);
+          }
         });
+      };
 
-        const promedioCalculado = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : (fuenteDatos.datosConductor?.rating || "0.0");
+      procesarSnapshot(snapEval);
+      procesarSnapshot(snapCond);
+      procesarSnapshot(snapPas);
 
-        if (!unmounted) {
-          // Actualizamos el estado que uses en VistaDetalleViaje (probablemente ratingReal)
-          setRatingReal({
-            promedio: promedioCalculado,
-            total: totalResenas
-          });
-        }
-      } catch (e) {
-        console.error("Error obteniendo rating en detalle:", e);
+      let sumaEstrellas = 0;
+      let totalResenas = 0;
+
+      resenasMap.forEach(data => {
+        sumaEstrellas += Number(data.estrellas || 0);
+        totalResenas++;
+      });
+
+      if (!unmounted) {
+        setRatingReal({
+          promedio: totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : (fuente.datosConductor?.rating || "0.0"),
+          total: totalResenas
+        });
       }
-    };
+    } catch (e) {
+      console.error("Error obteniendo rating en detalle:", e);
+    }
+  };
 
-    cargarRatingChofer();
-    return () => { unmounted = true; };
-  }, [viaje, viajeInicial]);
-  
+  cargarRatingChofer();
+  return () => { unmounted = true; };
+}, [viaje, viajeInicial]);
   
 
   useEffect(() => {
