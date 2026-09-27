@@ -161,47 +161,40 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const estadoViaje = viaje?.estado || "disponible"; 
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
+  // 1. Extraemos el ID del conductor
+  const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.id || viaje?.idConductor || viaje?.datosConductor?.uid || viaje?.datosConductor?.id;
 
-  // 1. ID del conductor
-  const idChofer = 
-    viaje?.uidConductor || 
-    viaje?.idConductor || 
-    viaje?.cId || 
-    viaje?.datosConductor?.uid || 
-    viaje?.datosConductor?.id || 
-    viaje?.idCreador || 
-    viaje?.uidCreador;
+  // 2. Estado para la calificación
+  const [ratingReal, setRatingReal] = useState<string>("5.0");
 
-  const [ratingReal, setRatingReal] = useState<string>("...");
-  const [debugInfo, setDebugInfo] = useState<string>("");
-
+  // 3. Consulta de reseñas idéntica a PerfilPublico con protección de tipos
   useEffect(() => {
-    const targetId = idChofer?.trim();
-
-    if (!targetId) {
-      setRatingReal("0.0");
-      setDebugInfo("Sin ID de conductor");
+    // Protección estricta: Evitamos que Firestore ejecute 'where' con valores no válidos en el APK
+    if (!idChofer || typeof idChofer !== 'string' || idChofer.trim() === '') {
       return;
     }
 
-    const calcular = async () => {
-      try {
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", targetId));
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", targetId));
-        const qPas  = query(collection(db, "Resenas"), where("idPasajero", "==", targetId));
+    const idPerfil = idChofer.trim();
 
-        const snapEval = await getDocs(qEval).catch(e => { setDebugInfo(`Err qEval: ${e.message}`); return null; });
-        const snapCond = await getDocs(qCond).catch(e => { setDebugInfo(`Err qCond: ${e.message}`); return null; });
-        const snapPas  = await getDocs(qPas).catch(e => { setDebugInfo(`Err qPas: ${e.message}`); return null; });
+    const obtenerRatingPerfil = async () => {
+      try {
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idPerfil));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idPerfil));
+        const qPas  = query(collection(db, "Resenas"), where("idPasajero", "==", idPerfil));
+
+        const [snapEval, snapCond, snapPas] = await Promise.all([
+          getDocs(qEval).catch(() => null),
+          getDocs(qCond).catch(() => null),
+          getDocs(qPas).catch(() => null)
+        ]);
 
         const resenasMap = new Map();
 
-        const procesar = (snap: any) => {
+        const procesarSnapshot = (snap: any) => {
           if (!snap) return;
           snap.forEach((docSnap: any) => {
             const data = docSnap.data();
-            // Ignorar si la reseña la escribió la misma persona
-            if (data.idEvaluador === targetId) return;
+            if (data.idEvaluador === idPerfil) return;
 
             if (!resenasMap.has(docSnap.id)) {
               resenasMap.set(docSnap.id, data);
@@ -209,31 +202,31 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           });
         };
 
-        procesar(snapEval);
-        procesar(snapCond);
-        procesar(snapPas);
+        procesarSnapshot(snapEval);
+        procesarSnapshot(snapCond);
+        procesarSnapshot(snapPas);
 
-        let suma = 0;
-        let total = 0;
+        let sumaEstrellas = 0;
+        let totalResenas = 0;
 
         resenasMap.forEach((data) => {
-          suma += Number(data.estrellas || 0);
-          total++;
+          sumaEstrellas += Number(data.estrellas || 0);
+          totalResenas++;
         });
 
-        const prom = total > 0 ? (suma / total).toFixed(1) : "0.0";
-        setRatingReal(prom);
-        setDebugInfo(`Reseñas: ${total} | Suma: ${suma}`);
-
-      } catch (err: any) {
-        setRatingReal("0.0");
-        setDebugInfo(`Error: ${err?.message || "Fallo general"}`);
+        if (totalResenas > 0) {
+          const promedio = (sumaEstrellas / totalResenas).toFixed(1);
+          setRatingReal(promedio);
+        } else {
+          setRatingReal("0.0");
+        }
+      } catch (error) {
+        console.error("Error obteniendo rating:", error);
       }
     };
 
-    calcular();
+    obtenerRatingPerfil();
   }, [idChofer]);
-  
   
   
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
@@ -1188,11 +1181,6 @@ const solicitarCola = async () => {
     )}
   </div>
 
-  {/* DEBUG EN PANTALLA */}
-  <p className="text-[9px] font-mono text-red-500 font-bold truncate">
-    {debugInfo || "Cargando..."}
-  </p>
-  
   <div className="flex items-center gap-2 mt-1">
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map(star => (
@@ -1208,7 +1196,6 @@ const solicitarCola = async () => {
     </span>
   </div>
 </div>
-    
     
 
 <ChevronRight size={20} className="text-slate-300 shrink-0" />
