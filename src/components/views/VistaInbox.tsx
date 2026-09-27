@@ -85,7 +85,6 @@ export const VistaInbox = ({
   userData, 
   onAbrirChat 
 }) => {
-  // 1. ESTADO PARA EL BUSCADOR
   const [busqueda, setBusqueda] = useState('');
   
   if (!userData?.id) return (
@@ -98,7 +97,6 @@ export const VistaInbox = ({
   const safeChatsChofer = chatsChofer || [];
   const safeChatsPasajero = chatsPasajero || [];
   
-  // 2. LISTA ORIGINAL ORDENADA
   const todosLosChats = [...safeChatsChofer, ...safeChatsPasajero]
     .filter(chat => !chat.esSoporte)
     .sort((a, b) => {
@@ -108,26 +106,29 @@ export const VistaInbox = ({
       return 0;
     });
 
-  // 3. LÓGICA DE FILTRADO EN TIEMPO REAL
-  const chatsFiltrados = todosLosChats.filter(chat => {
-    if (!busqueda.trim()) return true; // Si el buscador está vacío, muestra todos
+  // 🔥 FUNCIÓN CRÍTICA: Elimina acentos/tildes y pasa a minúsculas
+  const normalizarTexto = (texto) => {
+    return String(texto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  };
 
-    const termino = busqueda.toLowerCase();
+  const chatsFiltrados = todosLosChats.filter(chat => {
+    if (!busqueda.trim()) return true;
+
+    const termino = normalizarTexto(busqueda);
     
-    // Identificamos el nombre del contacto igual que en ChatCard
     const soyConductor = chat.uidConductor === userData.id;
     const nombreContacto = soyConductor ? chat.nombrePasajero : chat.nombreConductor;
 
-    // Extraemos los textos a comparar
-    const textoNombre = String(nombreContacto || '').toLowerCase();
-    const textoMensaje = String(chat.ultimoMensaje || '').toLowerCase();
-    const textoRuta = String(chat.ruta || '').toLowerCase();
+    const textoNombre = normalizarTexto(nombreContacto);
+    const textoMensaje = normalizarTexto(chat.ultimoMensaje);
+    const textoRuta = normalizarTexto(chat.ruta);
 
-    // Filtra si el término coincide con nombre, mensaje o ruta
     return textoNombre.includes(termino) || 
            textoMensaje.includes(termino) || 
            textoRuta.includes(termino);
   });
+
+  const estaBuscando = busqueda.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -143,7 +144,7 @@ export const VistaInbox = ({
           <input 
             type="text" 
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)} // 4. ENLAZAR EL INPUT AL ESTADO
+            onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar conversación o ruta..." 
             className="w-full bg-slate-50 border border-slate-100 rounded-[20px] py-3.5 pl-10 pr-4 text-xs font-bold text-[#1F2937] focus:outline-none focus:border-[#063971]/30 focus:ring-2 focus:ring-[#063971]/10 transition-all"
           />
@@ -151,57 +152,59 @@ export const VistaInbox = ({
 
         <div className="space-y-3 pt-2">
           
-          {/* EL CHAT DE SOPORTE SE MANTIENE SIEMPRE VISIBLE Y ARRIBA */}
-          <div 
-            onClick={() => onAbrirChat && onAbrirChat({
-              id: `soporte_${userData.id}`,
-              esSoporte: true, 
-              usuarioSoporteId: userData.id,
-              usuarioSoporteNombre: userData.nombre,
-              nombreContacto: "Soporte Dame la cola",
-              ultimoMensaje: "¿En qué podemos ayudarte hoy?",
-              ruta: "Atención 24/7",
-              mensajesSinLeer: 0
-            })}
-            className="bg-[#1F2937] p-4 rounded-[25px] border border-slate-800 shadow-lg transition-all active:scale-95 flex items-center gap-4 cursor-pointer relative overflow-hidden"
-          >
-            {/* ... (Contenido del soporte sin cambios) ... */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#063971]/40 rounded-full blur-2xl pointer-events-none" />
-            <div className="relative flex-shrink-0">
-              <div className="w-12 h-12 rounded-full bg-[#063971] border-2 border-slate-700 shadow-sm flex items-center justify-center text-white">
-                <MessageCircle size={24} fill="currentColor" className="text-white/80" />
+          {/* Se oculta el chat de soporte si el usuario está filtrando */}
+          {!estaBuscando && (
+            <>
+              <div 
+                onClick={() => onAbrirChat && onAbrirChat({
+                  id: `soporte_${userData.id}`,
+                  esSoporte: true, 
+                  usuarioSoporteId: userData.id,
+                  usuarioSoporteNombre: userData.nombre,
+                  nombreContacto: "Soporte Dame la cola",
+                  ultimoMensaje: "¿En qué podemos ayudarte hoy?",
+                  ruta: "Atención 24/7",
+                  mensajesSinLeer: 0
+                })}
+                className="bg-[#1F2937] p-4 rounded-[25px] border border-slate-800 shadow-lg transition-all active:scale-95 flex items-center gap-4 cursor-pointer relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#063971]/40 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-[#063971] border-2 border-slate-700 shadow-sm flex items-center justify-center text-white">
+                    <MessageCircle size={24} fill="currentColor" className="text-white/80" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#10B981] border-2 border-[#1F2937] rounded-full" />
+                </div>
+                <div className="flex-1 min-w-0 z-10">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="text-sm truncate pr-2 font-black text-white uppercase italic tracking-wide">
+                      Soporte Oficial
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-1 mb-1.5">
+                    <ShieldCheck size={12} className="text-[#10B981]" />
+                    <span className="text-[9px] font-bold text-white/80 uppercase tracking-widest">En línea</span>
+                  </div>
+                  <p className="text-xs truncate font-medium text-slate-400">
+                    ¿Tienes un problema con tu viaje?
+                  </p>
+                </div>
+                <ChevronRight size={18} className="text-slate-500 flex-shrink-0 z-10" />
               </div>
-              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#10B981] border-2 border-[#1F2937] rounded-full" />
-            </div>
-            <div className="flex-1 min-w-0 z-10">
-              <div className="flex justify-between items-start mb-1">
-                <h4 className="text-sm truncate pr-2 font-black text-white uppercase italic tracking-wide">
-                  Soporte Oficial
-                </h4>
-              </div>
-              <div className="flex items-center gap-1 mb-1.5">
-                <ShieldCheck size={12} className="text-[#10B981]" />
-                <span className="text-[9px] font-bold text-white/80 uppercase tracking-widest">En línea</span>
-              </div>
-              <p className="text-xs truncate font-medium text-slate-400">
-                ¿Tienes un problema con tu viaje?
-              </p>
-            </div>
-            <ChevronRight size={18} className="text-slate-500 flex-shrink-0 z-10" />
-          </div>
 
-          <div className="flex items-center gap-3 py-2">
-            <div className="h-[1px] flex-1 bg-slate-100"></div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Tus Conversaciones</span>
-            <div className="h-[1px] flex-1 bg-slate-100"></div>
-          </div>
+              <div className="flex items-center gap-3 py-2">
+                <div className="h-[1px] flex-1 bg-slate-100"></div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Tus Conversaciones</span>
+                <div className="h-[1px] flex-1 bg-slate-100"></div>
+              </div>
+            </>
+          )}
 
-          {/* 5. MAPEAMOS SOBRE chatsFiltrados EN LUGAR DE todosLosChats */}
           {chatsFiltrados.length === 0 ? (
             <div className='border border-slate-100 rounded-[30px] p-10 text-center bg-slate-50 mt-4'>
                 <MessageCircle size={32} className="mx-auto text-slate-300 mb-3" />
                 <p className='text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose'>
-                  {busqueda ? 'No se encontraron resultados' : 'No tienes mensajes activos'}
+                  {estaBuscando ? 'No se encontraron resultados' : 'No tienes mensajes activos'}
                 </p>
             </div>
           ) : (
