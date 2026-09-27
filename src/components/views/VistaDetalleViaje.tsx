@@ -161,13 +161,13 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const estadoViaje = viaje?.estado || "disponible"; 
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
-    // 1. Extraemos idChofer
-  const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.datosConductor?.uid || viaje?.idPasajero || viaje?.uidPasajero;
+  // 1. Extraemos ESTRICTAMENTE el ID del conductor (¡Eliminamos idPasajero para que no se confunda!)
+  const idChofer = viaje?.uidConductor || viaje?.idConductor || viaje?.cId || viaje?.datosConductor?.uid || viaje?.datosConductor?.id || viaje?.idCreador;
   
   // 2. Estado para la calificación real
   const [ratingReal, setRatingReal] = useState<string>(viaje?.datosConductor?.rating || "5.0");
 
-  // 3. Cálculo dinámico del rating consultando la colección Resenas (Igual que PerfilPublico)
+  // 3. Cálculo dinámico calcado de PerfilPublico
   useEffect(() => {
     if (!idChofer) return;
 
@@ -175,12 +175,10 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
       try {
         const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
         const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
-        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
 
-        const [snapEval, snapCond, snapPas] = await Promise.all([
+        const [snapEval, snapCond] = await Promise.all([
           getDocs(qEval).catch(() => null),
-          getDocs(qCond).catch(() => null),
-          getDocs(qPas).catch(() => null)
+          getDocs(qCond).catch(() => null)
         ]);
 
         const resenasMap = new Map();
@@ -189,10 +187,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           if (!snap) return;
           snap.forEach((docSnap: any) => {
             const data = docSnap.data();
-            // No contar las que él dio, solo las que recibió
-            if (data.idEvaluador === idChofer) return; 
-
-            if (!resenasMap.has(docSnap.id)) {
+            // Evitar contar las reseñas que el propio conductor dio
+            if (data.idEvaluador !== idChofer) {
               resenasMap.set(docSnap.id, data);
             }
           });
@@ -200,7 +196,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
         procesarSnapshot(snapEval);
         procesarSnapshot(snapCond);
-        procesarSnapshot(snapPas);
 
         let sumaEstrellas = 0;
         let totalResenas = 0;
@@ -210,11 +205,11 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           totalResenas++;
         });
 
-        // Si tiene reseñas, calculamos el promedio exacto. Si no, le dejamos 5.0 por defecto.
+        // Exactamente la misma lógica matemática que tienes en PerfilPublico
         if (totalResenas > 0) {
           setRatingReal((sumaEstrellas / totalResenas).toFixed(1));
         } else {
-          setRatingReal("5.0"); 
+          setRatingReal("0.0"); // Si no hay reseñas, mostramos 0.0 igual que en el perfil público
         }
 
       } catch (error) {
@@ -224,6 +219,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
     calcularRatingReal();
   }, [idChofer]);
+  
   
   
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
