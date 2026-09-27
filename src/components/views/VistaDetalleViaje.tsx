@@ -161,29 +161,70 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const estadoViaje = viaje?.estado || "disponible"; 
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
-  // Extraemos idChofer y consultamos su rating real actualizado
+    // 1. Extraemos idChofer
   const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.datosConductor?.uid || viaje?.idPasajero || viaje?.uidPasajero;
+  
+  // 2. Estado para la calificación real
   const [ratingReal, setRatingReal] = useState<string>(viaje?.datosConductor?.rating || "5.0");
 
+  // 3. Cálculo dinámico del rating consultando la colección Resenas (Igual que PerfilPublico)
   useEffect(() => {
     if (!idChofer) return;
-    const obtenerRatingActualizado = async () => {
+
+    const calcularRatingReal = async () => {
       try {
-        const userRef = doc(db, "usuarios", idChofer);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          const ratingVal = userData.rating ?? userData.promedio ?? userData.ratingPromedio;
-          if (ratingVal !== undefined && ratingVal !== null) {
-            setRatingReal(String(Number(ratingVal).toFixed(1)));
-          }
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+        const qPas = query(collection(db, "Resenas"), where("idPasajero", "==", idChofer));
+
+        const [snapEval, snapCond, snapPas] = await Promise.all([
+          getDocs(qEval).catch(() => null),
+          getDocs(qCond).catch(() => null),
+          getDocs(qPas).catch(() => null)
+        ]);
+
+        const resenasMap = new Map();
+
+        const procesarSnapshot = (snap: any) => {
+          if (!snap) return;
+          snap.forEach((docSnap: any) => {
+            const data = docSnap.data();
+            // No contar las que él dio, solo las que recibió
+            if (data.idEvaluador === idChofer) return; 
+
+            if (!resenasMap.has(docSnap.id)) {
+              resenasMap.set(docSnap.id, data);
+            }
+          });
+        };
+
+        procesarSnapshot(snapEval);
+        procesarSnapshot(snapCond);
+        procesarSnapshot(snapPas);
+
+        let sumaEstrellas = 0;
+        let totalResenas = 0;
+
+        resenasMap.forEach((data) => {
+          sumaEstrellas += Number(data.estrellas || 0);
+          totalResenas++;
+        });
+
+        // Si tiene reseñas, calculamos el promedio exacto. Si no, le dejamos 5.0 por defecto.
+        if (totalResenas > 0) {
+          setRatingReal((sumaEstrellas / totalResenas).toFixed(1));
+        } else {
+          setRatingReal("5.0"); 
         }
+
       } catch (error) {
-        console.error("Error al obtener rating del usuario:", error);
+        console.error("Error al calcular rating en vista detalle:", error);
       }
     };
-    obtenerRatingActualizado();
+
+    calcularRatingReal();
   }, [idChofer]);
+  
   
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
     return Promise.race([
