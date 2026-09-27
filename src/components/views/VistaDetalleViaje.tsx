@@ -162,75 +162,77 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
 
-    // 1. Buscamos el ID exacto del conductor dentro del objeto 'viaje'
+  // 1. ID del conductor
   const idChofer = 
-    viaje?.datosConductor?.uid || 
-    viaje?.datosConductor?.id || 
     viaje?.uidConductor || 
     viaje?.idConductor || 
+    viaje?.cId || 
+    viaje?.datosConductor?.uid || 
+    viaje?.datosConductor?.id || 
     viaje?.idCreador || 
     viaje?.uidCreador;
 
-  // 2. Inicializamos en "..." para saber visualmente cuándo está calculando
   const [ratingReal, setRatingReal] = useState<string>("...");
+  const [debugInfo, setDebugInfo] = useState<string>("");
 
-  // 3. Consulta de reseñas
   useEffect(() => {
-    console.log("ID del conductor en VistaDetalleViaje:", idChofer);
+    const targetId = idChofer?.trim();
 
-    if (!idChofer) {
+    if (!targetId) {
       setRatingReal("0.0");
+      setDebugInfo("Sin ID de conductor");
       return;
     }
 
-    const calcularRatingReal = async () => {
+    const calcular = async () => {
       try {
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idChofer));
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", targetId));
+        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", targetId));
+        const qPas  = query(collection(db, "Resenas"), where("idPasajero", "==", targetId));
 
-        const [snapEval, snapCond] = await Promise.all([
-          getDocs(qEval).catch(() => null),
-          getDocs(qCond).catch(() => null)
-        ]);
+        const snapEval = await getDocs(qEval).catch(e => { setDebugInfo(`Err qEval: ${e.message}`); return null; });
+        const snapCond = await getDocs(qCond).catch(e => { setDebugInfo(`Err qCond: ${e.message}`); return null; });
+        const snapPas  = await getDocs(qPas).catch(e => { setDebugInfo(`Err qPas: ${e.message}`); return null; });
 
         const resenasMap = new Map();
 
-        const procesarSnapshot = (snap: any) => {
+        const procesar = (snap: any) => {
           if (!snap) return;
           snap.forEach((docSnap: any) => {
             const data = docSnap.data();
-            if (data.idEvaluador !== idChofer) {
+            // Ignorar si la reseña la escribió la misma persona
+            if (data.idEvaluador === targetId) return;
+
+            if (!resenasMap.has(docSnap.id)) {
               resenasMap.set(docSnap.id, data);
             }
           });
         };
 
-        procesarSnapshot(snapEval);
-        procesarSnapshot(snapCond);
+        procesar(snapEval);
+        procesar(snapCond);
+        procesar(snapPas);
 
-        let sumaEstrellas = 0;
-        let totalResenas = 0;
+        let suma = 0;
+        let total = 0;
 
         resenasMap.forEach((data) => {
-          sumaEstrellas += Number(data.estrellas || 0);
-          totalResenas++;
+          suma += Number(data.estrellas || 0);
+          total++;
         });
 
-        if (totalResenas > 0) {
-          const promedio = (sumaEstrellas / totalResenas).toFixed(1);
-          setRatingReal(promedio);
-        } else {
-          setRatingReal("0.0");
-        }
-      } catch (error) {
-        console.error("Error al calcular rating:", error);
+        const prom = total > 0 ? (suma / total).toFixed(1) : "0.0";
+        setRatingReal(prom);
+        setDebugInfo(`Reseñas: ${total} | Suma: ${suma}`);
+
+      } catch (err: any) {
         setRatingReal("0.0");
+        setDebugInfo(`Error: ${err?.message || "Fallo general"}`);
       }
     };
 
-    calcularRatingReal();
+    calcular();
   }, [idChofer]);
-  
   
   
   
@@ -1186,9 +1188,9 @@ const solicitarCola = async () => {
     )}
   </div>
 
-  {/* DEBUG VISUAL TEMPORAL */}
+  {/* DEBUG EN PANTALLA */}
   <p className="text-[9px] font-mono text-red-500 font-bold truncate">
-    ID: {idChofer || "SIN_ID"}
+    {debugInfo || "Cargando..."}
   </p>
   
   <div className="flex items-center gap-2 mt-1">
@@ -1206,6 +1208,7 @@ const solicitarCola = async () => {
     </span>
   </div>
 </div>
+    
     
 
 <ChevronRight size={20} className="text-slate-300 shrink-0" />
