@@ -160,9 +160,31 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  const ratingMostrado = viaje?.datosConductor?.rating || "5.0";
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
+  // Extraemos idChofer y consultamos su rating real actualizado
+  const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.datosConductor?.uid || viaje?.idPasajero || viaje?.uidPasajero;
+  const [ratingReal, setRatingReal] = useState<string>(viaje?.datosConductor?.rating || "5.0");
 
+  useEffect(() => {
+    if (!idChofer) return;
+    const obtenerRatingActualizado = async () => {
+      try {
+        const userRef = doc(db, "usuarios", idChofer);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const ratingVal = userData.rating ?? userData.promedio ?? userData.ratingPromedio;
+          if (ratingVal !== undefined && ratingVal !== null) {
+            setRatingReal(String(Number(ratingVal).toFixed(1)));
+          }
+        }
+      } catch (error) {
+        console.error("Error al obtener rating del usuario:", error);
+      }
+    };
+    obtenerRatingActualizado();
+  }, [idChofer]);
+  
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
     return Promise.race([
       promesa,
