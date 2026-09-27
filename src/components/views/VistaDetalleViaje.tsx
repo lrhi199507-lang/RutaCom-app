@@ -161,15 +161,27 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const estadoViaje = viaje?.estado || "disponible"; 
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
-  // 1. Extraemos ESTRICTAMENTE el ID del conductor (¡Eliminamos idPasajero para que no se confunda!)
-  const idChofer = viaje?.uidConductor || viaje?.idConductor || viaje?.cId || viaje?.datosConductor?.uid || viaje?.datosConductor?.id || viaje?.idCreador;
-  
-  // 2. Estado para la calificación real
-  const [ratingReal, setRatingReal] = useState<string>(viaje?.datosConductor?.rating || "5.0");
 
-  // 3. Cálculo dinámico calcado de PerfilPublico
+    // 1. Buscamos el ID exacto del conductor dentro del objeto 'viaje'
+  const idChofer = 
+    viaje?.datosConductor?.uid || 
+    viaje?.datosConductor?.id || 
+    viaje?.uidConductor || 
+    viaje?.idConductor || 
+    viaje?.idCreador || 
+    viaje?.uidCreador;
+
+  // 2. Inicializamos en "..." para saber visualmente cuándo está calculando
+  const [ratingReal, setRatingReal] = useState<string>("...");
+
+  // 3. Consulta de reseñas
   useEffect(() => {
-    if (!idChofer) return;
+    console.log("ID del conductor en VistaDetalleViaje:", idChofer);
+
+    if (!idChofer) {
+      setRatingReal("0.0");
+      return;
+    }
 
     const calcularRatingReal = async () => {
       try {
@@ -187,7 +199,6 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           if (!snap) return;
           snap.forEach((docSnap: any) => {
             const data = docSnap.data();
-            // Evitar contar las reseñas que el propio conductor dio
             if (data.idEvaluador !== idChofer) {
               resenasMap.set(docSnap.id, data);
             }
@@ -205,20 +216,21 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
           totalResenas++;
         });
 
-        // Exactamente la misma lógica matemática que tienes en PerfilPublico
         if (totalResenas > 0) {
-          setRatingReal((sumaEstrellas / totalResenas).toFixed(1));
+          const promedio = (sumaEstrellas / totalResenas).toFixed(1);
+          setRatingReal(promedio);
         } else {
-          setRatingReal("0.0"); // Si no hay reseñas, mostramos 0.0 igual que en el perfil público
+          setRatingReal("0.0");
         }
-
       } catch (error) {
-        console.error("Error al calcular rating en vista detalle:", error);
+        console.error("Error al calcular rating:", error);
+        setRatingReal("0.0");
       }
     };
 
     calcularRatingReal();
   }, [idChofer]);
+  
   
   
   
