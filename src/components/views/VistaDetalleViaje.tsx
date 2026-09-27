@@ -1185,8 +1185,13 @@ const solicitarCola = async () => {
       <BadgeCheck size={18} className="text-[#10B981] fill-[#10B981]/20 shrink-0" strokeWidth={2.5} />
     )}
   </div>
+
+  {/* DEBUG VISUAL TEMPORAL */}
+  <p className="text-[9px] font-mono text-red-500 font-bold truncate">
+    ID: {idChofer || "SIN_ID"}
+  </p>
   
-  <div className="flex items-center gap-2">
+  <div className="flex items-center gap-2 mt-1">
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map(star => (
         <Star 
@@ -1201,6 +1206,7 @@ const solicitarCola = async () => {
     </span>
   </div>
 </div>
+    
 
 <ChevronRight size={20} className="text-slate-300 shrink-0" />
     
