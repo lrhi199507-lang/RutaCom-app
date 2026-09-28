@@ -162,53 +162,39 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
 
-    // 1. Extraemos el ID del conductor
-  const idChofer = viaje?.uidConductor || viaje?.idConductor || viaje?.idCreador || viaje?.datosConductor?.uid || viaje?.datosConductor?.id;
+    const [ratingReal, setRatingReal] = useState<string>("0.0");
 
-  // 2. Buscamos el rating directamente en las posibles propiedades del objeto 'viaje'
-  const ratingDeViaje = 
-    viaje?.rating || 
-    viaje?.ratingConductor || 
-    viaje?.promedio || 
-    viaje?.ratingPromedio || 
-    viaje?.cRating || 
-    viaje?.datosConductor?.rating || 
-    viaje?.datosConductor?.promedio || 
-    viaje?.datosConductor?.ratingPromedio;
-
-  // 3. Estado inicial aprovechando el valor del viaje
-  const [ratingReal, setRatingReal] = useState<string>(
-    ratingDeViaje ? String(Number(ratingDeViaje).toFixed(1)) : "5.0"
-  );
-
-  // 4. Respaldos con una lectura directa a 'usuarios' (sin 'where' ni 'query' para evitar errores de APK)
   useEffect(() => {
-    if (ratingDeViaje) {
-      setRatingReal(String(Number(ratingDeViaje).toFixed(1)));
-      return;
-    }
+    let unmounted = false;
+    const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.idConductor;
 
     if (!idChofer) return;
 
-    const obtenerRatingUsuario = async () => {
+    const fetchRating = async () => {
       try {
-        const userRef = doc(db, "usuarios", idChofer);
-        const userSnap = await getDoc(userRef);
+        const qResenas = query(collection(db, "Resenas"), where("idConductor", "==", idChofer));
+        const snap = await getDocs(qResenas);
 
-        if (userSnap.exists()) {
-          const uData = userSnap.data();
-          const val = uData.rating ?? uData.promedio ?? uData.ratingPromedio ?? uData.promedioCalificacion;
-          if (val !== undefined && val !== null) {
-            setRatingReal(String(Number(val).toFixed(1)));
-          }
-        }
-      } catch (error) {
-        console.error("Error al obtener perfil de usuario:", error);
+        if (unmounted) return;
+
+        let suma = 0;
+        let total = snap.size;
+
+        snap.forEach(d => {
+          suma += Number(d.data().estrellas || 0);
+        });
+
+        setRatingReal(total > 0 ? (suma / total).toFixed(1) : "0.0");
+      } catch (e) {
+        console.error("Error obteniendo reseñas:", e);
       }
     };
 
-    obtenerRatingUsuario();
-  }, [idChofer, ratingDeViaje]);
+    fetchRating();
+
+    return () => { unmounted = true; };
+  }, [viaje?.uidConductor, viaje?.idCreador, viaje?.idConductor]);
+  
   
   
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
@@ -1177,6 +1163,7 @@ const solicitarCola = async () => {
     {ratingReal}
   </span>
 </div>
+  
   
 <ChevronRight size={20} className="text-slate-300 shrink-0" />
     
