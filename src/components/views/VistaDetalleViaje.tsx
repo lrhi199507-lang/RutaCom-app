@@ -161,7 +161,8 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const estadoViaje = viaje?.estado || "disponible"; 
 
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
-  // 1. Extraemos el ID del conductor
+
+    // 1. Extraemos el ID del conductor
   const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.id || viaje?.idConductor || viaje?.datosConductor?.uid || viaje?.datosConductor?.id;
 
   // 2. Estado para la calificación
@@ -1171,7 +1172,7 @@ const solicitarCola = async () => {
       )}
     </div>
     
-    <div className="flex-1 min-w-0">
+<div className="flex-1 min-w-0">
   <div className="flex items-center gap-1.5 mb-1">
     <p className="text-base font-black italic text-[#1F2937] uppercase truncate">
       {String(viaje?.cN || viaje?.conductor || "Usuario")}
@@ -1196,6 +1197,7 @@ const solicitarCola = async () => {
     </span>
   </div>
 </div>
+    
     
 
 <ChevronRight size={20} className="text-slate-300 shrink-0" />
