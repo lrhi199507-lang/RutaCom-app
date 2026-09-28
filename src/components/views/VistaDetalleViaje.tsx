@@ -1151,19 +1151,19 @@ const solicitarCola = async () => {
       </div>
 
       <div className="flex items-center gap-2 mt-1">
-        <div className="flex gap-0.5">
-          {[1, 2, 3, 4, 5].map(star => (
-            <Star 
-              key={`star-${star}`} 
-              size={12} 
-              className={star <= Math.round(Number(ratingReal)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
-            />
-          ))}
-        </div>
-        <span className="text-[11px] font-black text-slate-400">
-          {ratingReal}
-        </span>
-      </div>
+  <div className="flex gap-0.5">
+    {[1, 2, 3, 4, 5].map(star => (
+      <Star 
+        key={`star-${star}`} 
+        size={12} 
+        className={star <= Math.floor(Number(ratingReal)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
+      />
+    ))}
+  </div>
+  <span className="text-[11px] font-black text-slate-400">
+    {ratingReal}
+  </span>
+</div>
     </div> {/* <-- Cierra el flex-1 del texto */}
     
     <ChevronRight size={20} className="text-slate-300 shrink-0" />
