@@ -163,71 +163,52 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
 
     // 1. Extraemos el ID del conductor
-  const idChofer = viaje?.uidConductor || viaje?.idCreador || viaje?.id || viaje?.idConductor || viaje?.datosConductor?.uid || viaje?.datosConductor?.id;
+  const idChofer = viaje?.uidConductor || viaje?.idConductor || viaje?.idCreador || viaje?.datosConductor?.uid || viaje?.datosConductor?.id;
 
-  // 2. Estado para la calificación
-  const [ratingReal, setRatingReal] = useState<string>("5.0");
+  // 2. Buscamos el rating directamente en las posibles propiedades del objeto 'viaje'
+  const ratingDeViaje = 
+    viaje?.rating || 
+    viaje?.ratingConductor || 
+    viaje?.promedio || 
+    viaje?.ratingPromedio || 
+    viaje?.cRating || 
+    viaje?.datosConductor?.rating || 
+    viaje?.datosConductor?.promedio || 
+    viaje?.datosConductor?.ratingPromedio;
 
-  // 3. Consulta de reseñas idéntica a PerfilPublico con protección de tipos
+  // 3. Estado inicial aprovechando el valor del viaje
+  const [ratingReal, setRatingReal] = useState<string>(
+    ratingDeViaje ? String(Number(ratingDeViaje).toFixed(1)) : "5.0"
+  );
+
+  // 4. Respaldos con una lectura directa a 'usuarios' (sin 'where' ni 'query' para evitar errores de APK)
   useEffect(() => {
-    // Protección estricta: Evitamos que Firestore ejecute 'where' con valores no válidos en el APK
-    if (!idChofer || typeof idChofer !== 'string' || idChofer.trim() === '') {
+    if (ratingDeViaje) {
+      setRatingReal(String(Number(ratingDeViaje).toFixed(1)));
       return;
     }
 
-    const idPerfil = idChofer.trim();
+    if (!idChofer) return;
 
-    const obtenerRatingPerfil = async () => {
+    const obtenerRatingUsuario = async () => {
       try {
-        const qEval = query(collection(db, "Resenas"), where("idEvaluado", "==", idPerfil));
-        const qCond = query(collection(db, "Resenas"), where("idConductor", "==", idPerfil));
-        const qPas  = query(collection(db, "Resenas"), where("idPasajero", "==", idPerfil));
+        const userRef = doc(db, "usuarios", idChofer);
+        const userSnap = await getDoc(userRef);
 
-        const [snapEval, snapCond, snapPas] = await Promise.all([
-          getDocs(qEval).catch(() => null),
-          getDocs(qCond).catch(() => null),
-          getDocs(qPas).catch(() => null)
-        ]);
-
-        const resenasMap = new Map();
-
-        const procesarSnapshot = (snap: any) => {
-          if (!snap) return;
-          snap.forEach((docSnap: any) => {
-            const data = docSnap.data();
-            if (data.idEvaluador === idPerfil) return;
-
-            if (!resenasMap.has(docSnap.id)) {
-              resenasMap.set(docSnap.id, data);
-            }
-          });
-        };
-
-        procesarSnapshot(snapEval);
-        procesarSnapshot(snapCond);
-        procesarSnapshot(snapPas);
-
-        let sumaEstrellas = 0;
-        let totalResenas = 0;
-
-        resenasMap.forEach((data) => {
-          sumaEstrellas += Number(data.estrellas || 0);
-          totalResenas++;
-        });
-
-        if (totalResenas > 0) {
-          const promedio = (sumaEstrellas / totalResenas).toFixed(1);
-          setRatingReal(promedio);
-        } else {
-          setRatingReal("0.0");
+        if (userSnap.exists()) {
+          const uData = userSnap.data();
+          const val = uData.rating ?? uData.promedio ?? uData.ratingPromedio ?? uData.promedioCalificacion;
+          if (val !== undefined && val !== null) {
+            setRatingReal(String(Number(val).toFixed(1)));
+          }
         }
       } catch (error) {
-        console.error("Error obteniendo rating:", error);
+        console.error("Error al obtener perfil de usuario:", error);
       }
     };
 
-    obtenerRatingPerfil();
-  }, [idChofer]);
+    obtenerRatingUsuario();
+  }, [idChofer, ratingDeViaje]);
   
   
   const ejecutarConTimeout = async (promesa, tiempoMs = 15000) => {
@@ -1183,23 +1164,20 @@ const solicitarCola = async () => {
   </div>
 
   <div className="flex items-center gap-2 mt-1">
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(star => (
-        <Star 
-          key={`star-${star}`} 
-          size={12} 
-          className={star <= Math.round(Number(ratingReal)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
-        />
-      ))}
-    </div>
-    <span className="text-[11px] font-black text-slate-400">
-      {ratingReal}
-    </span>
+  <div className="flex gap-0.5">
+    {[1, 2, 3, 4, 5].map(star => (
+      <Star 
+        key={`star-${star}`} 
+        size={12} 
+        className={star <= Math.round(Number(ratingReal)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'} 
+      />
+    ))}
   </div>
+  <span className="text-[11px] font-black text-slate-400">
+    {ratingReal}
+  </span>
 </div>
-    
-    
-
+  
 <ChevronRight size={20} className="text-slate-300 shrink-0" />
     
   </div>
