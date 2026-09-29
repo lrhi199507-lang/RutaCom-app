@@ -497,14 +497,17 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
 const solicitarCola = async () => {
-    // 🔒 BLOQUEO KYC: Lee los campos exactos de tu documento en Firestore
-    const estaVerificado = userData?.kycVerificado === true || userData?.estadoRevision === "aprobado";[span_0](start_span)[span_0](end_span)
+    console.log(">>> BOTÓN CONFIRMAR PRESIONADO <<<");
+    
+    try {
+      // 🔒 Validar KYC
+      const estaVerificado = userData?.kycVerificado === true || userData?.estadoRevision === "aprobado";[span_1](start_span)[span_1](end_span)
 
-    if (!estaVerificado) {
-      setModalAcompanantes(false); // Cierra la selección de acompañantes si estaba abierta
-      setModalKycRequerido(true);   // Despliega la advertencia visual de KYC
-      return;                      // Corta de inmediato sin consumir GPS ni hacer escrituras
-    }
+      if (!estaVerificado) {
+        setModalAcompanantes(false);
+        setModalKycRequerido(true); // <-- Verifica tener const [modalKycRequerido, setModalKycRequerido] = useState(false); arriba
+        return;
+      }
 
     const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
     const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
