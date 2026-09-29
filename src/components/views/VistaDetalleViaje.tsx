@@ -515,15 +515,35 @@ const solicitarCola = async () => {
     
     const miSaldoActual = Number(userData?.saldo || 0);
 
+const solicitarCola = async () => {
+  setCargando(true);
+  try {
+    // 1. Validación KYC
+    const estaVerificado = userData?.kycVerificado === true || userData?.estadoRevision === "aprobado";
+
+    if (!estaVerificado) {
+      setModalAcompanantes(false);
+      setModalKycRequerido(true);
+      setCargando(false);
+      return;
+    }
+
+    const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
+    const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
+    const costoTotalPeticion = costoViajeIda + costoViajeVuelta;
+    const miSaldoActual = Number(userData?.saldo || 0);
+
     if (miSaldoActual < costoTotalPeticion) {
       setToast({ texto: `Saldo insuficiente. Necesitas $${costoTotalPeticion.toFixed(2)}`, tipo: "error" });
       setTimeout(() => setToast(null), 3000);
+      setCargando(false);
       return;
     }
 
     if (puestosQueQuiero > cuposRestantes) {
       setToast({ texto: "No hay suficientes puestos para la Ida", tipo: "error" });
       setTimeout(() => setToast(null), 3000);
+      setCargando(false);
       return;
     }
 
@@ -535,108 +555,109 @@ const solicitarCola = async () => {
       if (puestosQueQuiero > cuposVueltaRestantes) {
          setToast({ texto: "No hay puestos suficientes para el Regreso", tipo: "error" });
          setTimeout(() => setToast(null), 3500);
+         setCargando(false);
          return;
       }
     }
 
-    setCargando(true);
+    let lat = 0; let lng = 0;
     try {
-      let lat = 0; let lng = 0;
-      try {
-        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
-        lat = position.coords.latitude; 
-        lng = position.coords.longitude;
-      } catch (gpsError) {
-        setToast({ texto: "Enciende tu GPS o Ubicación para pedir la cola", tipo: "error" });
-        setTimeout(() => setToast(null), 4000);
-        setCargando(false); 
-        return; 
-      }
-
-      const miId = userData?.id || userData?.uid;
-      const nombreUsuario = userData?.nombre || "Usuario";
-
-      const datosPasajeroBase = {
-        id: String(miId), 
-        nombre: String(nombreUsuario), 
-        fotoPerfil: userData?.fotoPerfil || null, 
-        puestosSolicitados: Number(puestosQueQuiero), 
-        adultosExtra: Number(adultosExtra), 
-        ninosExtra: Number(ninosExtra),
-        lat: lat, 
-        lng: lng, 
-        boardado: false, 
-        abordado: false, 
-      };
-
-      const procesarReservaUnica = async (viajeObjetivo, esRetorno = false) => {
-        const idConductorObj = viajeObjetivo.uidConductor || viajeObjetivo.idCreador;
-        const autoAceptaViaje = viajeObjetivo.autoAceptar === true; 
-        
-        await addDoc(collection(db, "Solicitudes"), {
-          idConductor: String(idConductorObj), 
-          nombrePasajero: String(nombreUsuario), 
-          idViaje: String(viajeObjetivo.id),
-          idPasajero: String(miId), 
-          estado: autoAceptaViaje ? "aprobada" : "pendiente",
-          puestosSolicitados: Number(puestosQueQuiero), 
-          fecha: serverTimestamp()
-        });
-
-        const extraTexto = puestosQueQuiero > 1 ? ` con ${puestosQueQuiero - 1} acompañante(s)` : "";
-        let tituloNoti = autoAceptaViaje ? "¡Nuevo Pasajero!" : "¡Nueva Solicitud!";
-        let cuerpoNoti = `${nombreUsuario} ${autoAceptaViaje ? 'se unió a' : 'quiere unirse a'} tu viaje${extraTexto}.`;
-
-        if (reservarIdaYVuelta) {
-            if (esRetorno) {
-                tituloNoti = autoAceptaViaje ? "¡Regreso Confirmado! 🔁" : "¡Solicitud de Regreso! 🔁";
-                cuerpoNoti = `${nombreUsuario} también ${autoAceptaViaje ? 'aseguró' : 'solicitó'} su puesto para el viaje de VUELTA${extraTexto}.`;
-            } else {
-                tituloNoti = autoAceptaViaje ? "¡Pasajero Ida y Vuelta! ✈️" : "¡Solicitud Ida y Vuelta! ✈️";
-                cuerpoNoti = `${nombreUsuario} ${autoAceptaViaje ? 'se unió a' : 'quiere unirse a'} tu viaje de IDA, y también va en el de REGRESO${extraTexto}.`;
-            }
-        }
-
-        if (autoAceptaViaje) {
-          const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
-          await procesadorEnNube({ 
-            accion: 'reservar', 
-            viajeId: viajeObjetivo.id, 
-            pasajeroId: String(miId), 
-            puestosSolicitados: Number(puestosQueQuiero),
-            precio: Number(viajeObjetivo.precio), 
-            esAutoAceptar: true, 
-            datosPasajero: datosPasajeroBase 
-          });
-          if (idConductorObj) await enviarNotificacion(idConductorObj, tituloNoti, cuerpoNoti, "exito");
-        } else {
-          await updateDoc(doc(db, "Viajes", viajeObjetivo.id), {
-            reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
-          });
-          if (idConductorObj) {
-            await enviarNotificacion(idConductorObj, tituloNoti, cuerpoNoti, "viaje");
-          }
-        }
-      };
-
-      await ejecutarConTimeout(procesarReservaUnica(viaje, false), 15000);
-
-      if (reservarIdaYVuelta && viajeRetorno) {
-        await ejecutarConTimeout(procesarReservaUnica(viajeRetorno, true), 15000);
-      }
-
-      setToast({ texto: viaje.autoAceptar ? "¡Reserva confirmada!" : "Solicitud enviada al chofer", tipo: "exito" });
-      setModalAcompanantes(false); 
-      setTimeout(() => setToast(null), 3000);
-
-    } catch (e) { 
-      const mensajeReal = e.message === "TIMEOUT_RED" ? "Red inestable. Validando..." : `Fallo: ${e.message}`;
-      setToast({ texto: mensajeReal, tipo: "error" }); 
-      setTimeout(() => setToast(null), 5000);
-    } finally { 
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      lat = position.coords.latitude; 
+      lng = position.coords.longitude;
+    } catch (gpsError) {
+      setToast({ texto: "Enciende tu GPS o Ubicación para pedir la cola", tipo: "error" });
+      setTimeout(() => setToast(null), 4000);
       setCargando(false); 
+      return; 
     }
+
+    const miId = userData?.id || userData?.uid;
+    const nombreUsuario = userData?.nombre || "Usuario";
+
+    const datosPasajeroBase = {
+      id: String(miId), 
+      nombre: String(nombreUsuario), 
+      fotoPerfil: userData?.fotoPerfil || null, 
+      puestosSolicitados: Number(puestosQueQuiero), 
+      adultosExtra: Number(adultosExtra), 
+      ninosExtra: Number(ninosExtra),
+      lat: lat, 
+      lng: lng, 
+      boardado: false, 
+      abordado: false, 
+    };
+
+    const procesarReservaUnica = async (viajeObjetivo, esRetorno = false) => {
+      const idConductorObj = viajeObjetivo.uidConductor || viajeObjetivo.idCreador;
+      const autoAceptaViaje = viajeObjetivo.autoAceptar === true; 
+      
+      await addDoc(collection(db, "Solicitudes"), {
+        idConductor: String(idConductorObj), 
+        nombrePasajero: String(nombreUsuario), 
+        idViaje: String(viajeObjetivo.id),
+        idPasajero: String(miId), 
+        estado: autoAceptaViaje ? "aprobada" : "pendiente",
+        puestosSolicitados: Number(puestosQueQuiero), 
+        fecha: serverTimestamp()
+      });
+
+      const extraTexto = puestosQueQuiero > 1 ? ` con ${puestosQueQuiero - 1} acompañante(s)` : "";
+      let tituloNoti = autoAceptaViaje ? "¡Nuevo Pasajero!" : "¡Nueva Solicitud!";
+      let cuerpoNoti = `${nombreUsuario} ${autoAceptaViaje ? 'se unió a' : 'quiere unirse a'} tu viaje${extraTexto}.`;
+
+      if (reservarIdaYVuelta) {
+          if (esRetorno) {
+              tituloNoti = autoAceptaViaje ? "¡Regreso Confirmado! 🔁" : "¡Solicitud de Regreso! 🔁";
+              cuerpoNoti = `${nombreUsuario} también ${autoAceptaViaje ? 'aseguró' : 'solicitó'} su puesto para el viaje de VUELTA${extraTexto}.`;
+          } else {
+              tituloNoti = autoAceptaViaje ? "¡Pasajero Ida y Vuelta! ✈️" : "¡Solicitud Ida y Vuelta! ✈️";
+              cuerpoNoti = `${nombreUsuario} ${autoAceptaViaje ? 'se unió a' : 'quiere unirse a'} tu viaje de IDA, y también va en el de REGRESO${extraTexto}.`;
+          }
+      }
+
+      if (autoAceptaViaje) {
+        const procesadorEnNube = httpsCallableFromURL(functions, 'https://procesar-cancelacion-segura-1080063705561.us-central1.run.app');
+        await procesadorEnNube({ 
+          accion: 'reservar', 
+          viajeId: viajeObjetivo.id, 
+          pasajeroId: String(miId), 
+          puestosSolicitados: Number(puestosQueQuiero),
+          precio: Number(viajeObjetivo.precio), 
+          esAutoAceptar: true, 
+          datosPasajero: datosPasajeroBase 
+        });
+        if (idConductorObj) await enviarNotificacion(idConductorObj, tituloNoti, cuerpoNoti, "exito");
+      } else {
+        await updateDoc(doc(db, "Viajes", viajeObjetivo.id), {
+          reservasPendientes: arrayUnion({ ...datosPasajeroBase, estado: 'pendiente' })
+        });
+        if (idConductorObj) {
+          await enviarNotificacion(idConductorObj, tituloNoti, cuerpoNoti, "viaje");
+        }
+      }
+    };
+
+    await ejecutarConTimeout(procesarReservaUnica(viaje, false), 15000);
+
+    if (reservarIdaYVuelta && viajeRetorno) {
+      await ejecutarConTimeout(procesarReservaUnica(viajeRetorno, true), 15000);
+    }
+
+    setToast({ texto: viaje.autoAceptar ? "¡Reserva confirmada!" : "Solicitud enviada al chofer", tipo: "exito" });
+    setModalAcompanantes(false); 
+    setTimeout(() => setToast(null), 3000);
+
+  } catch (e) { 
+    console.error("Error en solicitarCola:", e);
+    const mensajeReal = e.message === "TIMEOUT_RED" ? "Red inestable. Validando..." : `Fallo: ${e.message}`;
+    setToast({ texto: mensajeReal, tipo: "error" }); 
+    setTimeout(() => setToast(null), 5000);
+  } finally { 
+    setCargando(false); 
+  }
 };
+      
   
   const cancelarSolicitud = async () => {
     setCargando(true);
