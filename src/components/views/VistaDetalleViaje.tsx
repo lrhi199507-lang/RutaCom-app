@@ -1818,7 +1818,7 @@ const solicitarCola = async () => {
             <div className="text-left mb-6">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Motivo de cancelación:</p>
               <div className="space-y-2">
-                {[ "Emergencia personal / Salud", modalCancelar.rol === 'chofer' ? "Falla mecánica del auto" : "Conseguí otra alternativa", modalCancelar.rol === 'chofer' ? "No consiguió suficientes pasajeros" : "Se canceló mi compromiso", "Otro motivo" ].map(motivo => (
+                {[ "Emergencia personal / Salud", modalCancelar.rol === 'chofer' ? "Falla mecánica del auto" : "Conseguí otra alternativa", modalCancelar.rol === 'chofer' ? "No conseguí suficientes pasajeros" : "Se canceló mi compromiso", "Otro motivo" ].map(motivo => (
                   <button key={motivo} onClick={() => setMotivoCancelacion(motivo)} className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${motivoCancelacion === motivo ? 'bg-red-950/50 border-red-500 text-red-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
                     {motivo}
                   </button>
