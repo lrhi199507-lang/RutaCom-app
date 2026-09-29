@@ -497,22 +497,22 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
 const solicitarCola = async () => {
-    console.log(">>> BOTÓN CONFIRMAR PRESIONADO <<<");
-    
-    try {
-      // 🔒 Validar KYC
-      const estaVerificado = userData?.kycVerificado === true || userData?.estadoRevision === "aprobado";[span_1](start_span)[span_1](end_span)
+  setCargando(true);
+  try {
+    // 🔒 1. Validación KYC
+    const estaVerificado = userData?.kycVerificado === true || userData?.estadoRevision === "aprobado";
 
-      if (!estaVerificado) {
-        setModalAcompanantes(false);
-        setModalKycRequerido(true); // <-- Verifica tener const [modalKycRequerido, setModalKycRequerido] = useState(false); arriba
-        return;
-      }
+    if (!estaVerificado) {
+      setModalAcompanantes(false);  // Cierra la selección de acompañantes
+      setModalKycRequerido(true);    // Abre el modal de advertencia KYC
+      setCargando(false);
+      return;                        // Detiene la reserva por completo
+    }
 
+    // 2. Cálculo de costos y saldos
     const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
     const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
     const costoTotalPeticion = costoViajeIda + costoViajeVuelta;
-    
     const miSaldoActual = Number(userData?.saldo || 0);
 
     if (miSaldoActual < costoTotalPeticion) {
@@ -542,6 +542,7 @@ const solicitarCola = async () => {
       }
     }
 
+    // 3. Geolocalización
     let lat = 0; let lng = 0;
     try {
       const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
@@ -639,6 +640,7 @@ const solicitarCola = async () => {
     setCargando(false); 
   }
 };
+  
       
   
   const cancelarSolicitud = async () => {
@@ -1771,6 +1773,32 @@ const solicitarCola = async () => {
           </div>
         </div>
       )}
+
+      {/* MODAL KYC REQUERIDO */}
+{modalKycRequerido && (
+  <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110000] p-6 flex items-center justify-center animate-in fade-in duration-200">
+    <div className="bg-[#1F2937] w-full max-w-sm rounded-[35px] shadow-2xl p-8 relative border border-slate-800 text-center">
+      <div className="bg-[#063971]/20 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border border-[#063971]/30">
+        <ShieldCheck size={30} className="text-[#10B981]" />
+      </div>
+      <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">
+        Verificación Requerida
+      </h3>
+      <p className="text-xs font-bold text-slate-300 mb-6 leading-relaxed">
+        Para solicitar tu primera cola debes tener tu perfil verificado (KYC) por motivos de seguridad.
+      </p>
+      <div className="flex flex-col gap-3">
+        <button 
+          onClick={() => setModalKycRequerido(false)} 
+          className="w-full bg-[#063971] text-white rounded-full p-4 font-black uppercase text-[10px] tracking-[2px] shadow-lg active:scale-95 transition-all hover:bg-blue-800"
+        >
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      
       
       {/* MODAL DE CANCELACIÓN Y PENALIZACIÓN */}
       {modalCancelar.visible && (
