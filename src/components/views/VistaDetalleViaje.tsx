@@ -132,6 +132,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const [viajeRetorno, setViajeRetorno] = useState(null);
   const [reservarIdaYVuelta, setReservarIdaYVuelta] = useState(false);
   const [usuarioPerfil, setUsuarioPerfil] = useState<any>(null);
+  const [modalKycRequerido, setModalKycRequerido] = useState(false);
   
 
   useEffect(() => {
@@ -160,7 +161,7 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   const soyConductor = viaje?.uidConductor === userData?.id || viaje?.idCreador === userData?.id;
   const estadoViaje = viaje?.estado || "disponible"; 
 
-  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado);
+  const hayModalAbierto = modalAbordaje || modalAcompanantes || modalCancelar.visible || modalFinalizar || modalCalificarPasajeros || modalCalificacion || modalTerminos || Boolean(perfilSeleccionado) || modalKycRequerido;
 
     const [ratingReal, setRatingReal] = useState<string>("0.0");
 
@@ -496,6 +497,15 @@ export const VistaDetalleViaje = ({ viaje: viajeInicial, onRegresar, userData, o
   };
 
 const solicitarCola = async () => {
+    // 🔒 BLOQUEO KYC: Lee los campos exactos de tu documento en Firestore
+    const estaVerificado = userData?.kycVerificado === true || userData?.estadoRevision === "aprobado";[span_0](start_span)[span_0](end_span)
+
+    if (!estaVerificado) {
+      setModalAcompanantes(false); // Cierra la selección de acompañantes si estaba abierta
+      setModalKycRequerido(true);   // Despliega la advertencia visual de KYC
+      return;                      // Corta de inmediato sin consumir GPS ni hacer escrituras
+    }
+
     const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
     const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
     const costoTotalPeticion = costoViajeIda + costoViajeVuelta;
@@ -623,7 +633,7 @@ const solicitarCola = async () => {
     } finally { 
       setCargando(false); 
     }
-  };
+};
   
   const cancelarSolicitud = async () => {
     setCargando(true);
