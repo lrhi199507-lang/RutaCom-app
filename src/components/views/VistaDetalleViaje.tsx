@@ -515,24 +515,6 @@ const solicitarCola = async () => {
     
     const miSaldoActual = Number(userData?.saldo || 0);
 
-const solicitarCola = async () => {
-  setCargando(true);
-  try {
-    // 1. Validación KYC
-    const estaVerificado = userData?.kycVerificado === true || userData?.estadoRevision === "aprobado";
-
-    if (!estaVerificado) {
-      setModalAcompanantes(false);
-      setModalKycRequerido(true);
-      setCargando(false);
-      return;
-    }
-
-    const costoViajeIda = Number(viaje?.precio || 0) * puestosQueQuiero;
-    const costoViajeVuelta = (reservarIdaYVuelta && viajeRetorno) ? (Number(viajeRetorno?.precio || 0) * puestosQueQuiero) : 0;
-    const costoTotalPeticion = costoViajeIda + costoViajeVuelta;
-    const miSaldoActual = Number(userData?.saldo || 0);
-
     if (miSaldoActual < costoTotalPeticion) {
       setToast({ texto: `Saldo insuficiente. Necesitas $${costoTotalPeticion.toFixed(2)}`, tipo: "error" });
       setTimeout(() => setToast(null), 3000);
