@@ -272,13 +272,28 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       };
       const { f, v } = fieldMap[pasoDocumento.tipo];
       const nombreArchivo = `documentos/${userId}/${f}_${Date.now()}.jpg`;
-      const storageRef = ref(storage, nombreArchivo);
+        const storageRef = ref(storage, nombreArchivo);
       await uploadString(storageRef, fotoDocTemporal, 'data_url');
       const urlDescarga = await getDownloadURL(storageRef);
 
-      await updateDoc(userRef, { [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
-      setUserData({ ...userData, [f]: urlDescarga, [v]: false, estadoRevision: "pendiente" });
+      // --- CAMBIA ESTAS LÍNEAS DE ACTUALIZACIÓN ---
+      await updateDoc(userRef, { 
+        [f]: urlDescarga, 
+        [v]: false, 
+        estadoRevision: "pendiente",
+        [`docStatus.${pasoDocumento.tipo}`]: "revision" // ESTO QUITA EL RECHAZO EN FIREBASE
+      });
 
+      setUserData({ 
+        ...userData, 
+        [f]: urlDescarga, 
+        [v]: false, 
+        estadoRevision: "pendiente",
+        docStatus: {
+          ...(userData.docStatus || {}),
+          [pasoDocumento.tipo]: "revision" // ESTO QUITA EL RECHAZO EN LA PANTALLA
+        }
+      });
       try {
         await addDoc(collection(db, "Notificaciones"), {
           idDestino: "ADMIN_TELEGRAM",
@@ -527,16 +542,6 @@ const verificarCuentaCorreo = async () => {
                   <span className="text-lg mb-1">{(userData?.musica || false) ? '🎵' : '🔇'}</span>
                   <p className={`text-[10px] font-black uppercase ${(userData?.musica || false) ? 'text-white' : 'text-slate-400'}`}>{(userData?.musica || false) ? 'Con Música' : 'Sin Música'}</p>
                 </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
-                <MenuButton icon={FileText} label="Foto de Cédula" status={userData.kycVerificado ? 'verificado' : (userData.kycFoto ? 'revision' : (userData.estadoRevision === 'rechazado' ? 'rechazado' : 'pendiente'))} onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
-                <MenuButton icon={User} label="Selfie con Documento" status={userData.selfieVerificada ? 'verificado' : (userData.selfieFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
-                <MenuButton icon={ShieldCheck} label="Licencia de Conducir" status={userData.licenciaVerificada ? 'verificado' : (userData.licenciaFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
-                <MenuButton icon={ShieldCheck} label="Seguro RCV" status={userData.rcvVerificado ? 'verificado' : (userData.rcvFoto ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
               </div>
             </div>
 
