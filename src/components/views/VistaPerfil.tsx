@@ -541,24 +541,52 @@ const verificarCuentaCorreo = async () => {
             </div>
 
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-[#063971] uppercase tracking-[3px] ml-4 italic">Datos del Vehículo</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
-                <MenuButton icon={Car} label="Marca" value={userData.vehiculo?.marca} onClick={() => { setTipoEdicion({id:'marca', label:'Marca', valor:userData.vehiculo?.marca}); setNuevoValor(userData.vehiculo?.marca || ""); setModalVisible(true); }} />
-                <MenuButton icon={Gauge} label="Modelo" value={userData.vehiculo?.modelo} onClick={() => { setTipoEdicion({id:'modelo', label:'Modelo', valor:userData.vehiculo?.modelo}); setNuevoValor(userData.vehiculo?.modelo || ""); setModalVisible(true); }} />
-                <MenuButton icon={Palette} label="Color" value={userData.vehiculo?.color} onClick={() => { setTipoEdicion({id:'color', label:'Color', valor:userData.vehiculo?.color}); setNuevoValor(userData.vehiculo?.color || ""); setModalVisible(true); }} />
-                <MenuButton icon={Hash} label="Placa" value={userData.vehiculo?.placa} onClick={() => { setTipoEdicion({id:'placa', label:'Placa', valor:userData.vehiculo?.placa}); setNuevoValor(userData.vehiculo?.placa || ""); setModalVisible(true); }} />
-              </div>
-            </div>
+  <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
+  <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+    
+    <MenuButton icon={FileText} label="Foto de Cédula" 
+      status={userData.kycVerificado ? 'verificado' : (userData.docStatus?.cedula === 'rechazado' ? 'rechazado' : (userData.kycFoto ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
+      
+    <MenuButton icon={User} label="Selfie con Documento" 
+      status={userData.selfieVerificada ? 'verificado' : (userData.docStatus?.selfie === 'rechazado' ? 'rechazado' : (userData.selfieFoto ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
+      
+    <MenuButton icon={ShieldCheck} label="Licencia de Conducir" 
+      status={userData.licenciaVerificada ? 'verificado' : (userData.docStatus?.licencia === 'rechazado' ? 'rechazado' : (userData.licenciaFoto ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
+      
+    <MenuButton icon={ShieldCheck} label="Seguro RCV" 
+      status={userData.rcvVerificado ? 'verificado' : (userData.docStatus?.rcv === 'rechazado' ? 'rechazado' : (userData.rcvFoto ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
+      
+  </div>
+</div>
+            
 
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-[#10B981] uppercase tracking-[3px] ml-4 italic">Fotos del Vehículo</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
-                <MenuButton icon={Camera} label="Frontal" status={userData.fotoFrontalVerificada ? 'verificado' : (userData.fotoFrontal ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
-                <MenuButton icon={Camera} label="Trasera" status={userData.fotoTraseraVerificada ? 'verificado' : (userData.fotoTrasera ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
-                <MenuButton icon={Camera} label="Lat. Izquierdo" status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.fotoLatIzq ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
-                <MenuButton icon={Camera} label="Lat. Derecho" status={userData.fotoLatDerVerificada ? 'verificado' : (userData.fotoLatDer ? 'revision' : 'pendiente')} onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
-              </div>
-            </div>
+  <p className="text-[10px] font-black text-[#10B981] uppercase tracking-[3px] ml-4 italic">Fotos del Vehículo</p>
+  <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+    
+    <MenuButton icon={Camera} label="Frontal" 
+      status={userData.fotoFrontalVerificada ? 'verificado' : (userData.docStatus?.fotoFrontal === 'rechazado' ? 'rechazado' : (userData.fotoFrontal ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
+      
+    <MenuButton icon={Camera} label="Trasera" 
+      status={userData.fotoTraseraVerificada ? 'verificado' : (userData.docStatus?.fotoTrasera === 'rechazado' ? 'rechazado' : (userData.fotoTrasera ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
+      
+    <MenuButton icon={Camera} label="Lat. Izquierdo" 
+      status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.docStatus?.fotoLatIzq === 'rechazado' ? 'rechazado' : (userData.fotoLatIzq ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
+      
+    <MenuButton icon={Camera} label="Lat. Derecho" 
+      status={userData.fotoLatDerVerificada ? 'verificado' : (userData.docStatus?.fotoLatDer === 'rechazado' ? 'rechazado' : (userData.fotoLatDer ? 'revision' : 'pendiente'))} 
+      onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
+      
+  </div>
+</div>
+            
 
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 mt-4 active:scale-95 transition-transform"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
