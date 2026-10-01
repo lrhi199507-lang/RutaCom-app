@@ -3,8 +3,10 @@ import { auth, db } from './firebaseConfig';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from 'firebase/auth';
+
 import { doc, getDoc, setDoc, updateDoc, addDoc, collection } from 'firebase/firestore'; 
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation'; 
@@ -85,7 +87,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-    const manejarOlvidoClave = async () => {
+      const manejarOlvidoClave = async () => {
     if (!email.trim() || !email.includes('@')) {
       setToast({ texto: "Escribe un correo válido para ayudarte.", tipo: "error" });
       setTimeout(() => setToast(null), 4000);
@@ -94,13 +96,8 @@ export default function App() {
 
     setCargando(true);
     try {
-      const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
-      await solicitarCorreo({
-        idDestino: "CORREO_OLVIDO",
-        email: email.toLowerCase().trim(),
-        nombre: "Viajero",
-        timestamp: Date.now()
-      });
+      // Método oficial y directo de Firebase Auth
+      await sendPasswordResetEmail(auth, email.toLowerCase().trim());
 
       setToast({ 
         texto: "¡Enviado! Revisa tu bandeja de entrada para restablecer tu clave.", 
@@ -108,17 +105,18 @@ export default function App() {
       });
       setTimeout(() => setToast(null), 5000);
     } catch (error: any) {
-      console.error("❌ ERROR REAL EN FRONTEND:", error);
-      // Muestra el detalle real devuelto por la Cloud Function o Firebase
-      const detalleError = error.details?.message || error.message || error.code || "Error desconocido";
-      setToast({ texto: `Error: ${detalleError}`, tipo: "error" });
-      setTimeout(() => setToast(null), 6000);
+      console.error("❌ ERROR EN RESTABLECIMIENTO:", error);
+      if (error.code === 'auth/user-not-found') {
+        setToast({ texto: "No existe una cuenta vinculada a este correo.", tipo: "error" });
+      } else {
+        setToast({ texto: `Error: ${error.code}`, tipo: "error" });
+      }
+      setTimeout(() => setToast(null), 4000);
     } finally {
       setCargando(false);
     }
   };
   
-
   useEffect(() => {
     if (usuario !== undefined) return;
     
