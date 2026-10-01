@@ -3,9 +3,19 @@ import { App } from '@capacitor/app';
 import { db, storage } from '../../firebaseConfig';
 import { doc, updateDoc, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendEmailVerification } from 'firebase/auth';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { getAuth, signOut } from 'firebase/auth';
+
+// IMPORTACIONES DE AUTH UNIFICADAS CON LAS NUEVAS FUNCIONES NATIVAS
+import { 
+  getAuth, 
+  signOut, 
+  EmailAuthProvider, 
+  reauthenticateWithCredential, 
+  updatePassword, 
+  sendEmailVerification,
+  sendPasswordResetEmail
+} from 'firebase/auth';
+
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, AlertCircle, AlertTriangle, Car, Palette, 
@@ -13,7 +23,6 @@ import {
   BookOpen, Users, Clock, X, Calendar 
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const auth = getAuth();
 
@@ -41,7 +50,6 @@ const ModalComoFunciona = ({ isOpen, onClose }: any) => {
   if (!isOpen) return null;
 
   return (
-    // 🔥 Z-INDEX ELEVADO AL MÁXIMO (99999) 🔥
     <div className="fixed inset-0 z-[99999] bg-[#1F2937]/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-md rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto no-scrollbar shadow-2xl relative">
         <div className="flex justify-between items-center mb-6">
@@ -227,7 +235,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
 
-  // --- FUNCIÓN PARA GUARDAR LA FECHA DE NACIMIENTO Y EDAD ---
   const guardarNacimiento = async () => {
     setCargando(true);
     try {
@@ -272,16 +279,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       };
       const { f, v } = fieldMap[pasoDocumento.tipo];
       const nombreArchivo = `documentos/${userId}/${f}_${Date.now()}.jpg`;
-        const storageRef = ref(storage, nombreArchivo);
+      const storageRef = ref(storage, nombreArchivo);
       await uploadString(storageRef, fotoDocTemporal, 'data_url');
       const urlDescarga = await getDownloadURL(storageRef);
 
-      // --- CAMBIA ESTAS LÍNEAS DE ACTUALIZACIÓN ---
       await updateDoc(userRef, { 
         [f]: urlDescarga, 
         [v]: false, 
         estadoRevision: "pendiente",
-        [`docStatus.${pasoDocumento.tipo}`]: "revision" // ESTO QUITA EL RECHAZO EN FIREBASE
+        [`docStatus.${pasoDocumento.tipo}`]: "revision"
       });
 
       setUserData({ 
@@ -291,7 +297,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         estadoRevision: "pendiente",
         docStatus: {
           ...(userData.docStatus || {}),
-          [pasoDocumento.tipo]: "revision" // ESTO QUITA EL RECHAZO EN LA PANTALLA
+          [pasoDocumento.tipo]: "revision"
         }
       });
       try {
@@ -328,27 +334,36 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
   
-const verificarCuentaCorreo = async () => {
+  // --- FUNCIÓN ACTUALIZADA: Usa Firebase Nativo ---
+  const verificarCuentaCorreo = async () => {
     if (!auth.currentUser) return;
     setCargando(true);
     try {
-      const functions = getFunctions();
-      const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
-      
-      await solicitarCorreo({
-        idDestino: "CORREO_VERIFICACION",
-        email: auth.currentUser.email?.toLowerCase().trim(),
-        nombre: userData.nombre || "Viajero", 
-        timestamp: Date.now()
-      });
-
-      setToast({ texto: "¡Nuevo enlace enviado! Revisa tu bandeja.", tipo: "exito" });
+      await sendEmailVerification(auth.currentUser);
+      setToast({ texto: "¡Enlace enviado! Revisa tu correo.", tipo: "exito" });
       setTimeout(() => setToast(null), 4000); 
-      
     } catch (error) { 
-      console.error("Error al pedir reenvío del correo:", error);
-      setToast({ texto: "Error al solicitar el envío.", tipo: "error" });
+      console.error("Error al enviar correo:", error);
+      setToast({ texto: "Error al enviar. Intenta más tarde.", tipo: "error" });
       setTimeout(() => setToast(null), 4000); 
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // --- NUEVA FUNCIÓN: Recuperación de contraseña ---
+  const recuperarContrasena = async () => {
+    if (!auth.currentUser?.email) return;
+    setCargando(true);
+    try {
+      await sendPasswordResetEmail(auth, auth.currentUser.email);
+      setToast({ texto: "Correo de recuperación enviado.", tipo: "exito" });
+      setTimeout(() => setToast(null), 4000);
+      setModalClave(false); // Cierra el modal de contraseña si estaba abierto
+    } catch (error) {
+      console.error("Error en recuperación:", error);
+      setToast({ texto: "No se pudo enviar el correo.", tipo: "error" });
+      setTimeout(() => setToast(null), 4000);
     } finally {
       setCargando(false);
     }
@@ -406,8 +421,8 @@ const verificarCuentaCorreo = async () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={verificarCuentaCorreo} className="flex-1 bg-white/10 text-white border border-white/20 py-2.5 rounded-2xl text-[9px] font-black uppercase">Reenviar Link</button>
-                    <button onClick={actualizarEstadoVerificacion} className="flex-1 bg-white text-[#063971] py-2.5 rounded-2xl text-[9px] font-black uppercase shadow-sm">¡Ya lo hice! ✨</button>
+                    <button onClick={verificarCuentaCorreo} disabled={cargando} className="flex-1 bg-white/10 text-white border border-white/20 py-2.5 rounded-2xl text-[9px] font-black uppercase disabled:opacity-50">Reenviar Link</button>
+                    <button onClick={actualizarEstadoVerificacion} disabled={cargando} className="flex-1 bg-white text-[#063971] py-2.5 rounded-2xl text-[9px] font-black uppercase shadow-sm disabled:opacity-50">¡Ya lo hice! ✨</button>
                   </div>
                 </div>
               </div>
@@ -427,7 +442,6 @@ const verificarCuentaCorreo = async () => {
               </div>
               <h2 className="text-2xl font-black italic text-[#1F2937] uppercase tracking-tighter">{userData.nombre || "Usuario"}</h2>
               
-              {/* --- NUEVO: MIEMBRO DESDE --- */}
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center justify-center gap-1.5">
                  <Calendar size={14} className="text-[#063971]" /> Miembro desde {formatearMesAño(userData.fechaRegistro || userData.fechaCreacion)}
               </p>
@@ -515,7 +529,6 @@ const verificarCuentaCorreo = async () => {
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={UserCog} label="Nombre" value={userData.nombre} onClick={() => { setTipoEdicion({id:'nombre', label:'Nombre', valor:userData.nombre}); setNuevoValor(userData.nombre); setModalVisible(true); }} />
                 
-                {/* --- NUEVO: FECHA DE NACIMIENTO Y EDAD --- */}
                 <MenuButton 
                   icon={Calendar} 
                   label="Nacimiento y Edad" 
@@ -546,59 +559,46 @@ const verificarCuentaCorreo = async () => {
             </div>
 
             <div className="space-y-3">
-  <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
-  <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
-    
-    <MenuButton icon={FileText} label="Foto de Cédula" 
-      status={userData.kycVerificado ? 'verificado' : (userData.docStatus?.cedula === 'rechazado' ? 'rechazado' : (userData.kycFoto ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
-      
-    <MenuButton icon={User} label="Selfie con Documento" 
-      status={userData.selfieVerificada ? 'verificado' : (userData.docStatus?.selfie === 'rechazado' ? 'rechazado' : (userData.selfieFoto ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
-      
-    <MenuButton icon={ShieldCheck} label="Licencia de Conducir" 
-      status={userData.licenciaVerificada ? 'verificado' : (userData.docStatus?.licencia === 'rechazado' ? 'rechazado' : (userData.licenciaFoto ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
-      
-    <MenuButton icon={ShieldCheck} label="Seguro RCV" 
-      status={userData.rcvVerificado ? 'verificado' : (userData.docStatus?.rcv === 'rechazado' ? 'rechazado' : (userData.rcvFoto ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
-      
-  </div>
-</div>
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+                <MenuButton icon={FileText} label="Foto de Cédula" 
+                  status={userData.kycVerificado ? 'verificado' : (userData.docStatus?.cedula === 'rechazado' ? 'rechazado' : (userData.kycFoto ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
+                <MenuButton icon={User} label="Selfie con Documento" 
+                  status={userData.selfieVerificada ? 'verificado' : (userData.docStatus?.selfie === 'rechazado' ? 'rechazado' : (userData.selfieFoto ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
+                <MenuButton icon={ShieldCheck} label="Licencia de Conducir" 
+                  status={userData.licenciaVerificada ? 'verificado' : (userData.docStatus?.licencia === 'rechazado' ? 'rechazado' : (userData.licenciaFoto ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
+                <MenuButton icon={ShieldCheck} label="Seguro RCV" 
+                  status={userData.rcvVerificado ? 'verificado' : (userData.docStatus?.rcv === 'rechazado' ? 'rechazado' : (userData.rcvFoto ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
+              </div>
+            </div>
             
-
             <div className="space-y-3">
-  <p className="text-[10px] font-black text-[#10B981] uppercase tracking-[3px] ml-4 italic">Fotos del Vehículo</p>
-  <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
-    
-    <MenuButton icon={Camera} label="Frontal" 
-      status={userData.fotoFrontalVerificada ? 'verificado' : (userData.docStatus?.fotoFrontal === 'rechazado' ? 'rechazado' : (userData.fotoFrontal ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
-      
-    <MenuButton icon={Camera} label="Trasera" 
-      status={userData.fotoTraseraVerificada ? 'verificado' : (userData.docStatus?.fotoTrasera === 'rechazado' ? 'rechazado' : (userData.fotoTrasera ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
-      
-    <MenuButton icon={Camera} label="Lat. Izquierdo" 
-      status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.docStatus?.fotoLatIzq === 'rechazado' ? 'rechazado' : (userData.fotoLatIzq ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
-      
-    <MenuButton icon={Camera} label="Lat. Derecho" 
-      status={userData.fotoLatDerVerificada ? 'verificado' : (userData.docStatus?.fotoLatDer === 'rechazado' ? 'rechazado' : (userData.fotoLatDer ? 'revision' : 'pendiente'))} 
-      onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
-      
-  </div>
-</div>
-            
+              <p className="text-[10px] font-black text-[#10B981] uppercase tracking-[3px] ml-4 italic">Fotos del Vehículo</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+                <MenuButton icon={Camera} label="Frontal" 
+                  status={userData.fotoFrontalVerificada ? 'verificado' : (userData.docStatus?.fotoFrontal === 'rechazado' ? 'rechazado' : (userData.fotoFrontal ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
+                <MenuButton icon={Camera} label="Trasera" 
+                  status={userData.fotoTraseraVerificada ? 'verificado' : (userData.docStatus?.fotoTrasera === 'rechazado' ? 'rechazado' : (userData.fotoTrasera ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
+                <MenuButton icon={Camera} label="Lat. Izquierdo" 
+                  status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.docStatus?.fotoLatIzq === 'rechazado' ? 'rechazado' : (userData.fotoLatIzq ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
+                <MenuButton icon={Camera} label="Lat. Derecho" 
+                  status={userData.fotoLatDerVerificada ? 'verificado' : (userData.docStatus?.fotoLatDer === 'rechazado' ? 'rechazado' : (userData.fotoLatDer ? 'revision' : 'pendiente'))} 
+                  onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
+              </div>
+            </div>
 
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 mt-4 active:scale-95 transition-transform"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
         )}
       </div>
 
-      {/* --- MODAL CALENDARIO CUSTOM DAME LA COLA --- */}
       {modalNacimiento && (
         <div className="fixed inset-0 z-[300] bg-[#1F2937]/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative border border-slate-100">
@@ -624,7 +624,6 @@ const verificarCuentaCorreo = async () => {
                <div className="relative">
                  <select value={anioNac} onChange={e=>setAnioNac(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] font-bold p-3.5 rounded-2xl outline-none focus:border-[#063971] appearance-none text-center">
                     <option value="">Año</option>
-                    {/* Años desde hace 18 hasta 80 años atrás */}
                     {Array.from({length: 80}, (_,i) => new Date().getFullYear() - 18 - i).map(y => <option key={y} value={y}>{y}</option>)}
                  </select>
                </div>
@@ -644,7 +643,6 @@ const verificarCuentaCorreo = async () => {
         </div>
       )}
 
-      {/* --- RESTO DE MODALES DE EDICIÓN --- */}
       {modalVisible && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-[#1F2937]/60 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
@@ -714,11 +712,21 @@ const verificarCuentaCorreo = async () => {
               <div className="bg-[#063971]/10 p-4 rounded-2xl mb-4"><ShieldCheck className="text-[#063971]" size={32} /></div>
               <h2 className="text-xl font-black italic text-[#1F2937] mb-2 uppercase">Seguridad</h2>
               <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-6 text-center">Cambiar Contraseña</p>
-              <div className="w-full space-y-4">
+              
+              <div className="w-full space-y-4 mb-2">
                 <input type="password" placeholder="Contraseña Actual" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-bold text-[#1F2937] focus:border-[#063971]/30 transition-colors" value={passActual} onChange={(e) => setPassActual(e.target.value)} />
                 <input type="password" placeholder="Nueva Contraseña" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-bold text-[#1F2937] focus:border-[#063971]/30 transition-colors" value={passNueva} onChange={(e) => setPassNueva(e.target.value)} />
               </div>
-              <div className="grid grid-cols-2 gap-3 w-full mt-8">
+              
+              {/* BOTÓN PARA RECUPERAR CONTRASEÑA */}
+              <button 
+                onClick={recuperarContrasena} 
+                className="text-[9px] font-black uppercase text-[#063971]/70 hover:text-[#063971] tracking-widest underline decoration-[#063971]/30 underline-offset-4 active:scale-95 transition-all"
+              >
+                ¿Olvidaste la actual? Enviar correo
+              </button>
+
+              <div className="grid grid-cols-2 gap-3 w-full mt-6">
                 <button onClick={() => { setModalClave(false); setPassActual(''); setPassNueva(''); }} className="p-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 font-black uppercase text-[10px] transition-colors">Cancelar</button>
                 <button onClick={cambiarPasswordSeguro} className="p-4 rounded-2xl bg-[#063971] text-white font-black uppercase text-[10px] shadow-lg shadow-[#063971]/30 active:scale-95 transition-all">Actualizar</button>
               </div>
@@ -747,10 +755,10 @@ const verificarCuentaCorreo = async () => {
           )}
         </div>
       )}
-            {/* --- MODAL GUÍA DE LA APP --- */}
+      
       <ModalComoFunciona isOpen={showReglas} onClose={() => setShowReglas(false)} />
       
-    </div> // <-- Este es el último div que ya tienes en tu código
+    </div>
   );
 };
 
