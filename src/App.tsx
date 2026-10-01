@@ -85,7 +85,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const manejarOlvidoClave = async () => {
+    const manejarOlvidoClave = async () => {
     if (!email.trim() || !email.includes('@')) {
       setToast({ texto: "Escribe un correo válido para ayudarte.", tipo: "error" });
       setTimeout(() => setToast(null), 4000);
@@ -109,12 +109,15 @@ export default function App() {
       setTimeout(() => setToast(null), 5000);
     } catch (error: any) {
       console.error("❌ ERROR REAL EN FRONTEND:", error);
-      setToast({ texto: "Hubo un problema al procesar la solicitud.", tipo: "error" });
-      setTimeout(() => setToast(null), 4000);
+      // Muestra el detalle real devuelto por la Cloud Function o Firebase
+      const detalleError = error.details?.message || error.message || error.code || "Error desconocido";
+      setToast({ texto: `Error: ${detalleError}`, tipo: "error" });
+      setTimeout(() => setToast(null), 6000);
     } finally {
       setCargando(false);
     }
   };
+  
 
   useEffect(() => {
     if (usuario !== undefined) return;
