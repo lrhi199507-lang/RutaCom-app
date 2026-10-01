@@ -13,12 +13,10 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation'; 
 import { App as CapacitorApp } from '@capacitor/app';
 import { Check, ShieldCheck, Leaf, MapPin, Car, ChevronRight, Eye, EyeOff, RefreshCcw, AlertTriangle } from 'lucide-react'; 
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import NavegacionPrincipal from './NavegacionPrincipal';
 
 export default function App() {
   // ESTADOS DE AUTENTICACIÓN Y FLUJO
-  const functions = getFunctions();
   const [esRegistro, setEsRegistro] = useState(false);
   const [email, setEmail] = useState('');
   const [nombre, setNombre] = useState('');
@@ -88,7 +86,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-      const manejarOlvidoClave = async () => {
+  const manejarOlvidoClave = async () => {
     if (!email.trim() || !email.includes('@')) {
       setToast({ texto: "Escribe un correo válido para ayudarte.", tipo: "error" });
       setTimeout(() => setToast(null), 4000);
@@ -207,17 +205,13 @@ export default function App() {
           console.error("Error al avisar a Telegram:", errorTelegram);
         }
 
+        // 🔥 ENVÍO NATIVO DEL CORREO DE VERIFICACIÓN 🔥
         try {
-          const solicitarCorreo = httpsCallable(functions, 'enviarCorreoV2');
-          await solicitarCorreo({
-            idDestino: "CORREO_VERIFICACION", 
-            email: email.toLowerCase().trim(),
-            nombre: nombre.trim(),
-            timestamp: Date.now()
-          });
+          await sendEmailVerification(res.user);
         } catch (errorCorreo) {
-          console.error("Error al pedir el correo a la función V2:", errorCorreo);
+          console.error("Error al enviar el correo de verificación:", errorCorreo);
         }
+
         setMostrarOnboarding(true);
 
       } else {
@@ -318,8 +312,6 @@ export default function App() {
            />
         </div>
         
-        
-
         {/* Animación de la barra */}
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes loading {
@@ -381,14 +373,12 @@ export default function App() {
     return <NavegacionPrincipal user={usuario} />;
   }
 
-  
-    // PANTALLA DE LOGIN / REGISTRO
+  // PANTALLA DE LOGIN / REGISTRO
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-8 text-center text-[#1F2937] font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-[#063971]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-                              
-            {/* --- NUEVO LOGO OFICIAL (Aún más grande y sin fondo blanco) --- */}
+      {/* --- NUEVO LOGO OFICIAL (Aún más grande y sin fondo blanco) --- */}
       <div className="mb-2 mt-6 flex justify-center w-full px-4">
          <img 
            src="/logo-completo.png" 
@@ -398,8 +388,6 @@ export default function App() {
          />
       </div>
 
-      
-      
       {!esRegistro && <p className="text-[#063971] font-bold tracking-[3px] text-[10px] mb-8 uppercase italic">LA FORMA MÁS SEGURA DE PEDIR LA COLA</p>}
       {esRegistro && <p className="text-slate-500 text-xs mb-8 font-bold">Crea tu cuenta en segundos</p>}
 
