@@ -113,6 +113,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
 
   const esChofer = modoActual === 'chofer' || userData?.modo === 'chofer';
 
+  // Validación de aprobación de los 4 ángulos del vehículo
+  const vehiculoInspeccionado = esChofer && 
+    userData?.fotoFrontalVerificada === true && 
+    userData?.fotoTraseraVerificada === true && 
+    userData?.fotoLatIzqVerificada === true && 
+    userData?.fotoLatDerVerificada === true;
+
   useEffect(() => {
     const uid = auth.currentUser?.uid || userData?.id;
     if (!uid) return;
@@ -399,7 +406,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
 
-  // NUEVA FUNCIÓN: Solicitar ser chofer
   const solicitarSerChofer = async () => {
     setCargando(true);
     try {
@@ -410,7 +416,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setToast({ texto: "¡Solicitud enviada! Pronto te avisaremos.", tipo: "exito" });
       setTimeout(() => setToast(null), 4000);
 
-      // Opcional: Notificar a tu búnker (Telegram/Firebase)
       await addDoc(collection(db, "Notificaciones"), {
         idDestino: "ADMIN_TELEGRAM",
         titulo: "NUEVO ASPIRANTE A CHOFER 🚗",
@@ -465,9 +470,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
             )}
             <div className="bg-white p-8 rounded-[45px] shadow-sm border border-slate-100 text-center relative">
               <div className="absolute top-5 right-5">
-             <div className={`${rangoDatos.bgCard} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}> {rangoDatos.titulo}
-            </div>
-             </div>
+                <div className={`${rangoDatos.bgCard} text-white px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-pulse`}> {rangoDatos.titulo}
+                </div>
+              </div>
               <div className="relative w-28 h-28 mx-auto mb-5">
                 <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#063971] to-[#10B981] p-1">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-white">
@@ -488,7 +493,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
-            {(esChofer && userData.fotoFrontalVerificada && userData.fotoTraseraVerificada) && (
+            {/* Sello de Vehículo Inspeccionado: Se activa solo si los 4 ángulos están aprobados */}
+            {vehiculoInspeccionado && (
               <div className="flex items-center justify-center gap-2 bg-[#10B981]/10 py-2 px-4 rounded-2xl border border-[#10B981]/20 animate-bounce">
                 <ShieldCheck size={16} className="text-[#10B981]" />
                 <span className="text-[10px] font-black text-[#10B981] uppercase italic">Vehículo Inspeccionado</span>
@@ -645,7 +651,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             )}
 
-            {/* SECCIÓN NUEVA: Convertirse en conductor para pasajeros */}
             {!esChofer && (
               <div className="bg-white p-6 rounded-[35px] shadow-sm mt-4 border border-slate-100 text-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#063971]/5 rounded-full blur-3xl pointer-events-none"></div>
