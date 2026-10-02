@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { App } from '@capacitor/app';
 import { db, storage } from '../../firebaseConfig';
-import { doc, updateDoc, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, collection, addDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
-// IMPORTACIONES DE AUTH UNIFICADAS CON LAS NUEVAS FUNCIONES NATIVAS
 import { 
   getAuth, 
   signOut, 
@@ -26,7 +25,6 @@ import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
 const auth = getAuth();
 
-// --- HELPER: FORMATO MIEMBRO DESDE ---
 const formatearMesAño = (isoString) => {
   if (!isoString) return 'Fecha Desconocida';
   const date = new Date(isoString);
@@ -34,7 +32,6 @@ const formatearMesAño = (isoString) => {
   return `${meses[date.getMonth()]} ${date.getFullYear()}`;
 };
 
-// --- HELPER: CALCULAR EDAD AUTOMÁTICA ---
 const calcularEdad = (d, m, y) => {
   if (!d || !m || !y) return 0;
   const today = new Date();
@@ -45,7 +42,6 @@ const calcularEdad = (d, m, y) => {
   return age;
 };
 
-// --- MODAL DE REGLAS ---
 const ModalComoFunciona = ({ isOpen, onClose }: any) => {
   if (!isOpen) return null;
 
@@ -93,7 +89,7 @@ const ModalComoFunciona = ({ isOpen, onClose }: any) => {
   );
 };
 
-export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat }: any) => {
+export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiva, setPestañaActiva, onAbrirChat, modoActual }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [confirmacionCedula, setConfirmacionCedula] = useState(false); 
   const [pasoFoto, setPasoFoto] = useState(false); 
@@ -110,11 +106,25 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   
   const [showReglas, setShowReglas] = useState(false);
 
-  // --- ESTADOS DEL CALENDARIO PERSONALIZADO ---
   const [modalNacimiento, setModalNacimiento] = useState(false);
   const [diaNac, setDiaNac] = useState('');
   const [mesNac, setMesNac] = useState('');
   const [anioNac, setAnioNac] = useState('');
+
+  const esChofer = modoActual === 'chofer' || userData?.modo === 'chofer';
+
+  useEffect(() => {
+    const uid = auth.currentUser?.uid || userData?.id;
+    if (!uid) return;
+
+    const unsubscribe = onSnapshot(doc(db, "usuarios", uid), (docSnap) => {
+      if (docSnap.exists()) {
+        setUserData((prev: any) => ({ ...prev, ...docSnap.data() }));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userData?.id, setUserData]);
 
   useEffect(() => {
     let listenerHandle: any = null;
@@ -136,7 +146,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     };
   }, []);
 
-  // Precargar fecha si el usuario ya la configuró
   useEffect(() => {
     if (modalNacimiento && userData?.fechaNacimiento) {
       const [y, m, d] = userData.fechaNacimiento.split('-');
@@ -156,11 +165,15 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const faltan = rangoDatos.meta - totalTrayectoria;
   const porcentajeNivel = Math.min((totalTrayectoria / rangoDatos.meta) * 100, 100);
   
-  const puntosSeguridad = [
-    !!userData.kycVerificado, !!userData.licenciaVerificada, !!userData.circulacionVerificada,
-    !!userData.rcvVerificado, !!userData.selfieVerificada, !!userData.fotoFrontalVerificada,
-    !!userData.fotoTraseraVerificada, !!userData.fotoLatIzqVerificada, !!userData.fotoLatDerVerificada
-  ];
+  let puntosSeguridad = [!!userData.kycVerificado, !!userData.selfieVerificada];
+  if (esChofer) {
+    puntosSeguridad = [
+      ...puntosSeguridad,
+      !!userData.licenciaVerificada, !!userData.rcvVerificado,
+      !!userData.fotoFrontalVerificada, !!userData.fotoTraseraVerificada, 
+      !!userData.fotoLatIzqVerificada, !!userData.fotoLatDerVerificada
+    ];
+  }
   const porcentajeConfianza = (puntosSeguridad.filter(Boolean).length / puntosSeguridad.length) * 100;
 
   const seleccionarImagen = async (source: CameraSource) => {
@@ -193,7 +206,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setToast({ texto: "Foto de perfil actualizada", tipo: "exito" });
       setTimeout(() => setToast(null), 3000);
     } catch (e) { 
-      console.error(e); 
       setToast({ texto: "Error al subir foto", tipo: "error" });
     } finally {
       setCargando(false);
@@ -283,7 +295,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await uploadString(storageRef, fotoDocTemporal, 'data_url');
       const urlDescarga = await getDownloadURL(storageRef);
 
-      // Limpiamos el motivo de rechazo anterior si existía y pasamos a revisión
       await updateDoc(userRef, { 
         [f]: urlDescarga, 
         [v]: false, 
@@ -337,7 +348,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     } finally { setCargando(false); }
   };
   
-  // --- FUNCIÓN ACTUALIZADA: Usa Firebase Nativo ---
   const verificarCuentaCorreo = async () => {
     if (!auth.currentUser) return;
     setCargando(true);
@@ -346,7 +356,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       setToast({ texto: "¡Enlace enviado! Revisa tu correo.", tipo: "exito" });
       setTimeout(() => setToast(null), 4000); 
     } catch (error) { 
-      console.error("Error al enviar correo:", error);
       setToast({ texto: "Error al enviar. Intenta más tarde.", tipo: "error" });
       setTimeout(() => setToast(null), 4000); 
     } finally {
@@ -354,7 +363,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
 
-  // --- NUEVA FUNCIÓN: Recuperación de contraseña ---
   const recuperarContrasena = async () => {
     if (!auth.currentUser?.email) return;
     setCargando(true);
@@ -362,9 +370,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await sendPasswordResetEmail(auth, auth.currentUser.email);
       setToast({ texto: "Correo de recuperación enviado.", tipo: "exito" });
       setTimeout(() => setToast(null), 4000);
-      setModalClave(false); // Cierra el modal de contraseña si estaba abierto
+      setModalClave(false);
     } catch (error) {
-      console.error("Error en recuperación:", error);
       setToast({ texto: "No se pudo enviar el correo.", tipo: "error" });
       setTimeout(() => setToast(null), 4000);
     } finally {
@@ -389,6 +396,32 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       console.error(error); 
     } finally { 
       setCargando(false); 
+    }
+  };
+
+  // NUEVA FUNCIÓN: Solicitar ser chofer
+  const solicitarSerChofer = async () => {
+    setCargando(true);
+    try {
+      const uid = auth.currentUser?.uid || userData.id;
+      await updateDoc(doc(db, "usuarios", uid), { solicitudChofer: "pendiente" });
+      
+      setUserData({ ...userData, solicitudChofer: "pendiente" });
+      setToast({ texto: "¡Solicitud enviada! Pronto te avisaremos.", tipo: "exito" });
+      setTimeout(() => setToast(null), 4000);
+
+      // Opcional: Notificar a tu búnker (Telegram/Firebase)
+      await addDoc(collection(db, "Notificaciones"), {
+        idDestino: "ADMIN_TELEGRAM",
+        titulo: "NUEVO ASPIRANTE A CHOFER 🚗",
+        mensaje: `El usuario ${userData.nombre} quiere ser conductor.`,
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      setToast({ texto: "Error al procesar la solicitud.", tipo: "error" });
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -455,7 +488,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
-            {(userData.fotoFrontalVerificada && userData.fotoTraseraVerificada) && (
+            {(esChofer && userData.fotoFrontalVerificada && userData.fotoTraseraVerificada) && (
               <div className="flex items-center justify-center gap-2 bg-[#10B981]/10 py-2 px-4 rounded-2xl border border-[#10B981]/20 animate-bounce">
                 <ShieldCheck size={16} className="text-[#10B981]" />
                 <span className="text-[10px] font-black text-[#10B981] uppercase italic">Vehículo Inspeccionado</span>
@@ -572,38 +605,75 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                   status={userData.selfieVerificada ? 'verificado' : (userData.docStatus?.selfie === 'rechazado' ? 'rechazado' : (userData.selfieFoto ? 'revision' : 'pendiente'))} 
                   motivo={userData.docStatus?.selfie_motivo}
                   onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
-                <MenuButton icon={ShieldCheck} label="Licencia de Conducir" 
-                  status={userData.licenciaVerificada ? 'verificado' : (userData.docStatus?.licencia === 'rechazado' ? 'rechazado' : (userData.licenciaFoto ? 'revision' : 'pendiente'))} 
-                  motivo={userData.docStatus?.licencia_motivo}
-                  onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
-                <MenuButton icon={ShieldCheck} label="Seguro RCV" 
-                  status={userData.rcvVerificado ? 'verificado' : (userData.docStatus?.rcv === 'rechazado' ? 'rechazado' : (userData.rcvFoto ? 'revision' : 'pendiente'))} 
-                  motivo={userData.docStatus?.rcv_motivo}
-                  onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
+                
+                {esChofer && (
+                  <>
+                    <MenuButton icon={ShieldCheck} label="Licencia de Conducir" 
+                      status={userData.licenciaVerificada ? 'verificado' : (userData.docStatus?.licencia === 'rechazado' ? 'rechazado' : (userData.licenciaFoto ? 'revision' : 'pendiente'))} 
+                      motivo={userData.docStatus?.licencia_motivo}
+                      onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
+                    <MenuButton icon={ShieldCheck} label="Seguro RCV" 
+                      status={userData.rcvVerificado ? 'verificado' : (userData.docStatus?.rcv === 'rechazado' ? 'rechazado' : (userData.rcvFoto ? 'revision' : 'pendiente'))} 
+                      motivo={userData.docStatus?.rcv_motivo}
+                      onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
+                  </>
+                )}
               </div>
             </div>
             
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-[#10B981] uppercase tracking-[3px] ml-4 italic">Fotos del Vehículo</p>
-              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
-                <MenuButton icon={Camera} label="Frontal" 
-                  status={userData.fotoFrontalVerificada ? 'verificado' : (userData.docStatus?.fotoFrontal === 'rechazado' ? 'rechazado' : (userData.fotoFrontal ? 'revision' : 'pendiente'))} 
-                  motivo={userData.docStatus?.fotoFrontal_motivo}
-                  onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
-                <MenuButton icon={Camera} label="Trasera" 
-                  status={userData.fotoTraseraVerificada ? 'verificado' : (userData.docStatus?.fotoTrasera === 'rechazado' ? 'rechazado' : (userData.fotoTrasera ? 'revision' : 'pendiente'))} 
-                  motivo={userData.docStatus?.fotoTrasera_motivo}
-                  onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
-                <MenuButton icon={Camera} label="Lat. Izquierdo" 
-                  status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.docStatus?.fotoLatIzq === 'rechazado' ? 'rechazado' : (userData.fotoLatIzq ? 'revision' : 'pendiente'))} 
-                  motivo={userData.docStatus?.fotoLatIzq_motivo}
-                  onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
-                <MenuButton icon={Camera} label="Lat. Derecho" 
-                  status={userData.fotoLatDerVerificada ? 'verificado' : (userData.docStatus?.fotoLatDer === 'rechazado' ? 'rechazado' : (userData.fotoLatDer ? 'revision' : 'pendiente'))} 
-                  motivo={userData.docStatus?.fotoLatDer_motivo}
-                  onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
+            {esChofer && (
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-[#10B981] uppercase tracking-[3px] ml-4 italic">Fotos del Vehículo</p>
+                <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+                  <MenuButton icon={Camera} label="Frontal" 
+                    status={userData.fotoFrontalVerificada ? 'verificado' : (userData.docStatus?.fotoFrontal === 'rechazado' ? 'rechazado' : (userData.fotoFrontal ? 'revision' : 'pendiente'))} 
+                    motivo={userData.docStatus?.fotoFrontal_motivo}
+                    onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
+                  <MenuButton icon={Camera} label="Trasera" 
+                    status={userData.fotoTraseraVerificada ? 'verificado' : (userData.docStatus?.fotoTrasera === 'rechazado' ? 'rechazado' : (userData.fotoTrasera ? 'revision' : 'pendiente'))} 
+                    motivo={userData.docStatus?.fotoTrasera_motivo}
+                    onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
+                  <MenuButton icon={Camera} label="Lat. Izquierdo" 
+                    status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.docStatus?.fotoLatIzq === 'rechazado' ? 'rechazado' : (userData.fotoLatIzq ? 'revision' : 'pendiente'))} 
+                    motivo={userData.docStatus?.fotoLatIzq_motivo}
+                    onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
+                  <MenuButton icon={Camera} label="Lat. Derecho" 
+                    status={userData.fotoLatDerVerificada ? 'verificado' : (userData.docStatus?.fotoLatDer === 'rechazado' ? 'rechazado' : (userData.fotoLatDer ? 'revision' : 'pendiente'))} 
+                    motivo={userData.docStatus?.fotoLatDer_motivo}
+                    onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* SECCIÓN NUEVA: Convertirse en conductor para pasajeros */}
+            {!esChofer && (
+              <div className="bg-white p-6 rounded-[35px] shadow-sm mt-4 border border-slate-100 text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#063971]/5 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="relative z-10">
+                  <div className="w-14 h-14 bg-[#063971]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#063971]/20">
+                    <Car size={26} className="text-[#063971]" />
+                  </div>
+                  <h3 className="font-black uppercase text-[13px] text-[#1F2937] tracking-widest mb-2 italic">¿Tienes Vehículo?</h3>
+                  <p className="text-[11px] text-slate-500 font-bold mb-6 px-4 leading-relaxed">
+                    Gana dinero compartiendo tus rutas. Completa tu perfil básico y envía una solicitud para habilitar las funciones de conductor.
+                  </p>
+
+                  {userData?.solicitudChofer === 'pendiente' ? (
+                    <div className="bg-amber-50 text-amber-600 p-4 rounded-[20px] text-[10px] font-black uppercase border border-amber-100 flex justify-center items-center gap-2 shadow-inner">
+                      <Clock size={16} /> Solicitud en Revisión
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={solicitarSerChofer}
+                      disabled={cargando}
+                      className="w-full bg-[#063971] text-white p-5 rounded-[25px] font-black uppercase text-[11px] shadow-lg shadow-[#063971]/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Car size={16} /> Solicitar ser Conductor
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             <button onClick={handleLogout} className="w-full p-5 bg-red-50 text-red-500 rounded-[30px] font-black uppercase text-[10px] border border-red-100 flex items-center justify-center gap-2 mt-4 active:scale-95 transition-transform"><LogOut size={14} /> Cerrar Sesión</button>
           </div>
@@ -729,7 +799,6 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                 <input type="password" placeholder="Nueva Contraseña" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-bold text-[#1F2937] focus:border-[#063971]/30 transition-colors" value={passNueva} onChange={(e) => setPassNueva(e.target.value)} />
               </div>
               
-              {/* BOTÓN PARA RECUPERAR CONTRASEÑA */}
               <button 
                 onClick={recuperarContrasena} 
                 className="text-[9px] font-black uppercase text-[#063971]/70 hover:text-[#063971] tracking-widest underline decoration-[#063971]/30 underline-offset-4 active:scale-95 transition-all"
