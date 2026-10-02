@@ -242,7 +242,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       const valorFinal = esVehiculo ? nuevoValor.toUpperCase() : nuevoValor;
       await updateDoc(doc(db, "usuarios", uid), { [field]: valorFinal });
       if (esVehiculo) {
-        setUserData({ ...userData, vehiculo: { ...userData.vehiculo, [tipoEdicion.id]: valorFinal } });
+        setUserData({ ...userData, vehiculo: { ...(userData.vehiculo || {}), [tipoEdicion.id]: valorFinal } });
       } else {
         setUserData({ ...userData, [tipoEdicion.id]: valorFinal });
       }
@@ -409,6 +409,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     }
   };
 
+  const vehiculoData = userData?.vehiculo || {};
+
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
       {toast && (
@@ -544,6 +546,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             )}
             
+            {/* 1. Información Básica */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-4 italic">Información Básica</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
@@ -564,6 +567,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
+            {/* 2. Personalidad */}
             <div className="bg-white p-5 rounded-[30px] shadow-sm mt-4 border border-slate-100">
               <p className="text-[10px] font-black text-[#063971] uppercase tracking-widest mb-4">Personalidad al conducir</p>
               <div className="flex flex-row gap-3">
@@ -578,8 +582,9 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
+            {/* 3. Identidad Personal (SEPARADA DE DOCUMENTOS DE VEHÍCULO) */}
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Seguridad Personal</p>
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Identidad Personal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={FileText} label="Foto de Cédula" 
                   status={userData.kycVerificado ? 'verificado' : (userData.docStatus?.cedula === 'rechazado' ? 'rechazado' : (userData.kycFoto ? 'revision' : 'pendiente'))} 
@@ -589,6 +594,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                   status={userData.selfieVerificada ? 'verificado' : (userData.docStatus?.selfie === 'rechazado' ? 'rechazado' : (userData.selfieFoto ? 'revision' : 'pendiente'))} 
                   motivo={userData.docStatus?.selfie_motivo}
                   onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
+              </div>
+            </div>
+
+            {/* 4. Documentos del Conductor */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-[#063971] uppercase tracking-[3px] ml-4 italic">Documentos del Conductor</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={ShieldCheck} label="Licencia de Conducir" 
                   status={userData.licenciaVerificada ? 'verificado' : (userData.docStatus?.licencia === 'rechazado' ? 'rechazado' : (userData.licenciaFoto ? 'revision' : 'pendiente'))} 
                   motivo={userData.docStatus?.licencia_motivo}
@@ -599,7 +611,19 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
                   onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
               </div>
             </div>
+
+            {/* 5. Datos del Vehículo */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] ml-4 italic">Datos del Vehículo</p>
+              <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
+                <MenuButton icon={Car} label="Marca" value={vehiculoData.marca || "Configurar"} onClick={() => { setTipoEdicion({id:'marca', label:'Marca del Vehículo', valor: vehiculoData.marca || ""}); setNuevoValor(vehiculoData.marca || ""); setModalVisible(true); }} />
+                <MenuButton icon={Car} label="Modelo" value={vehiculoData.modelo || "Configurar"} onClick={() => { setTipoEdicion({id:'modelo', label:'Modelo del Vehículo', valor: vehiculoData.modelo || ""}); setNuevoValor(vehiculoData.modelo || ""); setModalVisible(true); }} />
+                <MenuButton icon={Palette} label="Color" value={vehiculoData.color || "Configurar"} onClick={() => { setTipoEdicion({id:'color', label:'Color del Vehículo', valor: vehiculoData.color || ""}); setNuevoValor(vehiculoData.color || ""); setModalVisible(true); }} />
+                <MenuButton icon={Hash} label="Placa" value={vehiculoData.placa || "Configurar"} onClick={() => { setTipoEdicion({id:'placa', label:'Placa del Vehículo', valor: vehiculoData.placa || ""}); setNuevoValor(vehiculoData.placa || ""); setModalVisible(true); }} />
+              </div>
+            </div>
             
+            {/* 6. Fotos del Vehículo */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-[#10B981] uppercase tracking-[3px] ml-4 italic">Fotos del Vehículo</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
