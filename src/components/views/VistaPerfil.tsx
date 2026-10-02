@@ -283,11 +283,13 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
       await uploadString(storageRef, fotoDocTemporal, 'data_url');
       const urlDescarga = await getDownloadURL(storageRef);
 
+      // Limpiamos el motivo de rechazo anterior si existía y pasamos a revisión
       await updateDoc(userRef, { 
         [f]: urlDescarga, 
         [v]: false, 
         estadoRevision: "pendiente",
-        [`docStatus.${pasoDocumento.tipo}`]: "revision"
+        [`docStatus.${pasoDocumento.tipo}`]: "revision",
+        [`docStatus.${pasoDocumento.tipo}_motivo`]: "" 
       });
 
       setUserData({ 
@@ -297,7 +299,8 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
         estadoRevision: "pendiente",
         docStatus: {
           ...(userData.docStatus || {}),
-          [pasoDocumento.tipo]: "revision"
+          [pasoDocumento.tipo]: "revision",
+          [`${pasoDocumento.tipo}_motivo`]: ""
         }
       });
       try {
@@ -563,15 +566,19 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={FileText} label="Foto de Cédula" 
                   status={userData.kycVerificado ? 'verificado' : (userData.docStatus?.cedula === 'rechazado' ? 'rechazado' : (userData.kycFoto ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.cedula_motivo}
                   onClick={() => setPasoDocumento({tipo:'cedula', activa:true})} />
                 <MenuButton icon={User} label="Selfie con Documento" 
                   status={userData.selfieVerificada ? 'verificado' : (userData.docStatus?.selfie === 'rechazado' ? 'rechazado' : (userData.selfieFoto ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.selfie_motivo}
                   onClick={() => setPasoDocumento({tipo:'selfie', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Licencia de Conducir" 
                   status={userData.licenciaVerificada ? 'verificado' : (userData.docStatus?.licencia === 'rechazado' ? 'rechazado' : (userData.licenciaFoto ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.licencia_motivo}
                   onClick={() => setPasoDocumento({tipo:'licencia', activa:true})} />
                 <MenuButton icon={ShieldCheck} label="Seguro RCV" 
                   status={userData.rcvVerificado ? 'verificado' : (userData.docStatus?.rcv === 'rechazado' ? 'rechazado' : (userData.rcvFoto ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.rcv_motivo}
                   onClick={() => setPasoDocumento({tipo:'rcv', activa:true})} />
               </div>
             </div>
@@ -581,15 +588,19 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
                 <MenuButton icon={Camera} label="Frontal" 
                   status={userData.fotoFrontalVerificada ? 'verificado' : (userData.docStatus?.fotoFrontal === 'rechazado' ? 'rechazado' : (userData.fotoFrontal ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.fotoFrontal_motivo}
                   onClick={() => setPasoDocumento({tipo:'fotoFrontal', activa:true})} />
                 <MenuButton icon={Camera} label="Trasera" 
                   status={userData.fotoTraseraVerificada ? 'verificado' : (userData.docStatus?.fotoTrasera === 'rechazado' ? 'rechazado' : (userData.fotoTrasera ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.fotoTrasera_motivo}
                   onClick={() => setPasoDocumento({tipo:'fotoTrasera', activa:true})} />
                 <MenuButton icon={Camera} label="Lat. Izquierdo" 
                   status={userData.fotoLatIzqVerificada ? 'verificado' : (userData.docStatus?.fotoLatIzq === 'rechazado' ? 'rechazado' : (userData.fotoLatIzq ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.fotoLatIzq_motivo}
                   onClick={() => setPasoDocumento({tipo:'fotoLatIzq', activa:true})} />
                 <MenuButton icon={Camera} label="Lat. Derecho" 
                   status={userData.fotoLatDerVerificada ? 'verificado' : (userData.docStatus?.fotoLatDer === 'rechazado' ? 'rechazado' : (userData.fotoLatDer ? 'revision' : 'pendiente'))} 
+                  motivo={userData.docStatus?.fotoLatDer_motivo}
                   onClick={() => setPasoDocumento({tipo:'fotoLatDer', activa:true})} />
               </div>
             </div>
@@ -762,19 +773,25 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   );
 };
 
-const MenuButton = ({ icon: Icon, label, value, status, onClick }: any) => {
+const MenuButton = ({ icon: Icon, label, value, status, motivo, onClick }: any) => {
   let statusText = value || "Configurar";
   let statusColor = "text-[#063971]";
   if (status === 'revision') { statusText = "REVISIÓN ⏳"; statusColor = "text-amber-500"; }
   if (status === 'verificado') { statusText = "LISTO ✅"; statusColor = "text-[#10B981]"; }
   if (status === 'rechazado') { statusText = "REINTENTAR ⚠️"; statusColor = "text-orange-600"; }
+  
   return (
     <button onClick={onClick} disabled={status === 'verificado' || status === 'revision'} className="w-full flex items-center justify-between p-5 border-b border-slate-50 last:border-0 active:bg-slate-50 disabled:opacity-80 overflow-hidden group">
       <div className="flex items-center gap-5 flex-1 min-w-0">
-        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 group-hover:text-[#063971] group-hover:bg-[#063971]/5 transition-colors flex items-center justify-center shadow-sm flex-shrink-0"><Icon size={20} /></div>
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 group-hover:text-[#063971] group-hover:bg-[#063971]/5 transition-colors flex items-center justify-center shadow-sm flex-shrink-0">
+          <Icon size={20} />
+        </div>
         <div className="text-left flex-1 min-w-0">
           <p className="text-[10px] font-black text-slate-400 uppercase italic leading-none mb-1.5 truncate">{label}</p>
           <p className={`text-xs font-black uppercase ${statusColor} truncate`}>{statusText}</p>
+          {status === 'rechazado' && motivo && (
+            <p className="text-[9px] font-bold text-orange-500 mt-1.5 leading-tight break-words whitespace-normal">{motivo}</p>
+          )}
         </div>
       </div>
       {status !== 'verificado' && status !== 'revision' && <ChevronRight size={18} className="text-slate-200 ml-3 flex-shrink-0 group-hover:text-[#063971]/50 transition-colors" />}
