@@ -24,9 +24,9 @@ import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
 const auth = getAuth();
 
-// ==========================================
 // CONFIGURACIÓN DE GOOGLE CLOUD VISION API
 // ==========================================
+// Corregido: "AIzaSy" (con 'I' mayúscula)
 const GOOGLE_VISION_API_KEY = "AIzaSyAkcqaSGckaT7FIRHalfrEZcyEpcuyp30k";
 
 const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promise<{ valido: boolean; mensaje?: string }> => {
@@ -60,7 +60,7 @@ const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promi
 
     const data = await response.json();
 
-    // Si Google Vision devuelve un error (ej. API Key no válida o no habilitada)
+    // Si Google Vision devuelve un error
     if (data.error) {
       console.error("Error devuelto por Google Vision API:", data.error);
       return { valido: false, mensaje: `Error de la API de Vision: ${data.error.message}` };
@@ -71,33 +71,29 @@ const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promi
       return { valido: false, mensaje: "No se pudo analizar la imagen. Intenta con otra foto." };
     }
 
-    // 1. Detección para CÉDULA y SELFIE (Exige Rostro y/o Texto)
-    if (tipoDoc === "cedula") {
-  const texto = (result?.fullTextAnnotation?.text || "").toLowerCase();
-  const rostros = result?.faceAnnotations || [];
-  
-  // Palabras clave que SIEMPRE tiene una cédula
-  const palabrasCedula = ["cedula", "identidad", "republica", "bolivariana", "venezuela", "v-", "e-"];
-  const tienePalabraClave = palabrasCedula.some((palabra) => texto.includes(palabra));
-  const tieneRostro = rostros.length > 0;
-
-  // Si no tiene rostro Y tampoco contiene palabras de cédula, la rechaza
-  if (!tieneRostro && !tienePalabraClave) {
-    return { valido: false, mensaje: "La foto no parece una Cédula de Identidad válida." };
-  }
-    }
-    
-    if (tipoDoc === "cedula") {
-      const texto = result?.fullTextAnnotation?.text || "";
+    // 1. Detección para SELFIE (Exige Rostro)
+    if (tipoDoc === "selfie") {
       const rostros = result?.faceAnnotations || [];
-      
-      // Una cédula válida debe tener texto legible O un rostro visible
-      if (texto.trim().length < 10 && rostros.length === 0) {
-        return { valido: false, mensaje: "La imagen no parece ser una Cédula de Identidad válida." };
+      if (rostros.length === 0) {
+        return { valido: false, mensaje: "No se detecta un rostro humano claro en la selfie." };
       }
     }
 
-    // 2. Detección de Texto Legible (Licencia y RCV)
+    // 2. Detección para CÉDULA (Exige Rostro o palabras oficiales)
+    if (tipoDoc === "cedula") {
+      const texto = (result?.fullTextAnnotation?.text || "").toLowerCase();
+      const rostros = result?.faceAnnotations || [];
+      
+      const palabrasCedula = ["cedula", "identidad", "republica", "bolivariana", "venezuela", "v-", "e-"];
+      const tienePalabraClave = palabrasCedula.some((palabra) => texto.includes(palabra));
+      const tieneRostro = rostros.length > 0;
+
+      if (!tieneRostro && !tienePalabraClave) {
+        return { valido: false, mensaje: "La foto no parece una Cédula de Identidad válida." };
+      }
+    }
+
+    // 3. Detección de Texto Legible (Licencia y RCV)
     if (["licencia", "rcv"].includes(tipoDoc)) {
       const texto = result?.fullTextAnnotation?.text || "";
       if (texto.trim().length < 10) {
@@ -105,7 +101,7 @@ const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promi
       }
     }
 
-    // 3. Detección de Vehículo (Fotos del Carro)
+    // 4. Detección de Vehículo (Fotos del Carro)
     if (["fotoFrontal", "fotoTrasera", "fotoLatIzq", "fotoLatDer"].includes(tipoDoc)) {
       const etiquetas = (result?.labelAnnotations || []).map((l: any) => l.description.toLowerCase());
       const PalabrasClaveCarro = [
