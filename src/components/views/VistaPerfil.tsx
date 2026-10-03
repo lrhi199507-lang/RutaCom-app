@@ -232,6 +232,17 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     return () => unsubscribe();
   }, [userData?.id, setUserData]);
 
+    // Limpia automáticamente cualquier toast (rojo o negro) a los 4 segundos
+useEffect(() => {
+  if (toast) {
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }
+}, [toast]);
+
   useEffect(() => {
     let listenerHandle: any = null;
     const configurarListener = async () => {
