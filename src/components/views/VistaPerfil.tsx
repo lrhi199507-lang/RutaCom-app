@@ -27,7 +27,7 @@ const auth = getAuth();
 // ==========================================
 // CONFIGURACIÓN DE GOOGLE CLOUD VISION API
 // ==========================================
-const GOOGLE_VISION_API_KEY = "AlzaSyAkcqaSGckaT7FIRHalfrEZcyEpcuyp30k";
+const GOOGLE_VISION_API_KEY = "AIzaSyAkcqaSGckaT7FIRHalfrEZcyEpcuyp30k";
 
 const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promise<{ valido: boolean; mensaje?: string }> => {
   if (!GOOGLE_VISION_API_KEY || GOOGLE_VISION_API_KEY.includes("PEGA_AQUI")) {
