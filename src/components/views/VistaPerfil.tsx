@@ -397,15 +397,19 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     setCargando(true);
 
     // 🔍 VALIDACIÓN INTELIGENTE CON GOOGLE CLOUD VISION API
-    const resultadoVision = await validarImagenConVision(fotoDocTemporal, pasoDocumento.tipo);
-    if (!resultadoVision.valido) {
-      setCargando(false);
-      setToast({ 
-        texto: resultadoVision.mensaje || "Imagen rechazada por calidad.", 
-        tipo: "error" 
-      });
-      return;
-    }
+const resultadoVision = await validarImagenConVision(fotoDocTemporal, pasoDocumento.tipo);
+
+if (!resultadoVision.valido) {
+  setCargando(false);
+  setFotoDocTemporal(null); // 1. Limpia la foto de vista previa
+  setPasoDocumento({ ...pasoDocumento, activa: false }); // 2. Cierra el modal automáticamente
+
+  setToast({ 
+    texto: resultadoVision.mensaje || "Imagen rechazada por calidad.", 
+    tipo: "error" 
+  });
+  return;
+}
 
     const userId = userData.uid || userData.id;
     try {
