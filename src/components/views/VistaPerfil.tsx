@@ -7,7 +7,6 @@ import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capa
 
 import { 
   getAuth, 
-  signOut, 
   EmailAuthProvider, 
   reauthenticateWithCredential, 
   updatePassword, 
@@ -18,12 +17,102 @@ import {
 import { 
   UserCog, ChevronRight, Phone, FileText, User, Edit2, 
   ShieldCheck, AlertCircle, AlertTriangle, Car, Palette, 
-  Hash, Gauge, LogOut, Camera, Image as ImageIcon,
+  Hash, LogOut, Camera, Image as ImageIcon,
   BookOpen, Users, Clock, X, Calendar 
 } from 'lucide-react';
 import { calcularRangoGlobal } from '../../utils/rangoUsuario';
 
 const auth = getAuth();
+
+// ==========================================
+// CONFIGURACIÓN DE GOOGLE CLOUD VISION API
+// ==========================================
+const GOOGLE_VISION_API_KEY = "AlzaSyAkcqaSGckaT7FIRHalfrEZcyEpcuyp30k";
+
+const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promise<{ valido: boolean; mensaje?: string }> => {
+  if (!GOOGLE_VISION_API_KEY || GOOGLE_VISION_API_KEY.includes("PEGA_AQUI")) {
+    return { valido: true }; // Si no se ha puesto clave, permite continuar
+  }
+
+  try {
+    const rawBase64 = base64Img.replace(/^data:image\/\w+;base64,/, "");
+
+    // Definir características a solicitar según el documento
+    const features: any[] = [];
+    if (["selfie", "cedula"].includes(tipoDoc)) {
+      features.push({ type: "FACE_DETECTION", maxResults: 5 });
+    }
+    if (["cedula", "licencia", "rcv"].includes(tipoDoc)) {
+      features.push({ type: "TEXT_DETECTION", maxResults: 5 });
+    }
+    if (["fotoFrontal", "fotoTrasera", "fotoLatIzq", "fotoLatDer"].includes(tipoDoc)) {
+      features.push({ type: "LABEL_DETECTION", maxResults: 10 });
+    }
+
+    const response = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [{ image: { content: rawBase64 }, features }],
+        }),
+      }
+    );
+
+    const data = await response.json();
+    const result = data.responses?.[0];
+
+    if (!result) return { valido: true };
+
+    // 1. Detección de Rostro (Selfie y Cédula)
+    if (["selfie", "cedula"].includes(tipoDoc)) {
+      const rostros = result?.faceAnnotations || [];
+      if (rostros.length === 0) {
+        return { 
+          valido: false, 
+          mensaje: "No se detecta un rostro humano claro en la foto. Intenta con mejor iluminación." 
+        };
+      }
+    }
+
+    // 2. Detección de Texto Legible (Cédula, Licencia, RCV)
+    if (["cedula", "licencia", "rcv"].includes(tipoDoc)) {
+      const texto = result?.fullTextAnnotation?.text || "";
+      if (texto.trim().length < 8) {
+        return { 
+          valido: false, 
+          mensaje: "El documento está borroso o no contiene texto legible." 
+        };
+      }
+    }
+
+    // 3. Detección de Vehículo (Fotos del Carro)
+    if (["fotoFrontal", "fotoTrasera", "fotoLatIzq", "fotoLatDer"].includes(tipoDoc)) {
+      const etiquetas = (result?.labelAnnotations || []).map((l: any) => l.description.toLowerCase());
+      const PalabrasClaveCarro = [
+        "car", "vehicle", "land vehicle", "automotive exterior", 
+        "bumper", "wheel", "motor vehicle", "mode of transport", "grille", "headlamp"
+      ];
+      
+      const esCarro = etiquetas.some((label: string) => 
+        PalabrasClaveCarro.some((palabra) => label.includes(palabra))
+      );
+
+      if (!esCarro) {
+        return { 
+          valido: false, 
+          mensaje: "La imagen no parece ser un vehículo. Toma una foto clara del automóvil." 
+        };
+      }
+    }
+
+    return { valido: true };
+  } catch (error) {
+    console.error("Error en validación Cloud Vision API:", error);
+    return { valido: true }; // En fallo de conexión permite el flujo para no bloquear al usuario
+  }
+};
 
 const formatearMesAño = (isoString) => {
   if (!isoString) return 'Fecha Desconocida';
@@ -194,6 +283,14 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
     setCargando(true);
     const userId = auth.currentUser?.uid || userData.id;
     try {
+      // Validar selfie con IA
+      const val = await validarImagenConVision(fotoTemporal, "selfie");
+      if (!val.valido) {
+        setToast({ texto: val.mensaje || "Foto de perfil rechazada.", tipo: "error" });
+        setCargando(false);
+        return;
+      }
+
       const nombreArchivo = `perfiles/${userId}_${Date.now()}.jpg`;
       const storageRef = ref(storage, nombreArchivo);
       await uploadString(storageRef, fotoTemporal, 'data_url');
@@ -286,6 +383,18 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
   const subirDocumentoFinal = async () => {
     if (!fotoDocTemporal) return;
     setCargando(true);
+
+    // 🔍 VALIDACIÓN INTELIGENTE CON GOOGLE CLOUD VISION API
+    const resultadoVision = await validarImagenConVision(fotoDocTemporal, pasoDocumento.tipo);
+    if (!resultadoVision.valido) {
+      setCargando(false);
+      setToast({ 
+        texto: resultadoVision.mensaje || "Imagen rechazada por calidad.", 
+        tipo: "error" 
+      });
+      return;
+    }
+
     const userId = userData.uid || userData.id;
     try {
       const userRef = doc(db, "usuarios", userId);
@@ -582,7 +691,7 @@ export const VistaPerfil = ({ userData, setUserData, handleLogout, pestañaActiv
               </div>
             </div>
 
-            {/* 3. Identidad Personal (SEPARADA DE DOCUMENTOS DE VEHÍCULO) */}
+            {/* 3. Identidad Personal */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-orange-500 uppercase tracking-[3px] ml-4 italic">Identidad Personal</p>
               <div className="bg-white rounded-[35px] shadow-sm border border-slate-100 p-2">
