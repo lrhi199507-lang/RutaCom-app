@@ -72,13 +72,21 @@ const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promi
     }
 
     // 1. Detección para CÉDULA y SELFIE (Exige Rostro y/o Texto)
-    if (tipoDoc === "selfie") {
-      const rostros = result?.faceAnnotations || [];
-      if (rostros.length === 0) {
-        return { valido: false, mensaje: "No se detecta un rostro humano claro en la selfie." };
-      }
-    }
+    if (tipoDoc === "cedula") {
+  const texto = (result?.fullTextAnnotation?.text || "").toLowerCase();
+  const rostros = result?.faceAnnotations || [];
+  
+  // Palabras clave que SIEMPRE tiene una cédula
+  const palabrasCedula = ["cedula", "identidad", "republica", "bolivariana", "venezuela", "v-", "e-"];
+  const tienePalabraClave = palabrasCedula.some((palabra) => texto.includes(palabra));
+  const tieneRostro = rostros.length > 0;
 
+  // Si no tiene rostro Y tampoco contiene palabras de cédula, la rechaza
+  if (!tieneRostro && !tienePalabraClave) {
+    return { valido: false, mensaje: "La foto no parece una Cédula de Identidad válida." };
+  }
+    }
+    
     if (tipoDoc === "cedula") {
       const texto = result?.fullTextAnnotation?.text || "";
       const rostros = result?.faceAnnotations || [];
