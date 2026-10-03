@@ -31,59 +31,69 @@ const GOOGLE_VISION_API_KEY = "AlzaSyAkcqaSGckaT7FIRHalfrEZcyEpcuyp30k";
 
 const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promise<{ valido: boolean; mensaje?: string }> => {
   if (!GOOGLE_VISION_API_KEY || GOOGLE_VISION_API_KEY.includes("PEGA_AQUI")) {
-    return { valido: true }; // Si no se ha puesto clave, permite continuar
+    return { valido: false, mensaje: "La clave de Google Vision API no está configurada." };
   }
 
   try {
     const rawBase64 = base64Img.replace(/^data:image\/\w+;base64,/, "");
 
-    // Definir características a solicitar según el documento
-    const features: any[] = [];
-    if (["selfie", "cedula"].includes(tipoDoc)) {
-      features.push({ type: "FACE_DETECTION", maxResults: 5 });
-    }
-    if (["cedula", "licencia", "rcv"].includes(tipoDoc)) {
-      features.push({ type: "TEXT_DETECTION", maxResults: 5 });
-    }
-    if (["fotoFrontal", "fotoTrasera", "fotoLatIzq", "fotoLatDer"].includes(tipoDoc)) {
-      features.push({ type: "LABEL_DETECTION", maxResults: 10 });
-    }
-
+    // Petición con múltiples detectores
     const response = await fetch(
       `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requests: [{ image: { content: rawBase64 }, features }],
+          requests: [
+            {
+              image: { content: rawBase64 },
+              features: [
+                { type: "FACE_DETECTION", maxResults: 5 },
+                { type: "TEXT_DETECTION", maxResults: 5 },
+                { type: "LABEL_DETECTION", maxResults: 10 }
+              ],
+            },
+          ],
         }),
       }
     );
 
     const data = await response.json();
+
+    // Si Google Vision devuelve un error (ej. API Key no válida o no habilitada)
+    if (data.error) {
+      console.error("Error devuelto por Google Vision API:", data.error);
+      return { valido: false, mensaje: `Error de la API de Vision: ${data.error.message}` };
+    }
+
     const result = data.responses?.[0];
+    if (!result || Object.keys(result).length === 0) {
+      return { valido: false, mensaje: "No se pudo analizar la imagen. Intenta con otra foto." };
+    }
 
-    if (!result) return { valido: true };
-
-    // 1. Detección de Rostro (Selfie y Cédula)
-    if (["selfie", "cedula"].includes(tipoDoc)) {
+    // 1. Detección para CÉDULA y SELFIE (Exige Rostro y/o Texto)
+    if (tipoDoc === "selfie") {
       const rostros = result?.faceAnnotations || [];
       if (rostros.length === 0) {
-        return { 
-          valido: false, 
-          mensaje: "No se detecta un rostro humano claro en la foto. Intenta con mejor iluminación." 
-        };
+        return { valido: false, mensaje: "No se detecta un rostro humano claro en la selfie." };
       }
     }
 
-    // 2. Detección de Texto Legible (Cédula, Licencia, RCV)
-    if (["cedula", "licencia", "rcv"].includes(tipoDoc)) {
+    if (tipoDoc === "cedula") {
       const texto = result?.fullTextAnnotation?.text || "";
-      if (texto.trim().length < 8) {
-        return { 
-          valido: false, 
-          mensaje: "El documento está borroso o no contiene texto legible." 
-        };
+      const rostros = result?.faceAnnotations || [];
+      
+      // Una cédula válida debe tener texto legible O un rostro visible
+      if (texto.trim().length < 10 && rostros.length === 0) {
+        return { valido: false, mensaje: "La imagen no parece ser una Cédula de Identidad válida." };
+      }
+    }
+
+    // 2. Detección de Texto Legible (Licencia y RCV)
+    if (["licencia", "rcv"].includes(tipoDoc)) {
+      const texto = result?.fullTextAnnotation?.text || "";
+      if (texto.trim().length < 10) {
+        return { valido: false, mensaje: "El documento está borroso o no contiene texto legible." };
       }
     }
 
@@ -100,19 +110,17 @@ const validarImagenConVision = async (base64Img: string, tipoDoc: string): Promi
       );
 
       if (!esCarro) {
-        return { 
-          valido: false, 
-          mensaje: "La imagen no parece ser un vehículo. Toma una foto clara del automóvil." 
-        };
+        return { valido: false, mensaje: "La foto no corresponde a un vehículo. Toma una foto clara del automóvil." };
       }
     }
 
     return { valido: true };
   } catch (error) {
     console.error("Error en validación Cloud Vision API:", error);
-    return { valido: true }; // En fallo de conexión permite el flujo para no bloquear al usuario
+    return { valido: false, mensaje: "Error de conexión al validar la imagen." };
   }
 };
+
 
 const formatearMesAño = (isoString) => {
   if (!isoString) return 'Fecha Desconocida';
