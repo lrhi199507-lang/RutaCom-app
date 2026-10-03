@@ -550,13 +550,28 @@ if (!resultadoVision.valido) {
   return (
     <div className="bg-slate-50 min-h-screen flex flex-col font-sans relative">
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
-          <div className={`px-5 py-4 rounded-[20px] shadow-2xl flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-[#1F2937]' : 'bg-red-500'}`}>
-            {toast.tipo === 'exito' ? <ShieldCheck size={24} className="text-[#10B981] shrink-0" /> : <AlertTriangle size={24} className="shrink-0" />}
-            <span className="leading-relaxed">{toast.texto}</span>
-          </div>
-        </div>
-      )}
+  <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] w-[90vw] max-w-sm animate-in slide-in-from-top fade-in duration-300">
+    <div className={`px-5 py-4 rounded-[20px] shadow-2xl flex items-center justify-between gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white ${toast.tipo === 'exito' ? 'bg-[#1F2937]' : 'bg-red-500'}`}>
+      <div className="flex items-center gap-3">
+        {toast.tipo === 'exito' ? (
+          <ShieldCheck size={24} className="text-[#10B981] shrink-0" />
+        ) : (
+          <AlertTriangle size={24} className="shrink-0" />
+        )}
+        <span className="leading-relaxed">{toast.texto}</span>
+      </div>
+
+      {/* Botón X para cerrar manualmente */}
+      <button
+        onClick={() => setToast(null)}
+        className="ml-2 bg-white/20 hover:bg-white/30 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shrink-0 transition-colors"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+)}
+      
 
       <div className="p-4 bg-white/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100">
         <div className="flex bg-slate-100 p-1.5 rounded-[22px] max-w-md mx-auto shadow-inner">
