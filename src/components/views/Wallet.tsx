@@ -19,7 +19,6 @@ export const Wallet = ({ userData, onRegresar }) => {
   const [montoRetiro, setMontoRetiro] = useState("");
   
   const [fotoRecarga, setFotoRecarga] = useState(null);
-  const [metodoRecarga, setMetodoRecarga] = useState("pago_movil"); 
   const [txSeleccionada, setTxSeleccionada] = useState(null);
   
   const [datosBancarios, setDatosBancarios] = useState({ 
@@ -40,7 +39,6 @@ export const Wallet = ({ userData, onRegresar }) => {
 
   const [tasaBCV, setTasaBCV] = useState(0);
   const [datosPagoAdmin, setDatosPagoAdmin] = useState({ banco: "Cargando...", telefono: "Cargando...", cedula: "Cargando..." });
-  const [datosBinanceAdmin, setDatosBinanceAdmin] = useState({ payId: "Cargando...", correo: "Cargando..." });
 
   useEffect(() => {
     const obtenerDatosFinanzas = async () => {
@@ -51,10 +49,11 @@ export const Wallet = ({ userData, onRegresar }) => {
           const data = snap.data();
           setTasaBCV(data.tasaBCV || 0);
           if (data.bancoAdmin) {
-            setDatosPagoAdmin({ banco: data.bancoAdmin.banco || "No definido", telefono: data.bancoAdmin.telefono || "No definido", cedula: data.bancoAdmin.cedula || "No definido" });
-          }
-          if (data.binanceAdmin) {
-            setDatosBinanceAdmin({ payId: data.binanceAdmin.payId || "No definido", correo: data.binanceAdmin.correo || "No definido" });
+            setDatosPagoAdmin({ 
+              banco: data.bancoAdmin.banco || "No definido", 
+              telefono: data.bancoAdmin.telefono || "No definido", 
+              cedula: data.bancoAdmin.cedula || "No definido" 
+            });
           }
         }
       } catch (error) { console.error("Error al obtener datos financieros:", error); }
@@ -115,18 +114,23 @@ export const Wallet = ({ userData, onRegresar }) => {
       const urlComprobante = await getDownloadURL(storageRef);
 
       await addDoc(collection(db, "PagosPendientes"), {
-        uid: userData.id, nombre: userData.nombre, monto: Number(montoRecarga), referencia: referencia,
-        comprobanteUrl: urlComprobante, tasaAplicada: tasaBCV, fecha: new Date().toISOString(), 
-        estado: "pendiente", tipo: "recarga", metodoPago: metodoRecarga 
+        uid: userData.id, 
+        nombre: userData.nombre, 
+        monto: Number(montoRecarga), 
+        referencia: referencia,
+        comprobanteUrl: urlComprobante, 
+        tasaAplicada: tasaBCV, 
+        fecha: new Date().toISOString(), 
+        estado: "pendiente", 
+        tipo: "recarga", 
+        metodoPago: "pago_movil" 
       });
 
       try {
         const botToken = "8943485402:AAFwOhXY6BQDy2p09PxSE4BsfxGZ9g1nqWQ";
         const chatId = "6402827355";
         
-        const etiquetaRef = metodoRecarga === "binance" ? "Apodo Binance" : "Referencia";
-        
-        const mensaje = `🔔 *NUEVA RECARGA SOLICITADA* 🔔\n\n💰 *Monto:* $${montoRecarga}\n📝 *${etiquetaRef}:* ${referencia}\n💳 *Método:* ${metodoRecarga.replace("_", " ")}\n👤 *Usuario:* ${userData.nombre}\n🆔 *ID:* ${userData.id}`;
+        const mensaje = `🔔 *NUEVA RECARGA SOLICITADA* 🔔\n\n💰 *Monto:* $${montoRecarga}\n📝 *Referencia:* ${referencia}\n💳 *Método:* Pago Móvil\n👤 *Usuario:* ${userData.nombre}\n🆔 *ID:* ${userData.id}`;
         
         const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
         
@@ -212,7 +216,9 @@ export const Wallet = ({ userData, onRegresar }) => {
     return true;
   });
 
-  const botonBloqueadoPorHora = false; 
+  // Validación de horario (Solo habilitado de 19:00 a 22:59)
+  const horaActual = new Date().getHours();
+  const botonBloqueadoPorHora = horaActual < 19 || horaActual >= 23; 
   
   return (
     <div className="min-h-screen bg-white font-sans pb-24 relative overflow-x-hidden">
@@ -341,6 +347,7 @@ export const Wallet = ({ userData, onRegresar }) => {
         </div>
       </div>
 
+      {/* MODAL RECARGA (Ahora solo con Pago Móvil) */}
       {showModalRecarga && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-[#1F2937]/70 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 border border-slate-100 animate-in slide-in-from-bottom duration-300 overflow-y-auto max-h-[90vh] no-scrollbar shadow-2xl">
@@ -349,88 +356,37 @@ export const Wallet = ({ userData, onRegresar }) => {
               <button onClick={() => setShowModalRecarga(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-[#1F2937] active:scale-90 transition-all"><X size={18} /></button>
             </div>
 
-            <div className="flex gap-3 mb-6">
-              <button type="button" onClick={() => setMetodoRecarga("pago_movil")} className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${metodoRecarga === "pago_movil" ? "bg-[#063971] text-white border-[#063971] shadow-lg shadow-[#063971]/30" : "bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300"}`}>
-                🇻🇪 Pago Móvil
-              </button>
-              <button type="button" onClick={() => setMetodoRecarga("binance")} className={`flex-1 py-3.5 rounded-[20px] text-[10px] font-black uppercase tracking-wider transition-all border-2 active:scale-95 ${metodoRecarga === "binance" ? "bg-amber-500 text-amber-950 border-amber-500 shadow-lg shadow-amber-900/30" : "bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300"}`}>
-                 Binance Pay
-              </button>
+            <div className="space-y-4 mb-6 bg-[#063971]/5 p-5 rounded-3xl border border-[#063971]/20 animate-in fade-in zoom-in-95 duration-200">
+              <p className="text-[10px] font-black text-[#063971] uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-500">Banco:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-[#1F2937] uppercase">{datosPagoAdmin.banco}</span>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-[#063971] hover:text-blue-800 p-1.5 bg-[#063971]/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-500">Teléfono:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-[#1F2937]">{datosPagoAdmin.telefono}</span>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-[#063971] hover:text-blue-800 p-1.5 bg-[#063971]/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-slate-500">Cédula:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-[#1F2937]">{datosPagoAdmin.cedula}</span>
+                    <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-[#063971] hover:text-blue-800 p-1.5 bg-[#063971]/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            {metodoRecarga === "pago_movil" ? (
-              <div className="space-y-4 mb-6 bg-[#063971]/5 p-5 rounded-3xl border border-[#063971]/20 animate-in fade-in zoom-in-95 duration-200">
-                <p className="text-[10px] font-black text-[#063971] uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos para Pago Móvil</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-bold text-slate-500">Banco:</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-[#1F2937] uppercase">{datosPagoAdmin.banco}</span>
-                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.banco, "Banco")} className="text-[#063971] hover:text-blue-800 p-1.5 bg-[#063971]/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-bold text-slate-500">Teléfono:</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-[#1F2937]">{datosPagoAdmin.telefono}</span>
-                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.telefono, "Teléfono")} className="text-[#063971] hover:text-blue-800 p-1.5 bg-[#063971]/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-bold text-slate-500">Cédula:</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-[#1F2937]">{datosPagoAdmin.cedula}</span>
-                      <button type="button" onClick={() => copiarDato(datosPagoAdmin.cedula, "Cédula")} className="text-[#063971] hover:text-blue-800 p-1.5 bg-[#063971]/10 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4 mb-6 bg-amber-500/10 p-5 rounded-3xl border border-amber-500/30 animate-in fade-in zoom-in-95 duration-200">
-                <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2 flex items-center gap-2"><Info size={14}/> Datos de Binance (USDT)</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-bold text-slate-600">Binance Pay ID:</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-[#1F2937]">{datosBinanceAdmin.payId}</span>
-                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.payId, "Pay ID")} className="text-amber-700 hover:text-amber-900 p-1.5 bg-amber-500/20 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-bold text-slate-600">Correo Cuenta:</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-[#1F2937] truncate max-w-[140px] text-right">{datosBinanceAdmin.correo}</span>
-                      <button type="button" onClick={() => copiarDato(datosBinanceAdmin.correo, "Correo")} className="text-amber-700 hover:text-amber-900 p-1.5 bg-amber-500/20 rounded-lg transition-all active:scale-90"><Copy size={13} /></button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-5 bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start gap-3 shadow-inner">
-                  <Lock size={20} className="text-red-500 shrink-0 mt-0.5" />
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">⚠️ Reglas</p>
-                    <p className="text-[9px] font-bold text-slate-600 leading-relaxed">
-                      Por seguridad, los fondos deben provenir de <span className="text-[#1F2937] font-black bg-red-100 px-1 py-0.5 rounded">TU PROPIA CUENTA</span>.
-                    </p>
-                    <div className="bg-red-100/70 p-2.5 rounded-xl border border-red-200 mt-1">
-                      <p className="text-[9.5px] font-black text-red-800 uppercase tracking-wide">📌 Obligatorio en la NOTA:</p>
-                      <p className="text-[9px] font-bold text-red-700 mt-1">
-                        Al enviar el pago en Binance Pay, debes colocar en el campo de "Nota" lo siguiente: <br/>
-                        <span className="text-[#1F2937] font-black bg-white px-1 py-0.5 rounded mt-1 inline-block shadow-sm">"recarga dame la cola"</span>
-                      </p>
-                    </div>
-                    <p className="text-[8.5px] font-black text-red-600 uppercase tracking-wider mt-1">
-                      🚫 Captures recortados, borrosos o de terceros serán rechazados.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="bg-orange-50 border border-orange-200 p-3.5 rounded-2xl mb-6 flex items-start gap-3">
               <AlertTriangle size={18} className="text-orange-500 shrink-0 mt-0.5" />
               <p className="text-[9px] font-bold text-orange-800 uppercase tracking-widest leading-relaxed">
-                <span className="text-orange-600 font-black">REQUISITO:</span> Debes adjuntar la captura clara del comprobante. ¡Tómale capture antes de cerrar tu app del banco/Binance!
+                <span className="text-orange-600 font-black">REQUISITO:</span> Debes adjuntar la captura clara del comprobante. ¡Tómale capture antes de cerrar tu app del banco!
               </p>
             </div>
 
@@ -449,7 +405,7 @@ export const Wallet = ({ userData, onRegresar }) => {
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">Monto a Recargar ($ USDT)</label>
                 <input type="number" value={montoRecarga} onChange={(e) => setMontoRecarga(e.target.value)} placeholder="Ej: 15.00" className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] rounded-2xl p-4 text-lg font-black outline-none focus:border-[#063971] transition-all" />
-                {metodoRecarga === "pago_movil" && montoRecarga && tasaBCV > 0 && (
+                {montoRecarga && tasaBCV > 0 && (
                   <p className="text-[10px] font-black text-[#10B981] uppercase mt-2 ml-1 italic animate-in fade-in">
                     Debes transferir: ≈ Bs. {(Number(montoRecarga) * tasaBCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
@@ -458,13 +414,13 @@ export const Wallet = ({ userData, onRegresar }) => {
               
               <div>
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-[2px] mb-1.5 block ml-1">
-                  {metodoRecarga === "pago_movil" ? "Número de Referencia" : "Tu Apodo (Nickname) en Binance"}
+                  Número de Referencia
                 </label>
                 <input 
                   type="text" 
                   value={referencia} 
                   onChange={(e) => setReferencia(e.target.value)} 
-                  placeholder={metodoRecarga === "pago_movil" ? "Ej: 1234 (Últimos dígitos)" : "Ej: JuanPerez99"} 
+                  placeholder="Ej: 1234 (Últimos dígitos)" 
                   className="w-full bg-slate-50 border border-slate-200 text-[#1F2937] rounded-2xl p-4 text-sm font-black outline-none focus:border-[#063971] transition-all" 
                 />
               </div>
@@ -522,7 +478,7 @@ export const Wallet = ({ userData, onRegresar }) => {
               </div>
 
               <button type="submit" disabled={enviando || Number(montoRetiro) > saldoDisponible || Number(montoRetiro) < 10 || !datosBancarios.cedula || botonBloqueadoPorHora} className="w-full bg-[#063971] text-white rounded-2xl p-4 font-black uppercase text-xs tracking-widest shadow-lg shadow-[#063971]/30 active:scale-95 transition-all disabled:opacity-50 mt-4 hover:bg-blue-800">
-               {enviando ? "Procesando..." : "Solicitar Retiro"}
+               {enviando ? "Procesando..." : botonBloqueadoPorHora ? "Fuera de Horario" : "Solicitar Retiro"}
               </button>
             </form>
           </div>
@@ -574,7 +530,6 @@ export const Wallet = ({ userData, onRegresar }) => {
                         </div>
                         <div className="flex justify-between items-center text-[11px] font-bold text-red-500">
                           <span>Comisión app (15%):</span>
-                          {/* 🔥 Aquí cambiamos 0.9 por 0.85 y 0.1 por 0.15 🔥 */}
                           <span>-${(((Number(txSeleccionada.monto) || 0) / 0.85) * 0.15).toFixed(2)}</span>
                         </div>
                       </>
