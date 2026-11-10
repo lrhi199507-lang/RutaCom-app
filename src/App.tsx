@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebaseConfig'; 
+import ModalTerminos from './components/ModalTerminos';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -37,6 +38,8 @@ export default function App() {
   const [slideActual, setSlideActual] = useState(0);
 
   const [mensajeCarga, setMensajeCarga] = useState("Conectando..."); 
+  const [datosUsuario, setDatosUsuario] = useState<any>(null);
+  
 
   // ==========================================
   // VARIABLES DE SEGURIDAD PARA CONTRASEÑA
@@ -45,6 +48,23 @@ export default function App() {
   const tieneMayus = /[A-Z]/.test(password);
   const tieneNum = /[0-9]/.test(password);
   const passwordValida = tieneSeis && tieneMayus && tieneNum;
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUsuario(user); 
+      if (user) {
+        // Consultamos el documento en Firestore
+        const userDocRef = doc(db, "usuarios", user.uid);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          setDatosUsuario(userSnap.data());
+        }
+      } else {
+        setDatosUsuario(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // 🔥 CONSULTAR FIREBASE AL ABRIR LA APP 🔥
   useEffect(() => {
