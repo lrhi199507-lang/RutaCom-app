@@ -390,8 +390,22 @@ export default function App() {
   }
 
   if (usuario && !mostrarOnboarding) {
+    // 🔥 Si terminosAceptados NO es true (es undefined, false o no existe), muestra el modal
+    if (datosUsuario && datosUsuario.terminosAceptados !== true) {
+      return (
+        <ModalTerminos 
+          uidUsuario={usuario.uid} 
+          onAceptado={() => {
+            setDatosUsuario({ ...datosUsuario, terminosAceptados: true });
+          }} 
+        />
+      );
+    }
+
     return <NavegacionPrincipal user={usuario} />;
   }
+  
+  
 
   // PANTALLA DE LOGIN / REGISTRO
   return (
