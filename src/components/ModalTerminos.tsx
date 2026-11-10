@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { db } from "../firebaseConfig"; // Ajusta la ruta a tu config de Firebase
 import { doc, updateDoc } from "firebase/firestore";
-import { TERMINOS_Y_CONDICIONES } from "../terminosLegales";
+import { TERMINOS_Y_CONDICIONES } from "../constants/terminosLegales";
 import { ShieldCheck, XCircle, FileText } from "lucide-react";
 
 interface ModalTerminosProps {
