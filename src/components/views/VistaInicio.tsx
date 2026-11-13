@@ -17,6 +17,7 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
   const [showCalendar, setShowCalendar] = useState(false);
   const [showPasajeros, setShowPasajeros] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
+  const [mesSeleccionadoIndex, setMesSeleccionadoIndex] = useState(0);
   
   const [coordsOrigen, setCoordsOrigen] = useState(null); 
   const [coordsDestino, setCoordsDestino] = useState(null);
@@ -500,10 +501,10 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         </div>
       )}
 
-                  {showCalendar && (() => {
-        // Obtenemos los próximos 12 meses disponibles para que puedan elegir el mes exacto
+            {showCalendar && (() => {
         const mesesDisponibles = [...Array(12)].map((_, i) => {
           const d = new Date();
+          d.setDate(1); // Evita saltos de mes si hoy es día 31
           d.setMonth(d.getMonth() + i);
           return {
             numeroMes: d.getMonth(),
@@ -512,19 +513,16 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
           };
         });
 
-        // Estado interno para el mes seleccionado en el filtro (por defecto el mes actual)
-        const [mesSeleccionadoIndex, setMesSeleccionadoIndex] = React.useState(0);
-
-        // Generamos los días del mes que el usuario haya seleccionado en el filtro superior
-        const mesElegido = mesesDisponibles[mesSeleccionadoIndex];
+        const mesElegido = mesesDisponibles[mesSeleccionadoIndex] || mesesDisponibles[0];
         const primerDiaMes = new Date(mesElegido.anio, mesElegido.numeroMes, 1);
         const ultimoDiaMes = new Date(mesElegido.anio, mesElegido.numeroMes + 1, 0);
         
         const diasDelMes = [];
         let diaInicio = new Date(primerDiaMes);
         
-        // Si es el mes actual, empezamos desde hoy; si es un mes futuro, desde el día 1
         const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
         if (mesElegido.numeroMes === hoy.getMonth() && mesElegido.anio === hoy.getFullYear()) {
           diaInicio = new Date(hoy);
         }
@@ -551,8 +549,8 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
                 </button>
               </div>
 
-              {/* FILTRO DE MESES HORIZONTAL (Para saltar de mes en mes al instante) */}
-              <div className="p-4 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto flex gap-2 no-scrollbar">
+              {/* FILTRO DE MESES HORIZONTAL */}
+              <div className="p-4 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto flex gap-2">
                 {mesesDisponibles.map((m, idx) => (
                   <button
                     key={idx}
@@ -568,38 +566,34 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
                 ))}
               </div>
               
-              {/* LISTA DE DÍAS DEL MES SELECCIONADO */}
+              {/* LISTA DE DÍAS */}
               <div className="flex-1 p-5 overflow-y-auto space-y-2.5">
-                {diasDelMes.length === 0 ? (
-                  <p className="text-center text-xs text-slate-400 py-10 font-medium">No hay días disponibles para este período.</p>
-                ) : (
-                  diasDelMes.map((d, i) => {
-                    const esSeleccionado = fechaSeleccionada.toDateString() === d.toDateString();
-                    const esHoy = new Date().toDateString() === d.toDateString();
+                {diasDelMes.map((d, i) => {
+                  const esSeleccionado = fechaSeleccionada.toDateString() === d.toDateString();
+                  const esHoy = new Date().toDateString() === d.toDateString();
 
-                    return (
-                      <button 
-                        key={i}
-                        onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
-                        className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
-                          esSeleccionado 
-                          ? 'bg-[#063971] border-[#063971] text-white shadow-lg shadow-[#063971]/20' 
-                          : 'bg-slate-50 border-slate-100 text-[#1F2937] hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="text-left">
-                          <p className={`text-[10px] font-black uppercase tracking-wider ${esSeleccionado ? 'text-white/80' : 'text-slate-400'}`}>
-                            {esHoy ? 'Hoy' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
-                          </p>
-                          <p className="text-sm font-black italic uppercase mt-0.5">
-                            {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                          </p>
-                        </div>
-                        <ChevronRight size={18} className={esSeleccionado ? 'text-white' : 'text-[#063971]'} />
-                      </button>
-                    );
-                  })
-                )}
+                  return (
+                    <button 
+                      key={i}
+                      onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
+                      className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
+                        esSeleccionado 
+                        ? 'bg-[#063971] border-[#063971] text-white shadow-lg shadow-[#063971]/20' 
+                        : 'bg-slate-50 border-slate-100 text-[#1F2937] hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-left">
+                        <p className={`text-[10px] font-black uppercase tracking-wider ${esSeleccionado ? 'text-white/80' : 'text-slate-400'}`}>
+                          {esHoy ? 'Hoy' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
+                        </p>
+                        <p className="text-sm font-black italic uppercase mt-0.5">
+                          {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <ChevronRight size={18} className={esSeleccionado ? 'text-white' : 'text-[#063971]'} />
+                    </button>
+                  );
+                })}
               </div>
 
             </div>
