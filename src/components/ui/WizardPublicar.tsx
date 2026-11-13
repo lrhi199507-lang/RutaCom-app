@@ -58,37 +58,165 @@ const calcularRangoPrecio = (distanciaKm, precioIngresado) => {
 };
 
 const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
-  const dias = [];
-  
-  // Dividimos el string para forzar a JavaScript a usar tu zona horaria local
-  const [year, month, day] = minDate.split('-');
-  const hoy = new Date(year, month - 1, day); 
+  const [showCalendarPublicar, setShowCalendarPublicar] = useState(false);
+  const [mesSeleccionadoIndex, setMesSeleccionadoIndex] = useState(0);
 
-  for (let i = 0; i < 15; i++) {
-    const d = new Date(hoy);
-    d.setDate(hoy.getDate() + i);
-    dias.push(d);
-  }
+  // Generamos los próximos 12 meses disponibles
+  const mesesDisponibles = [...Array(12)].map((_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + i);
+    return {
+      numeroMes: d.getMonth(),
+      anio: d.getFullYear(),
+      nombre: d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+    };
+  });
+
+  const mesElegido = mesesDisponibles[mesSeleccionadoIndex] || mesesDisponibles[0];
+  const primerDiaMes = new Date(mesElegido.anio, mesElegido.numeroMes, 1);
+  const ultimoDiaMes = new Date(mesElegido.anio, mesElegido.numeroMes + 1, 0);
   
+  const diasDelMes = [];
+  let diaInicio = new Date(primerDiaMes);
+  
+  const [yearMin, monthMin, dayMin] = minDate.split('-');
+  const hoyMin = new Date(yearMin, monthMin - 1, dayMin);
+  hoyMin.setHours(0, 0, 0, 0);
+
+  if (mesElegido.numeroMes === hoyMin.getMonth() && mesElegido.anio === hoyMin.getFullYear()) {
+    diaInicio = new Date(hoyMin);
+  }
+
+  while (diaInicio <= ultimoDiaMes) {
+    diasDelMes.push(new Date(diaInicio));
+    diaInicio.setDate(diaInicio.getDate() + 1);
+  }
+
+  // Previsualización rápida de los próximos 7 días en el carrusel principal
+  const diasCarrusel = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(hoyMin);
+    d.setDate(hoyMin.getDate() + i);
+    diasCarrusel.push(d);
+  }
+
+  const formatearAString = (d) => {
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mes}-${dia}`;
+  };
+
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
-      {dias.map((d, i) => {
-        // Formateamos la fecha manualmente SIN usar toISOString()
-        const mes = String(d.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.getDate()).padStart(2, '0');
-        const strDate = `${d.getFullYear()}-${mes}-${dia}`;
-        
-        const isSelected = fechaSeleccionada === strDate;
-        return (
-          <button key={i} type="button" onClick={() => onSelect(strDate)} className={`snap-center shrink-0 w-[70px] py-3 rounded-[22px] border flex flex-col items-center transition-all ${isSelected ? 'bg-[#063971] border-[#063971] text-white shadow-lg shadow-[#063971]/30' : 'bg-white border-slate-100 text-[#1F2937]'}`}>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>{i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
-            <span className="text-xl font-black italic mt-1">{d.getDate()}</span>
-          </button>
-        );
-      })}
+    <div className="space-y-3">
+      {/* Carrusel rápido o Botón para abrir el calendario completo */}
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-black uppercase text-slate-400">Fecha del Viaje</span>
+        <button 
+          type="button" 
+          onClick={() => setShowCalendarPublicar(true)}
+          className="text-[10px] font-black text-[#063971] uppercase tracking-wider bg-[#063971]/5 px-3 py-1 rounded-full border border-[#063971]/10 hover:bg-[#063971]/10 transition-colors"
+        >
+          📅 Ver Calendario Completo
+        </button>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
+        {diasCarrusel.map((d, i) => {
+          const strDate = formatearAString(d);
+          const isSelected = fechaSeleccionada === strDate;
+          return (
+            <button 
+              key={i} 
+              type="button" 
+              onClick={() => onSelect(strDate)} 
+              className={`snap-center shrink-0 w-[70px] py-3 rounded-[22px] border flex flex-col items-center transition-all ${isSelected ? 'bg-[#063971] border-[#063971] text-white shadow-lg shadow-[#063971]/30' : 'bg-white border-slate-100 text-[#1F2937]'}`}
+            >
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                {i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-ES', { weekday: 'short' })}
+              </span>
+              <span className="text-xl font-black italic mt-1">{d.getDate()}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* MODAL DE CALENDARIO COMPLETO CON FILTRO DE MESES */}
+      {showCalendarPublicar && (
+        <div className="fixed inset-0 z-[400] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-lg rounded-t-[35px] sm:rounded-[35px] flex flex-col shadow-2xl overflow-hidden h-[85vh] max-h-[650px] relative animate-in slide-in-from-bottom duration-300">
+            
+            {/* CABECERA FIJA */}
+            <div className="bg-white p-5 border-b border-slate-100 flex items-center justify-between shrink-0 z-20">
+              <h3 className="text-base font-black italic uppercase text-[#1F2937] tracking-tight">
+                ¿Cuándo viajas?
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setShowCalendarPublicar(false)} 
+                className="p-2 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* FILTRO DE MESES HORIZONTAL */}
+            <div className="p-4 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto flex gap-2 no-scrollbar">
+              {mesesDisponibles.map((m, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setMesSeleccionadoIndex(idx)}
+                  className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider shrink-0 transition-all border ${
+                    mesSeleccionadoIndex === idx
+                      ? 'bg-[#063971] text-white border-[#063971] shadow-md shadow-[#063971]/20'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {m.nombre}
+                </button>
+              ))}
+            </div>
+            
+            {/* LISTA DE DÍAS */}
+            <div className="flex-1 p-5 overflow-y-auto space-y-2.5">
+              {diasDelMes.map((d, i) => {
+                const strDate = formatearAString(d);
+                const esSeleccionado = fechaSeleccionada === strDate;
+                const esHoy = formatearAString(new Date()) === strDate;
+
+                return (
+                  <button 
+                    key={i}
+                    type="button"
+                    onClick={() => { onSelect(strDate); setShowCalendarPublicar(false); }}
+                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
+                      esSeleccionado 
+                      ? 'bg-[#063971] border-[#063971] text-white shadow-lg shadow-[#063971]/20' 
+                      : 'bg-slate-50 border-slate-100 text-[#1F2937] hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <p className={`text-[10px] font-black uppercase tracking-wider ${esSeleccionado ? 'text-white/80' : 'text-slate-400'}`}>
+                        {esHoy ? 'Hoy' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
+                      </p>
+                      <p className="text-sm font-black italic uppercase mt-0.5">
+                        {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className={esSeleccionado ? 'text-white' : 'text-[#063971]'} />
+                  </button>
+                );
+              })}
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
 
 const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada }) => {
   const [hora, setHora] = useState("06");
@@ -188,6 +316,9 @@ export const WizardPublicar = ({
   const mesLocal = String(fechaLocal.getMonth() + 1).padStart(2, '0');
   const diaLocal = String(fechaLocal.getDate()).padStart(2, '0');
   const hoy = `${fechaLocal.getFullYear()}-${mesLocal}-${diaLocal}`;
+
+    const [showCalendarPublicar, setShowCalendarPublicar] = useState(false);
+  const [mesSeleccionadoIndex, setMesSeleccionadoIndex] = useState(0);
   
   const [sugerencias, setSugerencias] = useState([]);
   const [campoActivo, setCampoActivo] = useState(null);
