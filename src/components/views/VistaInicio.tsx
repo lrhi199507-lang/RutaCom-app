@@ -500,46 +500,114 @@ export const VistaInicio = ({ viajes = [], setViajeSeleccionado, userData, modo 
         </div>
       )}
 
-      {showCalendar && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2">
-              <h3 className="text-lg font-black italic uppercase text-[#1F2937]">¿Cuándo sales?</h3>
-              <button onClick={() => setShowCalendar(false)} className="p-2 bg-slate-100 rounded-full"><X size={18} className="text-slate-500"/></button>
-            </div>
-            
-            <div className="space-y-2">
-              {[...Array(14)].map((_, i) => {
-                const d = new Date();
-                d.setDate(d.getDate() + i); 
-                
-                return (
-                  <button 
-                    key={i}
-                    onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
-                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
-                      fechaSeleccionada.toDateString() === d.toDateString() 
-                      ? 'bg-[#063971] border-[#063971] text-white shadow-lg' 
-                      : 'bg-slate-50 border-transparent text-[#1F2937] hover:bg-slate-100'
+                  {showCalendar && (() => {
+        // Obtenemos los próximos 12 meses disponibles para que puedan elegir el mes exacto
+        const mesesDisponibles = [...Array(12)].map((_, i) => {
+          const d = new Date();
+          d.setMonth(d.getMonth() + i);
+          return {
+            numeroMes: d.getMonth(),
+            anio: d.getFullYear(),
+            nombre: d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+          };
+        });
+
+        // Estado interno para el mes seleccionado en el filtro (por defecto el mes actual)
+        const [mesSeleccionadoIndex, setMesSeleccionadoIndex] = React.useState(0);
+
+        // Generamos los días del mes que el usuario haya seleccionado en el filtro superior
+        const mesElegido = mesesDisponibles[mesSeleccionadoIndex];
+        const primerDiaMes = new Date(mesElegido.anio, mesElegido.numeroMes, 1);
+        const ultimoDiaMes = new Date(mesElegido.anio, mesElegido.numeroMes + 1, 0);
+        
+        const diasDelMes = [];
+        let diaInicio = new Date(primerDiaMes);
+        
+        // Si es el mes actual, empezamos desde hoy; si es un mes futuro, desde el día 1
+        const hoy = new Date();
+        if (mesElegido.numeroMes === hoy.getMonth() && mesElegido.anio === hoy.getFullYear()) {
+          diaInicio = new Date(hoy);
+        }
+
+        while (diaInicio <= ultimoDiaMes) {
+          diasDelMes.push(new Date(diaInicio));
+          diaInicio.setDate(diaInicio.getDate() + 1);
+        }
+
+        return (
+          <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-0 sm:p-4">
+            <div className="bg-white w-full max-w-lg rounded-t-[35px] sm:rounded-[35px] flex flex-col shadow-2xl overflow-hidden h-[85vh] max-h-[650px] relative animate-in slide-in-from-bottom duration-300">
+              
+              {/* CABECERA FIJA */}
+              <div className="bg-white p-5 border-b border-slate-100 flex items-center justify-between shrink-0 z-20">
+                <h3 className="text-base font-black italic uppercase text-[#1F2937] tracking-tight">
+                  ¿Cuándo sales?
+                </h3>
+                <button 
+                  onClick={() => setShowCalendar(false)} 
+                  className="p-2 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* FILTRO DE MESES HORIZONTAL (Para saltar de mes en mes al instante) */}
+              <div className="p-4 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto flex gap-2 no-scrollbar">
+                {mesesDisponibles.map((m, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setMesSeleccionadoIndex(idx)}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider shrink-0 transition-all border ${
+                      mesSeleccionadoIndex === idx
+                        ? 'bg-[#063971] text-white border-[#063971] shadow-md shadow-[#063971]/20'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="text-left">
-                      <p className={`text-[10px] font-black uppercase ${fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white/80' : 'text-slate-400'}`}>
-                        {i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
-                      </p>
-                      <p className="text-sm font-black italic uppercase">
-                        {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-                      </p>
-                    </div>
-                    <ChevronRight size={18} className={fechaSeleccionada.toDateString() === d.toDateString() ? 'text-white' : 'text-[#063971]'} />
+                    {m.nombre}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              
+              {/* LISTA DE DÍAS DEL MES SELECCIONADO */}
+              <div className="flex-1 p-5 overflow-y-auto space-y-2.5">
+                {diasDelMes.length === 0 ? (
+                  <p className="text-center text-xs text-slate-400 py-10 font-medium">No hay días disponibles para este período.</p>
+                ) : (
+                  diasDelMes.map((d, i) => {
+                    const esSeleccionado = fechaSeleccionada.toDateString() === d.toDateString();
+                    const esHoy = new Date().toDateString() === d.toDateString();
+
+                    return (
+                      <button 
+                        key={i}
+                        onClick={() => { setFechaSeleccionada(d); setShowCalendar(false); }}
+                        className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${
+                          esSeleccionado 
+                          ? 'bg-[#063971] border-[#063971] text-white shadow-lg shadow-[#063971]/20' 
+                          : 'bg-slate-50 border-slate-100 text-[#1F2937] hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <p className={`text-[10px] font-black uppercase tracking-wider ${esSeleccionado ? 'text-white/80' : 'text-slate-400'}`}>
+                            {esHoy ? 'Hoy' : d.toLocaleDateString('es-ES', { weekday: 'long' })}
+                          </p>
+                          <p className="text-sm font-black italic uppercase mt-0.5">
+                            {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <ChevronRight size={18} className={esSeleccionado ? 'text-white' : 'text-[#063971]'} />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
             </div>
           </div>
-        </div>
-      )}
-
+        );
+      })()}
+      
+      
       {showMapaModal && (
         <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
            <div className="p-4 flex items-center justify-between shadow-sm z-10">
