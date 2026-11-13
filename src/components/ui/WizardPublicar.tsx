@@ -109,7 +109,7 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
 
   return (
     <div className="space-y-3">
-      {/* Carrusel rápido o Botón para abrir el calendario completo */}
+      {/* Carrusel rápido y botón para abrir el calendario completo */}
       <div className="flex items-center justify-between">
         <span className="text-[9px] font-black uppercase text-slate-400">Fecha del Viaje</span>
         <button 
@@ -143,8 +143,8 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
 
       {/* MODAL DE CALENDARIO COMPLETO CON FILTRO DE MESES */}
       {showCalendarPublicar && (
-        <div className="fixed inset-0 z-[400] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-lg rounded-t-[35px] sm:rounded-[35px] flex flex-col shadow-2xl overflow-hidden h-[85vh] max-h-[650px] relative animate-in slide-in-from-bottom duration-300">
+        <div className="fixed inset-0 z-[400] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-white w-full max-w-lg rounded-t-[35px] sm:rounded-[35px] flex flex-col shadow-2xl overflow-hidden h-[85vh] max-h-[650px] relative">
             
             {/* CABECERA FIJA */}
             <div className="bg-white p-5 border-b border-slate-100 flex items-center justify-between shrink-0 z-20">
@@ -161,7 +161,7 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
             </div>
 
             {/* FILTRO DE MESES HORIZONTAL */}
-            <div className="p-4 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto flex gap-2 no-scrollbar">
+            <div className="p-4 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto flex gap-2">
               {mesesDisponibles.map((m, idx) => (
                 <button
                   key={idx}
@@ -204,7 +204,7 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
                         {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
                     </div>
-                    <ChevronRight size={18} className={esSeleccionado ? 'text-white' : 'text-[#063971]'} />
+                    <span className={`font-black text-lg ${esSeleccionado ? 'text-white' : 'text-[#063971]'}`}>→</span>
                   </button>
                 );
               })}
@@ -216,7 +216,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
     </div>
   );
 };
-
 
 const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada }) => {
   const [hora, setHora] = useState("06");
