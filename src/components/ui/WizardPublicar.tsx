@@ -107,9 +107,17 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
     return `${d.getFullYear()}-${mes}-${dia}`;
   };
 
+  // Parsear la fecha seleccionada actual para mostrarla de forma bonita si está fuera del carrusel de 7 días
+  const formatearFechaLegible = (strDate) => {
+    if (!strDate) return "";
+    const [y, m, d] = strDate.split('-');
+    const fechaObj = new Date(y, m - 1, d);
+    return fechaObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
   return (
     <div className="space-y-3">
-      {/* Carrusel rápido y botón para abrir el calendario completo */}
+      {/* Cabecera y botón de calendario */}
       <div className="flex items-center justify-between">
         <span className="text-[9px] font-black uppercase text-slate-400">Fecha del Viaje</span>
         <button 
@@ -121,6 +129,17 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
         </button>
       </div>
 
+      {/* Indicador de la fecha seleccionada actualmente (Soluciona la duda visual) */}
+      {fechaSeleccionada && (
+        <div className="bg-[#063971]/5 border border-[#063971]/20 px-4 py-2.5 rounded-2xl flex items-center justify-between">
+          <span className="text-[10px] font-black text-slate-500 uppercase">Fecha Activa:</span>
+          <span className="text-xs font-black italic uppercase text-[#063971]">
+            {formatearFechaLegible(fechaSeleccionada)}
+          </span>
+        </div>
+      )}
+
+      {/* Carrusel rápido de 7 días */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
         {diasCarrusel.map((d, i) => {
           const strDate = formatearAString(d);
@@ -216,7 +235,7 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
     </div>
   );
 };
-
+            
 const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada }) => {
   const [hora, setHora] = useState("06");
   const [minuto, setMinuto] = useState("00");
