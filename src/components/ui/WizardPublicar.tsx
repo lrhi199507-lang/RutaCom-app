@@ -530,17 +530,19 @@ export const WizardPublicar = ({
                   <X size={16} />
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  setTipoMapa('origen');
-                  setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.16, lon: -67.95 });
-                  setShowMapaModal(true);
-                }}
-                className="p-2 rounded-xl bg-white border border-slate-200 text-[#063971] hover:bg-[#063971] hover:text-white transition-colors shrink-0"
-                title="Elegir en el mapa"
-              >
-              </button>
+              {/* Botón en Ciudad de salida */}
+<button
+  type="button"
+  onClick={() => {
+    setTipoMapa('origen');
+    setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.16, lon: -67.95 });
+    setShowMapaModal(true);
+  }}
+  className="w-9 h-9 rounded-full bg-white border border-slate-200 text-[#063971] flex items-center justify-center shadow-xs hover:bg-[#063971] hover:text-white transition-colors shrink-0"
+  title="Abrir mapa de salida"
+>
+</button>
+              
             </div>
           </div>
 
@@ -565,17 +567,19 @@ export const WizardPublicar = ({
                   <X size={16} />
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  setTipoMapa('destino');
-                  setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.16, lon: -67.95 });
-                  setShowMapaModal(true);
-                }}
-                className="p-2 rounded-xl bg-white border border-slate-200 text-[#10B981] hover:bg-[#10B981] hover:text-white transition-colors shrink-0"
-                title="Elegir en el mapa"
-              >
-              </button>
+              {/* Botón en Ciudad de llegada */}
+<button
+  type="button"
+  onClick={() => {
+    setTipoMapa('destino');
+    setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.16, lon: -67.95 });
+    setShowMapaModal(true);
+  }}
+  className="w-9 h-9 rounded-full bg-white border border-slate-200 text-[#10B981] flex items-center justify-center shadow-xs hover:bg-[#10B981] hover:text-white transition-colors shrink-0"
+  title="Abrir mapa de llegada"
+>
+</button>
+              
             </div>
           </div>
 
