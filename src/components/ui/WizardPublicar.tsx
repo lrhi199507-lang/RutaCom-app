@@ -398,7 +398,6 @@ export const WizardPublicar = ({
     setBuscandoDireccion(false);
   };
 
-  // 1. Intentar con Google Geocoder (más preciso en calles/sectores)
   if (window.google && window.google.maps && window.google.maps.Geocoder) {
     const geocoder = new window.google.maps.Geocoder();
     const latlng = { lat: Number(coordsTemporales.lat), lng: Number(coordsTemporales.lon) };
@@ -406,54 +405,53 @@ export const WizardPublicar = ({
     geocoder.geocode({ location: latlng }, (results, status) => {
       if (status === 'OK' && results && results.length > 0) {
         const comps = results[0].address_components || [];
-        const obtenerComponente = (tipos) => {
-          const encontrado = comps.find(c => tipos.some(t => c.types.includes(t)));
-          return encontrado ? encontrado.long_name : "";
+        const getComp = (tipos) => {
+          const item = comps.find(c => tipos.some(t => c.types.includes(t)));
+          return item ? item.long_name.trim() : "";
         };
 
-        const calle = obtenerComponente(['route']);
-        const sector = obtenerComponente([
+        const calle = getComp(['route']);
+        const sector = getComp([
           'neighborhood',
           'sublocality_level_1',
+          'sublocality_level_2',
           'sublocality',
           'political'
         ]);
-        const ciudad = obtenerComponente([
-          'locality',
-          'administrative_area_level_2'
-        ]);
+        const municipio = getComp(['locality', 'administrative_area_level_2']);
 
-        // Evitar duplicar si sector y ciudad se llaman igual
-        const sectorLimpio = sector && sector.toLowerCase() !== ciudad.toLowerCase() ? sector : "";
-        const partes = [calle, sectorLimpio, ciudad].filter(Boolean);
-        const partesUnicas = [...new Set(partes)];
+        // Si no hay calle/sector en components, sacar segmentos útiles de formatted_address
+        let basePartes = [calle, sector, municipio].filter(Boolean);
 
-        if (partesUnicas.length > 0) {
-          aplicarTexto(partesUnicas.join(", "));
-          return;
+        if (basePartes.length <= 1 && results[0].formatted_address) {
+          const ignorar = ['venezuela', 'carabobo', /^\d+$/];
+          const extraidos = results[0].formatted_address
+            .split(',')
+            .map(p => p.trim())
+            .filter(p => p && !ignorar.some(reg => typeof reg === 'string' ? p.toLowerCase() === reg : reg.test(p)));
+          if (extraidos.length > basePartes.length) {
+            basePartes = extraidos.slice(0, 3);
+          }
         }
 
-        // Si no desglosa componentes, tomar los primeros 2 segmentos de formatted_address
-        const corto = (results[0].formatted_address || "")
-          .split(',')
-          .map(p => p.trim())
-          .filter(Boolean)
-          .slice(0, 2)
-          .join(', ');
+        // Evitar duplicados (ej. "Los Guayos, Los Guayos")
+        const unicos = [];
+        for (const p of basePartes) {
+          if (!unicos.some(u => u.toLowerCase() === p.toLowerCase())) {
+            unicos.push(p);
+          }
+        }
 
-        if (corto) {
-          aplicarTexto(corto);
+        if (unicos.length > 0) {
+          aplicarTexto(unicos.slice(0, 3).join(", "));
           return;
         }
       }
-
-      // Si Google no devolvió detalle útil, caer a Nominatim
       respaldoNominatim();
     });
     return;
   }
 
-  // 2. Respaldo con Nominatim si Google Maps aún no está listo
   async function respaldoNominatim() {
     try {
       const response = await fetch(
@@ -500,30 +498,8 @@ export const WizardPublicar = ({
     );
   }
 
-  // PASO 1: ORIGEN Y DESTINO
+    // PASO 1: ORIGEN Y DESTINO
   if (pasoWizard === 1) {
-    const usarUbicacionActual = () => {
-      if (!navigator.geolocation) {
-        setToastMessage("Tu dispositivo no soporta GPS.");
-        setShowToast(true);
-        return;
-      }
-      setBuscandoDireccion(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-          setCoordsTemporales(coords);
-          setBuscandoDireccion(false);
-        },
-        () => {
-          setBuscandoDireccion(false);
-          setToastMessage("Activa el GPS para detectar tu ubicación.");
-          setShowToast(true);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    };
-
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
         <h2 className="text-2xl font-black italic uppercase text-[#1F2937] tracking-tighter leading-none mb-6">
@@ -653,22 +629,13 @@ export const WizardPublicar = ({
           <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom">
             <div className="p-4 flex items-center justify-between shadow-sm z-10 font-black uppercase italic text-sm text-[#1F2937]">
               <span>{tipoMapa === 'origen' ? 'Punto de Salida' : 'Punto de Llegada'}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={usarUbicacionActual}
-                  className="px-3 py-1.5 bg-[#063971]/10 text-[#063971] rounded-full text-[10px] font-black uppercase flex items-center gap-1"
-                >
-                  <Navigation size={13} /> Mi GPS
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowMapaModal(false)}
-                  className="p-2 bg-slate-100 rounded-full text-slate-500"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowMapaModal(false)}
+                className="p-2 bg-slate-100 rounded-full text-slate-500"
+              >
+                <X size={18} />
+              </button>
             </div>
             <div className="flex-1 relative">
               <MapaView
@@ -696,7 +663,6 @@ export const WizardPublicar = ({
     );
   }
   
-
   // PASO 2: DETALLES 
   if (pasoWizard === 2) {
     if (!viajeForm.fecha) setViajeForm({...viajeForm, fecha: hoy});
