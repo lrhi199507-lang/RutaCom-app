@@ -61,7 +61,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
   const [showCalendarPublicar, setShowCalendarPublicar] = useState(false);
   const [mesSeleccionadoIndex, setMesSeleccionadoIndex] = useState(0);
 
-  // Generamos los próximos 12 meses disponibles
   const mesesDisponibles = [...Array(12)].map((_, i) => {
     const d = new Date();
     d.setDate(1);
@@ -93,7 +92,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
     diaInicio.setDate(diaInicio.getDate() + 1);
   }
 
-  // Previsualización rápida de los próximos 7 días en el carrusel principal
   const diasCarrusel = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(hoyMin);
@@ -107,7 +105,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
     return `${d.getFullYear()}-${mes}-${dia}`;
   };
 
-  // Parsear la fecha seleccionada actual para mostrarla de forma bonita si está fuera del carrusel de 7 días
   const formatearFechaLegible = (strDate) => {
     if (!strDate) return "";
     const [y, m, d] = strDate.split('-');
@@ -117,7 +114,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
 
   return (
     <div className="space-y-3">
-      {/* Cabecera y botón de calendario */}
       <div className="flex items-center justify-between">
         <span className="text-[9px] font-black uppercase text-slate-400">Fecha del Viaje</span>
         <button 
@@ -129,7 +125,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
         </button>
       </div>
 
-      {/* Indicador de la fecha seleccionada actualmente (Soluciona la duda visual) */}
       {fechaSeleccionada && (
         <div className="bg-[#063971]/5 border border-[#063971]/20 px-4 py-2.5 rounded-2xl flex items-center justify-between">
           <span className="text-[10px] font-black text-slate-500 uppercase">Fecha Activa:</span>
@@ -139,7 +134,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
         </div>
       )}
 
-      {/* Carrusel rápido de 7 días */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
         {diasCarrusel.map((d, i) => {
           const strDate = formatearAString(d);
@@ -160,12 +154,9 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
         })}
       </div>
 
-      {/* MODAL DE CALENDARIO COMPLETO CON FILTRO DE MESES */}
       {showCalendarPublicar && (
         <div className="fixed inset-0 z-[400] flex items-end justify-center bg-[#1F2937]/40 backdrop-blur-sm p-0 sm:p-4">
           <div className="bg-white w-full max-w-lg rounded-t-[35px] sm:rounded-[35px] flex flex-col shadow-2xl overflow-hidden h-[85vh] max-h-[650px] relative">
-            
-            {/* CABECERA FIJA */}
             <div className="bg-white p-5 border-b border-slate-100 flex items-center justify-between shrink-0 z-20">
               <h3 className="text-base font-black italic uppercase text-[#1F2937] tracking-tight">
                 ¿Cuándo viajas?
@@ -179,7 +170,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
               </button>
             </div>
 
-            {/* FILTRO DE MESES HORIZONTAL */}
             <div className="p-4 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto flex gap-2">
               {mesesDisponibles.map((m, idx) => (
                 <button
@@ -197,7 +187,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
               ))}
             </div>
             
-            {/* LISTA DE DÍAS */}
             <div className="flex-1 p-5 overflow-y-auto space-y-2.5">
               {diasDelMes.map((d, i) => {
                 const strDate = formatearAString(d);
@@ -228,7 +217,6 @@ const CarruselFechas = ({ fechaSeleccionada, onSelect, minDate }) => {
                 );
               })}
             </div>
-
           </div>
         </div>
       )}
@@ -241,15 +229,13 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada
   const [minuto, setMinuto] = useState("00");
   const [periodo, setPeriodo] = useState("AM");
 
-  // Validación de hora actual si la fecha elegida es "hoy"
   const horaLocalReal = new Date();
   const esHoy = fechaSeleccionada === `${horaLocalReal.getFullYear()}-${String(horaLocalReal.getMonth() + 1).padStart(2, '0')}-${String(horaLocalReal.getDate()).padStart(2, '0')}`;
   const horaActual24 = horaLocalReal.getHours();
 
   useEffect(() => {
-    // Si abren el modal y es para hoy, forzamos la hora base a la hora siguiente actual
     if (isOpen && esHoy) {
-      const horaMinima = horaActual24 + 1; // Le sumamos 1 hora para dar margen
+      const horaMinima = horaActual24 + 1;
       if (horaMinima < 24) {
         let hFormat = horaMinima % 12 || 12;
         setHora(String(hFormat).padStart(2, '0'));
@@ -274,8 +260,6 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada
       let hNum = parseInt(h);
       if (periodo === "PM" && hNum < 12) hNum += 12;
       if (periodo === "AM" && hNum === 12) hNum = 0;
-      
-      // Si es hoy, bloqueamos las horas pasadas (o la actual para dar margen de tiempo)
       const bloqueada = esHoy && hNum <= horaActual24;
       return { valor: h, bloqueada };
     });
@@ -289,7 +273,6 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada
         {esHoy && <p className="text-[10px] text-orange-600 font-bold uppercase mb-4 text-center bg-orange-50 py-2 rounded-xl border border-orange-100">Mostrando solo horas disponibles para hoy</p>}
 
         <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-[30px] p-6 border mb-6 relative">
-          
           <div className="flex flex-col items-center h-40 overflow-y-auto scrollbar-hide snap-y">
             {getHorasPermitidas().map(hObj => (
               <button 
@@ -315,7 +298,6 @@ const ModalHoraCustom = ({ isOpen, onClose, onConfirm, titulo, fechaSeleccionada
             <button disabled={esHoy && horaActual24 >= 12} onClick={() => setPeriodo("AM")} className={`py-3 px-4 rounded-2xl font-black text-sm transition-all ${periodo === "AM" ? 'bg-[#063971] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'} ${esHoy && horaActual24 >= 12 ? 'opacity-30 line-through' : ''}`}>AM</button>
             <button onClick={() => setPeriodo("PM")} className={`py-3 px-4 rounded-2xl font-black text-sm transition-all ${periodo === "PM" ? 'bg-[#063971] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}>PM</button>
           </div>
-
         </div>
         <button onClick={handleConfirm} className="w-full bg-[#063971] text-white rounded-full p-4 font-black uppercase text-xs active:scale-95 transition-all shadow-lg">Confirmar Hora</button>
       </div>
@@ -334,9 +316,6 @@ export const WizardPublicar = ({
   const mesLocal = String(fechaLocal.getMonth() + 1).padStart(2, '0');
   const diaLocal = String(fechaLocal.getDate()).padStart(2, '0');
   const hoy = `${fechaLocal.getFullYear()}-${mesLocal}-${diaLocal}`;
-
-    const [showCalendarPublicar, setShowCalendarPublicar] = useState(false);
-  const [mesSeleccionadoIndex, setMesSeleccionadoIndex] = useState(0);
   
   const [sugerencias, setSugerencias] = useState([]);
   const [campoActivo, setCampoActivo] = useState(null);
@@ -391,7 +370,7 @@ export const WizardPublicar = ({
         else setSugerencias([]);
       });
     } else setSugerencias([]);
-  }
+  };
 
   const seleccionarSugerencia = (sugerencia) => {
     if (!inicializarGooglePlaces()) return;
@@ -405,44 +384,41 @@ export const WizardPublicar = ({
     });
   };
 
-const confirmarUbicacionMapa = async () => {
-  if (!coordsTemporales) return;
-  setBuscandoDireccion(true);
-  try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
-    
-    if (!response.ok) throw new Error("Error en la API de Nominatim");
-    
-    const data = await response.json();
-    
-    let txt = "Ubicación Seleccionada";
-    if (data.address) {
-      const lugar = data.name || "";
-      const calle = data.address.road || data.address.pedestrian || "";
-      const sector = data.address.neighbourhood || data.address.suburb || data.address.residential || "";
-      const ciudad = data.address.city || data.address.town || data.address.village || "";
+  const confirmarUbicacionMapa = async () => {
+    if (!coordsTemporales) return;
+    setBuscandoDireccion(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
+      if (!response.ok) throw new Error("Error en la API de Nominatim");
+      const data = await response.json();
       
-      const partes = [lugar, calle, sector, ciudad].filter(Boolean);
-      txt = [...new Set(partes)].join(", ");
-    } else if (data.display_name) {
-      txt = data.display_name.split(',').slice(0, 3).join(', ');
+      let txt = "Ubicación Seleccionada";
+      if (data.address) {
+        const lugar = data.name || "";
+        const calle = data.address.road || data.address.pedestrian || "";
+        const sector = data.address.neighbourhood || data.address.suburb || data.address.residential || "";
+        const ciudad = data.address.city || data.address.town || data.address.village || "";
+        
+        const partes = [lugar, calle, sector, ciudad].filter(Boolean);
+        txt = [...new Set(partes)].join(", ");
+      } else if (data.display_name) {
+        txt = data.display_name.split(',').slice(0, 3).join(', ');
+      }
+      
+      if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txt, coordsOrigen: coordsTemporales});
+      else setViajeForm({...viajeForm, destino: txt, coordsDestino: coordsTemporales});
+      
+      setShowMapaModal(false);
+    } catch (error) {
+      alert("No se pudo traducir la dirección, pero la ubicación fue guardada.");
+      const txtEmergencia = "Punto marcado en el mapa";
+      if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txtEmergencia, coordsOrigen: coordsTemporales});
+      else setViajeForm({...viajeForm, destino: txtEmergencia, coordsDestino: coordsTemporales});
+      setShowMapaModal(false);
+    } finally { 
+      setBuscandoDireccion(false); 
     }
-    
-    if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txt, coordsOrigen: coordsTemporales});
-    else setViajeForm({...viajeForm, destino: txt, coordsDestino: coordsTemporales});
-    
-    setShowMapaModal(false);
-  } catch (error) {
-    alert("No se pudo traducir la dirección, pero la ubicación fue guardada.");
-    const txtEmergencia = "Punto marcado en el mapa";
-    if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txtEmergencia, coordsOrigen: coordsTemporales});
-    else setViajeForm({...viajeForm, destino: txtEmergencia, coordsDestino: coordsTemporales});
-    
-    setShowMapaModal(false);
-  } finally { 
-    setBuscandoDireccion(false); 
-  }
-};
+  };
   
   const formatearHoraAmPm = (h24) => {
     if (!h24) return "Seleccionar";
@@ -464,7 +440,7 @@ const confirmarUbicacionMapa = async () => {
     );
   }
 
-  // PASOS (RENDERIZADO)
+  // PASO 1: ORIGEN Y DESTINO
   if (pasoWizard === 1) {
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
@@ -476,7 +452,7 @@ const confirmarUbicacionMapa = async () => {
             <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-[#063971]/50 transition-colors">
               <input type="text" placeholder="Ciudad de salida" className="bg-transparent w-full text-sm font-bold outline-none text-[#1F2937]" value={viajeForm.origen || ""} onChange={(e) => manejarBusqueda(e.target.value, 'origen')} />
               {viajeForm.origen && <X size={16} className="text-slate-300 cursor-pointer" onClick={() => setViajeForm({...viajeForm, origen: "", coordsOrigen: null})} />}
-              <button onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400 hover:text-[#063971] transition-colors"><Map size={18} /></button>
+              <button onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400 hover:text-[#063971] transition-colors"></button>
             </div>
           </div>
           <div className="relative">
@@ -484,7 +460,7 @@ const confirmarUbicacionMapa = async () => {
             <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-[#10B981]/50 transition-colors">
               <input type="text" placeholder="Ciudad de llegada" className="bg-transparent w-full text-sm font-bold outline-none text-[#1F2937]" value={viajeForm.destino || ""} onChange={(e) => manejarBusqueda(e.target.value, 'destino')} />
               {viajeForm.destino && <X size={16} className="text-slate-300 cursor-pointer" onClick={() => setViajeForm({...viajeForm, destino: "", coordsDestino: null})} />}
-              <button onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400 hover:text-[#10B981] transition-colors"><Map size={18} /></button>
+              <button onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400 hover:text-[#10B981] transition-colors"></button>
             </div>
           </div>
           {sugerencias.length > 0 && (
@@ -522,15 +498,14 @@ const confirmarUbicacionMapa = async () => {
     const distancia = calcularDistanciaKm(viajeForm.coordsOrigen, viajeForm.coordsDestino);
     const resultadoPrecio = calcularRangoPrecio(distancia, Number(viajeForm.precio));
 
-    // --- NUEVO: CÁLCULO DINÁMICO POR ASIENTOS ---
     const precioUnitario = Number(viajeForm.precio) || 0;
-    const asientosCount = Number(viajeForm.asientos) || 1; // Si está vacío o es 0, toma 1 por defecto
+    const asientosCount = Number(viajeForm.asientos) || 1;
     
     const precioTotalGlobal = precioUnitario * asientosCount;
     const comisionTotal = precioTotalGlobal * 0.15;
     const gananciaNetaTotal = precioTotalGlobal - comisionTotal;
     
-  return (
+    return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
         <h2 className="text-2xl font-black italic uppercase text-[#1F2937] tracking-tighter leading-none">Detalles del Viaje</h2>
         <div className="space-y-3">
@@ -540,13 +515,12 @@ const confirmarUbicacionMapa = async () => {
              <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Cambiar</div>
           </button>
         </div>
-                <div className="bg-slate-50 p-5 rounded-[30px] border border-slate-100">
+        <div className="bg-slate-50 p-5 rounded-[30px] border border-slate-100">
            <div className="flex gap-4">
              <div className="flex-[2]"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">💰 Precio $ (Por puesto)</p><input type="number" placeholder="0.00" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic outline-none text-[#10B981] focus:border-[#10B981]/50 border-slate-100 transition-colors" value={viajeForm.precio || ""} onChange={(e) => setViajeForm({...viajeForm, precio: e.target.value})} /></div>
              <div className="flex-1"><p className="text-[8px] font-black uppercase text-slate-400 mb-2">🪑 Asientos</p><input type="number" placeholder="1-4" className="bg-white w-full p-4 rounded-2xl border-2 text-2xl font-black italic outline-none text-[#1F2937] border-slate-100 focus:border-[#063971]/30 transition-colors" value={viajeForm.asientos || ""} onChange={(e) => setViajeForm({...viajeForm, asientos: e.target.value})} /></div>
            </div>
 
-           {/* --- DESGLOSE DE COMISIÓN MULTIPLICADO POR ASIENTOS --- */}
            {precioUnitario > 0 && (
              <div className="mt-4 p-4 bg-white rounded-[20px] border border-slate-100 flex flex-col gap-1.5 shadow-sm animate-in zoom-in-95">
                <div className="flex justify-between items-center text-[10px] font-black uppercase text-[#063971] mb-1 border-b border-slate-50 pb-1">
@@ -599,10 +573,24 @@ const confirmarUbicacionMapa = async () => {
         )}
         <div className="flex gap-3 pt-4">
           <button type="button" onClick={() => setPasoWizard(1)} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px] transition-all active:scale-95 hover:bg-slate-200"> Atrás </button>
-          <button onClick={() => setPasoWizard(3)} disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} className="flex-1 bg-[#063971] text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg shadow-[#063971]/20 disabled:opacity-50 transition-all active:scale-95">Siguiente</button>   
+          <button 
+            onClick={() => {
+              if (viajeForm.publicarRegreso && (!viajeForm.fechaRegreso || !viajeForm.horaRegreso)) {
+                setToastMessage("Selecciona fecha y hora de retorno.");
+                setShowToast(true);
+                return;
+              }
+              setPasoWizard(3);
+            }} 
+            disabled={!viajeForm.precio || !viajeForm.hora || !viajeForm.asientos} 
+            className="flex-1 bg-[#063971] text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg shadow-[#063971]/20 disabled:opacity-50 transition-all active:scale-95"
+          >
+            Siguiente
+          </button>   
         </div>
-       <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(h) => setViajeForm({...viajeForm, hora: h})} titulo="Hora de Salida" fechaSeleccionada={viajeForm.fecha} />
+        <ModalHoraCustom isOpen={showTimeModalIda} onClose={() => setShowTimeModalIda(false)} onConfirm={(h) => setViajeForm({...viajeForm, hora: h})} titulo="Hora de Salida" fechaSeleccionada={viajeForm.fecha} />
         <ModalHoraCustom isOpen={showTimeModalRegreso} onClose={() => setShowTimeModalRegreso(false)} onConfirm={(h) => setViajeForm({...viajeForm, horaRegreso: h})} titulo="Hora de Retorno" fechaSeleccionada={viajeForm.fechaRegreso} />
+        <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
     );
   }
@@ -612,10 +600,35 @@ const confirmarUbicacionMapa = async () => {
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-6 animate-in slide-in-from-right max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
         <h2 className="text-2xl font-black italic uppercase text-[#1F2937] tracking-tighter leading-none mb-6">Ajustes Finales</h2>
+        
         <div className="space-y-1">
-          <p className="text-[9px] font-black uppercase text-slate-400 ml-2">Punto de encuentro</p>
-          <textarea rows={2} placeholder="Ej: Frente al Farmatodo..." className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold text-[#1F2937] outline-none resize-none focus:border-[#063971]/50 transition-colors" value={viajeForm.referencia} onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} />
+          <p className="text-[9px] font-black uppercase text-slate-400 ml-2">
+            {viajeForm.publicarRegreso ? "Punto de encuentro (Ida)" : "Punto de encuentro"}
+          </p>
+          <textarea 
+            rows={2} 
+            placeholder="Ej: Frente al Farmatodo..." 
+            className="bg-slate-50 w-full p-4 rounded-[25px] border border-slate-100 text-[11px] font-bold text-[#1F2937] outline-none resize-none focus:border-[#063971]/50 transition-colors" 
+            value={viajeForm.referencia || ""} 
+            onChange={(e) => setViajeForm({...viajeForm, referencia: e.target.value})} 
+          />
         </div>
+
+        {viajeForm.publicarRegreso && (
+          <div className="space-y-1 animate-in slide-in-from-top">
+            <p className="text-[9px] font-black uppercase text-[#10B981] ml-2">
+              Punto de encuentro (Regreso)
+            </p>
+            <textarea 
+              rows={2} 
+              placeholder="Ej: Redoma de Guaparo / Centro Comercial..." 
+              className="bg-[#10B981]/5 w-full p-4 rounded-[25px] border border-[#10B981]/30 text-[11px] font-bold text-[#1F2937] outline-none resize-none focus:border-[#10B981] transition-colors" 
+              value={viajeForm.referenciaRegreso || ""} 
+              onChange={(e) => setViajeForm({...viajeForm, referenciaRegreso: e.target.value})} 
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-2">
             {[ {id:'ligero', i:'🎒'}, {id:'medio', i:'🧳'}, {id:'pesado', i:'📦'} ].map(eq => (
               <button key={eq.id} onClick={() => setViajeForm({...viajeForm, equipaje: eq.id})} className={`p-3 rounded-[20px] border-2 transition-all ${viajeForm.equipaje === eq.id ? 'border-[#063971] bg-[#063971]/5' : 'border-slate-50 bg-white hover:border-slate-100'}`}><span className="text-xl">{eq.i}</span></button>
@@ -631,6 +644,24 @@ const confirmarUbicacionMapa = async () => {
             disabled={publicando}
             onClick={async () => {
               if (!userData?.id || !userData?.kycVerificado) { setToastMessage("Verifica tu identidad."); setShowToast(true); return; }
+              
+              if (viajeForm.publicarRegreso) {
+                const refIda = (viajeForm.referencia || "").trim();
+                const refVuelta = (viajeForm.referenciaRegreso || "").trim();
+
+                if (!refVuelta) {
+                  setToastMessage("Indica el punto de encuentro de regreso.");
+                  setShowToast(true);
+                  return;
+                }
+
+                if (refIda.toLowerCase() === refVuelta.toLowerCase()) {
+                  setToastMessage("El punto de regreso debe ser distinto al de ida.");
+                  setShowToast(true);
+                  return;
+                }
+              }
+
               setPublicando(true);
               try {
                 const [ciudadOri] = (viajeForm.origen || "").split(',');
@@ -652,8 +683,8 @@ const confirmarUbicacionMapa = async () => {
                     bio: userData?.bio || "" 
                   },
                   vehiculo: userData?.vehiculo, 
-                  cO: ciudadOri || "S/N", 
-                  cD: ciudadDest || "S/N", 
+                  cO: (ciudadOri || "S/N").trim(), 
+                  cD: (ciudadDest || "S/N").trim(), 
                   coordsOrigen: viajeForm.coordsOrigen, 
                   coordsDestino: viajeForm.coordsDestino,
                   estado: "disponible", 
@@ -667,17 +698,40 @@ const confirmarUbicacionMapa = async () => {
                 const idEnlaceUnico = `enlace_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
                 if (viajeForm.publicarRegreso) {
-                   const objetoIda = { ...datosBase, conRetornoProgramado: true, tipoRuta: "ida_y_vuelta", idEnlace: idEnlaceUnico };
+                   const objetoIda = { 
+                     ...datosBase, 
+                     referencia: (viajeForm.referencia || "").trim(),
+                     conRetornoProgramado: true, 
+                     tipoRuta: "ida_y_vuelta", 
+                     idEnlace: idEnlaceUnico 
+                   };
                    await publicarRuta(objetoIda, true);
+
+                   const [nuevaCiudadOri] = (viajeForm.destino || "").split(',');
+                   const [nuevaCiudadDest] = (viajeForm.origen || "").split(',');
                    
                    await publicarRuta({
-                    ...objetoIda, origen: viajeForm.destino, destino: viajeForm.origen, cO: ciudadDest, cD: ciudadOri,
-                    coordsOrigen: viajeForm.coordsDestino, coordsDestino: viajeForm.coordsOrigen,
-                    fecha: viajeForm.fechaRegreso, hora: viajeForm.horaRegreso || viajeForm.hora, 
-                    tipoRuta: "vuelta_de_ruta", conRetornoProgramado: false, idEnlace: idEnlaceUnico
+                    ...objetoIda, 
+                    origen: viajeForm.destino, 
+                    destino: viajeForm.origen, 
+                    cO: (nuevaCiudadOri || "S/N").trim(), 
+                    cD: (nuevaCiudadDest || "S/N").trim(),
+                    coordsOrigen: viajeForm.coordsDestino, 
+                    coordsDestino: viajeForm.coordsOrigen,
+                    fecha: viajeForm.fechaRegreso, 
+                    hora: viajeForm.horaRegreso || viajeForm.hora, 
+                    referencia: (viajeForm.referenciaRegreso || "").trim(),
+                    tipoRuta: "vuelta_de_ruta", 
+                    conRetornoProgramado: false, 
+                    idEnlace: idEnlaceUnico
                    }, true);
                 } else {
-                  await publicarRuta({ ...datosBase, conRetornoProgramado: false, tipoRuta: "solo_ida" }, true);
+                  await publicarRuta({ 
+                    ...datosBase, 
+                    referencia: (viajeForm.referencia || "").trim(),
+                    conRetornoProgramado: false, 
+                    tipoRuta: "solo_ida" 
+                  }, true);
                 }
 
                 setToastMessage("¡Publicado con éxito!"); setShowToast(true);
