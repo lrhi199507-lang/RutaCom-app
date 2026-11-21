@@ -502,55 +502,200 @@ export const WizardPublicar = ({
 
   // PASO 1: ORIGEN Y DESTINO
   if (pasoWizard === 1) {
+    const usarUbicacionActual = () => {
+      if (!navigator.geolocation) {
+        setToastMessage("Tu dispositivo no soporta GPS.");
+        setShowToast(true);
+        return;
+      }
+      setBuscandoDireccion(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          setCoordsTemporales(coords);
+          setBuscandoDireccion(false);
+        },
+        () => {
+          setBuscandoDireccion(false);
+          setToastMessage("Activa el GPS para detectar tu ubicación.");
+          setShowToast(true);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    };
+
     return (
       <div className="bg-white p-5 sm:p-7 rounded-[40px] border shadow-sm space-y-5 animate-in slide-in-from-right relative max-h-[85vh] overflow-y-auto pb-24 no-scrollbar">
-        <h2 className="text-2xl font-black italic uppercase text-[#1F2937] tracking-tighter leading-none mb-6">{viajeAEditar ? "Edita tu Ruta" : "¿Hacia dónde vas?"}</h2>
+        <h2 className="text-2xl font-black italic uppercase text-[#1F2937] tracking-tighter leading-none mb-6">
+          {viajeAEditar ? "Edita tu Ruta" : "¿Hacia dónde vas?"}
+        </h2>
+
         <div className="relative pl-6 space-y-4">
           <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-slate-200" />
+
+          {/* SALIDA */}
           <div className="relative">
             <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#063971]/20 border-4 border-[#063971] rounded-full z-10" />
-            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-[#063971]/50 transition-colors">
-              <input type="text" placeholder="Ciudad de salida" className="bg-transparent w-full text-sm font-bold outline-none text-[#1F2937]" value={viajeForm.origen || ""} onChange={(e) => manejarBusqueda(e.target.value, 'origen')} />
-              {viajeForm.origen && <X size={16} className="text-slate-300 cursor-pointer" onClick={() => setViajeForm({...viajeForm, origen: "", coordsOrigen: null})} />}
-              <button onClick={() => { setTipoMapa('origen'); setCoordsTemporales(viajeForm.coordsOrigen || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400 hover:text-[#063971] transition-colors"></button>
+            <div className="flex items-center gap-2 bg-slate-50 px-4 py-3.5 rounded-[25px] border border-slate-100 focus-within:border-[#063971]/50 transition-colors">
+              <input
+                type="text"
+                placeholder="Ciudad de salida"
+                className="bg-transparent flex-1 min-w-0 text-sm font-bold outline-none text-[#1F2937]"
+                value={viajeForm.origen || ""}
+                onChange={(e) => manejarBusqueda(e.target.value, 'origen')}
+              />
+              {viajeForm.origen && (
+                <button
+                  type="button"
+                  onClick={() => setViajeForm({ ...viajeForm, origen: "", coordsOrigen: null })}
+                  className="p-1 text-slate-400 hover:text-slate-600 shrink-0"
+                  aria-label="Limpiar salida"
+                >
+                  <X size={16} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setTipoMapa('origen');
+                  setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.16, lon: -67.95 });
+                  setShowMapaModal(true);
+                }}
+                className="p-2 rounded-xl bg-white border border-slate-200 text-[#063971] hover:bg-[#063971] hover:text-white transition-colors shrink-0"
+                title="Elegir en el mapa"
+              >
+              </button>
             </div>
           </div>
+
+          {/* LLEGADA */}
           <div className="relative">
             <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#10B981]/20 border-4 border-[#10B981] rounded-full z-10" />
-            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-[#10B981]/50 transition-colors">
-              <input type="text" placeholder="Ciudad de llegada" className="bg-transparent w-full text-sm font-bold outline-none text-[#1F2937]" value={viajeForm.destino || ""} onChange={(e) => manejarBusqueda(e.target.value, 'destino')} />
-              {viajeForm.destino && <X size={16} className="text-slate-300 cursor-pointer" onClick={() => setViajeForm({...viajeForm, destino: "", coordsDestino: null})} />}
-              <button onClick={() => { setTipoMapa('destino'); setCoordsTemporales(viajeForm.coordsDestino || {lat: 10.16, lon: -67.95}); setShowMapaModal(true); }} className="text-slate-400 hover:text-[#10B981] transition-colors"></button>
+            <div className="flex items-center gap-2 bg-slate-50 px-4 py-3.5 rounded-[25px] border border-slate-100 focus-within:border-[#10B981]/50 transition-colors">
+              <input
+                type="text"
+                placeholder="Ciudad de llegada"
+                className="bg-transparent flex-1 min-w-0 text-sm font-bold outline-none text-[#1F2937]"
+                value={viajeForm.destino || ""}
+                onChange={(e) => manejarBusqueda(e.target.value, 'destino')}
+              />
+              {viajeForm.destino && (
+                <button
+                  type="button"
+                  onClick={() => setViajeForm({ ...viajeForm, destino: "", coordsDestino: null })}
+                  className="p-1 text-slate-400 hover:text-slate-600 shrink-0"
+                  aria-label="Limpiar llegada"
+                >
+                  <X size={16} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setTipoMapa('destino');
+                  setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.16, lon: -67.95 });
+                  setShowMapaModal(true);
+                }}
+                className="p-2 rounded-xl bg-white border border-slate-200 text-[#10B981] hover:bg-[#10B981] hover:text-white transition-colors shrink-0"
+                title="Elegir en el mapa"
+              >
+              </button>
             </div>
           </div>
+
           {sugerencias.length > 0 && (
             <div className="absolute z-[110] w-[calc(100%-1.5rem)] bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden mt-1 top-full">
               {sugerencias.map((s, i) => (
-                <button key={i} type="button" onClick={() => seleccionarSugerencia(s)} className="w-full text-left p-4 hover:bg-slate-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3 transition-colors">
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => seleccionarSugerencia(s)}
+                  className="w-full text-left p-4 hover:bg-slate-50 border-b last:border-0 text-[11px] font-black uppercase italic flex items-center gap-3 transition-colors"
+                >
                   <MapPin size={14} className="text-[#063971] shrink-0" />
-                  <div className="truncate"><p className="text-[#1F2937] truncate">{s.ciudad}</p><p className="text-[9px] font-bold text-slate-400 truncate">{s.estado}</p></div>
+                  <div className="truncate">
+                    <p className="text-[#1F2937] truncate">{s.ciudad}</p>
+                    <p className="text-[9px] font-bold text-slate-400 truncate">{s.estado}</p>
+                  </div>
                 </button>
               ))}
             </div>
           )}
         </div>
+
         {(viajeForm.coordsOrigen || viajeForm.coordsDestino) && (
-          <div className="pt-2 animate-in fade-in zoom-in"><div className="rounded-[25px] overflow-hidden border border-slate-100 h-48 relative"><MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} /></div></div>
-        )}
-        <div className="flex gap-3 pt-6">
-          <button onClick={() => { setVista("inicio"); setModo("pasajero"); }} className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px] hover:bg-slate-200 transition-colors">Cancelar</button>
-          <button onClick={() => setPasoWizard(2)} disabled={!viajeForm.origen || !viajeForm.destino} className="flex-1 bg-[#063971] text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg shadow-[#063971]/20 disabled:opacity-50 transition-all active:scale-95">Siguiente</button>
-        </div>
-        {showMapaModal && (
-          <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom">
-             <div className="p-4 flex items-center justify-between shadow-sm z-10 font-black uppercase italic text-sm text-[#1F2937]">Ubica el Pin<button onClick={() => setShowMapaModal(false)} className="p-2 bg-slate-100 rounded-full text-slate-500"><X size={18} /></button></div>
-             <div className="flex-1 relative"><MapaView origen={tipoMapa === 'origen' ? coordsTemporales : null} destino={tipoMapa === 'destino' ? coordsTemporales : null} onMarkerDragEnd={setCoordsTemporales} interactivo={true} /></div>
-             <div className="p-6 bg-white z-10"><button onClick={confirmarUbicacionMapa} disabled={buscandoDireccion} className="w-full bg-[#063971] text-white rounded-full p-4 font-black uppercase text-xs disabled:opacity-50 shadow-lg shadow-[#063971]/30 active:scale-95 transition-transform">Confirmar Ubicación</button></div>
+          <div className="pt-2 animate-in fade-in zoom-in">
+            <div className="rounded-[25px] overflow-hidden border border-slate-100 h-48 relative">
+              <MapaView origen={viajeForm.coordsOrigen} destino={viajeForm.coordsDestino} />
+            </div>
           </div>
         )}
+
+        <div className="flex gap-3 pt-6">
+          <button
+            type="button"
+            onClick={() => { setVista("inicio"); setModo("pasajero"); }}
+            className="bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-[9px] hover:bg-slate-200 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => setPasoWizard(2)}
+            disabled={!viajeForm.origen || !viajeForm.destino}
+            className="flex-1 bg-[#063971] text-white px-6 py-4 rounded-2xl font-black uppercase text-[9px] shadow-lg shadow-[#063971]/20 disabled:opacity-50 transition-all active:scale-95"
+          >
+            Siguiente
+          </button>
+        </div>
+
+        {showMapaModal && (
+          <div className="fixed inset-0 z-[300] bg-white flex flex-col animate-in slide-in-from-bottom">
+            <div className="p-4 flex items-center justify-between shadow-sm z-10 font-black uppercase italic text-sm text-[#1F2937]">
+              <span>{tipoMapa === 'origen' ? 'Punto de Salida' : 'Punto de Llegada'}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={usarUbicacionActual}
+                  className="px-3 py-1.5 bg-[#063971]/10 text-[#063971] rounded-full text-[10px] font-black uppercase flex items-center gap-1"
+                >
+                  <Navigation size={13} /> Mi GPS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMapaModal(false)}
+                  className="p-2 bg-slate-100 rounded-full text-slate-500"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 relative">
+              <MapaView
+                origen={tipoMapa === 'origen' ? coordsTemporales : null}
+                destino={tipoMapa === 'destino' ? coordsTemporales : null}
+                onMarkerDragEnd={setCoordsTemporales}
+                interactivo={true}
+              />
+            </div>
+            <div className="p-6 bg-white z-10">
+              <button
+                type="button"
+                onClick={confirmarUbicacionMapa}
+                disabled={buscandoDireccion}
+                className="w-full bg-[#063971] text-white rounded-full p-4 font-black uppercase text-xs disabled:opacity-50 shadow-lg shadow-[#063971]/30 active:scale-95 transition-transform"
+              >
+                {buscandoDireccion ? "Buscando dirección..." : "Confirmar Ubicación"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <Toast show={showToast} message={toastMessage} onClose={() => setShowToast(false)} />
       </div>
     );
   }
+  
 
   // PASO 2: DETALLES 
   if (pasoWizard === 2) {
