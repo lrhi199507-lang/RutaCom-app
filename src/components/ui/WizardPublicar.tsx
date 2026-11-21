@@ -385,40 +385,100 @@ export const WizardPublicar = ({
   };
 
   const confirmarUbicacionMapa = async () => {
-    if (!coordsTemporales) return;
-    setBuscandoDireccion(true);
+  if (!coordsTemporales) return;
+  setBuscandoDireccion(true);
+
+  const aplicarTexto = (textoFinal) => {
+    if (tipoMapa === 'origen') {
+      setViajeForm(prev => ({ ...prev, origen: textoFinal, coordsOrigen: coordsTemporales }));
+    } else {
+      setViajeForm(prev => ({ ...prev, destino: textoFinal, coordsDestino: coordsTemporales }));
+    }
+    setShowMapaModal(false);
+    setBuscandoDireccion(false);
+  };
+
+  // 1. Intentar con Google Geocoder (más preciso en calles/sectores)
+  if (window.google && window.google.maps && window.google.maps.Geocoder) {
+    const geocoder = new window.google.maps.Geocoder();
+    const latlng = { lat: Number(coordsTemporales.lat), lng: Number(coordsTemporales.lon) };
+
+    geocoder.geocode({ location: latlng }, (results, status) => {
+      if (status === 'OK' && results && results.length > 0) {
+        const comps = results[0].address_components || [];
+        const obtenerComponente = (tipos) => {
+          const encontrado = comps.find(c => tipos.some(t => c.types.includes(t)));
+          return encontrado ? encontrado.long_name : "";
+        };
+
+        const calle = obtenerComponente(['route']);
+        const sector = obtenerComponente([
+          'neighborhood',
+          'sublocality_level_1',
+          'sublocality',
+          'political'
+        ]);
+        const ciudad = obtenerComponente([
+          'locality',
+          'administrative_area_level_2'
+        ]);
+
+        // Evitar duplicar si sector y ciudad se llaman igual
+        const sectorLimpio = sector && sector.toLowerCase() !== ciudad.toLowerCase() ? sector : "";
+        const partes = [calle, sectorLimpio, ciudad].filter(Boolean);
+        const partesUnicas = [...new Set(partes)];
+
+        if (partesUnicas.length > 0) {
+          aplicarTexto(partesUnicas.join(", "));
+          return;
+        }
+
+        // Si no desglosa componentes, tomar los primeros 2 segmentos de formatted_address
+        const corto = (results[0].formatted_address || "")
+          .split(',')
+          .map(p => p.trim())
+          .filter(Boolean)
+          .slice(0, 2)
+          .join(', ');
+
+        if (corto) {
+          aplicarTexto(corto);
+          return;
+        }
+      }
+
+      // Si Google no devolvió detalle útil, caer a Nominatim
+      respaldoNominatim();
+    });
+    return;
+  }
+
+  // 2. Respaldo con Nominatim si Google Maps aún no está listo
+  async function respaldoNominatim() {
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`);
-      if (!response.ok) throw new Error("Error en la API de Nominatim");
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordsTemporales.lat}&lon=${coordsTemporales.lon}&zoom=18`
+      );
+      if (!response.ok) throw new Error("Error en Nominatim");
       const data = await response.json();
-      
-      let txt = "Ubicación Seleccionada";
+
+      let txt = "Punto marcado en el mapa";
       if (data.address) {
-        const lugar = data.name || "";
         const calle = data.address.road || data.address.pedestrian || "";
         const sector = data.address.neighbourhood || data.address.suburb || data.address.residential || "";
-        const ciudad = data.address.city || data.address.town || data.address.village || "";
-        
-        const partes = [lugar, calle, sector, ciudad].filter(Boolean);
-        txt = [...new Set(partes)].join(", ");
-      } else if (data.display_name) {
-        txt = data.display_name.split(',').slice(0, 3).join(', ');
+        const ciudad = data.address.city || data.address.town || data.address.village || data.address.municipality || "";
+        const partes = [...new Set([calle, sector, ciudad].filter(Boolean))];
+        if (partes.length > 0) txt = partes.join(", ");
       }
-      
-      if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txt, coordsOrigen: coordsTemporales});
-      else setViajeForm({...viajeForm, destino: txt, coordsDestino: coordsTemporales});
-      
-      setShowMapaModal(false);
+      aplicarTexto(txt);
     } catch (error) {
-      alert("No se pudo traducir la dirección, pero la ubicación fue guardada.");
-      const txtEmergencia = "Punto marcado en el mapa";
-      if (tipoMapa === 'origen') setViajeForm({...viajeForm, origen: txtEmergencia, coordsOrigen: coordsTemporales});
-      else setViajeForm({...viajeForm, destino: txtEmergencia, coordsDestino: coordsTemporales});
-      setShowMapaModal(false);
-    } finally { 
-      setBuscandoDireccion(false); 
+      aplicarTexto("Punto marcado en el mapa");
     }
-  };
+  }
+
+  respaldoNominatim();
+};
+  
   
   const formatearHoraAmPm = (h24) => {
     if (!h24) return "Seleccionar";
