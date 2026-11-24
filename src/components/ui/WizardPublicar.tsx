@@ -509,7 +509,7 @@ export const WizardPublicar = ({
         <div className="relative pl-6 space-y-4">
           <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-slate-200" />
 
-          {/* SALIDA */}
+                    {/* SALIDA */}
           <div className="relative">
             <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#063971]/20 border-4 border-[#063971] rounded-full z-10" />
             <div className="flex items-center gap-2 bg-slate-50 px-4 py-3.5 rounded-[25px] border border-slate-100 focus-within:border-[#063971]/50 transition-colors">
@@ -530,19 +530,17 @@ export const WizardPublicar = ({
                   <X size={16} />
                 </button>
               )}
-              {/* Botón en Ciudad de salida */}
-<button
-  type="button"
-  onClick={() => {
-    setTipoMapa('origen');
-    setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.16, lon: -67.95 });
-    setShowMapaModal(true);
-  }}
-  className="w-9 h-9 rounded-full bg-white border border-slate-200 text-[#063971] flex items-center justify-center shadow-xs hover:bg-[#063971] hover:text-white transition-colors shrink-0"
-  title="Abrir mapa de salida"
->
-</button>
-              
+              <button
+                type="button"
+                onClick={() => {
+                  setTipoMapa('origen');
+                  setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.16, lon: -67.95 });
+                  setShowMapaModal(true);
+                }}
+                className="pl-3 pr-1 py-1 border-l border-slate-200 text-slate-400 hover:text-[#063971] transition-colors shrink-0 flex items-center justify-center"
+                title="Elegir en el mapa"
+              >
+              </button>
             </div>
           </div>
 
@@ -567,22 +565,20 @@ export const WizardPublicar = ({
                   <X size={16} />
                 </button>
               )}
-              {/* Botón en Ciudad de llegada */}
-<button
-  type="button"
-  onClick={() => {
-    setTipoMapa('destino');
-    setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.16, lon: -67.95 });
-    setShowMapaModal(true);
-  }}
-  className="w-9 h-9 rounded-full bg-white border border-slate-200 text-[#10B981] flex items-center justify-center shadow-xs hover:bg-[#10B981] hover:text-white transition-colors shrink-0"
-  title="Abrir mapa de llegada"
->
-</button>
-              
+              <button
+                type="button"
+                onClick={() => {
+                  setTipoMapa('destino');
+                  setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.16, lon: -67.95 });
+                  setShowMapaModal(true);
+                }}
+                className="pl-3 pr-1 py-1 border-l border-slate-200 text-slate-400 hover:text-[#10B981] transition-colors shrink-0 flex items-center justify-center"
+                title="Elegir en el mapa"
+              >
+              </button>
             </div>
           </div>
-
+          
           {sugerencias.length > 0 && (
             <div className="absolute z-[110] w-[calc(100%-1.5rem)] bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden mt-1 top-full">
               {sugerencias.map((s, i) => (
