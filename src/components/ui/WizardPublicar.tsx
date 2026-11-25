@@ -509,75 +509,74 @@ export const WizardPublicar = ({
         <div className="relative pl-6 space-y-4">
           <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-slate-200" />
 
-                    {/* SALIDA */}
+                       {/* SALIDA */}
           <div className="relative">
             <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#063971]/20 border-4 border-[#063971] rounded-full z-10" />
-            <div className="flex items-center gap-2 bg-slate-50 px-4 py-3.5 rounded-[25px] border border-slate-100 focus-within:border-[#063971]/50 transition-colors">
+            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-[#063971]/50 transition-colors">
               <input
                 type="text"
                 placeholder="Ciudad de salida"
-                className="bg-transparent flex-1 min-w-0 text-sm font-bold outline-none text-[#1F2937]"
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] w-full placeholder:text-slate-400"
                 value={viajeForm.origen || ""}
                 onChange={(e) => manejarBusqueda(e.target.value, 'origen')}
               />
-              {viajeForm.origen && (
+              <div className="flex items-center gap-3 shrink-0">
+                {viajeForm.origen && (
+                  <X
+                    size={16}
+                    className="text-slate-300 cursor-pointer active:scale-90"
+                    onClick={() => setViajeForm({ ...viajeForm, origen: "", coordsOrigen: null })}
+                  />
+                )}
+                <div className="w-[1px] h-5 bg-slate-200" />
                 <button
                   type="button"
-                  onClick={() => setViajeForm({ ...viajeForm, origen: "", coordsOrigen: null })}
-                  className="p-1 text-slate-400 hover:text-slate-600 shrink-0"
-                  aria-label="Limpiar salida"
+                  onClick={() => {
+                    setTipoMapa('origen');
+                    setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.1620, lon: -67.9567 });
+                    setShowMapaModal(true);
+                  }}
+                  className="text-slate-400 hover:text-[#063971] active:scale-90 transition-all"
                 >
-                  <X size={16} />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setTipoMapa('origen');
-                  setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.16, lon: -67.95 });
-                  setShowMapaModal(true);
-                }}
-                className="pl-3 pr-1 py-1 border-l border-slate-200 text-slate-400 hover:text-[#063971] transition-colors shrink-0 flex items-center justify-center"
-                title="Elegir en el mapa"
-              >
-              </button>
+              </div>
             </div>
           </div>
 
           {/* LLEGADA */}
           <div className="relative">
             <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#10B981]/20 border-4 border-[#10B981] rounded-full z-10" />
-            <div className="flex items-center gap-2 bg-slate-50 px-4 py-3.5 rounded-[25px] border border-slate-100 focus-within:border-[#10B981]/50 transition-colors">
+            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-[#10B981]/50 transition-colors">
               <input
                 type="text"
                 placeholder="Ciudad de llegada"
-                className="bg-transparent flex-1 min-w-0 text-sm font-bold outline-none text-[#1F2937]"
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] w-full placeholder:text-slate-400"
                 value={viajeForm.destino || ""}
                 onChange={(e) => manejarBusqueda(e.target.value, 'destino')}
               />
-              {viajeForm.destino && (
+              <div className="flex items-center gap-3 shrink-0">
+                {viajeForm.destino && (
+                  <X
+                    size={16}
+                    className="text-slate-300 cursor-pointer active:scale-90"
+                    onClick={() => setViajeForm({ ...viajeForm, destino: "", coordsDestino: null })}
+                  />
+                )}
+                <div className="w-[1px] h-5 bg-slate-200" />
                 <button
                   type="button"
-                  onClick={() => setViajeForm({ ...viajeForm, destino: "", coordsDestino: null })}
-                  className="p-1 text-slate-400 hover:text-slate-600 shrink-0"
-                  aria-label="Limpiar llegada"
+                  onClick={() => {
+                    setTipoMapa('destino');
+                    setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.1620, lon: -67.9567 });
+                    setShowMapaModal(true);
+                  }}
+                  className="text-slate-400 hover:text-[#10B981] active:scale-90 transition-all"
                 >
-                  <X size={16} />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setTipoMapa('destino');
-                  setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.16, lon: -67.95 });
-                  setShowMapaModal(true);
-                }}
-                className="pl-3 pr-1 py-1 border-l border-slate-200 text-slate-400 hover:text-[#10B981] transition-colors shrink-0 flex items-center justify-center"
-                title="Elegir en el mapa"
-              >
-              </button>
+              </div>
             </div>
           </div>
+          
           
           {sugerencias.length > 0 && (
             <div className="absolute z-[110] w-[calc(100%-1.5rem)] bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden mt-1 top-full">
