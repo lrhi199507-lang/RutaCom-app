@@ -509,14 +509,14 @@ export const WizardPublicar = ({
         <div className="relative pl-6 space-y-4">
           <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-slate-200" />
 
-                       {/* SALIDA */}
+                                 {/* SALIDA */}
           <div className="relative">
             <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#063971]/20 border-4 border-[#063971] rounded-full z-10" />
             <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-[25px] border border-slate-100 focus-within:border-[#063971]/50 transition-colors">
               <input
                 type="text"
                 placeholder="Ciudad de salida"
-                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] w-full placeholder:text-slate-400"
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] flex-1 min-w-0 placeholder:text-slate-400"
                 value={viajeForm.origen || ""}
                 onChange={(e) => manejarBusqueda(e.target.value, 'origen')}
               />
@@ -524,11 +524,11 @@ export const WizardPublicar = ({
                 {viajeForm.origen && (
                   <X
                     size={16}
-                    className="text-slate-300 cursor-pointer active:scale-90"
+                    className="text-slate-400 cursor-pointer active:scale-90 shrink-0"
                     onClick={() => setViajeForm({ ...viajeForm, origen: "", coordsOrigen: null })}
                   />
                 )}
-                <div className="w-[1px] h-5 bg-slate-200" />
+                <div className="w-[1px] h-5 bg-slate-200 shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
@@ -536,8 +536,14 @@ export const WizardPublicar = ({
                     setCoordsTemporales(viajeForm.coordsOrigen || { lat: 10.1620, lon: -67.9567 });
                     setShowMapaModal(true);
                   }}
-                  className="text-slate-400 hover:text-[#063971] active:scale-90 transition-all"
+                  className="text-[#063971] hover:opacity-80 active:scale-90 transition-all shrink-0 flex items-center justify-center w-6 h-6"
+                  title="Seleccionar en el mapa"
                 >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                    <line x1="8" y1="2" x2="8" y2="18" />
+                    <line x1="16" y1="6" x2="16" y2="22" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -550,7 +556,7 @@ export const WizardPublicar = ({
               <input
                 type="text"
                 placeholder="Ciudad de llegada"
-                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] w-full placeholder:text-slate-400"
+                className="bg-transparent border-none outline-none focus:ring-0 text-sm font-bold text-[#1F2937] flex-1 min-w-0 placeholder:text-slate-400"
                 value={viajeForm.destino || ""}
                 onChange={(e) => manejarBusqueda(e.target.value, 'destino')}
               />
@@ -558,11 +564,11 @@ export const WizardPublicar = ({
                 {viajeForm.destino && (
                   <X
                     size={16}
-                    className="text-slate-300 cursor-pointer active:scale-90"
+                    className="text-slate-400 cursor-pointer active:scale-90 shrink-0"
                     onClick={() => setViajeForm({ ...viajeForm, destino: "", coordsDestino: null })}
                   />
                 )}
-                <div className="w-[1px] h-5 bg-slate-200" />
+                <div className="w-[1px] h-5 bg-slate-200 shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
@@ -570,8 +576,14 @@ export const WizardPublicar = ({
                     setCoordsTemporales(viajeForm.coordsDestino || { lat: 10.1620, lon: -67.9567 });
                     setShowMapaModal(true);
                   }}
-                  className="text-slate-400 hover:text-[#10B981] active:scale-90 transition-all"
+                  className="text-[#10B981] hover:opacity-80 active:scale-90 transition-all shrink-0 flex items-center justify-center w-6 h-6"
+                  title="Seleccionar en el mapa"
                 >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                    <line x1="8" y1="2" x2="8" y2="18" />
+                    <line x1="16" y1="6" x2="16" y2="22" />
+                  </svg>
                 </button>
               </div>
             </div>
